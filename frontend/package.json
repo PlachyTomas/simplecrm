@@ -12,7 +12,9 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "types:generate": "node scripts/generate-api-types.mjs",
+    "types:check": "node scripts/generate-api-types.mjs --check"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.0",
@@ -39,6 +41,7 @@
     "eslint-plugin-react-refresh": "^0.4.16",
     "globals": "^15.14.0",
     "jsdom": "^25.0.1",
+    "openapi-typescript": "^7.4.4",
     "postcss": "^8.4.49",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.9",

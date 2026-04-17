@@ -77,6 +77,32 @@ Working through Phase 0 tasks sequentially per Section 11 of the brief.
   - `uv run alembic downgrade base` → reverses cleanly.
   - `uv run alembic check` → "No new upgrade operations detected."
   - `ruff`, `ruff format --check`, `mypy app`, `pytest` all green.
+- Commit: a1d5604.
+
+### Task 0.5 — CI pipeline ✅ PASS
+- `.github/workflows/ci.yml` with three jobs: `backend`, `frontend`, and
+  `api-types-freshness`. Postgres 16 service container for the backend job;
+  pnpm / node / uv caching wired via official actions.
+- Backend job runs: ruff, ruff format check, mypy strict, alembic upgrade head,
+  pytest. Frontend job: lint, typecheck, format check, test, build.
+- `frontend/scripts/generate-api-types.mjs` — Node script extracting the
+  OpenAPI spec directly from `app.openapi()` (via `uv run`) or, if
+  `BACKEND_OPENAPI_URL` is set, fetching it over HTTP. Uses `openapi-typescript`
+  + `astToString`. `--check` mode regenerates into memory and exits non-zero
+  with a unified diff if the committed file drifts.
+- `frontend/package.json` gained `types:generate` and `types:check` scripts
+  plus the `openapi-typescript` devDep.
+- First committed `src/types/api.generated.ts` matches current spec
+  (`/healthz`, `/healthz/db`, `HealthResponse`). Generated file is opted out
+  of eslint + prettier via `.prettierignore` and `eslint.config.js` ignores.
+- Added `frontend/src/types/README.md` explaining the auto-gen contract.
+- Manually validated drift-detection: appended a comment to the generated
+  file, `types:check` exited 1 with a proper diff; `types:generate` restored
+  it; `types:check` went green again.
+- YAML validated via PyYAML parse: three jobs registered as expected.
+- CI itself not yet executable from this sandbox (no git remote push), but
+  every step was locally equivalent-run: backend suite (4/4 tests), alembic
+  upgrade, frontend lint/typecheck/test/build, and `types:check`.
 - Commit: pending.
 
 ### Task 0.3 — Frontend skeleton ✅ PASS
