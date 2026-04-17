@@ -350,4 +350,4 @@ Deals, Activities; plus list/detail screens.
   ownership_expires_at ~ now+365d, ICO unique per org but shareable across
   orgs, ownership-history row insert.
 - Full suite 39 passing; ruff, format, mypy strict clean.
-- Commit: pending.
+- Commit: 1709008.
