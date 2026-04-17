@@ -214,4 +214,27 @@ Phase 0 is done. All five tasks have clean conventional-commits on `master`:
 - Frontend OpenAPI types regenerated (adds all four auth operations +
   `CurrentUser` / `OrganizationSummary` / `HTTPValidationError` schemas).
   `pnpm typecheck` + `pnpm test` still pass.
+- Commit: 74f75ba.
+
+### Task 1.3 — Auth dependencies ✅ PASS
+- Extended `app/core/deps.py`:
+  - `require_role(*allowed)` — factory returning an async dependency that
+    enforces one of the allowed roles. Admins bypass unconditionally.
+  - `require_roles(iterable)` — iterable-accepting alias for composing role
+    sets at module level.
+  - `require_active_trial_or_subscription` — 402 Payment Required when the
+    org's `trial_ends_at` has passed AND `stripe_customer_id` is null. Payload
+    carries `trial_ends_at` + `organization_id` so the frontend can render
+    the trial-expiry gate without extra API calls.
+- `app/schemas/errors.py` — typed `TrialExpiredError` for the 402 body. Kept
+  separate from the dependency so route handlers that need a typed response
+  model can reference it.
+- Tests in `tests/services/test_permissions.py` (8 unit tests):
+  admin-bypasses-everything, allowed role passes, disallowed role → 403,
+  iterable variant, empty role set raises `ValueError` (config error),
+  trial-gate happy paths (in trial / with subscription) and rejection (expired
+  without subscription) with the 402 payload asserted.
+- mypy needed `Callable[[User], Awaitable[User]]` for the factories — fixed.
+- Full suite now 29 passing tests; API types unchanged (no new endpoints or
+  schemas exposed); `types:check` stays green.
 - Commit: pending.
