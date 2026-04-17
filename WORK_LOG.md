@@ -178,3 +178,40 @@ Phase 0 is done. All five tasks have clean conventional-commits on `master`:
   strict green, frontend `types:check` still up-to-date (no API surface
   changes in this task).
 - Commit: 6c7d09a.
+
+### Task 1.2 — Google OAuth flow ✅ PASS
+- Added deps: `authlib`, `python-jose[cryptography]`, `itsdangerous`.
+- `app/core/config.py`: JWT + Google OAuth + frontend redirect settings.
+- `app/core/security.py`: `create_access_token` / `create_refresh_token` /
+  `decode_token` (HS256; access TTL 1 h, refresh TTL 30 d), plus
+  `sign_oauth_state` / `verify_oauth_state` using `URLSafeTimedSerializer`.
+- `app/services/google_oauth.py`: `GoogleOAuthClient` Protocol +
+  `AuthlibGoogleOAuthClient` implementation; `get_google_oauth_client`
+  dependency so tests can inject a fake.
+- `app/services/auth.py`: `upsert_user_from_google_profile` — strongest match
+  by `google_id`, fallback by `email` (attaches `google_id` to an invite-seeded
+  user). First-time login creates a placeholder Organization (name derived
+  from the email domain) and an admin User; the 30-day trial comes from the
+  Organization default.
+- `app/core/deps.py`: `get_current_user` Bearer-token dependency (rejects
+  missing/invalid/wrong-type tokens, inactive users).
+- `app/api/v1/auth.py`:
+  - `GET /auth/google/login` — 307 to Google with a signed state cookie.
+  - `GET /auth/google/callback` — validates state (both equality against the
+    cookie and signature/TTL), exchanges code, upserts user, issues access
+    token in the redirect fragment, sets refresh cookie, 302 to frontend.
+  - `GET /auth/me` — returns the authenticated user + org summary.
+  - `POST /auth/logout` — clears the refresh cookie, 204.
+- `app/schemas/auth.py`: typed response models; `CurrentUser` carries a nested
+  `OrganizationSummary` with trial, locale, currency — the frontend needs all
+  three for trial-expiry gate and Intl formatters.
+- Tests:
+  - `tests/services/test_auth_service.py` — 3 upsert scenarios.
+  - `tests/api/v1/test_auth.py` — 9 scenarios: login redirect, callback happy
+    path, state mismatch, missing code (422), Google failure, /me happy path,
+    /me missing token, /me bad token, logout clears cookie.
+  - Total backend suite now 21 tests, all green.
+- Frontend OpenAPI types regenerated (adds all four auth operations +
+  `CurrentUser` / `OrganizationSummary` / `HTTPValidationError` schemas).
+  `pnpm typecheck` + `pnpm test` still pass.
+- Commit: pending.

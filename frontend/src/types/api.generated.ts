@@ -38,14 +38,143 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/google/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Google Login */
+        get: operations["google_login_api_v1_auth_google_login_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/google/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Google Callback */
+        get: operations["google_callback_api_v1_auth_google_callback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Me */
+        get: operations["me_api_v1_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Logout */
+        post: operations["logout_api_v1_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** CurrentUser */
+        CurrentUser: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Name */
+            name: string;
+            /** Avatar Url */
+            avatar_url?: string | null;
+            role: components["schemas"]["UserRole"];
+            organization: components["schemas"]["OrganizationSummary"];
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
         /** HealthResponse */
         HealthResponse: {
             /** Status */
             status: string;
+        };
+        /** OrganizationSummary */
+        OrganizationSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Locale */
+            locale: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Trial Ends At
+             * Format: date-time
+             */
+            trial_ends_at: string;
+        };
+        /**
+         * UserRole
+         * @enum {string}
+         */
+        UserRole: "salesperson" | "manager" | "admin";
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
     };
     responses: never;
@@ -93,6 +222,98 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
                 };
+            };
+        };
+    };
+    google_login_api_v1_auth_google_login_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    google_callback_api_v1_auth_google_callback_get: {
+        parameters: {
+            query: {
+                code: string;
+                state: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                simplecrm_oauth_state?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    me_api_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentUser"];
+                };
+            };
+        };
+    };
+    logout_api_v1_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
