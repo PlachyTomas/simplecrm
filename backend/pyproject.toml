@@ -76,6 +76,9 @@ extend-immutable-calls = [
 "alembic/versions/*.py" = [
     "N999",  # generated filenames have custom slug templates
 ]
+"app/db/models/*.py" = [
+    "N811",  # SQLAlchemy class aliases (e.g. UUID as PgUUID) aren't constants
+]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -97,10 +100,13 @@ check_untyped_defs = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 filterwarnings = [
     "error",
     "ignore::DeprecationWarning",
+    "ignore::ResourceWarning",
 ]
 
 [tool.pydantic-mypy]

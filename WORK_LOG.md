@@ -124,3 +124,57 @@ Working through Phase 0 tasks sequentially per Section 11 of the brief.
 
 Phase 0 is done. All five tasks have clean conventional-commits on `master`:
 73918ab, a675ef7, a199d16, a1d5604, 903c5d1.
+
+---
+
+## Session 1 continues — Phase 1
+
+### Task 1.1 — Organization/User/Team/Plan models + seed ✅ PASS
+- Four SQLAlchemy 2.0 models in `app/db/models/`:
+  - `Organization` — name, optional Czech registry fields (ICO/DIC/address/…),
+    `region` enum (default `eu-cz`), `locale` default `cs-CZ`, `currency`
+    default `CZK`, `trial_ends_at` defaulted to `now() + 30 days` in Python.
+  - `Plan` — catalog of subscription plans (`trial` at 0, `team` at 9900 CZK
+    monthly); names are unique.
+  - `User` — email is globally unique (a Google login always maps to the same
+    row); `role` enum defaults to `salesperson`; `google_id` unique nullable;
+    organization FK mandatory with CASCADE delete.
+  - `Team` — per-organization; `manager_user_id` nullable FK; `members`
+    relationship via `User.team_id`.
+- Enums exposed as Postgres `enum` types with explicit names
+  (`organization_region`, `plan_interval`, `user_role`). `Region` uses
+  `values_callable` so hyphenated values (`eu-cz`) survive Python → SQL.
+- Naming convention from `Base` flows through — all constraint names stable.
+- Migration `c98b20a997d0_phase1_foundation_org_user_team_plan`:
+  - Creates `organizations` → `plans` → `teams` (without the circular FK) →
+    `users`.
+  - After both tables exist, `op.create_foreign_key(..., use_alter=True)`
+    adds `fk_teams_manager_user_id_users`. Downgrade drops it first.
+  - `bulk_insert` seeds the two plans with fixed UUIDs so fixtures can refer
+    to them later.
+  - Downgrade explicitly drops the three enum types to leave a clean schema.
+- Pitfall caught during verification: inline `ForeignKeyConstraint(use_alter=True)`
+  inside `op.create_table` is silently dropped (constraint never emitted).
+  Switched to a separate `op.create_foreign_key` step after `users` exists.
+  Had to clean the broken DB state (DROP TABLE + DROP TYPE) once before the
+  fixed migration could run.
+- Side-effect import `import app.db.models` added to `alembic/env.py` so
+  autogenerate sees everything.
+- `tests/conftest.py`: added `db_session` fixture that opens an `AsyncSession`,
+  begins an outer transaction, yields, and rolls back on exit — per-test
+  isolation without nuking the dev DB. Required bumping pytest-asyncio's
+  loop scope to `session` (both fixture and test) so the module-level async
+  engine's connections live on the same loop as all tests.
+- `tests/db/test_models_phase1.py` — 5 tests: default plans present,
+  organization gets ~30-day trial window, user requires valid org (FK fires
+  IntegrityError), team↔manager↔members relationship round-trip, email
+  uniqueness enforced.
+- Ruff tweaks: `N811` ignored in `app/db/models/*` (SQLAlchemy class aliases
+  like `UUID as PgUUID` aren't constants in the pep8 sense).
+- `ResourceWarning` added to pytest's ignore filters — asyncpg connection
+  cleanup is noisy on Python 3.12 even on happy paths.
+- Verified: alembic upgrade / downgrade round-trip clean, `alembic check`
+  reports no pending ops, all 9 backend tests pass, ruff + format + mypy
+  strict green, frontend `types:check` still up-to-date (no API surface
+  changes in this task).
+- Commit: pending.

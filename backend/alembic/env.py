@@ -14,13 +14,12 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+# Side-effect import registers every model class with Base.metadata so
+# autogenerate can see them. Alphabetize when adding.
+import app.db.models  # noqa: F401
 from alembic import context
 from app.core.config import get_settings
 from app.db.base import Base
-
-# Ensure all model modules are imported so Base.metadata is populated before
-# autogenerate runs. As models are added (Phase 1+), add their imports here
-# or via an `app.db.models.__init__` module.
 
 config = context.config
 
