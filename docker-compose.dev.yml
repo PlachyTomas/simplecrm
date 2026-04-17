@@ -1,0 +1,59 @@
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: .docker/dev.Dockerfile
+    image: simplecrm-dev:latest
+    working_dir: /workspace
+    volumes:
+      # The repository, mounted read-write. Nothing else from the host.
+      - .:/workspace
+      # Claude Code auth persistence — the one intentional host share.
+      - ${HOME}/.claude:/root/.claude
+      # Optional: cache node_modules and uv cache across runs for speed.
+      - claude-dev-node-cache:/root/.npm
+      - claude-dev-uv-cache:/root/.cache/uv
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://simplecrm:simplecrm@postgres:5432/simplecrm
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=simplecrm
+      - POSTGRES_PASSWORD=simplecrm
+      - POSTGRES_DB=simplecrm
+      # Uncomment to pass an API key instead of relying on mounted ~/.claude:
+      # - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - simplecrm-dev
+    stdin_open: true
+    tty: true
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: simplecrm
+      POSTGRES_PASSWORD: simplecrm
+      POSTGRES_DB: simplecrm
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      # Bound to localhost only so it's not exposed to LAN.
+      - "127.0.0.1:5432:5432"
+    networks:
+      - simplecrm-dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U simplecrm"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+  claude-dev-node-cache:
+  claude-dev-uv-cache:
+
+networks:
+  simplecrm-dev:
+    driver: bridge

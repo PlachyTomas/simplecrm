@@ -1,0 +1,19 @@
+# Docker dev volumes — none of these should be committed
+postgres-data/
+
+# Environment files — secrets never committed
+.env
+.env.local
+.env.production
+
+# Work log and resume state — ephemeral coordination files
+WORK_LOG.md
+RESUME.md
+
+# Node / Python caches that might leak in from the container
+node_modules/
+.venv/
+__pycache__/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
