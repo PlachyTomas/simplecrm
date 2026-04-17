@@ -13,6 +13,7 @@ class OrganizationSummary(BaseModel):
 
     id: uuid.UUID
     name: str
+    ico: str | None = None
     locale: str
     currency: str
     trial_ends_at: datetime

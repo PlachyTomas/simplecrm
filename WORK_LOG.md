@@ -272,4 +272,39 @@ Phase 0 is done. All five tasks have clean conventional-commits on `master`:
   `pnpm format:check` (0), `pnpm build` (218 kB gzipped 69 kB). Backend
   untouched in this task; its suite still 29/29. `types:check` green (no API
   changes).
+- Commit: 22ae3ec.
+
+### Task 1.5 — First-time onboarding flow ✅ PASS
+- Backend:
+  - `app/schemas/auth.py`: `ico: str | None` added to `OrganizationSummary`
+    so the frontend can branch on onboarding state.
+  - `app/schemas/organization.py`: `OrganizationUpdate` (all fields optional,
+    `ico` validated as 8 digits) + `OrganizationOut`.
+  - `app/api/v1/organizations.py`: `GET /organizations/current` (any auth'd
+    user, returns their org) + `PUT /organizations/current` (admin-only via
+    `require_role(admin)`, applies `model_dump(exclude_unset=True)`).
+  - Mounted the router in the v1 aggregator.
+  - `tests/api/v1/test_organizations.py` — 6 tests: happy GET, missing-token
+    401, happy PUT, non-admin 403, malformed IČO 422, isolation-by-user.
+    The endpoint commits internally (defeats the rollback fixture), so tests
+    seed users with UUID-suffixed emails and tear them down via a dedicated
+    `owned_emails` fixture.
+  - Ruff: added `app.core.deps.require_role` / `require_roles` to
+    `extend-immutable-calls` so B008 no longer flags the admin dependency.
+  - Backend suite now 35 passing (was 29).
+- Frontend:
+  - `src/app/OnboardingForm.tsx` — `role="dialog" aria-modal="true"` blocking
+    modal with IČO / name / city inputs. Submit calls
+    `PUT /organizations/current` via a TanStack Query mutation and invalidates
+    `["auth","me"]`. ARES auto-fill noted as a Phase-3 follow-up.
+  - `src/app/AppShell.tsx`: renders the form when
+    `user.organization.ico == null && user.role === "admin"`.
+  - `src/__tests__/App.test.tsx`: existing authed-shell test now passes
+    `ico` in its mock so the modal stays hidden; two new tests cover the
+    admin-sees-modal and salesperson-does-not branches.
+  - Regenerated `api.generated.ts`: now carries `OrganizationOut`,
+    `OrganizationUpdate`, and the two new endpoints.
+- Verification: `pnpm lint`, `pnpm typecheck`, `pnpm test` (8/8),
+  `pnpm format:check`, `pnpm build`, `types:check` all green. Ruff, mypy,
+  pytest (35/35) green on the backend.
 - Commit: pending.

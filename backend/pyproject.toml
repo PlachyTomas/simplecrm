@@ -69,6 +69,8 @@ extend-immutable-calls = [
     "fastapi.File",
     "fastapi.Form",
     "fastapi.Security",
+    "app.core.deps.require_role",
+    "app.core.deps.require_roles",
 ]
 
 [tool.ruff.lint.per-file-ignores]

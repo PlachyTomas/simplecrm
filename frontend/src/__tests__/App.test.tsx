@@ -61,6 +61,7 @@ describe("App routing", () => {
           organization: {
             id: "00000000-0000-0000-0000-0000000000aa",
             name: "Alza s.r.o.",
+            ico: "27082440",
             locale: "cs-CZ",
             currency: "CZK",
             trial_ends_at: "2027-01-01T12:00:00+00:00",
@@ -71,9 +72,9 @@ describe("App routing", () => {
     );
     renderAt("/app", { token: "fake-token" });
     await waitFor(() =>
-      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-        /Vítejte zpět, Testovací Uživatel/i,
-      ),
+      expect(
+        screen.getByRole("heading", { name: /Vítejte zpět, Testovací Uživatel/i }),
+      ).toBeInTheDocument(),
     );
     expect(screen.getByText(/Alza s\.r\.o\./)).toBeInTheDocument();
   });
@@ -108,5 +109,64 @@ describe("App routing", () => {
     await waitFor(() =>
       expect(screen.getByRole("link", { name: /přihlásit se přes google/i })).toBeInTheDocument(),
     );
+  });
+
+  it("renders the onboarding modal when the org has no ico and the user is admin", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          id: "00000000-0000-0000-0000-000000000001",
+          email: "first@example.cz",
+          name: "První Admin",
+          avatar_url: null,
+          role: "admin",
+          organization: {
+            id: "00000000-0000-0000-0000-0000000000aa",
+            name: "Example",
+            ico: null,
+            locale: "cs-CZ",
+            currency: "CZK",
+            trial_ends_at: "2027-01-01T12:00:00+00:00",
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    renderAt("/app", { token: "fake-token" });
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: /dokončete nastavení firmy/i }),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("does not show onboarding for a salesperson with a placeholder org", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          id: "00000000-0000-0000-0000-000000000002",
+          email: "sales@example.cz",
+          name: "Obchodník",
+          avatar_url: null,
+          role: "salesperson",
+          organization: {
+            id: "00000000-0000-0000-0000-0000000000aa",
+            name: "Example",
+            ico: null,
+            locale: "cs-CZ",
+            currency: "CZK",
+            trial_ends_at: "2027-01-01T12:00:00+00:00",
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    renderAt("/app", { token: "fake-token" });
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+        /Vítejte zpět, Obchodník/i,
+      ),
+    );
+    expect(screen.queryByRole("heading", { name: /dokončete nastavení/i })).toBeNull();
   });
 });

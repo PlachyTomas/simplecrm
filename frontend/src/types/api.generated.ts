@@ -106,6 +106,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Current Organization */
+        get: operations["get_current_organization_api_v1_organizations_current_get"];
+        /** Update Current Organization */
+        put: operations["update_current_organization_api_v1_organizations_current_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -139,8 +157,8 @@ export interface components {
             /** Status */
             status: string;
         };
-        /** OrganizationSummary */
-        OrganizationSummary: {
+        /** OrganizationOut */
+        OrganizationOut: {
             /**
              * Id
              * Format: uuid
@@ -148,6 +166,18 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            /** Ico */
+            ico?: string | null;
+            /** Dic */
+            dic?: string | null;
+            /** Address Street */
+            address_street?: string | null;
+            /** Address City */
+            address_city?: string | null;
+            /** Address Zip */
+            address_zip?: string | null;
+            /** Legal Form */
+            legal_form?: string | null;
             /** Locale */
             locale: string;
             /** Currency */
@@ -157,6 +187,53 @@ export interface components {
              * Format: date-time
              */
             trial_ends_at: string;
+            /** Stripe Customer Id */
+            stripe_customer_id?: string | null;
+        };
+        /** OrganizationSummary */
+        OrganizationSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Ico */
+            ico?: string | null;
+            /** Locale */
+            locale: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Trial Ends At
+             * Format: date-time
+             */
+            trial_ends_at: string;
+        };
+        /**
+         * OrganizationUpdate
+         * @description Fields an admin can change on their own organization.
+         *
+         *     Every field is optional so that the onboarding form can submit a partial
+         *     update (e.g., IČO + name first, address later) and the settings page can
+         *     patch any subset.
+         */
+        OrganizationUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Ico */
+            ico?: string | null;
+            /** Dic */
+            dic?: string | null;
+            /** Address Street */
+            address_street?: string | null;
+            /** Address City */
+            address_city?: string | null;
+            /** Address Zip */
+            address_zip?: string | null;
+            /** Legal Form */
+            legal_form?: string | null;
         };
         /**
          * UserRole
@@ -314,6 +391,59 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    get_current_organization_api_v1_organizations_current_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationOut"];
+                };
+            };
+        };
+    };
+    update_current_organization_api_v1_organizations_current_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganizationUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

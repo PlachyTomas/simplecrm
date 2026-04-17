@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { LogOut } from "lucide-react";
 
+import { OnboardingForm } from "@/app/OnboardingForm";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { apiFetch } from "@/lib/api";
@@ -69,6 +70,12 @@ export function AppShell() {
           </div>
         </div>
       </header>
+
+      {user.organization.ico == null && user.role === "admin" ? (
+        <OnboardingForm
+          defaults={{ name: user.organization.name, ico: user.organization.ico ?? null }}
+        />
+      ) : null}
 
       <main className="mx-auto max-w-[1440px] px-4 py-12 md:px-8">
         <section className="mx-auto max-w-2xl rounded-lg border border-border bg-surface p-6">
