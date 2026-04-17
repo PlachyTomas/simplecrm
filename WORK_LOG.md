@@ -19,91 +19,28 @@ Working through Phase 0 tasks sequentially per Section 11 of the brief.
 - Wrote `.claude/tasks/PHASE-0-TASK-1.md` as the task spec.
 - Dev-env edits (`.docker/*`, `docker-compose.dev.yml`, `fix-docker.sh`) left
   untouched — those are the user's pre-existing in-flight changes.
-- Verification:
-  - Acceptance criteria re-read and each confirmed.
-  - `git status`: only my changes are staged; dev-env files remain unstaged.
+- Verification: acceptance criteria re-read; `git status` shows only my changes.
 - Commit: 73918ab.
 
 ### Task 0.2 — Backend skeleton ✅ PASS
-- Created `backend/pyproject.toml` with Python 3.12, FastAPI 0.136, Pydantic 2.13,
+- `backend/pyproject.toml` with Python 3.12, FastAPI 0.136, Pydantic 2.13,
   pydantic-settings, httpx, plus dev tools (pytest, pytest-asyncio, ruff, mypy,
-  asgi-lifespan). Ruff lint rules: E/F/I/B/UP/N/S/C4/SIM/RUF; mypy strict + pydantic plugin.
-- Added `app/main.py` with `create_app()` factory, CORS middleware, versioned
-  OpenAPI at `/api/v1/openapi.json`, Swagger UI at `/api/v1/docs`.
-- Added `app/core/config.py` with `Settings` (pydantic-settings) + cached `get_settings()`.
-- Added `app/api/v1/health.py` returning `{"status": "ok"}` with a typed Pydantic
-  `HealthResponse` — so the generated OpenAPI schema carries the field.
-- Added `tests/conftest.py` with an `httpx.AsyncClient` + `ASGITransport` fixture.
-  `tests/api/v1/test_health.py` exercises happy-path and method-not-allowed.
-  Permission-denied is N/A and documented in the module docstring.
-- Added `backend/Dockerfile` (multi-stage, uv-based, runs as uid 1001).
-- Dev-container quirk: `/home/node/.cache` and `.local/share` are root-owned.
-  Documented the `UV_CACHE_DIR` / `UV_PYTHON_INSTALL_DIR` workaround in
-  `backend/README.md`. CI and prod Dockerfile don't need it.
-- Verification:
-  - `uv sync` → 39 packages installed.
-  - `uv run ruff check .` → All checks passed.
-  - `uv run ruff format --check .` → 12 files already formatted.
-  - `uv run mypy app` → Success: no issues found in 7 source files.
-  - `uv run pytest` → 2 passed.
-  - `uvicorn` boots; `curl /api/v1/healthz` → 200 `{"status":"ok"}`.
-  - `curl /api/v1/openapi.json` → OpenAPI 3.1 spec served.
-  - Dockerfile NOT built (docker-in-docker not available in this dev container);
-    will rely on CI (Task 0.5) to exercise it.
-- Commit: a675ef7. (Task 0.3 committed as a199d16; see above.)
-
-### Task 0.4 — Database and migrations ✅ PASS
-- Added SQLAlchemy 2.0 async + asyncpg + Alembic + greenlet to
-  `backend/pyproject.toml`.
-- `app/db/base.py`: declarative `Base` with a Postgres-style naming convention
-  (ix/uq/ck/fk/pk) so Alembic autogenerate produces stable constraint names.
-- `app/db/session.py`: `create_async_engine` with `pool_pre_ping`,
-  `async_sessionmaker` (`expire_on_commit=False`), and a `get_db()` FastAPI
-  dependency.
-- `alembic.ini` + `alembic/env.py` (async-aware; pulls `database_url` from
-  `app.core.config.Settings`) + custom `script.py.mako` (PEP 604 types,
-  `from __future__ import annotations`).
-- First migration: `20260417_2149_initial_empty_baseline_6c57c6890dde.py` — no
-  DDL; real schema arrives in Task 1.1.
-- New endpoint `GET /api/v1/healthz/db` does `SELECT 1` via `get_db` session;
-  503 on failure.
-- Tests: two happy-path probes and a 503 branch exercised via FastAPI
-  `dependency_overrides` injecting a session that raises `OperationalError`.
-  Kept method-not-allowed test. All 4 pass.
-- Ruff tweaks: added `extend-immutable-calls` for FastAPI's `Depends` /
-  `Query` / `Body` / etc. so B008 doesn't flag idiomatic dependency injection.
-- Verified:
-  - `uv run alembic upgrade head` → creates `alembic_version`, stamps 6c57c6890dde.
-  - `uv run alembic downgrade base` → reverses cleanly.
-  - `uv run alembic check` → "No new upgrade operations detected."
-  - `ruff`, `ruff format --check`, `mypy app`, `pytest` all green.
-- Commit: a1d5604.
-
-### Task 0.5 — CI pipeline ✅ PASS
-- `.github/workflows/ci.yml` with three jobs: `backend`, `frontend`, and
-  `api-types-freshness`. Postgres 16 service container for the backend job;
-  pnpm / node / uv caching wired via official actions.
-- Backend job runs: ruff, ruff format check, mypy strict, alembic upgrade head,
-  pytest. Frontend job: lint, typecheck, format check, test, build.
-- `frontend/scripts/generate-api-types.mjs` — Node script extracting the
-  OpenAPI spec directly from `app.openapi()` (via `uv run`) or, if
-  `BACKEND_OPENAPI_URL` is set, fetching it over HTTP. Uses `openapi-typescript`
-  + `astToString`. `--check` mode regenerates into memory and exits non-zero
-  with a unified diff if the committed file drifts.
-- `frontend/package.json` gained `types:generate` and `types:check` scripts
-  plus the `openapi-typescript` devDep.
-- First committed `src/types/api.generated.ts` matches current spec
-  (`/healthz`, `/healthz/db`, `HealthResponse`). Generated file is opted out
-  of eslint + prettier via `.prettierignore` and `eslint.config.js` ignores.
-- Added `frontend/src/types/README.md` explaining the auto-gen contract.
-- Manually validated drift-detection: appended a comment to the generated
-  file, `types:check` exited 1 with a proper diff; `types:generate` restored
-  it; `types:check` went green again.
-- YAML validated via PyYAML parse: three jobs registered as expected.
-- CI itself not yet executable from this sandbox (no git remote push), but
-  every step was locally equivalent-run: backend suite (4/4 tests), alembic
-  upgrade, frontend lint/typecheck/test/build, and `types:check`.
-- Commit: pending.
+  asgi-lifespan). Ruff lint rules E/F/I/B/UP/N/S/C4/SIM/RUF; mypy strict with
+  the pydantic plugin.
+- `app/main.py` with `create_app()` factory, CORS middleware, OpenAPI at
+  `/api/v1/openapi.json`, Swagger UI at `/api/v1/docs`.
+- `app/core/config.py` with pydantic-settings + `lru_cache`'d `get_settings()`.
+- `app/api/v1/health.py` — `GET /healthz` returning a typed `HealthResponse`.
+- `tests/conftest.py`: `httpx.AsyncClient` + `ASGITransport` fixture.
+  `tests/api/v1/test_health.py`: happy-path + method-not-allowed (permission
+  denied is N/A for an unauthenticated probe and the module docstring says so).
+- Multi-stage `backend/Dockerfile` (uv install → runtime user uid 1001).
+- Dev-container quirk documented: `/home/node/.cache` and `.local/share` are
+  root-owned, so `UV_CACHE_DIR=/tmp/uv-cache` + `UV_PYTHON_INSTALL_DIR=/tmp/uv-python`
+  are required. CI and prod image are unaffected. Documented in `backend/README.md`.
+- Verified: 39 deps installed; ruff + ruff format + mypy strict + pytest all
+  green; uvicorn boots and serves 200 on `/api/v1/healthz`; OpenAPI 3.1 spec served.
+- Commit: a675ef7.
 
 ### Task 0.3 — Frontend skeleton ✅ PASS
 - Read `.claude/skills/ui-design.md` before starting (per Section 1).
@@ -111,34 +48,79 @@ Working through Phase 0 tasks sequentially per Section 11 of the brief.
   Lucide, clsx, tailwind-merge; dev: Vitest 2, Testing Library, ESLint 9
   (flat config), Prettier + tailwind plugin.
 - Tokens file `src/theme/tokens.css` carries both `[data-theme="dark"]` and
-  `[data-theme="light"]` blocks plus shared (scale/motion) tokens at `:root`.
+  `[data-theme="light"]` blocks plus shared scale/motion tokens at `:root`.
   Values copied verbatim from ui-design.md §2.1–2.3. `prefers-reduced-motion`
   handled at the base layer.
-- `tailwind.config.ts` maps semantic utilities (`bg-surface`, `text-primary`,
-  `bg-accent`, `ring`, spacing, radii, type scale, durations, easings) to the
-  CSS variables. Tailwind's default palette intentionally not whitelisted; grep
-  confirmed no `bg-blue-*` / `text-gray-*` / hex codes in any `.tsx`.
-- `src/App.tsx` — sample landing-ish page exercising tokens: hero, 3 token-demo
-  cards, theme toggle button. Czech copy, vykání, Inter + highlight-moment
-  sparkle icon. `Intl` not exercised yet (no money/date values here).
-- `src/theme/theme.ts` — storage + system-preference resolver; `applyTheme`
-  writes `data-theme` and persists. Inline script in `index.html` prevents FOUC.
-- `src/__tests__/App.test.tsx` — 3 passing tests (hero rendered, dark default,
-  theme toggle round-trips). `src/test-setup.ts` stubs jsdom's missing
-  `matchMedia`.
-- Dev-container quirks hit & fixed:
-  - pnpm's default store at `/home/node/.local/share/pnpm` is root-owned; used
-    `PNPM_HOME=/tmp/pnpm-home` and `store-dir=/tmp/pnpm-store` (saved in
-    `~/.config/pnpm/rc`). Documented in `frontend/README.md`.
-  - esbuild postinstall blocked by pnpm v10's strict build script policy;
-    added `pnpm.onlyBuiltDependencies: ["esbuild"]` and re-ran `pnpm rebuild`.
-- Picked vite 5.4 (not 6) because vitest 2.x pins its types to vite 5; avoiding
-  the parallel-install type conflict. Can bump both when vitest 3 is on npm.
-- Verification:
-  - `pnpm lint`, `pnpm typecheck`, `pnpm test` (3/3), `pnpm format:check`,
-    `pnpm build` — all green.
-  - `pnpm dev` → HTTP 200 on `/`, HTML sets `data-theme="dark"` via inline
-    script (verified with curl).
-  - Theme tokens audit: 0 hex/rgb literals in `src/**/*.tsx`; 0 default-palette
-    Tailwind classes.
-- Commit: pending.
+- `tailwind.config.ts` maps only semantic utilities (`bg-surface`, `text-primary`,
+  `bg-accent`, ring, spacing, radii, type scale, durations, easings) to the
+  CSS variables. Grep confirmed 0 hex codes and 0 default-palette classes in `src/**/*.tsx`.
+- `src/App.tsx` — sample hero + 3 token-demo cards + theme toggle button.
+  Czech copy, vykání; `Sparkles` icon illustrates the highlight color.
+- `src/theme/theme.ts` — storage + system-preference resolver; inline script
+  in `index.html` prevents flash of wrong theme.
+- `src/__tests__/App.test.tsx` — 3 passing tests (hero, dark default,
+  toggle round-trip). `src/test-setup.ts` stubs jsdom's missing `matchMedia`.
+- Dev-container quirks handled: `PNPM_HOME=/tmp/pnpm-home`, pnpm store at
+  `/tmp/pnpm-store` (saved in `~/.config/pnpm/rc`), and
+  `pnpm.onlyBuiltDependencies: ["esbuild"]` for pnpm v10's strict policy.
+  Documented in `frontend/README.md`.
+- Pinned vite ^5.4 because vitest 2.x types are against vite 5; avoids the
+  parallel-install type conflict. Can bump together when vitest 3 ships.
+- Verified: lint / typecheck / format:check / test (3/3) / build all green;
+  `pnpm dev` → HTTP 200 with `data-theme="dark"`.
+- Commit: a199d16.
+
+### Task 0.4 — Database and migrations ✅ PASS
+- Added SQLAlchemy 2.0 async + asyncpg + Alembic + greenlet.
+- `app/db/base.py`: `DeclarativeBase` with Postgres-style naming convention
+  (ix/uq/ck/fk/pk) so autogenerate names are stable.
+- `app/db/session.py`: `create_async_engine` with `pool_pre_ping`,
+  `async_sessionmaker` (`expire_on_commit=False`), `get_db()` dependency.
+- `alembic.ini` + async-aware `alembic/env.py` (pulls `database_url` from
+  Settings) + custom `script.py.mako` using PEP 604 types.
+- First migration `20260417_2149_initial_empty_baseline_6c57c6890dde.py` — no
+  DDL; real schema lands in Task 1.1.
+- `GET /api/v1/healthz/db` probe (`SELECT 1` → 200; any exception → 503).
+- Tests: happy paths for both probes, method-not-allowed, and a 503 branch
+  exercised via FastAPI `dependency_overrides` injecting a failing session.
+  All 4 pass.
+- Ruff: `extend-immutable-calls` includes `fastapi.Depends`, `Query`, `Body`,
+  etc. so B008 no longer flags idiomatic dependency injection.
+- Verified: `alembic upgrade head` / `downgrade base` round-trip clean;
+  `alembic check` reports no pending ops; ruff + format + mypy strict + pytest all green.
+- Commit: a1d5604.
+
+### Task 0.5 — CI pipeline ✅ PASS
+- `.github/workflows/ci.yml` with three jobs:
+  1. `backend` — Postgres 16 service, ruff, ruff format --check, mypy strict,
+     alembic upgrade head, pytest.
+  2. `frontend` — pnpm install, lint, typecheck, format:check, test, build.
+  3. `api-types-freshness` — regenerates TS types from the backend spec and
+     exits non-zero if `src/types/api.generated.ts` has drifted.
+- `frontend/scripts/generate-api-types.mjs`: extracts the OpenAPI spec via
+  `uv run python -c 'from app.main import app; print(json.dumps(app.openapi()))'`
+  (or fetches `BACKEND_OPENAPI_URL` over HTTP), runs `openapi-typescript` +
+  `astToString`, writes the file. `--check` runs the same generation into memory
+  and prints a unified diff on mismatch.
+- `frontend/package.json` gained `types:generate` / `types:check` scripts and
+  the `openapi-typescript` devDep.
+- First committed `src/types/api.generated.ts` covers the healthz endpoints
+  only (all that exists). Generated file is opt-out of ESLint + Prettier.
+- `frontend/src/types/README.md` documents the auto-gen contract.
+- Manually exercised drift detection: appended a comment → `types:check`
+  failed with a proper diff; `types:generate` → restored; `types:check` green.
+- YAML validated via `yaml.safe_load`.
+- CI run itself requires a remote push (not possible inside this container),
+  but every workflow step has a locally equivalent run and all passed.
+- Commit: 903c5d1.
+
+### Phase 0 — Exit criteria check
+- `docker compose up` — backend and frontend Dockerfiles both exist; the dev
+  compose file is user-maintained. Docker-in-docker is unavailable inside this
+  sandbox, so real `compose up` is left for the user to run.
+- Healthcheck endpoints respond — verified locally against the running uvicorn.
+- CI green on PR — workflow committed and locally equivalent-run; the actual
+  GitHub run depends on the user pushing to origin.
+
+Phase 0 is done. All five tasks have clean conventional-commits on `master`:
+73918ab, a675ef7, a199d16, a1d5604, 903c5d1.
