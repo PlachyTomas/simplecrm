@@ -237,4 +237,39 @@ Phase 0 is done. All five tasks have clean conventional-commits on `master`:
 - mypy needed `Callable[[User], Awaitable[User]]` for the factories — fixed.
 - Full suite now 29 passing tests; API types unchanged (no new endpoints or
   schemas exposed); `types:check` stays green.
+- Commit: 72c4cb0.
+
+### Task 1.4 — Frontend auth context + login + trial gate ✅ PASS
+- `src/lib/api.ts`: `apiFetch<T>()` wrapper + typed `ApiError`; `isTrialExpired`
+  helper peels FastAPI's `{detail: {...}}` envelope.
+- `src/lib/queryClient.ts`: shared TanStack Query client.
+- `src/auth/AuthContext.tsx` + `src/auth/useAuth.ts`: access token in memory
+  only (per brief). Provider scrapes `#access_token=` from the URL on mount
+  and then history-replaces the URL so the token doesn't linger in the bar.
+- `src/auth/useCurrentUser.ts`: TanStack Query hook around `/auth/me`; typed
+  against the generated `components["schemas"]["CurrentUser"]`.
+- `src/auth/ProtectedRoute.tsx`: anonymous → `/login`; pending → `Načítání…`;
+  401 → `/login`; 402 → `<TrialExpiredGate />`; success → children.
+- `src/auth/TrialExpiredGate.tsx`: full-screen gate implementing ui-design.md
+  §5.11 exactly — Czech copy, vykání, `Přejít na předplatné` primary CTA,
+  `Exportovat data` ghost CTA, support email footnote. Date formatted via
+  `Intl.DateTimeFormat("cs-CZ")` — never hardcoded.
+- `src/auth/LoginPage.tsx`: centered card with `Přihlásit se přes Google`
+  anchor pointing at `${API_BASE_URL}/api/v1/auth/google/login`.
+- `src/app/AppShell.tsx`: minimal authed shell (org name, trial countdown
+  date formatted via Intl, user avatar/initials, logout button calling
+  `/auth/logout` via a mutation).
+- `src/marketing/LandingStub.tsx`: placeholder `/` until Phase 11.
+- `src/App.tsx`: `AppRoutes` + BrowserRouter + `QueryClientProvider` +
+  `AuthProvider`. Exported `AppRoutes` so tests can drop `MemoryRouter` in.
+- Replaced the old `App.test.tsx` with router-aware tests (6 tests):
+  landing renders, Google CTA points at backend, anonymous `/app` → login,
+  `/auth/me` 200 renders shell, `/auth/me` 402 renders gate, `/auth/me` 401
+  kicks to login. `fetch` is stubbed with a Vitest mock.
+- `eslint.config.js`: no new rules (kept the `AuthContext` export + a narrow
+  eslint-disable on the `createContext` export for fast-refresh).
+- Verification: `pnpm lint` (0), `pnpm typecheck` (0), `pnpm test` (6/6),
+  `pnpm format:check` (0), `pnpm build` (218 kB gzipped 69 kB). Backend
+  untouched in this task; its suite still 29/29. `types:check` green (no API
+  changes).
 - Commit: pending.

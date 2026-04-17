@@ -1,35 +1,112 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { App } from "@/App";
+import { AppRoutes } from "@/App";
+import { AuthProvider } from "@/auth/AuthContext";
 
-describe("App", () => {
+function renderAt(initialPath: string, options: { token?: string | null } = {}) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={qc}>
+      <AuthProvider initialToken={options.token ?? null}>
+        <MemoryRouter initialEntries={[initialPath]}>
+          <AppRoutes />
+        </MemoryRouter>
+      </AuthProvider>
+    </QueryClientProvider>,
+  );
+}
+
+describe("App routing", () => {
+  const fetchMock = vi.fn<typeof fetch>();
+  const originalFetch = globalThis.fetch;
+
   beforeEach(() => {
-    document.documentElement.removeAttribute("data-theme");
-    window.localStorage.clear();
+    fetchMock.mockReset();
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
   });
 
-  it("renders the hero headline", () => {
-    render(<App />);
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.unstubAllEnvs();
+  });
+
+  it("renders the landing stub at /", () => {
+    renderAt("/");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/CRM pro prodej/i);
   });
 
-  it("applies dark theme by default when nothing is stored and system prefers dark", () => {
-    render(<App />);
-    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+  it("shows the Google login CTA on /login", () => {
+    renderAt("/login");
+    const cta = screen.getByRole("link", { name: /přihlásit se přes google/i });
+    expect(cta).toHaveAttribute("href", expect.stringContaining("/api/v1/auth/google/login"));
   });
 
-  it("toggles theme when the toggle button is pressed", async () => {
-    const user = userEvent.setup();
-    render(<App />);
-    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+  it("redirects /app to /login when unauthenticated", () => {
+    renderAt("/app");
+    expect(screen.getByRole("link", { name: /přihlásit se přes google/i })).toBeInTheDocument();
+  });
 
-    await user.click(screen.getByRole("button", { name: /přepnout na světlý režim/i }));
-    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
-    expect(window.localStorage.getItem("simplecrm-theme")).toBe("light");
+  it("renders the authed shell after /auth/me succeeds", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          id: "00000000-0000-0000-0000-000000000001",
+          email: "test@alza.cz",
+          name: "Testovací Uživatel",
+          avatar_url: null,
+          role: "admin",
+          organization: {
+            id: "00000000-0000-0000-0000-0000000000aa",
+            name: "Alza s.r.o.",
+            locale: "cs-CZ",
+            currency: "CZK",
+            trial_ends_at: "2027-01-01T12:00:00+00:00",
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    renderAt("/app", { token: "fake-token" });
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+        /Vítejte zpět, Testovací Uživatel/i,
+      ),
+    );
+    expect(screen.getByText(/Alza s\.r\.o\./)).toBeInTheDocument();
+  });
 
-    await user.click(screen.getByRole("button", { name: /přepnout na tmavý režim/i }));
-    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+  it("renders the trial gate when /auth/me returns 402", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          detail: {
+            detail: "Trial expired",
+            trial_ends_at: "2026-03-17T00:00:00+00:00",
+            organization_id: "00000000-0000-0000-0000-0000000000aa",
+          },
+        }),
+        { status: 402, headers: { "content-type": "application/json" } },
+      ),
+    );
+    renderAt("/app", { token: "fake-token" });
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+        /Vaše zkušební doba skončila/i,
+      ),
+    );
+    expect(screen.getByRole("button", { name: /přejít na předplatné/i })).toBeInTheDocument();
+  });
+
+  it("redirects /app to /login when /auth/me returns 401", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response("{}", { status: 401, headers: { "content-type": "application/json" } }),
+    );
+    renderAt("/app", { token: "fake-token" });
+    await waitFor(() =>
+      expect(screen.getByRole("link", { name: /přihlásit se přes google/i })).toBeInTheDocument(),
+    );
   });
 });
