@@ -4,16 +4,48 @@ postgres-data/
 # Environment files — secrets never committed
 .env
 .env.local
+.env.*.local
 .env.production
 
-# Work log and resume state — ephemeral coordination files
-WORK_LOG.md
-RESUME.md
-
-# Node / Python caches that might leak in from the container
+# Node / Python caches
 node_modules/
 .venv/
 __pycache__/
+*.pyc
 .ruff_cache/
 .mypy_cache/
 .pytest_cache/
+.tox/
+
+# Frontend build artifacts
+dist/
+build/
+.vite/
+coverage/
+
+# Python build artifacts
+*.egg-info/
+.coverage
+htmlcov/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Claude Code local overrides (per-machine permission allowlists)
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Playwright
+playwright-report/
+test-results/
