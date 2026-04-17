@@ -50,4 +50,42 @@ Working through Phase 0 tasks sequentially per Section 11 of the brief.
   - `curl /api/v1/openapi.json` → OpenAPI 3.1 spec served.
   - Dockerfile NOT built (docker-in-docker not available in this dev container);
     will rely on CI (Task 0.5) to exercise it.
+- Commit: a675ef7.
+
+### Task 0.3 — Frontend skeleton ✅ PASS
+- Read `.claude/skills/ui-design.md` before starting (per Section 1).
+- `frontend/package.json`: React 18, Vite 5, TS 5.6 strict, TanStack Query v5,
+  Lucide, clsx, tailwind-merge; dev: Vitest 2, Testing Library, ESLint 9
+  (flat config), Prettier + tailwind plugin.
+- Tokens file `src/theme/tokens.css` carries both `[data-theme="dark"]` and
+  `[data-theme="light"]` blocks plus shared (scale/motion) tokens at `:root`.
+  Values copied verbatim from ui-design.md §2.1–2.3. `prefers-reduced-motion`
+  handled at the base layer.
+- `tailwind.config.ts` maps semantic utilities (`bg-surface`, `text-primary`,
+  `bg-accent`, `ring`, spacing, radii, type scale, durations, easings) to the
+  CSS variables. Tailwind's default palette intentionally not whitelisted; grep
+  confirmed no `bg-blue-*` / `text-gray-*` / hex codes in any `.tsx`.
+- `src/App.tsx` — sample landing-ish page exercising tokens: hero, 3 token-demo
+  cards, theme toggle button. Czech copy, vykání, Inter + highlight-moment
+  sparkle icon. `Intl` not exercised yet (no money/date values here).
+- `src/theme/theme.ts` — storage + system-preference resolver; `applyTheme`
+  writes `data-theme` and persists. Inline script in `index.html` prevents FOUC.
+- `src/__tests__/App.test.tsx` — 3 passing tests (hero rendered, dark default,
+  theme toggle round-trips). `src/test-setup.ts` stubs jsdom's missing
+  `matchMedia`.
+- Dev-container quirks hit & fixed:
+  - pnpm's default store at `/home/node/.local/share/pnpm` is root-owned; used
+    `PNPM_HOME=/tmp/pnpm-home` and `store-dir=/tmp/pnpm-store` (saved in
+    `~/.config/pnpm/rc`). Documented in `frontend/README.md`.
+  - esbuild postinstall blocked by pnpm v10's strict build script policy;
+    added `pnpm.onlyBuiltDependencies: ["esbuild"]` and re-ran `pnpm rebuild`.
+- Picked vite 5.4 (not 6) because vitest 2.x pins its types to vite 5; avoiding
+  the parallel-install type conflict. Can bump both when vitest 3 is on npm.
+- Verification:
+  - `pnpm lint`, `pnpm typecheck`, `pnpm test` (3/3), `pnpm format:check`,
+    `pnpm build` — all green.
+  - `pnpm dev` → HTTP 200 on `/`, HTML sets `data-theme="dark"` via inline
+    script (verified with curl).
+  - Theme tokens audit: 0 hex/rgb literals in `src/**/*.tsx`; 0 default-palette
+    Tailwind classes.
 - Commit: pending.

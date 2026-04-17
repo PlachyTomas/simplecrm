@@ -22,6 +22,7 @@ dist/
 build/
 .vite/
 coverage/
+*.tsbuildinfo
 
 # Python build artifacts
 *.egg-info/
