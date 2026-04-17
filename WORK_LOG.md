@@ -328,3 +328,26 @@ Phase 1 done. Commits on master for Phase 1:
 
 Next up: Phase 2 — core data model and CRUD. Companies, Contacts, Pipeline,
 Deals, Activities; plus list/detail screens.
+
+### Task 2.1 — Company + OwnershipHistory ✅ PASS
+- Added `OwnershipChangeReason` enum (`initial`, `reassigned`,
+  `freed_timeout`, `won_deal_refresh`).
+- `app/db/models/company.py`: UUID PK, FK to Organization (CASCADE) and
+  `owner_user_id` (SET NULL), ICO scoped-unique per organization, indexes on
+  `organization_id`, `owner_user_id`, `ownership_expires_at`, `ico`.
+  `last_order_at` + `ownership_expires_at` are both regular timestamptz;
+  `ownership_expires_at` defaults to `now() + 365d` via a Python callable.
+- **Design change vs original spec**: the brief sketched
+  `ownership_expires_at` as a stored generated column. Postgres 16 rejected
+  the expression as "not immutable" (interval literal under STORED semantics).
+  Switched to a regular column that the application maintains (won-deal flow
+  bumps it); the freeing job still gets an indexed filter target.
+- `app/db/models/ownership_history.py`: audit rows with FKs to Company
+  (CASCADE) and User (SET NULL), nullable `released_at`, enum `reason`.
+- Migration `eae6d56b0854_phase2_companies_and_ownership_history.py`; clean
+  autogen, round-trips, downgrade drops the `ownership_change_reason` enum.
+- Tests (`tests/db/test_models_phase2.py`, 4 passing): default
+  ownership_expires_at ~ now+365d, ICO unique per org but shareable across
+  orgs, ownership-history row insert.
+- Full suite 39 passing; ruff, format, mypy strict clean.
+- Commit: pending.

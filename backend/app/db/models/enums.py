@@ -14,3 +14,10 @@ class PlanInterval(StrEnum):
 
 class Region(StrEnum):
     eu_cz = "eu-cz"
+
+
+class OwnershipChangeReason(StrEnum):
+    initial = "initial"
+    reassigned = "reassigned"
+    freed_timeout = "freed_timeout"
+    won_deal_refresh = "won_deal_refresh"
