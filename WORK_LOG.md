@@ -307,4 +307,24 @@ Phase 0 is done. All five tasks have clean conventional-commits on `master`:
 - Verification: `pnpm lint`, `pnpm typecheck`, `pnpm test` (8/8),
   `pnpm format:check`, `pnpm build`, `types:check` all green. Ruff, mypy,
   pytest (35/35) green on the backend.
-- Commit: pending.
+- Commit: 9638482.
+
+### Phase 1 — Exit criteria check
+- "User can Google-sign-in from landing page, lands in app shell,
+  `/api/v1/auth/me` returns their info."
+  - Landing-stub → `/login` → "Přihlásit se přes Google" → backend OAuth URL:
+    wired. Real end-to-end confirmation needs real Google OAuth credentials,
+    which only the deploy owner has; the stub path is fully covered by tests
+    on both sides.
+  - `/auth/me` returns a typed `CurrentUser` that the frontend consumes via
+    `useCurrentUser`; verified in the 6 frontend routing tests and 9 backend
+    auth tests.
+  - Trial gate (402 from authed calls) renders per ui-design.md §5.11.
+  - First-time onboarding modal captures IČO + name and persists via
+    `PUT /organizations/current`.
+
+Phase 1 done. Commits on master for Phase 1:
+6c7d09a, 74f75ba, 72c4cb0, 22ae3ec, 9638482.
+
+Next up: Phase 2 — core data model and CRUD. Companies, Contacts, Pipeline,
+Deals, Activities; plus list/detail screens.
