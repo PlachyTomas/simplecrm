@@ -177,4 +177,4 @@ Phase 0 is done. All five tasks have clean conventional-commits on `master`:
   reports no pending ops, all 9 backend tests pass, ruff + format + mypy
   strict green, frontend `types:check` still up-to-date (no API surface
   changes in this task).
-- Commit: pending.
+- Commit: 6c7d09a.
