@@ -50,7 +50,34 @@ Working through Phase 0 tasks sequentially per Section 11 of the brief.
   - `curl /api/v1/openapi.json` → OpenAPI 3.1 spec served.
   - Dockerfile NOT built (docker-in-docker not available in this dev container);
     will rely on CI (Task 0.5) to exercise it.
-- Commit: a675ef7.
+- Commit: a675ef7. (Task 0.3 committed as a199d16; see above.)
+
+### Task 0.4 — Database and migrations ✅ PASS
+- Added SQLAlchemy 2.0 async + asyncpg + Alembic + greenlet to
+  `backend/pyproject.toml`.
+- `app/db/base.py`: declarative `Base` with a Postgres-style naming convention
+  (ix/uq/ck/fk/pk) so Alembic autogenerate produces stable constraint names.
+- `app/db/session.py`: `create_async_engine` with `pool_pre_ping`,
+  `async_sessionmaker` (`expire_on_commit=False`), and a `get_db()` FastAPI
+  dependency.
+- `alembic.ini` + `alembic/env.py` (async-aware; pulls `database_url` from
+  `app.core.config.Settings`) + custom `script.py.mako` (PEP 604 types,
+  `from __future__ import annotations`).
+- First migration: `20260417_2149_initial_empty_baseline_6c57c6890dde.py` — no
+  DDL; real schema arrives in Task 1.1.
+- New endpoint `GET /api/v1/healthz/db` does `SELECT 1` via `get_db` session;
+  503 on failure.
+- Tests: two happy-path probes and a 503 branch exercised via FastAPI
+  `dependency_overrides` injecting a session that raises `OperationalError`.
+  Kept method-not-allowed test. All 4 pass.
+- Ruff tweaks: added `extend-immutable-calls` for FastAPI's `Depends` /
+  `Query` / `Body` / etc. so B008 doesn't flag idiomatic dependency injection.
+- Verified:
+  - `uv run alembic upgrade head` → creates `alembic_version`, stamps 6c57c6890dde.
+  - `uv run alembic downgrade base` → reverses cleanly.
+  - `uv run alembic check` → "No new upgrade operations detected."
+  - `ruff`, `ruff format --check`, `mypy app`, `pytest` all green.
+- Commit: pending.
 
 ### Task 0.3 — Frontend skeleton ✅ PASS
 - Read `.claude/skills/ui-design.md` before starting (per Section 1).
