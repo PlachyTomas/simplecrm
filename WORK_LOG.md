@@ -511,4 +511,45 @@ Picked up cleanly from Session 1's end state: `master` at d68cfd9, no
 - Backend suite now 109 passing; ruff / format / mypy strict clean.
 - Frontend `api.generated.ts` regenerated. `pnpm typecheck` + `pnpm test`
   stay green.
+- Commit: ac41913.
+
+### Task 2.7 — Companies list + detail (read-only) ✅ PASS
+- `frontend/src/app/companies/useCompanies.ts` + `useCompany.ts` — TanStack
+  Query hooks typed against `components["schemas"]["CompanyOut"]` and the
+  generated `Page_CompanyOut_` envelope.
+- `CompaniesListPage.tsx` — semantic `<table>` per ui-design.md §5.4 (header
+  row, hover rows, no zebra), pluralized Czech count, IČO in monospace,
+  city, locale-formatted created-at.
+- `CompanyDetailPage.tsx` — back-to-list link, header with IČO in mono, and
+  a definition-list grid for DIČ, legal form, address, website, note,
+  created-at, ownership-expires-at. Dates formatted through
+  `Intl.DateTimeFormat(user.organization.locale)`.
+- `AppShell.tsx` split into `AppShell` (chrome) + `AppHome` (index welcome)
+  so React Router v6 nested routes can render children into `<Outlet/>`.
+  Added a top-bar nav (desktop only; mobile bottom-tabs arrive in Phase 4.1)
+  with Přehled / Firmy links; active state uses `bg-accent-subtle
+  text-accent` from the token palette.
+- `App.tsx` wires `/app` as a layout route with index + `companies` +
+  `companies/:companyId` children.
+- `__tests__/companies.test.tsx` (3 tests): list renders rows, empty state,
+  row click → detail. URL-aware fetch mock serves `/auth/me` and the two
+  companies endpoints.
+- Existing 8 routing tests still pass (AppHome renders "Vítejte zpět" via
+  the nested route).
+- `pnpm lint / typecheck / test (11/11) / format:check / build` all green;
+  backend suite unchanged.
 - Commit: pending.
+
+### Phase 2 — Exit criteria check
+"An admin can seed data via API, frontend renders a table of companies and a
+detail page, permissions enforced, all data scoped to organization."
+- API: `POST /api/v1/companies` (2.6a), `POST /api/v1/contacts` (2.6b),
+  `POST /api/v1/deals` (2.6c) — admin-accessible; all org-scoped; backed
+  by tests that assert cross-org isolation.
+- Frontend: `/app/companies` + `/app/companies/:id` read-only in 2.7.
+  Create/edit UI arrives in Phase 4.
+- Permissions: `scope_by_owner` + `can_write_row` drive row-level filters;
+  admin-only delete everywhere.
+
+Phase 2 done. Commits on master for Phase 2: 1709008, a5a8e08, dd8f5a4,
+30339cb, dfab630, ab33f2e, 75a4823, ac41913, and this pending commit.

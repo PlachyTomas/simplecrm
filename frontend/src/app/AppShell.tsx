@@ -1,11 +1,25 @@
 import { useMutation } from "@tanstack/react-query";
-import { LogOut } from "lucide-react";
+import { Building2, Home, LogOut } from "lucide-react";
+import { NavLink, Outlet } from "react-router-dom";
 
 import { OnboardingForm } from "@/app/OnboardingForm";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { apiFetch } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { queryClient } from "@/lib/queryClient";
+
+const NAV_LINK_BASE =
+  "inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-fast";
+
+function navClass({ isActive }: { isActive: boolean }) {
+  return cn(
+    NAV_LINK_BASE,
+    isActive
+      ? "bg-accent-subtle text-accent"
+      : "text-text-secondary hover:bg-surface-overlay hover:text-text-primary",
+  );
+}
 
 export function AppShell() {
   const { data: user } = useCurrentUser();
@@ -39,6 +53,15 @@ export function AppShell() {
               Zkušební doba do <time>{trialEndsAt}</time>
             </p>
           </div>
+
+          <nav className="hidden items-center gap-1 md:flex">
+            <NavLink to="/app" end className={navClass}>
+              <Home size={16} strokeWidth={1.75} /> Přehled
+            </NavLink>
+            <NavLink to="/app/companies" className={navClass}>
+              <Building2 size={16} strokeWidth={1.75} /> Firmy
+            </NavLink>
+          </nav>
 
           <div className="flex items-center gap-3">
             {user.avatar_url ? (
@@ -77,16 +100,25 @@ export function AppShell() {
         />
       ) : null}
 
-      <main className="mx-auto max-w-[1440px] px-4 py-12 md:px-8">
-        <section className="mx-auto max-w-2xl rounded-lg border border-border bg-surface p-6">
-          <h1 className="text-2xl font-semibold">Vítejte zpět, {user.name}</h1>
-          <p className="mt-2 text-sm text-text-secondary">
-            Aplikace se teprve staví. V dalších krocích přibude přehled obchodů, firem a kontaktů.
-            Sledujte <code className="font-mono text-text-primary">WORK_LOG.md</code> pro aktuální
-            postup.
-          </p>
-        </section>
+      <main className="mx-auto max-w-[1440px]">
+        <Outlet />
       </main>
     </div>
+  );
+}
+
+export function AppHome() {
+  const { data: user } = useCurrentUser();
+  if (!user) return null;
+  return (
+    <section className="mx-auto max-w-2xl px-4 py-12 md:px-8">
+      <div className="rounded-lg border border-border bg-surface p-6">
+        <h1 className="text-2xl font-semibold">Vítejte zpět, {user.name}</h1>
+        <p className="mt-2 text-sm text-text-secondary">
+          Aplikace se teprve staví. V dalších krocích přibudou obchody, kontakty a Kanban pipeline.
+          Pro teď si můžete prohlédnout přehled firem.
+        </p>
+      </div>
+    </section>
   );
 }
