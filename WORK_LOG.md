@@ -577,4 +577,30 @@ Phase 2 done. Commits on master for Phase 2: 1709008, a5a8e08, dd8f5a4,
   IČO format validation (non-digit + too-short), non-CZ country rejection,
   partial payload tolerance, registry resolver for CZ + unknown country.
 - Backend suite now 119 passing; ruff / format / mypy strict clean.
+- Commit: b810912.
+
+### Task 3.2 — /companies/lookup-registry endpoint ✅ PASS
+- `app/services/lookup_cache.py`: async-safe `TtlCache[T]` (PEP-695 generic)
+  with a 24h default TTL and a sliding-window `RateLimiter` keyed by user
+  id (default 20 calls / minute). Both behind `asyncio.Lock` so concurrent
+  FastAPI handlers don't race.
+- `app/schemas/registry.py`: `RegistryLookupResult` mirroring
+  `CompanyRegistryData` 1:1 so the generated OpenAPI is clean.
+- `app/api/v1/companies.py`:
+  - Module-level `TtlCache` + `RateLimiter` instances, each behind
+    `get_registry_cache` / `get_registry_rate_limiter` deps so tests can
+    override.
+  - `GET /companies/lookup-registry?country=&number=` — auth'd; 429 on
+    limiter miss; 400 on unknown country / malformed registration number;
+    404 on not-found; 502 on upstream failure; 200 with typed result on
+    success. Cache populated on hit; subsequent calls avoid the upstream.
+  - Route declared **before** `/{company_id}` so the `lookup-registry`
+    literal wins the match.
+- Tests (`tests/api/v1/test_companies.py`, +7 → 24): happy + cache-hit
+  verified by call counter, 404, 502, 400 on bad IČO, 400 on unknown
+  country, 429 after tight limiter exhaustion, 401 without a token.
+- Backend suite 126 passing; ruff / format / mypy strict clean.
+- Frontend `api.generated.ts` regenerated — now carries the
+  `lookup-registry` endpoint and `RegistryLookupResult`; `pnpm typecheck`
+  + `pnpm test` still green.
 - Commit: pending.

@@ -338,3 +338,258 @@ async def test_delete_company_rejects_missing_token(
     await db_session.commit()
     response = await client.delete(f"/api/v1/companies/{company.id}")
     assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# lookup_registry
+# ---------------------------------------------------------------------------
+
+
+class _FakeRegistry:
+    """Stand-in `BusinessRegistryRegistry` that records call counts."""
+
+    def __init__(self, result=None, *, fail: str | None = None) -> None:
+        self.result = result
+        self.fail = fail  # "error" | "value_error" | None
+        self.calls = 0
+
+    def resolve(self, country: str):
+        if country.upper() != "CZ":
+            raise ValueError(f"No registry service for country {country!r}")
+        return self
+
+    async def lookup(self, country: str, number: str):
+        self.calls += 1
+        from app.services.business_registry import BusinessRegistryError
+
+        if self.fail == "error":
+            raise BusinessRegistryError("upstream boom")
+        if self.fail == "value_error":
+            raise ValueError("IČO must be exactly 8 digits")
+        return self.result
+
+
+async def test_lookup_registry_happy_and_caches(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    from app.api.v1.companies import (
+        get_registry_cache,
+        get_registry_rate_limiter,
+    )
+    from app.main import app
+    from app.schemas.registry import RegistryLookupResult
+    from app.services.business_registry import (
+        CompanyRegistryData,
+        get_business_registry,
+    )
+    from app.services.lookup_cache import RateLimiter, TtlCache
+
+    org = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+
+    fake = _FakeRegistry(
+        result=CompanyRegistryData(
+            name="Alza.cz a.s.",
+            ico="27082440",
+            dic="CZ27082440",
+            address_city="Praha",
+        )
+    )
+    test_cache: TtlCache[RegistryLookupResult] = TtlCache()
+    test_limiter = RateLimiter()
+
+    app.dependency_overrides[get_business_registry] = lambda: fake
+    app.dependency_overrides[get_registry_cache] = lambda: test_cache
+    app.dependency_overrides[get_registry_rate_limiter] = lambda: test_limiter
+    try:
+        first = await client.get(
+            "/api/v1/companies/lookup-registry?country=CZ&number=27082440",
+            headers=_auth(user),
+        )
+        second = await client.get(
+            "/api/v1/companies/lookup-registry?country=CZ&number=27082440",
+            headers=_auth(user),
+        )
+    finally:
+        app.dependency_overrides.pop(get_business_registry, None)
+        app.dependency_overrides.pop(get_registry_cache, None)
+        app.dependency_overrides.pop(get_registry_rate_limiter, None)
+
+    assert first.status_code == 200
+    assert first.json()["name"] == "Alza.cz a.s."
+    assert first.json()["ico"] == "27082440"
+    assert second.status_code == 200
+    # Cache hit on second call — service only touched once.
+    assert fake.calls == 1
+
+
+async def test_lookup_registry_not_found_returns_404(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    from app.api.v1.companies import (
+        get_registry_cache,
+        get_registry_rate_limiter,
+    )
+    from app.main import app
+    from app.schemas.registry import RegistryLookupResult
+    from app.services.business_registry import get_business_registry
+    from app.services.lookup_cache import RateLimiter, TtlCache
+
+    org = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+
+    fake = _FakeRegistry(result=None)
+    app.dependency_overrides[get_business_registry] = lambda: fake
+    app.dependency_overrides[get_registry_cache] = lambda: TtlCache[RegistryLookupResult]()
+    app.dependency_overrides[get_registry_rate_limiter] = lambda: RateLimiter()
+    try:
+        response = await client.get(
+            "/api/v1/companies/lookup-registry?country=CZ&number=99999999",
+            headers=_auth(user),
+        )
+    finally:
+        app.dependency_overrides.pop(get_business_registry, None)
+        app.dependency_overrides.pop(get_registry_cache, None)
+        app.dependency_overrides.pop(get_registry_rate_limiter, None)
+    assert response.status_code == 404
+
+
+async def test_lookup_registry_upstream_error_returns_502(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    from app.api.v1.companies import (
+        get_registry_cache,
+        get_registry_rate_limiter,
+    )
+    from app.main import app
+    from app.schemas.registry import RegistryLookupResult
+    from app.services.business_registry import get_business_registry
+    from app.services.lookup_cache import RateLimiter, TtlCache
+
+    org = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+
+    fake = _FakeRegistry(fail="error")
+    app.dependency_overrides[get_business_registry] = lambda: fake
+    app.dependency_overrides[get_registry_cache] = lambda: TtlCache[RegistryLookupResult]()
+    app.dependency_overrides[get_registry_rate_limiter] = lambda: RateLimiter()
+    try:
+        response = await client.get(
+            "/api/v1/companies/lookup-registry?country=CZ&number=27082440",
+            headers=_auth(user),
+        )
+    finally:
+        app.dependency_overrides.pop(get_business_registry, None)
+        app.dependency_overrides.pop(get_registry_cache, None)
+        app.dependency_overrides.pop(get_registry_rate_limiter, None)
+    assert response.status_code == 502
+
+
+async def test_lookup_registry_bad_ico_returns_400(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    from app.api.v1.companies import (
+        get_registry_cache,
+        get_registry_rate_limiter,
+    )
+    from app.main import app
+    from app.schemas.registry import RegistryLookupResult
+    from app.services.business_registry import get_business_registry
+    from app.services.lookup_cache import RateLimiter, TtlCache
+
+    org = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+
+    fake = _FakeRegistry(fail="value_error")
+    app.dependency_overrides[get_business_registry] = lambda: fake
+    app.dependency_overrides[get_registry_cache] = lambda: TtlCache[RegistryLookupResult]()
+    app.dependency_overrides[get_registry_rate_limiter] = lambda: RateLimiter()
+    try:
+        response = await client.get(
+            "/api/v1/companies/lookup-registry?country=CZ&number=ABC",
+            headers=_auth(user),
+        )
+    finally:
+        app.dependency_overrides.pop(get_business_registry, None)
+        app.dependency_overrides.pop(get_registry_cache, None)
+        app.dependency_overrides.pop(get_registry_rate_limiter, None)
+    assert response.status_code == 400
+
+
+async def test_lookup_registry_unknown_country_returns_400(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    from app.api.v1.companies import (
+        get_registry_cache,
+        get_registry_rate_limiter,
+    )
+    from app.main import app
+    from app.schemas.registry import RegistryLookupResult
+    from app.services.business_registry import get_business_registry
+    from app.services.lookup_cache import RateLimiter, TtlCache
+
+    org = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+
+    fake = _FakeRegistry(result=None)
+    app.dependency_overrides[get_business_registry] = lambda: fake
+    app.dependency_overrides[get_registry_cache] = lambda: TtlCache[RegistryLookupResult]()
+    app.dependency_overrides[get_registry_rate_limiter] = lambda: RateLimiter()
+    try:
+        response = await client.get(
+            "/api/v1/companies/lookup-registry?country=SK&number=12345678",
+            headers=_auth(user),
+        )
+    finally:
+        app.dependency_overrides.pop(get_business_registry, None)
+        app.dependency_overrides.pop(get_registry_cache, None)
+        app.dependency_overrides.pop(get_registry_rate_limiter, None)
+    assert response.status_code == 400
+
+
+async def test_lookup_registry_rate_limit_returns_429(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    from app.api.v1.companies import (
+        get_registry_cache,
+        get_registry_rate_limiter,
+    )
+    from app.main import app
+    from app.schemas.registry import RegistryLookupResult
+    from app.services.business_registry import (
+        CompanyRegistryData,
+        get_business_registry,
+    )
+    from app.services.lookup_cache import RateLimiter, TtlCache
+
+    org = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+
+    fake = _FakeRegistry(result=CompanyRegistryData(name="Test", ico="27082440"))
+    # Tight limiter: one call allowed per test.
+    tight_limiter = RateLimiter(max_calls=1, window_seconds=60)
+    app.dependency_overrides[get_business_registry] = lambda: fake
+    # Fresh cache so the second call actually re-enters rate-limit path.
+    cache: TtlCache[RegistryLookupResult] = TtlCache()
+    app.dependency_overrides[get_registry_cache] = lambda: cache
+    app.dependency_overrides[get_registry_rate_limiter] = lambda: tight_limiter
+    try:
+        first = await client.get(
+            "/api/v1/companies/lookup-registry?country=CZ&number=27082440",
+            headers=_auth(user),
+        )
+        second = await client.get(
+            "/api/v1/companies/lookup-registry?country=CZ&number=12345678",
+            headers=_auth(user),
+        )
+    finally:
+        app.dependency_overrides.pop(get_business_registry, None)
+        app.dependency_overrides.pop(get_registry_cache, None)
+        app.dependency_overrides.pop(get_registry_rate_limiter, None)
+    assert first.status_code == 200
+    assert second.status_code == 429
+
+
+async def test_lookup_registry_rejects_missing_token(client: AsyncClient) -> None:
+    response = await client.get("/api/v1/companies/lookup-registry?country=CZ&number=27082440")
+    assert response.status_code == 401

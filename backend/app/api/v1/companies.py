@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,8 +15,28 @@ from app.db import get_db
 from app.db.models import Company, User, UserRole
 from app.schemas.company import CompanyCreate, CompanyOut, CompanyUpdate
 from app.schemas.pagination import Page, PaginationParams
+from app.schemas.registry import RegistryLookupResult
+from app.services.business_registry import (
+    BusinessRegistryError,
+    BusinessRegistryRegistry,
+    get_business_registry,
+)
+from app.services.lookup_cache import RateLimiter, TtlCache
 
 router = APIRouter(prefix="/companies", tags=["companies"])
+
+# Module-level process-local cache + rate limiter. Swap for Redis once we
+# scale past a single API process.
+_registry_cache: TtlCache[RegistryLookupResult] = TtlCache()
+_registry_rate_limiter = RateLimiter()
+
+
+def get_registry_cache() -> TtlCache[RegistryLookupResult]:
+    return _registry_cache
+
+
+def get_registry_rate_limiter() -> RateLimiter:
+    return _registry_rate_limiter
 
 
 async def _get_scoped(session: AsyncSession, user: User, company_id: uuid.UUID) -> Company:
@@ -50,6 +70,59 @@ async def list_companies(
         limit=pagination.limit,
         offset=pagination.offset,
     )
+
+
+@router.get("/lookup-registry", response_model=RegistryLookupResult)
+async def lookup_registry(
+    country: str = Query(min_length=2, max_length=2, description="ISO-ish country code"),
+    number: str = Query(min_length=1, max_length=32, description="Registration number (e.g. IČO)"),
+    user: User = Depends(get_current_user),
+    registry: BusinessRegistryRegistry = Depends(get_business_registry),
+    cache: TtlCache[RegistryLookupResult] = Depends(get_registry_cache),
+    rate_limiter: RateLimiter = Depends(get_registry_rate_limiter),
+) -> RegistryLookupResult:
+    if not await rate_limiter.try_acquire(user.id):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many registry lookups — slow down a moment.",
+        )
+
+    key = (country.upper(), number)
+    cached = await cache.get(key)
+    if cached is not None:
+        return cached
+
+    try:
+        service = registry.resolve(country)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    try:
+        registry_data = await service.lookup(country, number)
+    except ValueError as exc:
+        # Malformed registration number (e.g. wrong length / non-digit ICO).
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except BusinessRegistryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Business registry is unavailable, please try again in a minute.",
+        ) from exc
+
+    if registry_data is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No company found in the {country.upper()} registry for {number}.",
+        )
+
+    result = RegistryLookupResult.model_validate(registry_data)
+    await cache.set(key, result)
+    return result
 
 
 @router.get("/{company_id}", response_model=CompanyOut)

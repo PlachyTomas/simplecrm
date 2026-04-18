@@ -142,6 +142,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/lookup-registry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lookup Registry */
+        get: operations["lookup_registry_api_v1_companies_lookup_registry_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}": {
         parameters: {
             query?: never;
@@ -657,6 +674,31 @@ export interface components {
             offset: number;
         };
         /**
+         * RegistryLookupResult
+         * @description Response body for /companies/lookup-registry.
+         *
+         *     Mirrors `app.services.business_registry.CompanyRegistryData` 1:1 so the
+         *     generated OpenAPI schema is clean.
+         */
+        RegistryLookupResult: {
+            /** Name */
+            name: string;
+            /** Ico */
+            ico: string;
+            /** Dic */
+            dic?: string | null;
+            /** Address Street */
+            address_street?: string | null;
+            /** Address City */
+            address_city?: string | null;
+            /** Address Zip */
+            address_zip?: string | null;
+            /** Legal Form */
+            legal_form?: string | null;
+            /** Registered On */
+            registered_on?: string | null;
+        };
+        /**
          * UserRole
          * @enum {string}
          */
@@ -920,6 +962,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lookup_registry_api_v1_companies_lookup_registry_get: {
+        parameters: {
+            query: {
+                /** @description ISO-ish country code */
+                country: string;
+                /** @description Registration number (e.g. IČO) */
+                number: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistryLookupResult"];
                 };
             };
             /** @description Validation Error */
