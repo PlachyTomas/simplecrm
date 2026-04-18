@@ -538,7 +538,7 @@ Picked up cleanly from Session 1's end state: `master` at d68cfd9, no
   the nested route).
 - `pnpm lint / typecheck / test (11/11) / format:check / build` all green;
   backend suite unchanged.
-- Commit: pending.
+- Commit: a9a016e.
 
 ### Phase 2 — Exit criteria check
 "An admin can seed data via API, frontend renders a table of companies and a
