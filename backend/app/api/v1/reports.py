@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+import csv
+import io
+from collections import defaultdict
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +18,15 @@ from app.core.scoping import scope_by_owner
 from app.db import get_db
 from app.db.models import Deal, Organization, Stage, User
 from app.db.models.enums import StageType
-from app.schemas.reports import KpiSummary
+from app.schemas.reports import (
+    KpiSummary,
+    Leaderboard,
+    LeaderboardRow,
+    LossReasonRow,
+    LossReasons,
+    Velocity,
+    VelocityByStage,
+)
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -22,6 +34,18 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 def _start_of_month_utc() -> datetime:
     now = datetime.now(tz=UTC)
     return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
+def _date_window(
+    from_date: date | None, to_date: date | None
+) -> tuple[date, date, datetime, datetime]:
+    """Normalize a date range; defaults to the trailing 90 days."""
+    today = datetime.now(tz=UTC).date()
+    resolved_to = to_date or today
+    resolved_from = from_date or date.fromordinal(resolved_to.toordinal() - 89)
+    start = datetime.combine(resolved_from, time.min, tzinfo=UTC)
+    end = datetime.combine(resolved_to, time.max, tzinfo=UTC)
+    return resolved_from, resolved_to, start, end
 
 
 @router.get("/kpi-summary", response_model=KpiSummary)
@@ -33,13 +57,10 @@ async def kpi_summary(
     if org is None:
         raise RuntimeError("current user points at a missing organization")
 
-    # Base query filtered by the caller's visibility scope.
     stmt = (
         select(Deal, Stage)
         .join(Stage, Stage.id == Deal.stage_id)
-        .where(
-            Deal.organization_id == user.organization_id,
-        )
+        .where(Deal.organization_id == user.organization_id)
     )
     scoped = await scope_by_owner(stmt, session=session, user=user, owner_col=Deal.owner_user_id)
     rows = (await session.execute(scoped)).all()
@@ -55,9 +76,6 @@ async def kpi_summary(
             open_count += 1
             if deal.currency == org.currency:
                 open_value += deal.value
-        # Won this month: stage type is won AND closed in the current month.
-        # We also accept deals that closed without a won stage-move (edge
-        # case) if closed_at is set and there's no lost_reason.
         if (
             deal.closed_at is not None
             and deal.closed_at >= month_start
@@ -73,4 +91,212 @@ async def kpi_summary(
         open_pipeline_value=open_value,
         won_this_month_count=won_count,
         won_this_month_value=won_value,
+    )
+
+
+@router.get("/leaderboard", response_model=Leaderboard)
+async def leaderboard(
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Leaderboard:
+    org = await session.get(Organization, user.organization_id)
+    if org is None:
+        raise RuntimeError("current user points at a missing organization")
+    resolved_from, resolved_to, start, end = _date_window(from_date, to_date)
+
+    stmt = (
+        select(Deal, Stage, User)
+        .join(Stage, Stage.id == Deal.stage_id)
+        .join(User, User.id == Deal.owner_user_id, isouter=True)
+        .where(
+            Deal.organization_id == user.organization_id,
+            Deal.closed_at.is_not(None),
+            Deal.closed_at >= start,
+            Deal.closed_at <= end,
+            Stage.stage_type == StageType.won,
+        )
+    )
+    scoped = await scope_by_owner(stmt, session=session, user=user, owner_col=Deal.owner_user_id)
+    totals: dict[str, dict] = defaultdict(
+        lambda: {"count": 0, "value": Decimal("0"), "name": "—"}
+    )
+    for deal, _stage, owner in (await session.execute(scoped)).all():
+        if owner is None:
+            continue
+        bucket = totals[str(owner.id)]
+        bucket["name"] = owner.name
+        bucket["count"] += 1
+        if deal.currency == org.currency:
+            bucket["value"] += deal.value
+
+    rows = [
+        LeaderboardRow(
+            user_id=user_id,
+            name=bucket["name"],
+            won_count=bucket["count"],
+            won_value=bucket["value"],
+        )
+        for user_id, bucket in totals.items()
+    ]
+    rows.sort(key=lambda r: (r.won_value, r.won_count), reverse=True)
+    return Leaderboard(
+        currency=org.currency,
+        from_date=resolved_from,
+        to_date=resolved_to,
+        rows=rows,
+    )
+
+
+@router.get("/loss-reasons", response_model=LossReasons)
+async def loss_reasons(
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> LossReasons:
+    org = await session.get(Organization, user.organization_id)
+    if org is None:
+        raise RuntimeError("current user points at a missing organization")
+    resolved_from, resolved_to, start, end = _date_window(from_date, to_date)
+
+    stmt = select(Deal).where(
+        Deal.organization_id == user.organization_id,
+        Deal.closed_at.is_not(None),
+        Deal.closed_at >= start,
+        Deal.closed_at <= end,
+        Deal.lost_reason.is_not(None),
+    )
+    scoped = await scope_by_owner(stmt, session=session, user=user, owner_col=Deal.owner_user_id)
+    buckets: dict[str, dict] = defaultdict(lambda: {"count": 0, "value": Decimal("0")})
+    for deal in (await session.execute(scoped)).scalars():
+        reason = deal.lost_reason or "Neuvedeno"
+        buckets[reason]["count"] += 1
+        if deal.currency == org.currency:
+            buckets[reason]["value"] += deal.value
+    rows = [
+        LossReasonRow(lost_reason=reason, count=b["count"], total_value=b["value"])
+        for reason, b in buckets.items()
+    ]
+    rows.sort(key=lambda r: (r.count, r.total_value), reverse=True)
+    return LossReasons(
+        currency=org.currency,
+        from_date=resolved_from,
+        to_date=resolved_to,
+        rows=rows,
+    )
+
+
+@router.get("/pipeline-velocity", response_model=Velocity)
+async def pipeline_velocity(
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Velocity:
+    """Average days from `created_at` to `closed_at` for deals that finished
+    inside the window, grouped by the final stage. MVP proxy for "time in
+    stage" — the activity-log-driven accurate version is a later task.
+    """
+    resolved_from, resolved_to, start, end = _date_window(from_date, to_date)
+
+    stmt = (
+        select(Deal, Stage)
+        .join(Stage, Stage.id == Deal.stage_id)
+        .where(
+            Deal.organization_id == user.organization_id,
+            Deal.closed_at.is_not(None),
+            Deal.closed_at >= start,
+            Deal.closed_at <= end,
+        )
+    )
+    scoped = await scope_by_owner(stmt, session=session, user=user, owner_col=Deal.owner_user_id)
+    per_stage: dict[str, dict] = defaultdict(
+        lambda: {"name": "", "sum_days": 0.0, "count": 0, "stage_id": None}
+    )
+    for deal, stage in (await session.execute(scoped)).all():
+        assert deal.closed_at is not None
+        days = (deal.closed_at - deal.created_at).total_seconds() / 86400.0
+        bucket = per_stage[str(stage.id)]
+        bucket["name"] = stage.name
+        bucket["stage_id"] = stage.id
+        bucket["sum_days"] += days
+        bucket["count"] += 1
+
+    stages = [
+        VelocityByStage(
+            stage_id=b["stage_id"],
+            stage_name=b["name"],
+            avg_days_in_stage=(b["sum_days"] / b["count"]) if b["count"] else None,
+            deal_count=b["count"],
+        )
+        for b in per_stage.values()
+    ]
+    stages.sort(key=lambda v: v.stage_name)
+    return Velocity(from_date=resolved_from, to_date=resolved_to, stages=stages)
+
+
+@router.get("/export-csv")
+async def export_deals_csv(
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """Deals CSV export matching the caller's visibility scope."""
+    resolved_from, resolved_to, start, end = _date_window(from_date, to_date)
+
+    stmt = (
+        select(Deal, Stage)
+        .join(Stage, Stage.id == Deal.stage_id)
+        .where(
+            Deal.organization_id == user.organization_id,
+            Deal.created_at <= end,
+            (Deal.closed_at.is_(None)) | (Deal.closed_at >= start),
+        )
+    )
+    scoped = await scope_by_owner(stmt, session=session, user=user, owner_col=Deal.owner_user_id)
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(
+        [
+            "id",
+            "name",
+            "stage",
+            "stage_type",
+            "value",
+            "currency",
+            "owner_user_id",
+            "company_id",
+            "expected_close_date",
+            "closed_at",
+            "lost_reason",
+            "created_at",
+        ]
+    )
+    for deal, stage in (await session.execute(scoped)).all():
+        writer.writerow(
+            [
+                str(deal.id),
+                deal.name,
+                stage.name,
+                stage.stage_type.value,
+                str(deal.value),
+                deal.currency,
+                str(deal.owner_user_id) if deal.owner_user_id else "",
+                str(deal.company_id),
+                deal.expected_close_date.isoformat() if deal.expected_close_date else "",
+                deal.closed_at.isoformat() if deal.closed_at else "",
+                deal.lost_reason or "",
+                deal.created_at.isoformat(),
+            ]
+        )
+    buffer.seek(0)
+    filename = f"simplecrm-deals-{resolved_from.isoformat()}_{resolved_to.isoformat()}.csv"
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

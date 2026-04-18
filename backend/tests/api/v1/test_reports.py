@@ -162,3 +162,196 @@ async def test_kpi_summary_skips_cross_currency_in_totals(
 async def test_kpi_summary_rejects_missing_token(client: AsyncClient) -> None:
     response = await client.get("/api/v1/reports/kpi-summary")
     assert response.status_code == 401
+
+
+async def test_leaderboard_aggregates_won_deals_per_owner(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, _open_stage, won_stage, company = await _setup(db_session, owned_cleanup)
+    now = datetime.now(tz=UTC)
+
+    other_email = f"o-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(other_email)
+    other = User(
+        email=other_email, name="Other", role=UserRole.admin, organization_id=org.id
+    )
+    db_session.add(other)
+    await db_session.commit()
+    await db_session.refresh(other)
+
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                owner_user_id=user.id,
+                name="U won A",
+                value=Decimal("500"),
+                currency="CZK",
+                closed_at=now,
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                owner_user_id=user.id,
+                name="U won B",
+                value=Decimal("750"),
+                currency="CZK",
+                closed_at=now,
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                owner_user_id=other.id,
+                name="Other won",
+                value=Decimal("300"),
+                currency="CZK",
+                closed_at=now,
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    response = await client.get("/api/v1/reports/leaderboard", headers=_auth(user))
+    assert response.status_code == 200
+    body = response.json()
+    assert body["currency"] == "CZK"
+    rows = body["rows"]
+    assert len(rows) == 2
+    assert rows[0]["won_count"] == 2
+    assert Decimal(rows[0]["won_value"]) == Decimal("1250")
+    assert rows[1]["won_count"] == 1
+    assert Decimal(rows[1]["won_value"]) == Decimal("300")
+
+
+async def test_loss_reasons_groups_by_reason(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, open_stage, _won_stage, company = await _setup(db_session, owned_cleanup)
+    now = datetime.now(tz=UTC)
+
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                owner_user_id=user.id,
+                name="Lost 1",
+                value=Decimal("100"),
+                currency="CZK",
+                closed_at=now,
+                lost_reason="Cena",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                owner_user_id=user.id,
+                name="Lost 2",
+                value=Decimal("200"),
+                currency="CZK",
+                closed_at=now,
+                lost_reason="Cena",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                owner_user_id=user.id,
+                name="Lost 3",
+                value=Decimal("50"),
+                currency="CZK",
+                closed_at=now,
+                lost_reason="Funkce",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    response = await client.get("/api/v1/reports/loss-reasons", headers=_auth(user))
+    assert response.status_code == 200
+    body = response.json()
+    rows = body["rows"]
+    assert len(rows) == 2
+    top = rows[0]
+    assert top["lost_reason"] == "Cena"
+    assert top["count"] == 2
+    assert Decimal(top["total_value"]) == Decimal("300")
+
+
+async def test_velocity_averages_days_to_close(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, _open_stage, won_stage, company = await _setup(db_session, owned_cleanup)
+    now = datetime.now(tz=UTC)
+
+    deals = [
+        Deal(
+            organization_id=org.id,
+            company_id=company.id,
+            stage_id=won_stage.id,
+            owner_user_id=user.id,
+            name="Fast",
+            value=Decimal("100"),
+            currency="CZK",
+            closed_at=now,
+        ),
+        Deal(
+            organization_id=org.id,
+            company_id=company.id,
+            stage_id=won_stage.id,
+            owner_user_id=user.id,
+            name="Slow",
+            value=Decimal("100"),
+            currency="CZK",
+            closed_at=now,
+        ),
+    ]
+    db_session.add_all(deals)
+    await db_session.commit()
+    for d in deals:
+        await db_session.refresh(d)
+    deals[0].created_at = now - __import__("datetime").timedelta(days=4)
+    deals[1].created_at = now - __import__("datetime").timedelta(days=10)
+    await db_session.commit()
+
+    response = await client.get(
+        "/api/v1/reports/pipeline-velocity", headers=_auth(user)
+    )
+    assert response.status_code == 200
+    body = response.json()
+    stages = body["stages"]
+    won_row = next(s for s in stages if s["stage_id"] == str(won_stage.id))
+    assert won_row["deal_count"] == 2
+    assert won_row["avg_days_in_stage"] is not None
+    assert 6.5 <= won_row["avg_days_in_stage"] <= 7.5
+
+
+async def test_export_csv_streams_deals(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, open_stage, _won_stage, company = await _setup(db_session, owned_cleanup)
+    db_session.add(
+        Deal(
+            organization_id=org.id,
+            company_id=company.id,
+            stage_id=open_stage.id,
+            owner_user_id=user.id,
+            name="ExportRow",
+            value=Decimal("42"),
+            currency="CZK",
+        )
+    )
+    await db_session.commit()
+
+    response = await client.get("/api/v1/reports/export-csv", headers=_auth(user))
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert "attachment" in response.headers["content-disposition"]
+    text = response.text
+    assert "id,name,stage,stage_type,value,currency" in text
+    assert "ExportRow" in text

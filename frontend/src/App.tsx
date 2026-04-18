@@ -11,6 +11,7 @@ import { DashboardPage } from "@/app/dashboard/DashboardPage";
 import { DealDetailPage } from "@/app/deals/DealDetailPage";
 import { DealsListPage } from "@/app/deals/DealsListPage";
 import { PipelinePage } from "@/app/pipeline/PipelinePage";
+import { ReportsPage } from "@/app/reports/ReportsPage";
 import { AuthProvider } from "@/auth/AuthContext";
 import { LoginPage } from "@/auth/LoginPage";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
@@ -38,12 +39,7 @@ export function AppRoutes() {
         <Route path="contacts/:contactId" element={<ContactsPage />} />
         <Route path="deals" element={<DealsListPage />} />
         <Route path="deals/:dealId" element={<DealDetailPage />} />
-        <Route
-          path="reports"
-          element={
-            <ComingSoonPage title="Reporty" description="Výkazy a leaderboard přibudou v Fázi 8." />
-          }
-        />
+        <Route path="reports" element={<ReportsPage />} />
         <Route
           path="settings"
           element={

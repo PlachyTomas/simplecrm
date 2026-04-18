@@ -402,6 +402,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/leaderboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Leaderboard */
+        get: operations["leaderboard_api_v1_reports_leaderboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/loss-reasons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Loss Reasons */
+        get: operations["loss_reasons_api_v1_reports_loss_reasons_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/pipeline-velocity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pipeline Velocity
+         * @description Average days from `created_at` to `closed_at` for deals that finished
+         *     inside the window, grouped by the final stage. MVP proxy for "time in
+         *     stage" — the activity-log-driven accurate version is a later task.
+         */
+        get: operations["pipeline_velocity_api_v1_reports_pipeline_velocity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/export-csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Deals Csv
+         * @description Deals CSV export matching the caller's visibility scope.
+         */
+        get: operations["export_deals_csv_api_v1_reports_export_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/teams": {
         parameters: {
             query?: never;
@@ -815,11 +891,6 @@ export interface components {
         /**
          * KpiSummary
          * @description Reports snapshot for the caller (and their visibility scope).
-         *
-         *     `won_this_month_*` reflect deals whose `closed_at` landed inside the
-         *     current UTC month (start of month → now). Values are in the org's
-         *     configured currency; deals in other currencies contribute to counts
-         *     but not to currency-denominated totals.
          */
         KpiSummary: {
             /** Currency */
@@ -832,6 +903,63 @@ export interface components {
             won_this_month_count: number;
             /** Won This Month Value */
             won_this_month_value: string;
+        };
+        /** Leaderboard */
+        Leaderboard: {
+            /** Currency */
+            currency: string;
+            /**
+             * From Date
+             * Format: date
+             */
+            from_date: string;
+            /**
+             * To Date
+             * Format: date
+             */
+            to_date: string;
+            /** Rows */
+            rows: components["schemas"]["LeaderboardRow"][];
+        };
+        /** LeaderboardRow */
+        LeaderboardRow: {
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Name */
+            name: string;
+            /** Won Count */
+            won_count: number;
+            /** Won Value */
+            won_value: string;
+        };
+        /** LossReasonRow */
+        LossReasonRow: {
+            /** Lost Reason */
+            lost_reason: string;
+            /** Count */
+            count: number;
+            /** Total Value */
+            total_value: string;
+        };
+        /** LossReasons */
+        LossReasons: {
+            /** Currency */
+            currency: string;
+            /**
+             * From Date
+             * Format: date
+             */
+            from_date: string;
+            /**
+             * To Date
+             * Format: date
+             */
+            to_date: string;
+            /** Rows */
+            rows: components["schemas"]["LossReasonRow"][];
         };
         /** OrganizationOut */
         OrganizationOut: {
@@ -1098,6 +1226,35 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** Velocity */
+        Velocity: {
+            /**
+             * From Date
+             * Format: date
+             */
+            from_date: string;
+            /**
+             * To Date
+             * Format: date
+             */
+            to_date: string;
+            /** Stages */
+            stages: components["schemas"]["VelocityByStage"][];
+        };
+        /** VelocityByStage */
+        VelocityByStage: {
+            /**
+             * Stage Id
+             * Format: uuid
+             */
+            stage_id: string;
+            /** Stage Name */
+            stage_name: string;
+            /** Avg Days In Stage */
+            avg_days_in_stage: number | null;
+            /** Deal Count */
+            deal_count: number;
         };
     };
     responses: never;
@@ -2032,6 +2189,134 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KpiSummary"];
+                };
+            };
+        };
+    };
+    leaderboard_api_v1_reports_leaderboard_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Leaderboard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    loss_reasons_api_v1_reports_loss_reasons_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LossReasons"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pipeline_velocity_api_v1_reports_pipeline_velocity_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Velocity"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_deals_csv_api_v1_reports_export_csv_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
