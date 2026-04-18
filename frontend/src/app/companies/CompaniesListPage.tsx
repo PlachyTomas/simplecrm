@@ -20,6 +20,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { AddCompanyModal } from "@/app/companies/AddCompanyModal";
+import { OwnershipBadge } from "@/app/companies/OwnershipBadge";
 import { type CompanyOut, useCompanies } from "@/app/companies/useCompanies";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
@@ -64,7 +65,19 @@ export function CompaniesListPage() {
     return [
       helper.accessor("name", {
         header: "Název",
-        cell: (info) => <span className="font-medium text-text-primary">{info.getValue()}</span>,
+        cell: (info) => {
+          const row = info.row.original;
+          return (
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-text-primary">{info.getValue()}</span>
+              <OwnershipBadge
+                ownershipExpiresAt={row.ownership_expires_at}
+                ownerUserId={row.owner_user_id}
+                compact
+              />
+            </div>
+          );
+        },
       }),
       helper.accessor("ico", {
         header: "IČO",

@@ -2,6 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { OwnershipBadge } from "@/app/companies/OwnershipBadge";
 import { useCompany } from "@/app/companies/useCompany";
 import type { CompanyOut } from "@/app/companies/useCompanies";
 import { useCurrentUser } from "@/auth/useCurrentUser";
@@ -127,7 +128,13 @@ export function CompanyDetailPage() {
       </Link>
 
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold">{company.name}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-semibold">{company.name}</h1>
+          <OwnershipBadge
+            ownershipExpiresAt={company.ownership_expires_at}
+            ownerUserId={company.owner_user_id}
+          />
+        </div>
         {company.ico ? (
           <p className="mt-1 font-mono text-sm text-text-tertiary">IČO {company.ico}</p>
         ) : null}
