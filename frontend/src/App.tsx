@@ -7,6 +7,8 @@ import { MorePage } from "@/app/MorePage";
 import { CompaniesListPage } from "@/app/companies/CompaniesListPage";
 import { CompanyDetailPage } from "@/app/companies/CompanyDetailPage";
 import { ContactsPage } from "@/app/contacts/ContactsPage";
+import { DealDetailPage } from "@/app/deals/DealDetailPage";
+import { DealsListPage } from "@/app/deals/DealsListPage";
 import { AuthProvider } from "@/auth/AuthContext";
 import { LoginPage } from "@/auth/LoginPage";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
@@ -40,15 +42,8 @@ export function AppRoutes() {
         />
         <Route path="contacts" element={<ContactsPage />} />
         <Route path="contacts/:contactId" element={<ContactsPage />} />
-        <Route
-          path="deals"
-          element={
-            <ComingSoonPage
-              title="Obchody"
-              description="Přehled obchodů bude součástí pipeline v Fázi 5."
-            />
-          }
-        />
+        <Route path="deals" element={<DealsListPage />} />
+        <Route path="deals/:dealId" element={<DealDetailPage />} />
         <Route
           path="reports"
           element={
