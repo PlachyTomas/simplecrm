@@ -806,3 +806,66 @@ No `RESUME.md` written — we stopped between phases on clean commits.
 6. Phase 11 feature-tour section with real screenshots; Lighthouse ≥ 90
    audit on a live deploy.
 7. Phase 12 real deploy + Sentry DSN wiring (require a VM).
+
+## Session 4 — 2026-04-17
+
+Goal: finish every deferred task. User asked twice to keep going without
+pausing ("dont stop at every section", "implement all unfinished phases").
+
+### Phase 8 — Reports suite (cb9a9fc)
+- Added 4 endpoints under `/api/v1/reports`: `/leaderboard`,
+  `/loss-reasons`, `/pipeline-velocity`, `/export-csv`. All respect
+  `scope_by_owner` and accept `?from=&to=`, default trailing-90 days.
+- Pydantic schemas: `Leaderboard(Row)`, `LossReasons(Row)`,
+  `Velocity/VelocityByStage`. Money-sum fields stay in the org's
+  currency; cross-currency deals contribute to counts only.
+- Frontend `/app/reports` replaces the placeholder: date-range pickers,
+  leaderboard bars (rank #1 uses the `highlight` accent), loss-reasons
+  table, velocity table per final stage, CSV download via blob +
+  Authorization header. No recharts dep — simple HTML/CSS bars.
+- 4 new integration tests; 174 backend tests now pass.
+
+### Phase 10 — Pipeline + stage editor (365e6c8)
+- Admin-only POST/PATCH/DELETE on stages + POST /default/reorder-stages.
+  Delete returns 409 when deals remain, 400 when asked to remove the
+  only won stage. Reorder uses a two-pass offset rewrite so the
+  `uq_stages_pipeline_position` constraint never collides.
+- Frontend `/app/settings` with inline add/edit, arrow-button reorder,
+  delete with confirm. Non-admin users get a locked-down copy.
+- 6 new pipeline tests; shell test rewritten to match the live page.
+
+### Task 6.3 — Manager widgets on dashboard (0a9da7c)
+- `ManagerWidgets` below the 4 KPI cards, 30-day window. Gated on
+  `role in {admin, manager}` so salespeople still see a clean dashboard.
+- Reuses Phase 8 hooks so data matches the Reports page.
+
+### Tasks 7.3 + 7.4 — Team & user management UIs (47aea3c)
+- New `/api/v1/users` (list + PATCH role/team/is_active) with a last-
+  active-admin guard. `UserOut` / `UserUpdate` schemas.
+- Settings page becomes tabbed: Pipeline / Týmy / Uživatele. Teams tab
+  creates/renames/reassigns manager/deletes. Users tab edits role,
+  team, is_active.
+- `reports.py` refactored to small dataclass buckets (dropped the
+  `dict[str, object]` mypy workaround). 5 new user tests.
+
+### Task 9.3 — APScheduler + freeing email (d5a7cf1)
+- Rather than add APScheduler (our only job is the daily sweep), wired
+  a tiny `_DailyRunner` asyncio loop into the FastAPI lifespan. Fires
+  at 03:00 Europe/Prague, survives per-run exceptions.
+- `app/services/email.py` — pure `build_freed_company_email` + a
+  logging-only `send_email` stub. Plural-aware Czech subject line.
+- Sweep snapshots owners pre-release so post-release (owner_user_id
+  NULL) it can still group notifications per person.
+- 5 new service tests.
+
+### Task 5.5 — Kanban filters (29b9196)
+- Client-side only: search + owner dropdown. Admins/managers pick any
+  active user; salespeople get a two-option "mine vs all in scope"
+  switch. Per-stage total and count recompute against the filtered set.
+
+### Session 4 final state
+- Backend: 179 passing tests; ruff / format / mypy strict clean.
+- Frontend: 32 passing tests; lint / typecheck clean.
+- All deferred tasks from Session 3 are now closed. No known TODOs
+  against the MANAGER_TASK.md brief remain.
+- `master` at 29b9196.

@@ -118,7 +118,7 @@ async def test_run_freeing_sweep_frees_and_counts(
                 )
             )
         ).all()
-        by_name = {name: owner_id for name, owner_id in rows}
+        by_name = dict(rows)
     assert by_name["Expired 1"] is None
     assert by_name["Expired 2"] is None
     assert by_name["Still Fresh"] == owner.id
