@@ -491,4 +491,24 @@ Picked up cleanly from Session 1's end state: `master` at d68cfd9, no
   update happy+422+cross-org-denied, delete admin-ok+salesperson-403+401.
 - Backend suite now 93 passing; ruff / format / mypy strict clean.
 - Frontend types regenerated; `pnpm typecheck` + `pnpm test` stay green.
+- Commit: 75a4823.
+
+### Task 2.6c — Deals CRUD ✅ PASS
+- `app/schemas/deal.py`: `DealCreate` (name, company_id, stage_id required;
+  owner/contact/value/currency/probability/expected_close_date optional),
+  `DealUpdate` (all fields optional, lost_reason editable), `DealOut`.
+  Probability 0..100 and value ≥ 0 enforced at the schema layer.
+- `app/api/v1/deals.py`: 5 endpoints reusing `scope_by_owner` +
+  `can_write_row` from 2.6a. Cross-org references to company, stage, or
+  primary contact all 400 via dedicated `_assert_*_in_org` helpers. Currency
+  defaults to the caller's organization `currency` when the payload omits it.
+  Salesperson can't self-assign to another user. Delete admin-only.
+- Router mounted at `/api/v1/deals`.
+- `tests/api/v1/test_deals.py` (16 tests): list admin-sees-all + salesperson-
+  scoped + 401; get happy+cross-org+404; create happy (defaults currency)+422
+  +cross-org-company+salesperson-403; update happy+cross-org-stage+foreign-
+  owned-denied (404, visibility-first); delete admin-ok+salesperson-403+401.
+- Backend suite now 109 passing; ruff / format / mypy strict clean.
+- Frontend `api.generated.ts` regenerated. `pnpm typecheck` + `pnpm test`
+  stay green.
 - Commit: pending.
