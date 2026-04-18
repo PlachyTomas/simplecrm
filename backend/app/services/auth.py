@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Organization, User, UserRole
 from app.services.google_oauth import GoogleProfile
+from app.services.pipeline import create_default_pipeline
 
 
 def _default_org_name(email: str) -> str:
@@ -43,6 +44,7 @@ async def upsert_user_from_google_profile(session: AsyncSession, profile: Google
         organization = Organization(name=_default_org_name(profile.email))
         session.add(organization)
         await session.flush()
+        await create_default_pipeline(session, organization.id)
         user = User(
             email=profile.email,
             name=profile.name,

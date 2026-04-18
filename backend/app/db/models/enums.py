@@ -21,3 +21,9 @@ class OwnershipChangeReason(StrEnum):
     reassigned = "reassigned"
     freed_timeout = "freed_timeout"
     won_deal_refresh = "won_deal_refresh"
+
+
+class StageType(StrEnum):
+    open = "open"
+    won = "won"
+    lost = "lost"

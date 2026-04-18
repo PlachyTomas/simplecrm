@@ -370,4 +370,29 @@ Picked up cleanly from Session 1's end state: `master` at d68cfd9, no
   on contact.company_id. Previous 4 company/ownership tests still pass.
 - Backend suite now 43 passing; ruff / format / mypy strict clean. Frontend
   unchanged so `types:check` stays green (no endpoints added yet).
+- Commit: a5a8e08.
+
+### Task 2.3 — Pipeline + Stage + default seed ✅ PASS
+- `StageType` enum (`open` / `won` / `lost`) added to `enums.py`.
+- `app/db/models/pipeline.py`: `pipelines` table, UUID PK, CASCADE FK to
+  Organization, `is_default` bool, partial-unique index
+  `uq_pipelines_one_default_per_org` on `organization_id WHERE is_default`
+  so every org can have at most one default pipeline.
+- `app/db/models/stage.py`: `stages` table, CASCADE FK to pipeline, unique
+  `(pipeline_id, position)`, CHECK `default_probability 0..100`, enum
+  `stage_type`.
+- `app/services/pipeline.py`: `DEFAULT_STAGES` seed (5 open + 1 won, Czech
+  names, colors drawn from theme accents) and async
+  `create_default_pipeline(session, org_id)`.
+- `app/services/auth.py`: first-login `upsert_user_from_google_profile` now
+  calls `create_default_pipeline` right after inserting the Organization.
+- Migration `396feead22c3_phase2_pipelines_and_stages.py`: creates both
+  tables + the `stage_type` enum; downgrade tears them all down plus the
+  enum.
+- Tests (`tests/services/test_pipeline.py`, 4 passing): seeds six stages
+  with the right names/positions/probabilities/types, double-seed raises
+  IntegrityError, CHECK fires for probability=120, first-login integration
+  wires the pipeline into the auth flow.
+- Backend suite now 47 passing; ruff / format / mypy strict clean; frontend
+  `types:check` green (no API changes yet).
 - Commit: pending.
