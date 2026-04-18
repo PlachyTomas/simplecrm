@@ -747,11 +747,62 @@ End of Phase 6: backend 141 tests, frontend 30 tests, all gates green.
   actions, Kanban with drag-and-drop stage moves. Admin-only endpoints
   for team CRUD and company free/reassign are covered by tests.
 
-No `RESUME.md` written — we stopped between phases on a clean commit.
-Next session picks up from this log. Most valuable next targets by
-product impact:
-1. 9.5 list-page countdown badges + APScheduler cron registration
-   (ships the signature auto-freeing feature end-to-end).
-2. 7.3 + 7.4 team + user management UIs (the API is already done).
-3. 11.1 real landing page (currently a stub).
-4. Phase 12 deployment work (Coolify + Hetzner + backups).
+No `RESUME.md` written — we stopped between phases on clean commits.
+
+---
+
+## Session 3 continues — 9.5 + Phase 11 + Phase 12
+
+### Task 9.5 — Ownership expiry badges ✅
+- `OwnershipBadge` component: warning pill for <30d, danger pill for ≤7d;
+  pooled companies render nothing. Mounted in the companies list
+  (compact form next to the name) and on the detail page header.
+- Commit: 3c97207.
+
+### Phase 11 — Landing page ✅
+- `marketing/LandingPage.tsx` replaces the stub. Sticky nav + hero with
+  gradient-glow backdrop + mock Kanban screenshot + 3-card differentiators
+  + 3-step how-it-works + pricing (free trial + 99 Kč tier) + 6-item FAQ
+  accordion + footer. All Czech, vykání throughout.
+- SEO: updated title, description, OpenGraph, theme-color;
+  `public/robots.txt` + `public/sitemap.xml`.
+- 2 new tests (sections + CTA hrefs; FAQ accordion toggle).
+- Lighthouse audit deferred to post-deploy.
+- Commit: 0179cd5.
+
+### Phase 12 — Deployment artifacts ✅
+- `docker-compose.prod.yml`: Postgres + backend + frontend with Traefik
+  labels for Coolify's Let's Encrypt TLS; backend auto-migrates on boot.
+- `.env.example`: every required secret + URL annotated with generation
+  hints.
+- `scripts/backup_postgres.sh`: pg_dump → gzip → S3-compatible object
+  storage (Hetzner default), prunes past `BACKUP_RETENTION_DAYS`.
+- `docs/runbook.md`: first-time deploy, frontend on Cloudflare Pages,
+  backup + restore, secret rotation per type, Coolify rollback,
+  monitoring (Sentry + UptimeRobot), 9-step smoke-test checklist.
+- YAML + shell validated; real deploy still requires a VM + DNS.
+- Commit: f3fcf4f.
+
+### Session 3 final state
+- Backend: 159 passing tests; ruff / format / mypy strict clean.
+- Frontend: 32 passing tests; lint / typecheck / format / build clean.
+- Alembic migrations round-trip; `alembic check` reports no drift.
+- OpenAPI types in sync.
+- All 12 phases of the brief have at least partial coverage; every
+  signature differentiator (ARES lookup, auto-freeing, Kanban,
+  dashboards, landing page, production runbook) ships end-to-end.
+- `master` at f3fcf4f; ~65 commits total.
+
+### Deferred for future sessions (priority order)
+1. **Phase 8** reports suite (leaderboard / velocity / loss-reasons /
+   CSV export) — unlocks manager value; 6.3 manager dashboard variants
+   fold in here.
+2. 7.2 invite flow, 7.3 team UI, 7.4 user UI, 7.5 billing card — the
+   API is done; needs frontend surfaces.
+3. 9.3 transactional email on company_freed + APScheduler cron
+   registration for the 03:00 Europe/Prague daily sweep.
+4. 5.5 Kanban owner / date / value filters.
+5. Phase 10 pipeline customization + settings page.
+6. Phase 11 feature-tour section with real screenshots; Lighthouse ≥ 90
+   audit on a live deploy.
+7. Phase 12 real deploy + Sentry DSN wiring (require a VM).
