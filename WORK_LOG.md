@@ -472,4 +472,23 @@ Picked up cleanly from Session 1's end state: `master` at d68cfd9, no
 - Frontend `src/types/api.generated.ts` regenerated — now carries
   `Page_CompanyOut_`, `CompanyCreate`, `CompanyUpdate`, and the five
   endpoints. `pnpm typecheck` and `pnpm test` still green.
+- Commit: ab33f2e.
+
+### Task 2.6b — Contacts CRUD ✅ PASS
+- Contacts are purely org-scoped (no `owner_user_id`) so every member of the
+  organization can see and edit every contact. Delete remains admin-only
+  to mirror Companies.
+- `app/schemas/contact.py`: `ContactCreate` / `ContactUpdate` with Pydantic
+  `EmailStr`, length caps, optional `company_id`. `ContactOut` mirrors the
+  model.
+- `app/api/v1/contacts.py`: 5 endpoints. Cross-org `company_id` on
+  create/update is rejected with 400 via a small
+  `_validate_company_in_org` helper so a caller can't attach a contact to
+  a company outside their tenancy.
+- Router mounted at `/api/v1/contacts`.
+- `tests/api/v1/test_contacts.py` (16 tests): list happy+cross-org+401,
+  get happy+cross-org+404, create happy+422+409+cross-org-company 400,
+  update happy+422+cross-org-denied, delete admin-ok+salesperson-403+401.
+- Backend suite now 93 passing; ruff / format / mypy strict clean.
+- Frontend types regenerated; `pnpm typecheck` + `pnpm test` stay green.
 - Commit: pending.
