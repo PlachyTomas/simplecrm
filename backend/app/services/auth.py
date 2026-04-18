@@ -65,3 +65,31 @@ async def upsert_user_from_google_profile(session: AsyncSession, profile: Google
     await session.flush()
     await session.refresh(user)
     return user
+
+
+async def upsert_dev_user(session: AsyncSession, email: str, name: str | None = None) -> User:
+    """Dev-bypass twin of the Google upsert: creates (or finds) a User +
+    Organization without an OAuth round-trip. Only callable from the
+    dev-login endpoint, which is itself gated on `dev_auth_enabled` +
+    `app_env == "dev"`.
+    """
+    stmt = select(User).where(User.email == email)
+    user = (await session.execute(stmt)).scalar_one_or_none()
+
+    if user is None:
+        organization = Organization(name=_default_org_name(email))
+        session.add(organization)
+        await session.flush()
+        await create_default_pipeline(session, organization.id)
+        user = User(
+            email=email,
+            name=name or email.split("@", 1)[0].capitalize(),
+            role=UserRole.admin,
+            organization_id=organization.id,
+        )
+        session.add(user)
+
+    user.last_login_at = datetime.now(tz=UTC)
+    await session.flush()
+    await session.refresh(user)
+    return user

@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     # Where to send them when they log out or hit an error.
     frontend_login_redirect: str = "http://localhost:5173/login"
 
+    # Dev-only auth bypass. When true AND app_env == "dev", the backend
+    # exposes POST /api/v1/auth/dev-login which mints a JWT for an
+    # arbitrary email — no Google round-trip. MUST stay false in prod.
+    dev_auth_enabled: bool = False
+
 
 @lru_cache
 def get_settings() -> Settings:

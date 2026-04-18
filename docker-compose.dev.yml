@@ -6,13 +6,14 @@ services:
     image: simplecrm-dev:latest
     working_dir: /workspace
     volumes:
-      # The repository, mounted read-write. Nothing else from the host.
+      # The repository, mounted read-write.
       - .:/workspace
-      # Claude Code auth persistence — the one intentional host share.
-      - ${HOME}/.claude:/root/.claude
-      # Optional: cache node_modules and uv cache across runs for speed.
-      - claude-dev-node-cache:/root/.npm
-      - claude-dev-uv-cache:/root/.cache/uv
+      # Claude Code auth persistence — mounted to non-root user's home.
+      - ${HOME}/.claude:/home/node/.claude
+      # Cache persistence across runs.
+      - claude-dev-node-cache:/home/node/.npm
+      - claude-dev-uv-cache:/home/node/.cache/uv
+      - claude-dev-pnpm-store:/home/node/.local/share/pnpm
     environment:
       - DATABASE_URL=postgresql+asyncpg://simplecrm:simplecrm@postgres:5432/simplecrm
       - POSTGRES_HOST=postgres
@@ -20,8 +21,18 @@ services:
       - POSTGRES_USER=simplecrm
       - POSTGRES_PASSWORD=simplecrm
       - POSTGRES_DB=simplecrm
-      # Uncomment to pass an API key instead of relying on mounted ~/.claude:
-      # - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - HOME=/home/node
+      # Dev-only auth bypass — POST /api/v1/auth/dev-login mints a JWT
+      # without Google OAuth. Gated on app_env=="dev" too (default).
+      - APP_ENV=dev
+      - DEV_AUTH_ENABLED=true
+      # Frontend toggle that surfaces the Dev-login panel on /login.
+      - VITE_DEV_AUTH_ENABLED=true
+    ports:
+      # Exposed to the host so the dev can open the browser against
+      # http://localhost:5173 (frontend) / http://localhost:8000 (API).
+      - "127.0.0.1:5173:5173"
+      - "127.0.0.1:8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -39,7 +50,6 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     ports:
-      # Bound to localhost only so it's not exposed to LAN.
       - "127.0.0.1:5432:5432"
     networks:
       - simplecrm-dev
@@ -53,6 +63,7 @@ volumes:
   postgres-data:
   claude-dev-node-cache:
   claude-dev-uv-cache:
+  claude-dev-pnpm-store:
 
 networks:
   simplecrm-dev:

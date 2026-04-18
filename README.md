@@ -34,6 +34,20 @@ simplecrm/
 - `docs/adr/` — architectural decisions with rationale.
 - `WORK_LOG.md` — what has been built so far.
 
+## Quick start via dev container
+
+```bash
+docker compose -f docker-compose.dev.yml up -d
+# wait ~5 seconds for migrations + first boot, then open:
+#   http://localhost:5173   (frontend)
+#   http://localhost:8000/api/v1/docs   (Swagger)
+```
+
+The dev compose file ships with a **dev-auth bypass** enabled (no Google
+OAuth needed). The login page shows a "Dev login" panel — type any email
+and you're in as an admin. Details and safety rationale in
+[`docs/local-development.md`](docs/local-development.md#8-dev-mode-auth-bypass).
+
 ## Status
 
 Under active construction. See `WORK_LOG.md` for current state.
