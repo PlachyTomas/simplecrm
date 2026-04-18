@@ -17,6 +17,7 @@ import {
   useMoveDealStage,
   usePipelineBoard,
 } from "@/app/pipeline/useBoard";
+import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { cn } from "@/lib/utils";
 
@@ -122,12 +123,44 @@ function StageColumn({ stage, locale, boardCurrency, draggingId }: StageColumnPr
 export function PipelinePage() {
   const { data: board, isPending, isError } = usePipelineBoard();
   const { data: user } = useCurrentUser();
+  const { data: usersPage } = useOrgUsers();
   const moveMutation = useMoveDealStage();
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
+  const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | string>("all");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const locale = user?.organization.locale ?? "cs-CZ";
+
+  const filteredStages = useMemo<BoardStage[]>(() => {
+    if (!board) return [];
+    const normalized = searchTerm.trim().toLowerCase();
+    return board.stages.map((stage) => {
+      const deals = stage.deals.filter((deal) => {
+        if (ownerFilter === "mine" && deal.owner_user_id !== user?.id) return false;
+        if (
+          ownerFilter !== "all" &&
+          ownerFilter !== "mine" &&
+          deal.owner_user_id !== ownerFilter
+        ) {
+          return false;
+        }
+        if (normalized && !deal.name.toLowerCase().includes(normalized)) return false;
+        return true;
+      });
+      const total = deals.reduce((acc, d) => {
+        if (d.currency === board.currency) return acc + Number(d.value);
+        return acc;
+      }, 0);
+      return {
+        ...stage,
+        deals,
+        deal_count: deals.length,
+        total_value: String(total),
+      };
+    });
+  }, [board, ownerFilter, searchTerm, user?.id]);
 
   const activeDeal = useMemo(() => {
     if (!activeDealId || !board) return null;
@@ -137,6 +170,9 @@ export function PipelinePage() {
     }
     return null;
   }, [activeDealId, board]);
+
+  const hasActiveFilter = ownerFilter !== "all" || searchTerm.trim().length > 0;
+  const canPickOwner = user?.role === "admin" || user?.role === "manager";
 
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveDealId(null);
@@ -169,13 +205,72 @@ export function PipelinePage() {
   }
 
   const hasAnyDeals = board.stages.some((s) => s.deals.length > 0);
+  const hasFilteredDeals = filteredStages.some((s) => s.deals.length > 0);
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
-      <div className="flex items-center justify-between px-4 py-4 md:px-8">
+      <div className="flex flex-wrap items-end justify-between gap-3 px-4 py-4 md:px-8">
         <div>
           <h1 className="text-2xl font-semibold">Pipeline</h1>
           <p className="text-sm text-text-tertiary">{board.name}</p>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="flex flex-col text-xs font-medium text-text-tertiary">
+            Hledat
+            <input
+              type="search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Název obchodu…"
+              className="mt-1 w-48 rounded-md border border-border bg-surface px-2 py-1.5 text-sm"
+            />
+          </label>
+          {canPickOwner ? (
+            <label className="flex flex-col text-xs font-medium text-text-tertiary">
+              Vlastník
+              <select
+                value={ownerFilter}
+                onChange={(e) => setOwnerFilter(e.target.value)}
+                className="mt-1 rounded-md border border-border bg-surface px-2 py-1.5 text-sm"
+              >
+                <option value="all">Všichni</option>
+                <option value="mine">Moje obchody</option>
+                <optgroup label="Obchodníci">
+                  {(usersPage?.items ?? [])
+                    .filter((u) => u.is_active)
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name}
+                      </option>
+                    ))}
+                </optgroup>
+              </select>
+            </label>
+          ) : (
+            <label className="flex flex-col text-xs font-medium text-text-tertiary">
+              Zobrazit
+              <select
+                value={ownerFilter === "mine" ? "mine" : "all"}
+                onChange={(e) => setOwnerFilter(e.target.value === "mine" ? "mine" : "all")}
+                className="mt-1 rounded-md border border-border bg-surface px-2 py-1.5 text-sm"
+              >
+                <option value="all">Vše v mém rozsahu</option>
+                <option value="mine">Pouze moje obchody</option>
+              </select>
+            </label>
+          )}
+          {hasActiveFilter ? (
+            <button
+              type="button"
+              onClick={() => {
+                setOwnerFilter("all");
+                setSearchTerm("");
+              }}
+              className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary"
+            >
+              Zrušit filtr
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -202,7 +297,7 @@ export function PipelinePage() {
         onDragCancel={() => setActiveDealId(null)}
       >
         <div className="flex flex-1 gap-4 overflow-x-auto px-4 pb-6 md:px-8">
-          {board.stages.map((stage) => (
+          {filteredStages.map((stage) => (
             <StageColumn
               key={stage.id}
               stage={stage}
@@ -212,6 +307,14 @@ export function PipelinePage() {
             />
           ))}
         </div>
+        {hasAnyDeals && !hasFilteredDeals ? (
+          <p
+            className="px-4 pb-4 text-center text-sm text-text-tertiary md:px-8"
+            role="status"
+          >
+            Žádné obchody neodpovídají filtru.
+          </p>
+        ) : null}
 
         <DragOverlay>
           {activeDeal ? <DealCard deal={activeDeal} locale={locale} /> : null}
