@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import { useMemo } from "react";
 
 import { type KpiSummary, useKpiSummary } from "@/app/dashboard/useKpi";
+import { useLeaderboard, useVelocity } from "@/app/reports/useReports";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 
 interface KpiCardProps {
@@ -47,6 +48,99 @@ function formatMoney(value: string, currency: string, locale: string): string {
   } catch {
     return `${numeric.toLocaleString(locale)} ${currency}`;
   }
+}
+
+function ManagerWidgets({ locale }: { locale: string }) {
+  const range = useMemo(() => {
+    const today = new Date();
+    const to = today.toISOString().slice(0, 10);
+    const from = new Date(today);
+    from.setDate(from.getDate() - 29);
+    return { from: from.toISOString().slice(0, 10), to };
+  }, []);
+  const leaderboard = useLeaderboard(range);
+  const velocity = useVelocity(range);
+
+  return (
+    <section
+      aria-label="Manažerský přehled"
+      className="mt-8 grid grid-cols-1 gap-4 xl:grid-cols-2"
+    >
+      <article className="rounded-lg border border-border bg-surface p-5">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
+            Leaderboard (30 dní)
+          </h2>
+        </div>
+        {leaderboard.isPending ? (
+          <p className="mt-4 text-sm text-text-tertiary">Načítání…</p>
+        ) : leaderboard.isError || !leaderboard.data ? (
+          <p className="mt-4 text-sm text-danger">Nelze načíst.</p>
+        ) : leaderboard.data.rows.length === 0 ? (
+          <p className="mt-4 text-sm text-text-secondary">
+            Žádné vyhrané obchody za posledních 30 dní.
+          </p>
+        ) : (
+          <ol className="mt-4 space-y-2">
+            {leaderboard.data.rows.slice(0, 5).map((row, idx) => (
+              <li key={row.user_id} className="flex items-center justify-between text-sm">
+                <span className="text-text-primary">
+                  <span className="mr-2 tabular-nums text-text-tertiary">{idx + 1}.</span>
+                  {row.name}
+                </span>
+                <span className="tabular-nums text-text-secondary">
+                  {row.won_count} ·{" "}
+                  {(() => {
+                    try {
+                      return new Intl.NumberFormat(locale, {
+                        style: "currency",
+                        currency: leaderboard.data.currency,
+                        maximumFractionDigits: 0,
+                      }).format(Number(row.won_value));
+                    } catch {
+                      return `${row.won_value} ${leaderboard.data.currency}`;
+                    }
+                  })()}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </article>
+
+      <article className="rounded-lg border border-border bg-surface p-5">
+        <h2 className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
+          Průměrné trvání obchodu (30 dní)
+        </h2>
+        {velocity.isPending ? (
+          <p className="mt-4 text-sm text-text-tertiary">Načítání…</p>
+        ) : velocity.isError || !velocity.data ? (
+          <p className="mt-4 text-sm text-danger">Nelze načíst.</p>
+        ) : velocity.data.stages.length === 0 ? (
+          <p className="mt-4 text-sm text-text-secondary">
+            Za posledních 30 dní nebyl uzavřen žádný obchod.
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-2">
+            {velocity.data.stages.map((stage) => (
+              <li
+                key={stage.stage_id}
+                className="flex items-center justify-between text-sm"
+              >
+                <span className="text-text-primary">{stage.stage_name}</span>
+                <span className="tabular-nums text-text-secondary">
+                  {stage.avg_days_in_stage == null
+                    ? "—"
+                    : `${(Math.round(stage.avg_days_in_stage * 10) / 10).toFixed(1)} dní`}{" "}
+                  · {stage.deal_count}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </article>
+    </section>
+  );
 }
 
 export function DashboardPage() {
@@ -122,6 +216,10 @@ export function DashboardPage() {
           hint="Součet vyhraných obchodů"
         />
       </section>
+
+      {user.role === "admin" || user.role === "manager" ? (
+        <ManagerWidgets locale={locale} />
+      ) : null}
     </div>
   );
 }

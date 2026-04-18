@@ -68,6 +68,35 @@ describe("Dashboard KPIs", () => {
           won_this_month_value: "90000.00",
         });
       }
+      if (url.includes("/api/v1/reports/leaderboard")) {
+        return jsonResponse({
+          currency: "CZK",
+          from_date: "2026-03-18",
+          to_date: "2026-04-17",
+          rows: [
+            {
+              user_id: "00000000-0000-0000-0000-000000000099",
+              name: "Anna",
+              won_count: 2,
+              won_value: "45000.00",
+            },
+          ],
+        });
+      }
+      if (url.includes("/api/v1/reports/pipeline-velocity")) {
+        return jsonResponse({
+          from_date: "2026-03-18",
+          to_date: "2026-04-17",
+          stages: [
+            {
+              stage_id: "00000000-0000-0000-0000-0000000000cc",
+              stage_name: "Vyhráno",
+              avg_days_in_stage: 7.5,
+              deal_count: 2,
+            },
+          ],
+        });
+      }
       throw new Error(`Unexpected fetch: ${url}`);
     });
 
@@ -79,5 +108,12 @@ describe("Dashboard KPIs", () => {
     expect(screen.getByText(/125\s?000/)).toBeInTheDocument();
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByText(/90\s?000/)).toBeInTheDocument();
+
+    await waitFor(() =>
+      expect(screen.getByText(/Leaderboard \(30 dní\)/i)).toBeInTheDocument(),
+    );
+    expect(screen.getByText(/Anna/)).toBeInTheDocument();
+    expect(screen.getByText(/Průměrné trvání/i)).toBeInTheDocument();
+    expect(screen.getByText(/7\.5 dní/)).toBeInTheDocument();
   });
 });
