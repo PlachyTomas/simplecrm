@@ -1,0 +1,98 @@
+# Production compose for Coolify / bare-metal Docker.
+#
+# Usage on a single-host deployment:
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# On Coolify: connect this file as the deployment source. Coolify will
+# inject env vars from its own UI (see docs/runbook.md) and manage the
+# Let's Encrypt TLS cert via its bundled Traefik.
+#
+# Backups: the `backup` service runs on a scheduler (Coolify or host cron)
+# and uploads pg_dump to Hetzner Object Storage (S3-compatible). See
+# scripts/backup_postgres.sh.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-simplecrm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-simplecrm}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-simplecrm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - simplecrm
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: simplecrm-backend:prod
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-simplecrm}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-simplecrm}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_TTL_MINUTES: ${ACCESS_TOKEN_TTL_MINUTES:-60}
+      REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-30}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+      FRONTEND_SUCCESS_REDIRECT: ${FRONTEND_SUCCESS_REDIRECT}
+      FRONTEND_LOGIN_REDIRECT: ${FRONTEND_LOGIN_REDIRECT}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    command: >
+      sh -c "
+        alembic upgrade head &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+      "
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - simplecrm
+    labels:
+      # Coolify/Traefik routes these hostnames to this container via Let's Encrypt.
+      - "traefik.enable=true"
+      - "traefik.http.routers.simplecrm-api.rule=Host(`${API_HOST}`)"
+      - "traefik.http.routers.simplecrm-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.simplecrm-api.loadbalancer.server.port=8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/v1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # The frontend is expected to ship to Cloudflare Pages (free, global CDN).
+  # This service is included for single-host deployments that prefer to keep
+  # everything on one Hetzner box. Remove it if you're using Pages.
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    image: simplecrm-frontend:prod
+    restart: unless-stopped
+    networks:
+      - simplecrm
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.simplecrm-web.rule=Host(`${WEB_HOST}`)"
+      - "traefik.http.routers.simplecrm-web.tls.certresolver=letsencrypt"
+      - "traefik.http.services.simplecrm-web.loadbalancer.server.port=80"
+
+volumes:
+  postgres-data:
+
+networks:
+  simplecrm:
+    driver: bridge
