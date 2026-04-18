@@ -252,10 +252,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pipelines/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Default Pipeline */
+        get: operations["get_default_pipeline_api_v1_pipelines_default_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pipelines/default/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Default Pipeline Board */
+        get: operations["get_default_pipeline_board_api_v1_pipelines_default_board_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** BoardStage */
+        BoardStage: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Color */
+            color: string;
+            /** Position */
+            position: number;
+            stage_type: components["schemas"]["StageType"];
+            /** Default Probability */
+            default_probability: number;
+            /** Deal Count */
+            deal_count: number;
+            /** Total Value */
+            total_value: string;
+            /** Currency */
+            currency: string;
+            /** Deals */
+            deals: components["schemas"]["DealOut"][];
+        };
         /** CompanyCreate */
         CompanyCreate: {
             /** Name */
@@ -673,6 +732,36 @@ export interface components {
             /** Offset */
             offset: number;
         };
+        /** PipelineBoard */
+        PipelineBoard: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Is Default */
+            is_default: boolean;
+            /** Currency */
+            currency: string;
+            /** Stages */
+            stages: components["schemas"]["BoardStage"][];
+        };
+        /** PipelineSummary */
+        PipelineSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Is Default */
+            is_default: boolean;
+            /** Stages */
+            stages: components["schemas"]["StageOut"][];
+        };
         /**
          * RegistryLookupResult
          * @description Response body for /companies/lookup-registry.
@@ -698,6 +787,33 @@ export interface components {
             /** Registered On */
             registered_on?: string | null;
         };
+        /** StageOut */
+        StageOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Pipeline Id
+             * Format: uuid
+             */
+            pipeline_id: string;
+            /** Name */
+            name: string;
+            /** Default Probability */
+            default_probability: number;
+            /** Color */
+            color: string;
+            /** Position */
+            position: number;
+            stage_type: components["schemas"]["StageType"];
+        };
+        /**
+         * StageType
+         * @enum {string}
+         */
+        StageType: "open" | "won" | "lost";
         /**
          * UserRole
          * @enum {string}
@@ -1422,6 +1538,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_default_pipeline_api_v1_pipelines_default_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineSummary"];
+                };
+            };
+        };
+    };
+    get_default_pipeline_board_api_v1_pipelines_default_board_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineBoard"];
                 };
             };
         };
