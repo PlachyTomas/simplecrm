@@ -395,4 +395,26 @@ Picked up cleanly from Session 1's end state: `master` at d68cfd9, no
   wires the pipeline into the auth flow.
 - Backend suite now 47 passing; ruff / format / mypy strict clean; frontend
   `types:check` green (no API changes yet).
+- Commit: dd8f5a4.
+
+### Task 2.4 — Deal model ✅ PASS
+- `app/db/models/deal.py`: UUID PK; CASCADE FKs to `organizations` and
+  `companies`; SET NULL FKs to `contacts` (primary contact) and `users`
+  (owner); RESTRICT FK to `stages` so a stage with open deals can't be
+  dropped.
+- `value` is `Numeric(14, 2)` + `currency` `varchar(3)` — never `value_czk`,
+  per Section 7 of the brief. Currency defaults to "CZK" at the schema layer;
+  the service layer will inject from the org's default in Phase 2.6.
+- `probability_override` nullable int + CHECK `(NULL OR 0..100)` so stage
+  defaults drive probability unless a deal overrides.
+- Indexes per brief: `organization_id`, `stage_id`, `owner_user_id` +
+  `company_id` and `expected_close_date`.
+- `closed_at` + `lost_reason` nullable — populated by Phase 5.4's won/lost
+  flow.
+- Migration `597c44f5ac56_phase2_deals.py`; autogen clean; round-trips.
+- Tests extended in `test_models_phase2.py` (+4 → 12 total): numeric + CZK
+  round-trip, stage RESTRICT fires, `probability_override=150` CHECK fails,
+  company-delete CASCADEs its deals.
+- Backend suite now 51 passing; ruff / format / mypy strict clean. API
+  surface unchanged, so frontend types:check stays green.
 - Commit: pending.

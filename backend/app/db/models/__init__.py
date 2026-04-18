@@ -6,6 +6,7 @@ so Alembic autogenerate can see them. Always add new models here.
 
 from app.db.models.company import Company
 from app.db.models.contact import Contact
+from app.db.models.deal import Deal
 from app.db.models.enums import (
     OwnershipChangeReason,
     PlanInterval,
@@ -24,6 +25,7 @@ from app.db.models.user import User
 __all__ = [
     "Company",
     "Contact",
+    "Deal",
     "Organization",
     "OwnershipChangeReason",
     "OwnershipHistory",

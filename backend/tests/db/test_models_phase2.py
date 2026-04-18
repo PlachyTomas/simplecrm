@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
 import pytest
 from sqlalchemy import delete, select
@@ -12,13 +13,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import (
     Company,
     Contact,
+    Deal,
     Organization,
     OwnershipChangeReason,
     OwnershipHistory,
+    Stage,
     User,
     UserRole,
 )
 from app.db.models.company import OWNERSHIP_WINDOW
+from app.services.pipeline import create_default_pipeline
 
 
 async def _seed_org_and_user(db_session: AsyncSession) -> tuple[Organization, User]:
@@ -215,3 +219,92 @@ async def test_deleting_company_nulls_contact_company_id(
     refreshed = await db_session.get(Contact, contact_id)
     assert refreshed is not None
     assert refreshed.company_id is None
+
+
+async def _seed_pipeline_and_company(
+    db_session: AsyncSession,
+) -> tuple[Organization, Company, Stage, User]:
+    org, owner = await _seed_org_and_user(db_session)
+    pipeline = await create_default_pipeline(db_session, org.id)
+    await db_session.refresh(pipeline, attribute_names=["stages"])
+    company = Company(organization_id=org.id, name="DealCo s.r.o.")
+    db_session.add(company)
+    await db_session.flush()
+    return org, company, pipeline.stages[0], owner
+
+
+async def test_deal_round_trip(db_session: AsyncSession) -> None:
+    org, company, stage, owner = await _seed_pipeline_and_company(db_session)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=owner.id,
+        name="Pilotní obchod",
+        value=Decimal("42500.00"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.flush()
+    await db_session.refresh(deal)
+    assert deal.value == Decimal("42500.00")
+    assert deal.currency == "CZK"
+    assert deal.closed_at is None
+
+
+async def test_deleting_stage_with_deals_fails(db_session: AsyncSession) -> None:
+    org, company, stage, _owner = await _seed_pipeline_and_company(db_session)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        name="Bloker",
+        value=Decimal("0.00"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.flush()
+
+    with pytest.raises(IntegrityError):
+        await db_session.execute(delete(Stage).where(Stage.id == stage.id))
+        await db_session.flush()
+
+
+async def test_deal_probability_override_check(db_session: AsyncSession) -> None:
+    org, company, stage, _owner = await _seed_pipeline_and_company(db_session)
+    bad = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        name="Nevalidní",
+        value=Decimal("0.00"),
+        currency="CZK",
+        probability_override=150,
+    )
+    db_session.add(bad)
+    with pytest.raises(IntegrityError):
+        await db_session.flush()
+
+
+async def test_deleting_company_cascades_deals(db_session: AsyncSession) -> None:
+    org, company, stage, _owner = await _seed_pipeline_and_company(db_session)
+    db_session.add(
+        Deal(
+            organization_id=org.id,
+            company_id=company.id,
+            stage_id=stage.id,
+            name="Zmizí s firmou",
+            value=Decimal("0.00"),
+            currency="CZK",
+        )
+    )
+    await db_session.flush()
+
+    await db_session.execute(delete(Company).where(Company.id == company.id))
+    await db_session.flush()
+    remaining = (
+        (await db_session.execute(select(Deal).where(Deal.company_id == company.id)))
+        .scalars()
+        .all()
+    )
+    assert remaining == []
