@@ -626,7 +626,7 @@ Phase 2 done. Commits on master for Phase 2: 1709008, a5a8e08, dd8f5a4,
   a "Zkusit znovu" button. All Czech copy asserted.
 - Verification: `pnpm lint / typecheck / test (14/14) / format:check /
   build` all green; backend suite still 126 passing.
-- Commit: pending.
+- Commit: bac8639.
 
 ### Phase 3 — Exit criteria check
 "Tester can enter a real IČO (e.g. 27074358 — Alza.cz) and see auto-filled
@@ -639,5 +639,4 @@ fields; the company can be saved."
   Happy path covered by tests; real-ARES confirmation needs the dev
   container's outbound HTTP (allowed per README) and can be run manually.
 
-Phase 3 done. Commits on master for Phase 3: b810912, 437f8f5, and the
-pending commit for Task 3.3.
+Phase 3 done. Commits on master for Phase 3: b810912, 437f8f5, bac8639.
