@@ -603,4 +603,41 @@ Phase 2 done. Commits on master for Phase 2: 1709008, a5a8e08, dd8f5a4,
 - Frontend `api.generated.ts` regenerated — now carries the
   `lookup-registry` endpoint and `RegistryLookupResult`; `pnpm typecheck`
   + `pnpm test` still green.
+- Commit: 437f8f5.
+
+### Task 3.3 — Add company modal with IČO lookup ✅ PASS
+- `frontend/src/app/companies/useLookupRegistry.ts` — typed
+  `useQuery<RegistryLookupResult>`; fires only when the IČO is exactly 8
+  digits, `retry: false`, 24h `staleTime` matching the backend TTL.
+- `useCreateCompany.ts` — typed mutation; invalidates `["companies"]` on
+  success so the list refetches.
+- `AddCompanyModal.tsx` — `role="dialog" aria-modal="true"` blocking modal.
+  State machine (`empty | loading | success | not_found | error`) drives
+  the IČO-field helper text and the retry CTA. Not-found leaves manual
+  fields editable (user can save without ARES). 429 / 502 render a
+  "Zkusit znovu" button that calls `refetch()`. A successful ARES hit
+  auto-fills name, DIČ, address triplet, and legal form.
+- `CompaniesListPage.tsx` gains a primary "Přidat firmu" button in both
+  empty and populated states; empty-state copy rewritten to nudge a first
+  company. After a successful save the modal closes and the page navigates
+  to the new company's detail view.
+- `__tests__/addCompanyModal.test.tsx` (3 tests): happy lookup + prefill +
+  save + navigate, 404 keeps form editable and still saves, 429 surfaces
+  a "Zkusit znovu" button. All Czech copy asserted.
+- Verification: `pnpm lint / typecheck / test (14/14) / format:check /
+  build` all green; backend suite still 126 passing.
 - Commit: pending.
+
+### Phase 3 — Exit criteria check
+"Tester can enter a real IČO (e.g. 27074358 — Alza.cz) and see auto-filled
+fields; the company can be saved."
+- Backend: `GET /api/v1/companies/lookup-registry?country=CZ&number=…`
+  hits ARES via `CzechAresService`, 24h-caches results, rate-limits per
+  user, translates upstream errors into 404 / 502 / 400.
+- Frontend: admin clicks "Přidat firmu", types IČO, sees live lookup and
+  prefilled fields, submits → modal closes, list refetches, detail opens.
+  Happy path covered by tests; real-ARES confirmation needs the dev
+  container's outbound HTTP (allowed per README) and can be run manually.
+
+Phase 3 done. Commits on master for Phase 3: b810912, 437f8f5, and the
+pending commit for Task 3.3.
