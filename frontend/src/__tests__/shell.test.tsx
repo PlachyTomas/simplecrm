@@ -123,7 +123,9 @@ describe("Responsive app shell", () => {
         screen.getByRole("heading", { level: 1, name: /^Nastavení pipeline$/ }),
       ).toBeInTheDocument(),
     );
-    expect(screen.getByRole("button", { name: /přidat fázi/i })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /přidat fázi/i })).toBeInTheDocument(),
+    );
   });
 
   it("renders the Více menu at /app/more", async () => {

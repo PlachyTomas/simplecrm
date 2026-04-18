@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import csv
+import dataclasses
 import io
+import uuid
 from collections import defaultdict
 from datetime import UTC, date, datetime, time
 from decimal import Decimal
@@ -119,24 +121,29 @@ async def leaderboard(
         )
     )
     scoped = await scope_by_owner(stmt, session=session, user=user, owner_col=Deal.owner_user_id)
-    totals: dict[str, dict] = defaultdict(
-        lambda: {"count": 0, "value": Decimal("0"), "name": "—"}
-    )
+
+    @dataclasses.dataclass
+    class _OwnerAgg:
+        name: str = "—"
+        count: int = 0
+        value: Decimal = Decimal("0")
+
+    totals: dict[uuid.UUID, _OwnerAgg] = defaultdict(_OwnerAgg)
     for deal, _stage, owner in (await session.execute(scoped)).all():
         if owner is None:
             continue
-        bucket = totals[str(owner.id)]
-        bucket["name"] = owner.name
-        bucket["count"] += 1
+        bucket = totals[owner.id]
+        bucket.name = owner.name
+        bucket.count += 1
         if deal.currency == org.currency:
-            bucket["value"] += deal.value
+            bucket.value += deal.value
 
     rows = [
         LeaderboardRow(
             user_id=user_id,
-            name=bucket["name"],
-            won_count=bucket["count"],
-            won_value=bucket["value"],
+            name=bucket.name,
+            won_count=bucket.count,
+            won_value=bucket.value,
         )
         for user_id, bucket in totals.items()
     ]
@@ -169,14 +176,19 @@ async def loss_reasons(
         Deal.lost_reason.is_not(None),
     )
     scoped = await scope_by_owner(stmt, session=session, user=user, owner_col=Deal.owner_user_id)
-    buckets: dict[str, dict] = defaultdict(lambda: {"count": 0, "value": Decimal("0")})
+    @dataclasses.dataclass
+    class _ReasonAgg:
+        count: int = 0
+        value: Decimal = Decimal("0")
+
+    buckets: dict[str, _ReasonAgg] = defaultdict(_ReasonAgg)
     for deal in (await session.execute(scoped)).scalars():
         reason = deal.lost_reason or "Neuvedeno"
-        buckets[reason]["count"] += 1
+        buckets[reason].count += 1
         if deal.currency == org.currency:
-            buckets[reason]["value"] += deal.value
+            buckets[reason].value += deal.value
     rows = [
-        LossReasonRow(lost_reason=reason, count=b["count"], total_value=b["value"])
+        LossReasonRow(lost_reason=reason, count=b.count, total_value=b.value)
         for reason, b in buckets.items()
     ]
     rows.sort(key=lambda r: (r.count, r.total_value), reverse=True)
@@ -212,25 +224,30 @@ async def pipeline_velocity(
         )
     )
     scoped = await scope_by_owner(stmt, session=session, user=user, owner_col=Deal.owner_user_id)
-    per_stage: dict[str, dict] = defaultdict(
-        lambda: {"name": "", "sum_days": 0.0, "count": 0, "stage_id": None}
-    )
+    @dataclasses.dataclass
+    class _StageAgg:
+        stage_id: uuid.UUID | None = None
+        name: str = ""
+        sum_days: float = 0.0
+        count: int = 0
+
+    per_stage: dict[uuid.UUID, _StageAgg] = defaultdict(_StageAgg)
     for deal, stage in (await session.execute(scoped)).all():
         if deal.closed_at is None:
             continue
         days = (deal.closed_at - deal.created_at).total_seconds() / 86400.0
-        bucket = per_stage[str(stage.id)]
-        bucket["name"] = stage.name
-        bucket["stage_id"] = stage.id
-        bucket["sum_days"] += days
-        bucket["count"] += 1
+        bucket = per_stage[stage.id]
+        bucket.stage_id = stage.id
+        bucket.name = stage.name
+        bucket.sum_days += days
+        bucket.count += 1
 
     stages = [
         VelocityByStage(
-            stage_id=b["stage_id"],
-            stage_name=b["name"],
-            avg_days_in_stage=(b["sum_days"] / b["count"]) if b["count"] else None,
-            deal_count=b["count"],
+            stage_id=b.stage_id,  # type: ignore[arg-type]
+            stage_name=b.name,
+            avg_days_in_stage=(b.sum_days / b.count) if b.count else None,
+            deal_count=b.count,
         )
         for b in per_stage.values()
     ]

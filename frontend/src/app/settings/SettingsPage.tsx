@@ -9,8 +9,19 @@ import {
   useReorderStages,
   useUpdateStage,
 } from "@/app/settings/usePipelineSettings";
+import { TeamsSection } from "@/app/settings/TeamsSection";
+import { UsersSection } from "@/app/settings/UsersSection";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { ApiError } from "@/lib/api";
+import { cn } from "@/lib/utils";
+
+type SettingsTab = "pipeline" | "teams" | "users";
+
+const TABS: { key: SettingsTab; label: string }[] = [
+  { key: "pipeline", label: "Pipeline" },
+  { key: "teams", label: "Týmy" },
+  { key: "users", label: "Uživatelé" },
+];
 
 type StageType = "open" | "won" | "lost";
 
@@ -225,6 +236,7 @@ export function SettingsPage() {
   const [addingOpen, setAddingOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<SettingsTab>("pipeline");
 
   if (!user) {
     return (
@@ -245,22 +257,8 @@ export function SettingsPage() {
     );
   }
 
-  if (isPending) {
-    return (
-      <div className="p-8 text-sm text-text-tertiary" role="status">
-        Načítání pipeline…
-      </div>
-    );
-  }
-  if (isError || !pipeline) {
-    return (
-      <div className="m-4 rounded-md border border-danger-subtle bg-danger-subtle px-4 py-3 text-sm text-danger md:m-8">
-        Pipeline se nepodařilo načíst.
-      </div>
-    );
-  }
-
-  const stages = [...pipeline.stages].sort((a, b) => a.position - b.position);
+  const stagesReady = !isPending && !isError && pipeline;
+  const stages = stagesReady ? [...pipeline.stages].sort((a, b) => a.position - b.position) : [];
 
   async function handleMove(idx: number, dir: -1 | 1) {
     const target = idx + dir;
@@ -296,9 +294,35 @@ export function SettingsPage() {
       <header className="mb-6">
         <h1 className="text-2xl font-semibold">Nastavení pipeline</h1>
         <p className="mt-1 text-sm text-text-tertiary">
-          Spravujte fáze pipeline, jejich pořadí a pravděpodobnosti.
+          Spravujte fáze pipeline, týmy a uživatele vaší organizace.
         </p>
       </header>
+
+      <nav aria-label="Karty nastavení" className="mb-6 border-b border-border-subtle">
+        <ul role="tablist" className="-mb-px flex gap-1 overflow-x-auto">
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <li key={tab.key} role="presentation">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={cn(
+                    "inline-flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium transition-colors duration-fast",
+                    isActive
+                      ? "border-accent text-accent"
+                      : "border-transparent text-text-secondary hover:text-text-primary",
+                  )}
+                >
+                  {tab.label}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
 
       {globalError ? (
         <div
@@ -309,6 +333,17 @@ export function SettingsPage() {
         </div>
       ) : null}
 
+      {activeTab === "teams" ? <TeamsSection /> : null}
+      {activeTab === "users" ? <UsersSection /> : null}
+      {activeTab !== "pipeline" ? null : isPending ? (
+        <div className="rounded-lg border border-border bg-surface p-6 text-sm text-text-tertiary">
+          Načítání pipeline…
+        </div>
+      ) : isError || !pipeline ? (
+        <div className="rounded-md border border-danger-subtle bg-danger-subtle px-4 py-3 text-sm text-danger">
+          Pipeline se nepodařilo načíst.
+        </div>
+      ) : (
       <section className="rounded-lg border border-border bg-surface p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Fáze</h2>
@@ -379,6 +414,7 @@ export function SettingsPage() {
           })}
         </ol>
       </section>
+      )}
     </div>
   );
 }
