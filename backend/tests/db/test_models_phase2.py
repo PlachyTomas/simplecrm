@@ -5,12 +5,13 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import (
     Company,
+    Contact,
     Organization,
     OwnershipChangeReason,
     OwnershipHistory,
@@ -115,3 +116,102 @@ async def test_ownership_history_records_event(db_session: AsyncSession) -> None
     assert len(rows) == 1
     assert rows[0].reason is OwnershipChangeReason.initial
     assert rows[0].released_at is None
+
+
+async def test_contact_links_to_company(db_session: AsyncSession) -> None:
+    org, _ = await _seed_org_and_user(db_session)
+    company = Company(organization_id=org.id, name="Alza.cz a.s.")
+    db_session.add(company)
+    await db_session.flush()
+
+    contact = Contact(
+        organization_id=org.id,
+        company_id=company.id,
+        first_name="Jan",
+        last_name="Novák",
+        email="jan.novak@alza.cz",
+        position="CFO",
+    )
+    db_session.add(contact)
+    await db_session.flush()
+    await db_session.refresh(contact, attribute_names=["company"])
+    assert contact.company is not None
+    assert contact.company.name == "Alza.cz a.s."
+
+
+async def test_contact_email_unique_per_organization(
+    db_session: AsyncSession,
+) -> None:
+    org, _ = await _seed_org_and_user(db_session)
+    db_session.add_all(
+        [
+            Contact(
+                organization_id=org.id,
+                first_name="Jan",
+                last_name="Novák",
+                email="duplicate@example.cz",
+            ),
+            Contact(
+                organization_id=org.id,
+                first_name="Jana",
+                last_name="Nová",
+                email="duplicate@example.cz",
+            ),
+        ]
+    )
+    with pytest.raises(IntegrityError):
+        await db_session.flush()
+
+
+async def test_contact_email_shared_across_organizations(
+    db_session: AsyncSession,
+) -> None:
+    first = Organization(name="First ct")
+    second = Organization(name="Second ct")
+    db_session.add_all([first, second])
+    await db_session.flush()
+
+    db_session.add_all(
+        [
+            Contact(
+                organization_id=first.id,
+                first_name="Jan",
+                last_name="Novák",
+                email="shared@example.cz",
+            ),
+            Contact(
+                organization_id=second.id,
+                first_name="Jana",
+                last_name="Nová",
+                email="shared@example.cz",
+            ),
+        ]
+    )
+    await db_session.flush()  # should not raise
+
+
+async def test_deleting_company_nulls_contact_company_id(
+    db_session: AsyncSession,
+) -> None:
+    org, _ = await _seed_org_and_user(db_session)
+    company = Company(organization_id=org.id, name="Brzy smazaná a.s.")
+    db_session.add(company)
+    await db_session.flush()
+
+    contact = Contact(
+        organization_id=org.id,
+        company_id=company.id,
+        first_name="Petr",
+        last_name="Svoboda",
+        email="petr.svoboda@example.cz",
+    )
+    db_session.add(contact)
+    await db_session.flush()
+
+    contact_id = contact.id
+    await db_session.execute(delete(Company).where(Company.id == company.id))
+    await db_session.flush()
+    await db_session.refresh(contact)
+    refreshed = await db_session.get(Contact, contact_id)
+    assert refreshed is not None
+    assert refreshed.company_id is None

@@ -351,3 +351,23 @@ Deals, Activities; plus list/detail screens.
   orgs, ownership-history row insert.
 - Full suite 39 passing; ruff, format, mypy strict clean.
 - Commit: 1709008.
+
+## Session 2 — 2026-04-18
+
+Picked up cleanly from Session 1's end state: `master` at d68cfd9, no
+`RESUME.md`. Read `WORK_LOG.md` and restarted at Task 2.2.
+
+### Task 2.2 — Contact model ✅ PASS
+- `app/db/models/contact.py`: UUID PK, FK to Organization (CASCADE) and
+  optional Company (SET NULL). First / last name required; email, phone,
+  LinkedIn, position, note optional. Email is unique per-organization
+  (`uq_contacts_org_email`) so the same person can live in two orgs' books
+  without colliding; indexes on `organization_id` and `company_id`.
+- `app/db/models/__init__.py` re-exports `Contact`.
+- Migration `3a06ad7bed4c_phase2_contacts.py`; autogen clean, round-trips.
+- Tests (`test_models_phase2.py` grows to 8): happy company link, email
+  unique per org, email shareable across orgs, company-delete → SET NULL
+  on contact.company_id. Previous 4 company/ownership tests still pass.
+- Backend suite now 43 passing; ruff / format / mypy strict clean. Frontend
+  unchanged so `types:check` stays green (no endpoints added yet).
+- Commit: pending.
