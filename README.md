@@ -27,8 +27,10 @@ simplecrm/
 
 ## Further reading
 
+- `docs/local-development.md` — get the stack running on your machine.
+- `docs/runbook.md` — production deploy, backup, rollback.
 - `MANAGER_TASK.md` — the complete product brief and implementation plan.
-- `README-dev-env.md` — how to run the isolated dev container.
+- `README-dev-env.md` — how to run the isolated Claude Code dev container.
 - `docs/adr/` — architectural decisions with rationale.
 - `WORK_LOG.md` — what has been built so far.
 
