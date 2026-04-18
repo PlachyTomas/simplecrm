@@ -9,6 +9,7 @@ from app.api.v1 import (
     organizations,
     pipelines,
     reports,
+    teams,
 )
 
 api_router = APIRouter()
@@ -20,3 +21,4 @@ api_router.include_router(contacts.router)
 api_router.include_router(deals.router)
 api_router.include_router(pipelines.router)
 api_router.include_router(reports.router)
+api_router.include_router(teams.router)
