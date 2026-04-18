@@ -438,4 +438,38 @@ Picked up cleanly from Session 1's end state: `master` at d68cfd9, no
   `expire_all()` to drop the ORM cache after raw DELETE).
 - Backend suite 54 passing; ruff / format / mypy strict clean; frontend
   types:check still up to date.
+- Commit: dfab630.
+
+### Task 2.6a — Companies CRUD + row-level scoping ✅ PASS
+- `app/schemas/pagination.py`: `PaginationParams` dependency (limit 1–100,
+  default 50) + `Page[T]` envelope using PEP-695 generic syntax so OpenAPI
+  carries a proper typed wrapper.
+- `app/core/scoping.py`:
+  - `team_member_ids(session, user)` — admin sees every user in the org,
+    manager sees everyone on teams they manage (plus themselves),
+    salesperson sees teammates (plus themselves).
+  - `scope_by_owner(stmt, session, user, owner_col)` — admin passes through;
+    others get `owner_col IN visible_ids OR owner_col IS NULL` so the pool
+    is always visible.
+  - `can_write_row(session, user, owner_id)` — symmetric check for create /
+    update; unowned rows always writable.
+- `app/schemas/company.py`: `CompanyCreate` / `CompanyUpdate` (8-digit IČO
+  regex, length caps) + `CompanyOut` mirroring the model.
+- `app/api/v1/companies.py`: 5 endpoints — list (paginated), get, create,
+  update, delete. Admin-only delete via `require_role(admin)`. IČO collisions
+  surface as 409; visibility-first 404 when the caller isn't allowed to see
+  the row.
+- Router mounted under `/api/v1/companies`.
+- Tests:
+  - `tests/services/test_scoping.py` (6 tests): admin/manager/salesperson
+    visibility, pool inclusion, write-scope enforcement.
+  - `tests/api/v1/test_companies.py` (17 tests): list happy+scoping+401+422;
+    get happy+cross-org-denied+404; create happy+422+salesperson-403+409;
+    update happy+422+salesperson-foreign-denied; delete admin-ok+non-admin-
+    403+401. Uses an `owned_cleanup` teardown fixture since endpoint commits
+    defeat the rollback fixture.
+- Backend suite now 77 passing; ruff / format / mypy strict clean.
+- Frontend `src/types/api.generated.ts` regenerated — now carries
+  `Page_CompanyOut_`, `CompanyCreate`, `CompanyUpdate`, and the five
+  endpoints. `pnpm typecheck` and `pnpm test` still green.
 - Commit: pending.
