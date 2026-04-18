@@ -15,12 +15,12 @@ import { AuthProvider } from "@/auth/AuthContext";
 import { LoginPage } from "@/auth/LoginPage";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { queryClient } from "@/lib/queryClient";
-import { LandingStub } from "@/marketing/LandingStub";
+import { LandingPage } from "@/marketing/LandingPage";
 
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<LandingStub />} />
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route
         path="/app"
