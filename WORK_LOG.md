@@ -552,4 +552,29 @@ detail page, permissions enforced, all data scoped to organization."
   admin-only delete everywhere.
 
 Phase 2 done. Commits on master for Phase 2: 1709008, a5a8e08, dd8f5a4,
-30339cb, dfab630, ab33f2e, 75a4823, ac41913, and this pending commit.
+30339cb, dfab630, ab33f2e, 75a4823, ac41913, a9a016e.
+
+### Task 3.1 — BusinessRegistryService + CzechAresService ✅ PASS
+- `app/services/business_registry.py`:
+  - `CompanyRegistryData` dataclass — name + ICO + optional
+    DIC/address/legal_form/registered_on.
+  - `BusinessRegistryService` Protocol — `country_code` attr + async
+    `lookup(country_code, registration_number)`.
+  - `CzechAresService` — hits
+    `ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/{ico}`
+    with an httpx `AsyncClient`. Accepts an optional `transport` so tests
+    inject `httpx.MockTransport`. 404 → None; any other 4xx/5xx →
+    `BusinessRegistryError`; network/JSON errors also raised as the same
+    error class.
+  - `_format_czech_address` helper maps ARES's `sidlo` → (street, city,
+    zip) with int/str handling and PSČ zero-padding.
+  - `BusinessRegistryRegistry` resolves country code → service; Slovak /
+    German / Polish slots lie unused in an injectable dict for future
+    implementations.
+  - `get_business_registry` FastAPI dependency.
+- Tests (`tests/services/test_ares_client.py`, 10 passing): 200 parse,
+  404 → None, 500 / network / JSON errors → `BusinessRegistryError`,
+  IČO format validation (non-digit + too-short), non-CZ country rejection,
+  partial payload tolerance, registry resolver for CZ + unknown country.
+- Backend suite now 119 passing; ruff / format / mypy strict clean.
+- Commit: pending.
