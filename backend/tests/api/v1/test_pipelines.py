@@ -219,3 +219,114 @@ async def test_pipeline_board_scoped_for_salesperson(
     first = response.json()["stages"][0]
     assert first["deal_count"] == 1
     assert {d["name"] for d in first["deals"]} == {"Mine"}
+
+
+async def test_admin_can_create_and_update_stage(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _org, user, stages = await _seed(db_session, owned_cleanup)
+    response = await client.post(
+        "/api/v1/pipelines/default/stages",
+        headers=_auth(user),
+        json={
+            "name": "Kvalifikace",
+            "default_probability": 20,
+            "color": "#112233",
+            "stage_type": "open",
+        },
+    )
+    assert response.status_code == 201, response.text
+    created = response.json()
+    assert created["name"] == "Kvalifikace"
+    assert created["default_probability"] == 20
+
+    patch = await client.patch(
+        f"/api/v1/pipelines/stages/{created['id']}",
+        headers=_auth(user),
+        json={"name": "Kvalifikace A", "default_probability": 35},
+    )
+    assert patch.status_code == 200
+    body = patch.json()
+    assert body["name"] == "Kvalifikace A"
+    assert body["default_probability"] == 35
+    # First stage still present — create appended at the end.
+    assert body["position"] > stages[-1].position
+
+
+async def test_salesperson_cannot_create_stage(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _org, user, _stages = await _seed(db_session, owned_cleanup, role=UserRole.salesperson)
+    response = await client.post(
+        "/api/v1/pipelines/default/stages",
+        headers=_auth(user),
+        json={"name": "Sales", "default_probability": 0, "color": "#112233"},
+    )
+    assert response.status_code == 403
+
+
+async def test_delete_stage_refuses_when_deals_present(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, stages = await _seed(db_session, owned_cleanup)
+    company = Company(organization_id=org.id, name="C")
+    db_session.add(company)
+    await db_session.commit()
+    await db_session.refresh(company)
+    db_session.add(
+        Deal(
+            organization_id=org.id,
+            company_id=company.id,
+            stage_id=stages[0].id,
+            owner_user_id=user.id,
+            name="Blocker",
+            value=Decimal("100"),
+            currency="CZK",
+        )
+    )
+    await db_session.commit()
+
+    response = await client.delete(
+        f"/api/v1/pipelines/stages/{stages[0].id}", headers=_auth(user)
+    )
+    assert response.status_code == 409
+
+
+async def test_delete_empty_stage_succeeds(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _org, user, stages = await _seed(db_session, owned_cleanup)
+    # stages[0] is empty in a fresh org.
+    response = await client.delete(
+        f"/api/v1/pipelines/stages/{stages[0].id}", headers=_auth(user)
+    )
+    assert response.status_code == 204
+
+
+async def test_reorder_stages_updates_positions(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _org, user, stages = await _seed(db_session, owned_cleanup)
+    ids = [str(s.id) for s in stages]
+    reversed_ids = list(reversed(ids))
+    response = await client.post(
+        "/api/v1/pipelines/default/reorder-stages",
+        headers=_auth(user),
+        json={"stage_ids": reversed_ids},
+    )
+    assert response.status_code == 200, response.text
+    got_order = [s["id"] for s in sorted(response.json()["stages"], key=lambda s: s["position"])]
+    assert got_order == reversed_ids
+
+
+async def test_reorder_stages_rejects_foreign_ids(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _org, user, stages = await _seed(db_session, owned_cleanup)
+    bad_ids = [str(stages[0].id), str(uuid.uuid4())]
+    response = await client.post(
+        "/api/v1/pipelines/default/reorder-stages",
+        headers=_auth(user),
+        json={"stage_ids": bad_ids},
+    )
+    assert response.status_code == 400

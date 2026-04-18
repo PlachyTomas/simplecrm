@@ -216,7 +216,8 @@ async def pipeline_velocity(
         lambda: {"name": "", "sum_days": 0.0, "count": 0, "stage_id": None}
     )
     for deal, stage in (await session.execute(scoped)).all():
-        assert deal.closed_at is not None
+        if deal.closed_at is None:
+            continue
         days = (deal.closed_at - deal.created_at).total_seconds() / 86400.0
         bucket = per_stage[str(stage.id)]
         bucket["name"] = stage.name

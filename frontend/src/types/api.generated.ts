@@ -385,6 +385,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pipelines/default/stages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Stage */
+        post: operations["create_stage_api_v1_pipelines_default_stages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pipelines/stages/{stage_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Stage */
+        delete: operations["delete_stage_api_v1_pipelines_stages__stage_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Stage */
+        patch: operations["update_stage_api_v1_pipelines_stages__stage_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/pipelines/default/reorder-stages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reorder Stages */
+        post: operations["reorder_stages_api_v1_pipelines_default_reorder_stages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reports/kpi-summary": {
         parameters: {
             query?: never;
@@ -1138,6 +1190,23 @@ export interface components {
             /** Registered On */
             registered_on?: string | null;
         };
+        /** StageCreate */
+        StageCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Default Probability
+             * @default 0
+             */
+            default_probability: number;
+            /**
+             * Color
+             * @default #3D5AFE
+             */
+            color: string;
+            /** @default open */
+            stage_type: components["schemas"]["StageType"];
+        };
         /** StageOut */
         StageOut: {
             /**
@@ -1160,11 +1229,26 @@ export interface components {
             position: number;
             stage_type: components["schemas"]["StageType"];
         };
+        /** StageReorder */
+        StageReorder: {
+            /** Stage Ids */
+            stage_ids: string[];
+        };
         /**
          * StageType
          * @enum {string}
          */
         StageType: "open" | "won" | "lost";
+        /** StageUpdate */
+        StageUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Default Probability */
+            default_probability?: number | null;
+            /** Color */
+            color?: string | null;
+            stage_type?: components["schemas"]["StageType"] | null;
+        };
         /** TeamCreate */
         TeamCreate: {
             /** Name */
@@ -2169,6 +2253,136 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PipelineBoard"];
+                };
+            };
+        };
+    };
+    create_stage_api_v1_pipelines_default_stages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StageCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_stage_api_v1_pipelines_stages__stage_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                stage_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_stage_api_v1_pipelines_stages__stage_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                stage_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StageUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reorder_stages_api_v1_pipelines_default_reorder_stages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StageReorder"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

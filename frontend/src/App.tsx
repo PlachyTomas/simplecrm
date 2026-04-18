@@ -2,7 +2,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "@/app/AppShell";
-import { ComingSoonPage } from "@/app/ComingSoonPage";
 import { MorePage } from "@/app/MorePage";
 import { CompaniesListPage } from "@/app/companies/CompaniesListPage";
 import { CompanyDetailPage } from "@/app/companies/CompanyDetailPage";
@@ -12,6 +11,7 @@ import { DealDetailPage } from "@/app/deals/DealDetailPage";
 import { DealsListPage } from "@/app/deals/DealsListPage";
 import { PipelinePage } from "@/app/pipeline/PipelinePage";
 import { ReportsPage } from "@/app/reports/ReportsPage";
+import { SettingsPage } from "@/app/settings/SettingsPage";
 import { AuthProvider } from "@/auth/AuthContext";
 import { LoginPage } from "@/auth/LoginPage";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
@@ -40,15 +40,7 @@ export function AppRoutes() {
         <Route path="deals" element={<DealsListPage />} />
         <Route path="deals/:dealId" element={<DealDetailPage />} />
         <Route path="reports" element={<ReportsPage />} />
-        <Route
-          path="settings"
-          element={
-            <ComingSoonPage
-              title="Nastavení"
-              description="Nastavení profilu, týmu a pipeline dorazí v Fázi 10."
-            />
-          }
-        />
+        <Route path="settings" element={<SettingsPage />} />
         <Route path="more" element={<MorePage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

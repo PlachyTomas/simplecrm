@@ -2,20 +2,30 @@
 
 from __future__ import annotations
 
+import uuid
 from collections import defaultdict
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, require_role
 from app.core.scoping import scope_by_owner
 from app.db import get_db
-from app.db.models import Deal, Organization, Pipeline, User
+from app.db.models import Deal, Organization, Pipeline, Stage, User, UserRole
+from app.db.models.enums import StageType
 from app.schemas.deal import DealOut
-from app.schemas.pipeline import BoardStage, PipelineBoard, PipelineSummary
+from app.schemas.pipeline import (
+    BoardStage,
+    PipelineBoard,
+    PipelineSummary,
+    StageCreate,
+    StageOut,
+    StageReorder,
+    StageUpdate,
+)
 
 router = APIRouter(prefix="/pipelines", tags=["pipelines"])
 
@@ -108,3 +118,131 @@ async def get_default_pipeline_board(
         currency=org.currency,
         stages=board_stages,
     )
+
+
+async def _load_stage_for_write(
+    session: AsyncSession, stage_id: uuid.UUID, user: User
+) -> Stage:
+    stmt = (
+        select(Stage)
+        .join(Pipeline, Pipeline.id == Stage.pipeline_id)
+        .where(Stage.id == stage_id, Pipeline.organization_id == user.organization_id)
+    )
+    stage = (await session.execute(stmt)).scalar_one_or_none()
+    if stage is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Stage not found")
+    return stage
+
+
+@router.post(
+    "/default/stages",
+    response_model=StageOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_stage(
+    payload: StageCreate,
+    user: User = Depends(require_role(UserRole.admin)),
+    session: AsyncSession = Depends(get_db),
+) -> Stage:
+    pipeline = await _fetch_default_pipeline(session, user)
+    max_pos = max((s.position for s in pipeline.stages), default=0)
+    stage = Stage(
+        pipeline_id=pipeline.id,
+        name=payload.name.strip(),
+        default_probability=payload.default_probability,
+        color=payload.color,
+        position=max_pos + 10,
+        stage_type=payload.stage_type,
+    )
+    session.add(stage)
+    await session.commit()
+    await session.refresh(stage)
+    return stage
+
+
+@router.patch("/stages/{stage_id}", response_model=StageOut)
+async def update_stage(
+    stage_id: uuid.UUID,
+    payload: StageUpdate,
+    user: User = Depends(require_role(UserRole.admin)),
+    session: AsyncSession = Depends(get_db),
+) -> Stage:
+    stage = await _load_stage_for_write(session, stage_id, user)
+    data = payload.model_dump(exclude_unset=True)
+    if data.get("name"):
+        stage.name = data["name"].strip()
+    if data.get("default_probability") is not None:
+        stage.default_probability = data["default_probability"]
+    if data.get("color"):
+        stage.color = data["color"]
+    if data.get("stage_type") is not None:
+        stage.stage_type = data["stage_type"]
+    await session.commit()
+    await session.refresh(stage)
+    return stage
+
+
+@router.delete("/stages/{stage_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_stage(
+    stage_id: uuid.UUID,
+    user: User = Depends(require_role(UserRole.admin)),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    stage = await _load_stage_for_write(session, stage_id, user)
+
+    # Guard: never leave a pipeline without at least one won stage — that
+    # would break mark-as-won.
+    if stage.stage_type is StageType.won:
+        other_won_stmt = select(func.count()).select_from(Stage).where(
+            Stage.pipeline_id == stage.pipeline_id,
+            Stage.stage_type == StageType.won,
+            Stage.id != stage.id,
+        )
+        remaining = (await session.execute(other_won_stmt)).scalar_one()
+        if remaining == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot delete the only won stage in the pipeline.",
+            )
+
+    # Guard: refuse to delete a stage that still has deals. The UI should
+    # move them first; we avoid silent data loss by returning 409.
+    count_stmt = select(func.count()).select_from(Deal).where(Deal.stage_id == stage.id)
+    in_use = (await session.execute(count_stmt)).scalar_one()
+    if in_use:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Stage still holds {in_use} deal(s); move them first.",
+        )
+
+    await session.delete(stage)
+    await session.commit()
+
+
+@router.post("/default/reorder-stages", response_model=PipelineSummary)
+async def reorder_stages(
+    payload: StageReorder,
+    user: User = Depends(require_role(UserRole.admin)),
+    session: AsyncSession = Depends(get_db),
+) -> Pipeline:
+    pipeline = await _fetch_default_pipeline(session, user)
+    existing = {s.id: s for s in pipeline.stages}
+    if set(payload.stage_ids) != set(existing.keys()):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="stage_ids must be a permutation of the pipeline's stages.",
+        )
+
+    # Two-pass rewrite to avoid colliding on the
+    # unique (pipeline_id, position) constraint: first push every row to a
+    # high temp offset, then write final positions.
+    offset = 1000
+    for stage in pipeline.stages:
+        stage.position += offset
+    await session.flush()
+
+    for idx, sid in enumerate(payload.stage_ids):
+        existing[sid].position = (idx + 1) * 10
+    await session.commit()
+    await session.refresh(pipeline, attribute_names=["stages"])
+    return pipeline

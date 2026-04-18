@@ -69,6 +69,14 @@ describe("Responsive app shell", () => {
           stages: [],
         });
       }
+      if (url.endsWith("/api/v1/pipelines/default")) {
+        return jsonResponse({
+          id: "p",
+          name: "Výchozí",
+          is_default: true,
+          stages: [],
+        });
+      }
       if (url.endsWith("/api/v1/reports/kpi-summary")) {
         return jsonResponse({
           currency: "CZK",
@@ -108,12 +116,14 @@ describe("Responsive app shell", () => {
     }
   });
 
-  it("renders the Brzy hotové placeholder on stub routes", async () => {
+  it("renders the Nastavení pipeline page for admins", async () => {
     renderAt("/app/settings");
     await waitFor(() =>
-      expect(screen.getByRole("heading", { level: 1, name: /^Nastavení$/ })).toBeInTheDocument(),
+      expect(
+        screen.getByRole("heading", { level: 1, name: /^Nastavení pipeline$/ }),
+      ).toBeInTheDocument(),
     );
-    expect(screen.getByText(/profilu.*týmu.*pipeline/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /přidat fázi/i })).toBeInTheDocument();
   });
 
   it("renders the Více menu at /app/more", async () => {
