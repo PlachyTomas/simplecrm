@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +22,13 @@ from app.services.business_registry import (
     BusinessRegistryRegistry,
     get_business_registry,
 )
+from app.services.freeing import free_single_company, reassign_company
 from app.services.lookup_cache import RateLimiter, TtlCache
+
+
+class CompanyReassign(BaseModel):
+    new_owner_user_id: uuid.UUID
+
 
 router = APIRouter(prefix="/companies", tags=["companies"])
 
@@ -222,3 +229,45 @@ async def delete_company(
     company = await _get_scoped(session, user, company_id)
     await session.delete(company)
     await session.commit()
+
+
+@router.post("/{company_id}/free", response_model=CompanyOut)
+async def free_company(
+    company_id: uuid.UUID,
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> Company:
+    """Admin/manager-initiated release into the shared pool."""
+    company = await _get_scoped(session, user, company_id)
+    await free_single_company(session, company=company, released_by=user.id)
+    await session.refresh(company)
+    return company
+
+
+@router.post("/{company_id}/reassign", response_model=CompanyOut)
+async def reassign_company_endpoint(
+    company_id: uuid.UUID,
+    payload: CompanyReassign,
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> Company:
+    """Transfer a company to a specific new owner (admin or manager)."""
+    company = await _get_scoped(session, user, company_id)
+    # New owner must be in the caller's org.
+    target_stmt = select(User.id).where(
+        User.organization_id == user.organization_id,
+        User.id == payload.new_owner_user_id,
+    )
+    if (await session.execute(target_stmt)).scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="new_owner_user_id does not exist in your organization",
+        )
+    await reassign_company(
+        session,
+        company=company,
+        new_owner_id=payload.new_owner_user_id,
+        released_by=user.id,
+    )
+    await session.refresh(company)
+    return company

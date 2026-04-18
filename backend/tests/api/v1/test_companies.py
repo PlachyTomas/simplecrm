@@ -621,3 +621,72 @@ async def test_lookup_registry_rate_limit_returns_429(
 async def test_lookup_registry_rejects_missing_token(client: AsyncClient) -> None:
     response = await client.get("/api/v1/companies/lookup-registry?country=CZ&number=27082440")
     assert response.status_code == 401
+
+
+# free + reassign endpoints ------------------------------------------------
+
+
+async def test_free_company_admin_clears_owner(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    company = Company(organization_id=org.id, name="Owned", owner_user_id=sales.id)
+    db_session.add(company)
+    await db_session.commit()
+
+    response = await client.post(f"/api/v1/companies/{company.id}/free", headers=_auth(admin))
+    assert response.status_code == 200
+    assert response.json()["owner_user_id"] is None
+
+
+async def test_free_company_salesperson_forbidden(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    company = Company(organization_id=org.id, name="Mine", owner_user_id=sales.id)
+    db_session.add(company)
+    await db_session.commit()
+
+    response = await client.post(f"/api/v1/companies/{company.id}/free", headers=_auth(sales))
+    assert response.status_code == 403
+
+
+async def test_reassign_company_admin_transfers_owner(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    a = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    b = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    company = Company(organization_id=org.id, name="T", owner_user_id=a.id)
+    db_session.add(company)
+    await db_session.commit()
+
+    response = await client.post(
+        f"/api/v1/companies/{company.id}/reassign",
+        headers=_auth(admin),
+        json={"new_owner_user_id": str(b.id)},
+    )
+    assert response.status_code == 200
+    assert response.json()["owner_user_id"] == str(b.id)
+
+
+async def test_reassign_company_cross_org_rejected(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    first = await _seed_org(db_session, owned_cleanup)
+    second = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, first, UserRole.admin)
+    foreign = await _seed_user(db_session, owned_cleanup, second, UserRole.salesperson)
+    company = Company(organization_id=first.id, name="T")
+    db_session.add(company)
+    await db_session.commit()
+    response = await client.post(
+        f"/api/v1/companies/{company.id}/reassign",
+        headers=_auth(admin),
+        json={"new_owner_user_id": str(foreign.id)},
+    )
+    assert response.status_code == 400
