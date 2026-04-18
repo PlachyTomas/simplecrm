@@ -36,6 +36,10 @@ class DealStageMove(BaseModel):
     stage_id: uuid.UUID
 
 
+class DealMarkLost(BaseModel):
+    lost_reason: str = Field(min_length=1, max_length=200)
+
+
 class DealOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

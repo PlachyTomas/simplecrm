@@ -24,7 +24,14 @@ from app.db.models import (
     User,
     UserRole,
 )
-from app.schemas.deal import DealCreate, DealOut, DealStageMove, DealUpdate
+from app.db.models.enums import StageType
+from app.schemas.deal import (
+    DealCreate,
+    DealMarkLost,
+    DealOut,
+    DealStageMove,
+    DealUpdate,
+)
 from app.schemas.pagination import Page, PaginationParams
 
 router = APIRouter(prefix="/deals", tags=["deals"])
@@ -242,6 +249,127 @@ async def move_deal_stage(
             payload={
                 "from_stage_id": str(previous_stage_id),
                 "to_stage_id": str(payload.stage_id),
+            },
+        )
+    )
+    await session.commit()
+    await session.refresh(deal)
+    return deal
+
+
+@router.post("/{deal_id}/mark-won", response_model=DealOut)
+async def mark_deal_won(
+    deal_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Deal:
+    """Stamp the deal as won, move it to the pipeline's `won` stage, and
+    refresh the company's last_order_at so the auto-free clock resets.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    deal = await _get_scoped(session, user, deal_id)
+    if not await can_write_row(session, user, deal.owner_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot mark deals outside your visibility scope",
+        )
+
+    # Find the won stage in the same pipeline as the current stage.
+    stmt = (
+        select(Stage)
+        .join(Pipeline, Pipeline.id == Stage.pipeline_id)
+        .where(
+            Pipeline.organization_id == user.organization_id,
+            Stage.stage_type == StageType.won,
+        )
+        .order_by(Stage.position)
+    )
+    won_stage = (await session.execute(stmt)).scalars().first()
+    if won_stage is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="No won stage configured in your pipeline.",
+        )
+
+    now = datetime.now(tz=UTC)
+    previous_stage_id = deal.stage_id
+    deal.stage_id = won_stage.id
+    deal.closed_at = now
+    deal.lost_reason = None
+
+    # Refresh the owning company's last_order_at + ownership_expires_at.
+    company = await session.get(Company, deal.company_id)
+    if company is not None:
+        company.last_order_at = now
+        company.ownership_expires_at = now + timedelta(days=365)
+
+    session.add(
+        Activity(
+            organization_id=user.organization_id,
+            entity_type=ActivityEntityType.deal,
+            entity_id=deal.id,
+            user_id=user.id,
+            activity_type=ActivityType.deal_won,
+            payload={
+                "from_stage_id": str(previous_stage_id),
+                "to_stage_id": str(won_stage.id),
+                "value": str(deal.value),
+                "currency": deal.currency,
+            },
+        )
+    )
+    await session.commit()
+    await session.refresh(deal)
+    return deal
+
+
+@router.post("/{deal_id}/mark-lost", response_model=DealOut)
+async def mark_deal_lost(
+    deal_id: uuid.UUID,
+    payload: DealMarkLost,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Deal:
+    """Stamp the deal as lost with a required reason. Stage stays the same
+    unless a dedicated `lost` stage exists, in which case we move to it."""
+    from datetime import UTC, datetime
+
+    deal = await _get_scoped(session, user, deal_id)
+    if not await can_write_row(session, user, deal.owner_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot mark deals outside your visibility scope",
+        )
+
+    previous_stage_id = deal.stage_id
+    stmt = (
+        select(Stage)
+        .join(Pipeline, Pipeline.id == Stage.pipeline_id)
+        .where(
+            Pipeline.organization_id == user.organization_id,
+            Stage.stage_type == StageType.lost,
+        )
+        .order_by(Stage.position)
+    )
+    lost_stage = (await session.execute(stmt)).scalars().first()
+    if lost_stage is not None:
+        deal.stage_id = lost_stage.id
+
+    deal.closed_at = datetime.now(tz=UTC)
+    deal.lost_reason = payload.lost_reason
+
+    session.add(
+        Activity(
+            organization_id=user.organization_id,
+            entity_type=ActivityEntityType.deal,
+            entity_id=deal.id,
+            user_id=user.id,
+            activity_type=ActivityType.deal_lost,
+            payload={
+                "from_stage_id": str(previous_stage_id),
+                "to_stage_id": str(deal.stage_id),
+                "lost_reason": payload.lost_reason,
             },
         )
     )

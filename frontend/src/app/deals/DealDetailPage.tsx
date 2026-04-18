@@ -1,9 +1,19 @@
-import { ArrowLeft } from "lucide-react";
-import { type ReactNode, useMemo } from "react";
+import { ArrowLeft, Check, X } from "lucide-react";
+import { type ReactNode, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { useMarkDealLost, useMarkDealWon } from "@/app/deals/useDealActions";
 import { useDeal } from "@/app/deals/useDeals";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+
+const LOST_REASONS = [
+  "Cena",
+  "Konkurence",
+  "Nevhodný čas",
+  "Rozpočet",
+  "Nedosaženo dohody",
+  "Jiný",
+];
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -14,10 +24,104 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function MarkLostDialog({
+  open,
+  onClose,
+  onConfirm,
+  pending,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+  pending: boolean;
+}) {
+  const [reason, setReason] = useState(LOST_REASONS[0]);
+  const [custom, setCustom] = useState("");
+
+  if (!open) return null;
+
+  const finalReason = reason === "Jiný" ? custom.trim() : reason;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="mark-lost-title"
+      className="bg-bg/80 fixed inset-0 z-50 flex items-center justify-center px-4 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (finalReason) onConfirm(finalReason);
+        }}
+        className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg"
+      >
+        <h2 id="mark-lost-title" className="text-xl font-semibold">
+          Označit jako prohraný
+        </h2>
+        <p className="mt-2 text-sm text-text-secondary">
+          Vyberte hlavní důvod, abychom mohli sestavit report ztracených obchodů.
+        </p>
+        <fieldset className="mt-4 space-y-2">
+          <legend className="sr-only">Důvod</legend>
+          {LOST_REASONS.map((opt) => (
+            <label key={opt} className="flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="lost-reason"
+                value={opt}
+                checked={reason === opt}
+                onChange={() => setReason(opt)}
+              />
+              {opt}
+            </label>
+          ))}
+        </fieldset>
+        {reason === "Jiný" ? (
+          <label className="mt-3 block">
+            <span className="text-xs font-medium text-text-secondary">Vlastní důvod</span>
+            <input
+              type="text"
+              value={custom}
+              onChange={(e) => setCustom(e.target.value)}
+              required
+              maxLength={200}
+              className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
+            />
+          </label>
+        ) : null}
+        <div className="mt-6 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
+          >
+            Zrušit
+          </button>
+          <button
+            type="submit"
+            disabled={pending || !finalReason}
+            className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-medium text-white transition-colors duration-fast hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {pending ? "Ukládám…" : "Uložit"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 export function DealDetailPage() {
   const { dealId } = useParams<{ dealId: string }>();
   const { data: deal, isPending, isError } = useDeal(dealId);
   const { data: user } = useCurrentUser();
+  const [lostDialogOpen, setLostDialogOpen] = useState(false);
+
+  const markWon = useMarkDealWon(dealId);
+  const markLost = useMarkDealLost(dealId);
 
   const locale = user?.organization.locale ?? "cs-CZ";
   const dateFmt = useMemo(() => new Intl.DateTimeFormat(locale, { dateStyle: "long" }), [locale]);
@@ -46,11 +150,9 @@ export function DealDetailPage() {
     );
   }
 
-  const moneyFmt = new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: deal.currency,
-  });
+  const moneyFmt = new Intl.NumberFormat(locale, { style: "currency", currency: deal.currency });
   const value = Number(deal.value);
+  const isClosed = !!deal.closed_at;
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
@@ -61,11 +163,33 @@ export function DealDetailPage() {
         <ArrowLeft size={16} strokeWidth={1.75} /> Zpět na obchody
       </Link>
 
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold">{deal.name}</h1>
-        <p className="mt-1 font-mono text-lg tabular-nums text-text-primary">
-          {Number.isNaN(value) ? `${deal.value} ${deal.currency}` : moneyFmt.format(value)}
-        </p>
+      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">{deal.name}</h1>
+          <p className="mt-1 font-mono text-lg tabular-nums text-text-primary">
+            {Number.isNaN(value) ? `${deal.value} ${deal.currency}` : moneyFmt.format(value)}
+          </p>
+        </div>
+        {!isClosed ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => markWon.mutate()}
+              disabled={markWon.isPending}
+              className="inline-flex h-10 items-center gap-2 rounded-md bg-highlight px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-highlight-hover disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Check size={16} strokeWidth={1.75} /> Označit jako vyhráno
+            </button>
+            <button
+              type="button"
+              onClick={() => setLostDialogOpen(true)}
+              disabled={markLost.isPending}
+              className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
+            >
+              <X size={16} strokeWidth={1.75} /> Označit jako prohráno
+            </button>
+          </div>
+        ) : null}
       </header>
 
       <section className="rounded-lg border border-border bg-surface">
@@ -107,6 +231,15 @@ export function DealDetailPage() {
           ) : null}
         </dl>
       </section>
+
+      <MarkLostDialog
+        open={lostDialogOpen}
+        onClose={() => setLostDialogOpen(false)}
+        pending={markLost.isPending}
+        onConfirm={(reason) => {
+          markLost.mutate({ lost_reason: reason }, { onSuccess: () => setLostDialogOpen(false) });
+        }}
+      />
     </div>
   );
 }

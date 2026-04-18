@@ -269,6 +269,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/deals/{deal_id}/mark-won": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Deal Won
+         * @description Stamp the deal as won, move it to the pipeline's `won` stage, and
+         *     refresh the company's last_order_at so the auto-free clock resets.
+         */
+        post: operations["mark_deal_won_api_v1_deals__deal_id__mark_won_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/deals/{deal_id}/mark-lost": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Deal Lost
+         * @description Stamp the deal as lost with a required reason. Stage stays the same
+         *     unless a dedicated `lost` stage exists, in which case we move to it.
+         */
+        post: operations["mark_deal_lost_api_v1_deals__deal_id__mark_lost_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/pipelines/default": {
         parameters: {
             query?: never;
@@ -553,6 +595,11 @@ export interface components {
             probability_override?: number | null;
             /** Expected Close Date */
             expected_close_date?: string | null;
+        };
+        /** DealMarkLost */
+        DealMarkLost: {
+            /** Lost Reason */
+            lost_reason: string;
         };
         /** DealOut */
         DealOut: {
@@ -1579,6 +1626,72 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["DealStageMove"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_deal_won_api_v1_deals__deal_id__mark_won_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_deal_lost_api_v1_deals__deal_id__mark_lost_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealMarkLost"];
             };
         };
         responses: {

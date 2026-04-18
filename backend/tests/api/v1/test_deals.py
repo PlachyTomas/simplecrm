@@ -500,6 +500,105 @@ async def test_move_deal_stage_cross_org_rejected(
     assert response.status_code == 400
 
 
+async def test_mark_won_moves_to_won_stage_and_touches_company(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    from sqlalchemy import select as sql_select
+
+    from app.db.models import Pipeline, Stage
+    from app.db.models.enums import StageType
+
+    org, first_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=first_stage.id,
+        owner_user_id=admin.id,
+        name="Big win",
+        value=Decimal("50000"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    response = await client.post(f"/api/v1/deals/{deal.id}/mark-won", headers=_auth(admin))
+    assert response.status_code == 200
+    body = response.json()
+    assert body["closed_at"] is not None
+    assert body["lost_reason"] is None
+
+    stmt = (
+        sql_select(Stage)
+        .join(Pipeline)
+        .where(Pipeline.organization_id == org.id, Stage.stage_type == StageType.won)
+    )
+    won_stage = (await db_session.execute(stmt)).scalar_one()
+    assert body["stage_id"] == str(won_stage.id)
+
+    # Company's last_order_at is freshly set. Use a fresh session so we
+    # don't race with the endpoint's own commit.
+    async with AsyncSessionLocal() as fresh:
+        refreshed = await fresh.get(Company, company.id)
+        assert refreshed is not None
+        assert refreshed.last_order_at is not None
+
+
+async def test_mark_lost_requires_reason(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=admin.id,
+        name="Going south",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    missing = await client.post(f"/api/v1/deals/{deal.id}/mark-lost", headers=_auth(admin), json={})
+    assert missing.status_code == 422
+
+    ok = await client.post(
+        f"/api/v1/deals/{deal.id}/mark-lost",
+        headers=_auth(admin),
+        json={"lost_reason": "Klient vybral konkurenci"},
+    )
+    assert ok.status_code == 200
+    body = ok.json()
+    assert body["closed_at"] is not None
+    assert body["lost_reason"] == "Klient vybral konkurenci"
+
+
+async def test_mark_won_rejects_foreign_deal(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    other = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    company = await _seed_company(db_session, org)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=other.id,
+        name="Theirs",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+    response = await client.post(f"/api/v1/deals/{deal.id}/mark-won", headers=_auth(sales))
+    assert response.status_code == 404
+
+
 async def test_move_deal_stage_foreign_deal_returns_404(
     client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
 ) -> None:
