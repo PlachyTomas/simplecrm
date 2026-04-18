@@ -50,26 +50,41 @@ describe("App routing", () => {
   });
 
   it("renders the authed shell after /auth/me succeeds", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          id: "00000000-0000-0000-0000-000000000001",
-          email: "test@alza.cz",
-          name: "Testovací Uživatel",
-          avatar_url: null,
-          role: "admin",
-          organization: {
-            id: "00000000-0000-0000-0000-0000000000aa",
-            name: "Alza s.r.o.",
-            ico: "27082440",
-            locale: "cs-CZ",
+    const me = {
+      id: "00000000-0000-0000-0000-000000000001",
+      email: "test@alza.cz",
+      name: "Testovací Uživatel",
+      avatar_url: null,
+      role: "admin",
+      organization: {
+        id: "00000000-0000-0000-0000-0000000000aa",
+        name: "Alza s.r.o.",
+        ico: "27082440",
+        locale: "cs-CZ",
+        currency: "CZK",
+        trial_ends_at: "2027-01-01T12:00:00+00:00",
+      },
+    };
+    fetchMock.mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me"))
+        return new Response(JSON.stringify(me), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      if (url.endsWith("/api/v1/reports/kpi-summary"))
+        return new Response(
+          JSON.stringify({
             currency: "CZK",
-            trial_ends_at: "2027-01-01T12:00:00+00:00",
-          },
-        }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      ),
-    );
+            open_deal_count: 0,
+            open_pipeline_value: "0.00",
+            won_this_month_count: 0,
+            won_this_month_value: "0.00",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
     renderAt("/app", { token: "fake-token" });
     await waitFor(() =>
       expect(
@@ -141,31 +156,46 @@ describe("App routing", () => {
   });
 
   it("does not show onboarding for a salesperson with a placeholder org", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          id: "00000000-0000-0000-0000-000000000002",
-          email: "sales@example.cz",
-          name: "Obchodník",
-          avatar_url: null,
-          role: "salesperson",
-          organization: {
-            id: "00000000-0000-0000-0000-0000000000aa",
-            name: "Example",
-            ico: null,
-            locale: "cs-CZ",
+    const me = {
+      id: "00000000-0000-0000-0000-000000000002",
+      email: "sales@example.cz",
+      name: "Obchodník",
+      avatar_url: null,
+      role: "salesperson",
+      organization: {
+        id: "00000000-0000-0000-0000-0000000000aa",
+        name: "Example",
+        ico: null,
+        locale: "cs-CZ",
+        currency: "CZK",
+        trial_ends_at: "2027-01-01T12:00:00+00:00",
+      },
+    };
+    fetchMock.mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me"))
+        return new Response(JSON.stringify(me), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      if (url.endsWith("/api/v1/reports/kpi-summary"))
+        return new Response(
+          JSON.stringify({
             currency: "CZK",
-            trial_ends_at: "2027-01-01T12:00:00+00:00",
-          },
-        }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      ),
-    );
+            open_deal_count: 0,
+            open_pipeline_value: "0.00",
+            won_this_month_count: 0,
+            won_this_month_value: "0.00",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
     renderAt("/app", { token: "fake-token" });
     await waitFor(() =>
-      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-        /Vítejte zpět, Obchodník/i,
-      ),
+      expect(
+        screen.getByRole("heading", { level: 1, name: /Vítejte zpět, Obchodník/i }),
+      ).toBeInTheDocument(),
     );
     expect(screen.queryByRole("heading", { name: /dokončete nastavení/i })).toBeNull();
   });

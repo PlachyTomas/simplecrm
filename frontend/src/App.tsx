@@ -1,12 +1,13 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
-import { AppHome, AppShell } from "@/app/AppShell";
+import { AppShell } from "@/app/AppShell";
 import { ComingSoonPage } from "@/app/ComingSoonPage";
 import { MorePage } from "@/app/MorePage";
 import { CompaniesListPage } from "@/app/companies/CompaniesListPage";
 import { CompanyDetailPage } from "@/app/companies/CompanyDetailPage";
 import { ContactsPage } from "@/app/contacts/ContactsPage";
+import { DashboardPage } from "@/app/dashboard/DashboardPage";
 import { DealDetailPage } from "@/app/deals/DealDetailPage";
 import { DealsListPage } from "@/app/deals/DealsListPage";
 import { PipelinePage } from "@/app/pipeline/PipelinePage";
@@ -29,7 +30,7 @@ export function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<AppHome />} />
+        <Route index element={<DashboardPage />} />
         <Route path="companies" element={<CompaniesListPage />} />
         <Route path="companies/:companyId" element={<CompanyDetailPage />} />
         <Route path="pipeline" element={<PipelinePage />} />

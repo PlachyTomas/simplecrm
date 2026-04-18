@@ -69,6 +69,15 @@ describe("Responsive app shell", () => {
           stages: [],
         });
       }
+      if (url.endsWith("/api/v1/reports/kpi-summary")) {
+        return jsonResponse({
+          currency: "CZK",
+          open_deal_count: 0,
+          open_pipeline_value: "0.00",
+          won_this_month_count: 0,
+          won_this_month_value: "0.00",
+        });
+      }
       throw new Error(`Unexpected fetch: ${url}`);
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;

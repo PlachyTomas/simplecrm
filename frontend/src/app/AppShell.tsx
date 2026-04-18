@@ -109,19 +109,3 @@ export function AppShell() {
     </div>
   );
 }
-
-export function AppHome() {
-  const { data: user } = useCurrentUser();
-  if (!user) return null;
-  return (
-    <section className="mx-auto max-w-2xl px-4 py-12 md:px-8">
-      <div className="rounded-lg border border-border bg-surface p-6">
-        <h1 className="text-2xl font-semibold">Vítejte zpět, {user.name}</h1>
-        <p className="mt-2 text-sm text-text-secondary">
-          Použijte navigaci po levé straně, abyste se dostali k firmám, pipeline a obchodům. Pokud
-          vidíte „Brzy hotové", znamená to, že tu sekci teprve stavíme.
-        </p>
-      </div>
-    </section>
-  );
-}

@@ -345,6 +345,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/kpi-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kpi Summary */
+        get: operations["kpi_summary_api_v1_reports_kpi_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -692,6 +709,27 @@ export interface components {
         HealthResponse: {
             /** Status */
             status: string;
+        };
+        /**
+         * KpiSummary
+         * @description Reports snapshot for the caller (and their visibility scope).
+         *
+         *     `won_this_month_*` reflect deals whose `closed_at` landed inside the
+         *     current UTC month (start of month → now). Values are in the org's
+         *     configured currency; deals in other currencies contribute to counts
+         *     but not to currency-denominated totals.
+         */
+        KpiSummary: {
+            /** Currency */
+            currency: string;
+            /** Open Deal Count */
+            open_deal_count: number;
+            /** Open Pipeline Value */
+            open_pipeline_value: string;
+            /** Won This Month Count */
+            won_this_month_count: number;
+            /** Won This Month Value */
+            won_this_month_value: string;
         };
         /** OrganizationOut */
         OrganizationOut: {
@@ -1751,6 +1789,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PipelineBoard"];
+                };
+            };
+        };
+    };
+    kpi_summary_api_v1_reports_kpi_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KpiSummary"];
                 };
             };
         };
