@@ -104,8 +104,8 @@ describe("Companies screens", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: /^firmy$/i })).toBeInTheDocument(),
     );
-    expect(screen.getByRole("link", { name: /alza\.cz/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /rohlík\.cz/i })).toBeInTheDocument();
+    expect(await screen.findByText(/alza\.cz a\.s\./i)).toBeInTheDocument();
+    expect(await screen.findByText(/rohlík\.cz/i)).toBeInTheDocument();
   });
 
   it("renders empty state when list is empty", async () => {
@@ -139,9 +139,10 @@ describe("Companies screens", () => {
     });
 
     renderAt("/app/companies", { token: "fake" });
-    const link = await screen.findByRole("link", { name: /alza\.cz/i });
+    const cell = await screen.findByText(/alza\.cz a\.s\./i);
     const user = userEvent.setup();
-    await user.click(link);
+    // Each row is a clickable <tr>; click the row cell.
+    await user.click(cell);
 
     await waitFor(() =>
       expect(screen.getByRole("heading", { level: 1, name: /alza\.cz/i })).toBeInTheDocument(),

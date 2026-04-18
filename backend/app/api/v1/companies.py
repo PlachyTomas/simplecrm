@@ -54,10 +54,18 @@ async def _get_scoped(session: AsyncSession, user: User, company_id: uuid.UUID) 
 @router.get("", response_model=Page[CompanyOut])
 async def list_companies(
     pagination: PaginationParams = Depends(),
+    search: str | None = Query(
+        default=None,
+        max_length=120,
+        description="Case-insensitive partial match on name or IČO.",
+    ),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Page[CompanyOut]:
     base = select(Company).where(Company.organization_id == user.organization_id)
+    if search:
+        pattern = f"%{search.strip()}%"
+        base = base.where(Company.name.ilike(pattern) | Company.ico.ilike(pattern))
     scoped = await scope_by_owner(base, session=session, user=user, owner_col=Company.owner_user_id)
     count_stmt = select(func.count()).select_from(scoped.subquery())
     total = (await session.execute(count_stmt)).scalar_one()

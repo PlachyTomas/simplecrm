@@ -139,6 +139,34 @@ async def test_list_companies_rejects_missing_token(client: AsyncClient) -> None
     assert response.status_code == 401
 
 
+async def test_list_companies_search_filters_by_name_and_ico(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    db_session.add_all(
+        [
+            Company(organization_id=org.id, name="Alza.cz a.s.", ico="27082440"),
+            Company(organization_id=org.id, name="Rohlík.cz", ico="24253820"),
+            Company(organization_id=org.id, name="Moje s.r.o.", ico="11111111"),
+        ]
+    )
+    await db_session.commit()
+
+    # Partial name match, case-insensitive.
+    by_name = await client.get("/api/v1/companies?search=alza", headers=_auth(admin))
+    assert by_name.status_code == 200
+    assert {it["name"] for it in by_name.json()["items"]} == {"Alza.cz a.s."}
+
+    # Partial ICO match.
+    by_ico = await client.get("/api/v1/companies?search=2425", headers=_auth(admin))
+    assert {it["name"] for it in by_ico.json()["items"]} == {"Rohlík.cz"}
+
+    # No match.
+    empty = await client.get("/api/v1/companies?search=xyz123", headers=_auth(admin))
+    assert empty.json()["total"] == 0
+
+
 # ---------------------------------------------------------------------------
 # get_company
 # ---------------------------------------------------------------------------

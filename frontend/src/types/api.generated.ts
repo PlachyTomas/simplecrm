@@ -913,6 +913,8 @@ export interface operations {
     list_companies_api_v1_companies_get: {
         parameters: {
             query?: {
+                /** @description Case-insensitive partial match on name or IČO. */
+                search?: string | null;
                 limit?: number;
                 offset?: number;
             };
