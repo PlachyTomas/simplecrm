@@ -640,3 +640,36 @@ fields; the company can be saved."
   container's outbound HTTP (allowed per README) and can be run manually.
 
 Phase 3 done. Commits on master for Phase 3: b810912, 437f8f5, bac8639.
+
+### Task 4.1 — Responsive app shell ✅ PASS
+- `src/app/Sidebar.tsx` — desktop-only (`hidden md:flex`) as a single
+  `<nav aria-label="Hlavní navigace">`. Primary destinations (Přehled,
+  Pipeline, Firmy, Kontakty, Obchody) under a "Prodej" caption; a
+  secondary block pins Nastavení + Odhlásit se (button) at the bottom.
+  Active `NavLink` uses `bg-accent-subtle text-accent`.
+- `src/app/MobileTabBar.tsx` — fixed-bottom `<nav aria-label="Spodní
+  navigace">` with five tabs (Přehled / Pipeline / Firmy / Kontakty /
+  Více). `md:hidden` hides it on desktop. 44-px min height per
+  ui-design.md §6.5.
+- `src/app/ComingSoonPage.tsx` — shared placeholder for unbuilt sections.
+- `src/app/MorePage.tsx` — mobile surface for hidden destinations
+  (Obchody, Reporty, Nastavení, Odhlásit se).
+- `src/app/AppShell.tsx` rewritten:
+  - Flex layout `<Sidebar />` + main column.
+  - Sticky 64-px top bar with org name, trial badge (days remaining;
+    color shifts to `warning` ≤ 7d and `danger` ≤ 3d per §5.11), user
+    avatar + name/email.
+  - `<main>` with `pb-20 md:pb-12` so content clears the mobile tab bar.
+  - `<MobileTabBar />` docked at the bottom.
+  - Onboarding modal continues to appear for admins without an IČO.
+- `src/App.tsx` adds `/app/pipeline`, `/app/contacts`, `/app/deals`,
+  `/app/reports`, `/app/settings` (all `ComingSoonPage`) and `/app/more`
+  (`MorePage`).
+- `src/__tests__/shell.test.tsx` (4 new tests): desktop sidebar lists the
+  five primary links + logout button; mobile tab bar lists the five
+  destinations; `/app/pipeline` renders the Brzy hotové placeholder;
+  `/app/more` renders the Více menu (scoped via `within(main)` so the
+  sidebar's "Obchody" link doesn't collide with the MorePage's).
+- Verification: 18/18 frontend tests (up from 14); lint, typecheck,
+  format, build all green. Backend unchanged at 126 tests.
+- Commit: pending.

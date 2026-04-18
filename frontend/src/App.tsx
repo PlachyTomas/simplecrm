@@ -2,6 +2,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { AppHome, AppShell } from "@/app/AppShell";
+import { ComingSoonPage } from "@/app/ComingSoonPage";
+import { MorePage } from "@/app/MorePage";
 import { CompaniesListPage } from "@/app/companies/CompaniesListPage";
 import { CompanyDetailPage } from "@/app/companies/CompanyDetailPage";
 import { AuthProvider } from "@/auth/AuthContext";
@@ -26,6 +28,49 @@ export function AppRoutes() {
         <Route index element={<AppHome />} />
         <Route path="companies" element={<CompaniesListPage />} />
         <Route path="companies/:companyId" element={<CompanyDetailPage />} />
+        <Route
+          path="pipeline"
+          element={
+            <ComingSoonPage
+              title="Pipeline"
+              description="Kanban přehled obchodů brzy dorazí. Zatím můžete zakládat firmy a dál sledovat postup."
+            />
+          }
+        />
+        <Route
+          path="contacts"
+          element={
+            <ComingSoonPage
+              title="Kontakty"
+              description="Rozhraní kontaktů je na cestě. Zatím používejte seznam firem pro základní evidenci."
+            />
+          }
+        />
+        <Route
+          path="deals"
+          element={
+            <ComingSoonPage
+              title="Obchody"
+              description="Přehled obchodů bude součástí pipeline v Fázi 5."
+            />
+          }
+        />
+        <Route
+          path="reports"
+          element={
+            <ComingSoonPage title="Reporty" description="Výkazy a leaderboard přibudou v Fázi 8." />
+          }
+        />
+        <Route
+          path="settings"
+          element={
+            <ComingSoonPage
+              title="Nastavení"
+              description="Nastavení profilu, týmu a pipeline dorazí v Fázi 10."
+            />
+          }
+        />
+        <Route path="more" element={<MorePage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
