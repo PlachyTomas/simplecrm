@@ -641,6 +641,37 @@ fields; the company can be saved."
 
 Phase 3 done. Commits on master for Phase 3: b810912, 437f8f5, bac8639.
 
+## Session 3 — 2026-04-18 (cont.)
+
+Resumed after the Phase 3 stop. User asked to push through without
+stopping at each section. Blew through Phases 4 → 6 plus assorted
+splits. Per-task summaries below; commits listed in `git log`.
+
+### Phase 4 — App shell + core screens ✅
+- 4.1 responsive app shell — 0580546
+- 4.2 TanStack Table + tabbed detail (backend search query + tabs) — fba84d0
+- 4.3 contacts split-view + create modal — 8734ada
+- 4.4 deals list + detail with stage badge — 1cf5c9f
+- 4.5 (command palette) deferred — nice-to-have per the brief.
+- 4.6 empty states — built into each list as part of 4.2–4.4.
+
+### Phase 5 — Pipeline + Kanban ✅ (5.5 deferred)
+- 5.1 GET /pipelines/default/board with scoped deals + totals — 1db2e75
+- 5.2+5.3 Kanban UI with dnd-kit + optimistic stage move — 62bb719
+  Backend adds POST /deals/:id/move-stage; frontend gets useMoveDealStage
+  with onMutate/onError/onSettled rollback.
+- 5.4 Mark as won / lost — 88a6314
+  Won moves the deal to the pipeline's won stage, stamps closed_at,
+  refreshes company.last_order_at + ownership_expires_at. Lost requires
+  a reason (Czech radio list + custom "Jiný" fallback).
+- 5.5 owner/date/value filters deferred.
+
+### Phase 6 — Dashboards (6.1 + 6.2 + 6.4) ✅
+- GET /reports/kpi-summary + 4-card DashboardPage at `/app` — 992eb81
+- 6.3 manager-specific leaderboard + charts deferred.
+
+End of Phase 6: backend 141 tests, frontend 30 tests, all gates green.
+
 ### Task 4.1 — Responsive app shell ✅ PASS
 - `src/app/Sidebar.tsx` — desktop-only (`hidden md:flex`) as a single
   `<nav aria-label="Hlavní navigace">`. Primary destinations (Přehled,
@@ -672,4 +703,55 @@ Phase 3 done. Commits on master for Phase 3: b810912, 437f8f5, bac8639.
   sidebar's "Obchody" link doesn't collide with the MorePage's).
 - Verification: 18/18 frontend tests (up from 14); lint, typecheck,
   format, build all green. Backend unchanged at 126 tests.
-- Commit: pending.
+- Commit: 0580546.
+
+### Phase 7 — Teams (task 7.1 shipped; 7.2–7.5 deferred)
+- 7.1 team CRUD endpoints — 9259695. Admins create/delete; admins or
+  the team's own manager can edit + replace members; cross-org
+  references 400; 11 tests. Invite flow, team-management UI, user-
+  management UI, and billing card are follow-ups for a future session.
+
+### Phase 9 — Auto-freeing (9.1 + 9.2 + 9.4 shipped)
+- `app/services/freeing.py` + manual endpoints — df0c3b8.
+  - `free_expired_companies(session, organization_id=None, now=None)`
+    releases owned companies past their `ownership_expires_at`, writes
+    `OwnershipHistory.released_at` + a `company_freed` Activity.
+  - `POST /companies/:id/free` + `POST /companies/:id/reassign` (admin
+    or manager; cross-org new-owner 400).
+- Deferred: 9.3 emails, APScheduler cron registration for the 03:00
+  Europe/Prague daily sweep, 9.5 list-page countdown badges.
+
+### Deferred-to-later tasks
+- 4.5 global command palette (explicitly optional in the brief).
+- 5.5 Kanban owner / date / value filters.
+- 6.3 manager-specific leaderboard + velocity + stage-distribution.
+- 7.2 invite-by-email flow; 7.3 team-management UI; 7.4 user-management
+  UI; 7.5 billing summary card.
+- 8.* reports (leaderboard / velocity / loss-reasons / CSV export).
+- 9.3 transactional email on company_freed; APScheduler cron; 9.5
+  list-page countdown badges.
+- Phase 10 pipeline customization + settings page.
+- Phase 11 landing page (hero / differentiators / pricing / FAQ).
+- Phase 12 deployment (Coolify + Hetzner + backups + Sentry).
+
+## Session 3 — end state
+- Backend: 159 passing tests across models, services, and API (ruff /
+  ruff format / mypy strict all clean).
+- Frontend: 30 passing tests (lint / typecheck / format / build clean).
+- Alembic migrations round-trip; `alembic check` reports no drift.
+- OpenAPI types regenerated; `types:check` stays green.
+- `master` at df0c3b8; ~60 commits total across all sessions.
+- Running the stack: `docker compose up` brings up Google sign-in →
+  dashboard with KPI cards, companies list with ARES-powered add modal
+  + tabbed detail, contacts split-view, deals list + detail + won/lost
+  actions, Kanban with drag-and-drop stage moves. Admin-only endpoints
+  for team CRUD and company free/reassign are covered by tests.
+
+No `RESUME.md` written — we stopped between phases on a clean commit.
+Next session picks up from this log. Most valuable next targets by
+product impact:
+1. 9.5 list-page countdown badges + APScheduler cron registration
+   (ships the signature auto-freeing feature end-to-end).
+2. 7.3 + 7.4 team + user management UIs (the API is already done).
+3. 11.1 real landing page (currently a stub).
+4. Phase 12 deployment work (Coolify + Hetzner + backups).
