@@ -11,6 +11,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import (
+    Activity,
+    ActivityEntityType,
+    ActivityType,
     Company,
     Contact,
     Deal,
@@ -308,3 +311,96 @@ async def test_deleting_company_cascades_deals(db_session: AsyncSession) -> None
         .all()
     )
     assert remaining == []
+
+
+async def test_activity_round_trip_with_jsonb_payload(
+    db_session: AsyncSession,
+) -> None:
+    org, user = await _seed_org_and_user(db_session)
+    company = Company(organization_id=org.id, name="Aktivity s.r.o.")
+    db_session.add(company)
+    await db_session.flush()
+
+    activity = Activity(
+        organization_id=org.id,
+        entity_type=ActivityEntityType.company,
+        entity_id=company.id,
+        user_id=user.id,
+        activity_type=ActivityType.note,
+        payload={"text": "Zavolat zítra", "priority": "high"},
+    )
+    db_session.add(activity)
+    await db_session.flush()
+    await db_session.refresh(activity)
+
+    assert activity.payload == {"text": "Zavolat zítra", "priority": "high"}
+    assert activity.entity_type is ActivityEntityType.company
+    assert activity.created_at is not None
+
+
+async def test_activity_query_by_entity(db_session: AsyncSession) -> None:
+    org, user = await _seed_org_and_user(db_session)
+    contact = Contact(
+        organization_id=org.id,
+        first_name="Eva",
+        last_name="Nováková",
+        email="eva@ex.cz",
+    )
+    db_session.add(contact)
+    await db_session.flush()
+    db_session.add_all(
+        [
+            Activity(
+                organization_id=org.id,
+                entity_type=ActivityEntityType.contact,
+                entity_id=contact.id,
+                user_id=user.id,
+                activity_type=ActivityType.note,
+                payload={"text": f"poznámka {i}"},
+            )
+            for i in range(3)
+        ]
+    )
+    await db_session.flush()
+
+    rows = (
+        (
+            await db_session.execute(
+                select(Activity).where(
+                    Activity.entity_type == ActivityEntityType.contact,
+                    Activity.entity_id == contact.id,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 3
+
+
+async def test_activity_user_delete_nulls_user_id(
+    db_session: AsyncSession,
+) -> None:
+    org, user = await _seed_org_and_user(db_session)
+    company = Company(organization_id=org.id, name="Keep me a.s.")
+    db_session.add(company)
+    await db_session.flush()
+
+    activity = Activity(
+        organization_id=org.id,
+        entity_type=ActivityEntityType.company,
+        entity_id=company.id,
+        user_id=user.id,
+        activity_type=ActivityType.note,
+        payload={},
+    )
+    db_session.add(activity)
+    await db_session.flush()
+    activity_id = activity.id
+
+    await db_session.execute(delete(User).where(User.id == user.id))
+    await db_session.flush()
+    db_session.expire_all()
+    refreshed = await db_session.get(Activity, activity_id)
+    assert refreshed is not None
+    assert refreshed.user_id is None

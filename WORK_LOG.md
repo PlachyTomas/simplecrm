@@ -417,4 +417,25 @@ Picked up cleanly from Session 1's end state: `master` at d68cfd9, no
   company-delete CASCADEs its deals.
 - Backend suite now 51 passing; ruff / format / mypy strict clean. API
   surface unchanged, so frontend types:check stays green.
+- Commit: 30339cb.
+
+### Task 2.5 — Activity model ✅ PASS
+- `ActivityEntityType` (`company | contact | deal`) and `ActivityType`
+  (`note`, `stage_change`, `owner_change`, `deal_won`, `deal_lost`,
+  `company_freed`, `ownership_reassigned`) enums added.
+- `app/db/models/activity.py`: polymorphic audit log. `(entity_type,
+  entity_id)` identifies the subject — no FK on `entity_id` because it spans
+  three tables; the service layer validates the pair. `user_id` nullable +
+  SET NULL so system-emitted activities (freeing cron) and user-deletion
+  preserve history. `payload` is JSONB for flexible extra context.
+  `organization_id` is CASCADE-scoped for row-level filters and org teardown.
+- Indexes: `(entity_type, entity_id)` composite for timeline queries,
+  `created_at` for ordering, plus `organization_id` and `user_id`.
+- Migration `94077b6331b7_phase2_activities.py`: creates the table + both
+  enums; downgrade tears them all down.
+- Tests (`test_models_phase2.py`, +3 → 15 total): JSONB payload round-trip,
+  query by `(entity_type, entity_id)`, user-delete nulls `user_id` (with
+  `expire_all()` to drop the ORM cache after raw DELETE).
+- Backend suite 54 passing; ruff / format / mypy strict clean; frontend
+  types:check still up to date.
 - Commit: pending.
