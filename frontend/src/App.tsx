@@ -6,6 +6,7 @@ import { ComingSoonPage } from "@/app/ComingSoonPage";
 import { MorePage } from "@/app/MorePage";
 import { CompaniesListPage } from "@/app/companies/CompaniesListPage";
 import { CompanyDetailPage } from "@/app/companies/CompanyDetailPage";
+import { ContactsPage } from "@/app/contacts/ContactsPage";
 import { AuthProvider } from "@/auth/AuthContext";
 import { LoginPage } from "@/auth/LoginPage";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
@@ -37,15 +38,8 @@ export function AppRoutes() {
             />
           }
         />
-        <Route
-          path="contacts"
-          element={
-            <ComingSoonPage
-              title="Kontakty"
-              description="Rozhraní kontaktů je na cestě. Zatím používejte seznam firem pro základní evidenci."
-            />
-          }
-        />
+        <Route path="contacts" element={<ContactsPage />} />
+        <Route path="contacts/:contactId" element={<ContactsPage />} />
         <Route
           path="deals"
           element={

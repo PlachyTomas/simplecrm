@@ -54,7 +54,8 @@ describe("Responsive app shell", () => {
     fetchMock.mockImplementation(async (input) => {
       const url = typeof input === "string" ? input : (input as Request).url;
       if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME_RESPONSE);
-      if (url.includes("/api/v1/companies?")) return jsonResponse(EMPTY_LIST);
+      if (url.includes("/api/v1/companies?") || url.includes("/api/v1/contacts?"))
+        return jsonResponse(EMPTY_LIST);
       throw new Error(`Unexpected fetch: ${url}`);
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
