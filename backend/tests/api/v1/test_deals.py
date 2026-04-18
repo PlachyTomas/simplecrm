@@ -432,3 +432,95 @@ async def test_delete_deal_rejects_missing_token(
     await db_session.commit()
     response = await client.delete(f"/api/v1/deals/{deal.id}")
     assert response.status_code == 401
+
+
+# move_deal_stage --------------------------------------------------------
+
+
+async def test_move_deal_stage_happy(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    from sqlalchemy import select as sql_select
+
+    from app.db.models import Pipeline, Stage
+
+    org, first_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+
+    stages_stmt = sql_select(Stage).join(Pipeline).where(Pipeline.organization_id == org.id)
+    stages = (await db_session.execute(stages_stmt)).scalars().all()
+    second_stage = next(s for s in stages if s.position == 1)
+
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=first_stage.id,
+        owner_user_id=admin.id,
+        name="Mover",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    response = await client.post(
+        f"/api/v1/deals/{deal.id}/move-stage",
+        headers=_auth(admin),
+        json={"stage_id": str(second_stage.id)},
+    )
+    assert response.status_code == 200
+    assert response.json()["stage_id"] == str(second_stage.id)
+
+
+async def test_move_deal_stage_cross_org_rejected(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    first_org, first_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    _second_org, second_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, first_org, UserRole.admin)
+    company = await _seed_company(db_session, first_org)
+    deal = Deal(
+        organization_id=first_org.id,
+        company_id=company.id,
+        stage_id=first_stage.id,
+        owner_user_id=admin.id,
+        name="Local",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    response = await client.post(
+        f"/api/v1/deals/{deal.id}/move-stage",
+        headers=_auth(admin),
+        json={"stage_id": str(second_stage.id)},
+    )
+    assert response.status_code == 400
+
+
+async def test_move_deal_stage_foreign_deal_returns_404(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    other = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    company = await _seed_company(db_session, org)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=other.id,
+        name="Theirs",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+    response = await client.post(
+        f"/api/v1/deals/{deal.id}/move-stage",
+        headers=_auth(sales),
+        json={"stage_id": str(stage.id)},
+    )
+    assert response.status_code == 404  # visibility-first

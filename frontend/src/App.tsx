@@ -9,6 +9,7 @@ import { CompanyDetailPage } from "@/app/companies/CompanyDetailPage";
 import { ContactsPage } from "@/app/contacts/ContactsPage";
 import { DealDetailPage } from "@/app/deals/DealDetailPage";
 import { DealsListPage } from "@/app/deals/DealsListPage";
+import { PipelinePage } from "@/app/pipeline/PipelinePage";
 import { AuthProvider } from "@/auth/AuthContext";
 import { LoginPage } from "@/auth/LoginPage";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
@@ -31,15 +32,7 @@ export function AppRoutes() {
         <Route index element={<AppHome />} />
         <Route path="companies" element={<CompaniesListPage />} />
         <Route path="companies/:companyId" element={<CompanyDetailPage />} />
-        <Route
-          path="pipeline"
-          element={
-            <ComingSoonPage
-              title="Pipeline"
-              description="Kanban přehled obchodů brzy dorazí. Zatím můžete zakládat firmy a dál sledovat postup."
-            />
-          }
-        />
+        <Route path="pipeline" element={<PipelinePage />} />
         <Route path="contacts" element={<ContactsPage />} />
         <Route path="contacts/:contactId" element={<ContactsPage />} />
         <Route path="deals" element={<DealsListPage />} />

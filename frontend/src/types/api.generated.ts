@@ -252,6 +252,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/deals/{deal_id}/move-stage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Move Deal Stage */
+        post: operations["move_deal_stage_api_v1_deals__deal_id__move_stage_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/pipelines/default": {
         parameters: {
             query?: never;
@@ -587,6 +604,14 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** DealStageMove */
+        DealStageMove: {
+            /**
+             * Stage Id
+             * Format: uuid
+             */
+            stage_id: string;
         };
         /** DealUpdate */
         DealUpdate: {
@@ -1530,6 +1555,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    move_deal_stage_api_v1_deals__deal_id__move_stage_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealStageMove"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealOut"];
+                };
             };
             /** @description Validation Error */
             422: {

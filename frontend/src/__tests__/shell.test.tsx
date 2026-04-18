@@ -60,6 +60,15 @@ describe("Responsive app shell", () => {
         url.includes("/api/v1/deals?")
       )
         return jsonResponse(EMPTY_LIST);
+      if (url.includes("/api/v1/pipelines/default/board")) {
+        return jsonResponse({
+          id: "p",
+          name: "Výchozí",
+          is_default: true,
+          currency: "CZK",
+          stages: [],
+        });
+      }
       throw new Error(`Unexpected fetch: ${url}`);
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
@@ -91,11 +100,11 @@ describe("Responsive app shell", () => {
   });
 
   it("renders the Brzy hotové placeholder on stub routes", async () => {
-    renderAt("/app/pipeline");
+    renderAt("/app/settings");
     await waitFor(() =>
-      expect(screen.getByRole("heading", { level: 1, name: /^Pipeline$/ })).toBeInTheDocument(),
+      expect(screen.getByRole("heading", { level: 1, name: /^Nastavení$/ })).toBeInTheDocument(),
     );
-    expect(screen.getByText(/Kanban přehled obchodů brzy/i)).toBeInTheDocument();
+    expect(screen.getByText(/profilu.*týmu.*pipeline/i)).toBeInTheDocument();
   });
 
   it("renders the Více menu at /app/more", async () => {

@@ -11,8 +11,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user, require_role
 from app.core.scoping import can_write_row, scope_by_owner
 from app.db import get_db
-from app.db.models import Company, Contact, Deal, Organization, Pipeline, Stage, User, UserRole
-from app.schemas.deal import DealCreate, DealOut, DealUpdate
+from app.db.models import (
+    Activity,
+    ActivityEntityType,
+    ActivityType,
+    Company,
+    Contact,
+    Deal,
+    Organization,
+    Pipeline,
+    Stage,
+    User,
+    UserRole,
+)
+from app.schemas.deal import DealCreate, DealOut, DealStageMove, DealUpdate
 from app.schemas.pagination import Page, PaginationParams
 
 router = APIRouter(prefix="/deals", tags=["deals"])
@@ -194,6 +206,45 @@ async def update_deal(
 
     for field, value in updates.items():
         setattr(deal, field, value)
+    await session.commit()
+    await session.refresh(deal)
+    return deal
+
+
+@router.post("/{deal_id}/move-stage", response_model=DealOut)
+async def move_deal_stage(
+    deal_id: uuid.UUID,
+    payload: DealStageMove,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Deal:
+    deal = await _get_scoped(session, user, deal_id)
+    if not await can_write_row(session, user, deal.owner_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot move deals outside your visibility scope",
+        )
+    await _assert_stage_in_org(session, user, payload.stage_id)
+
+    if deal.stage_id == payload.stage_id:
+        return deal  # no-op; UI sometimes sends it on drop
+
+    previous_stage_id = deal.stage_id
+    deal.stage_id = payload.stage_id
+
+    session.add(
+        Activity(
+            organization_id=user.organization_id,
+            entity_type=ActivityEntityType.deal,
+            entity_id=deal.id,
+            user_id=user.id,
+            activity_type=ActivityType.stage_change,
+            payload={
+                "from_stage_id": str(previous_stage_id),
+                "to_stage_id": str(payload.stage_id),
+            },
+        )
+    )
     await session.commit()
     await session.refresh(deal)
     return deal

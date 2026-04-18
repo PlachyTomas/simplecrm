@@ -32,6 +32,10 @@ class DealUpdate(BaseModel):
     lost_reason: str | None = Field(default=None, max_length=200)
 
 
+class DealStageMove(BaseModel):
+    stage_id: uuid.UUID
+
+
 class DealOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
