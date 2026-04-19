@@ -47,7 +47,6 @@
       "Write(.docker/**)",
       "Write(scripts/**)",
       "Write(docs/**)",
-      "Write(WORK_LOG.md)",
       "Write(RESUME.md)"
     ],
     "deny": [

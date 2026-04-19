@@ -13,7 +13,7 @@ You are one session doing everything. For each task you:
 2. **Build** — write the code, migrations, and tests.
 3. **Verify** — explicitly switch to tester mindset. Re-read the acceptance criteria. Run lints, typechecks, and tests. Check the output at 390px and 1280px if it's UI work. Fix anything that fails.
 4. **Commit** — one clean commit per completed task. Conventional commit format.
-5. **Log** — update `WORK_LOG.md`, then move to the next task.
+5. **Log** — update `docs/work-log.md`, then move to the next task.
 
 The explicit mode-switch between Build and Verify matters. When you switch, mentally discard your assumptions about the code you just wrote and re-examine it against the acceptance criteria as if seeing it for the first time.
 
@@ -34,7 +34,7 @@ Smaller tasks = cleaner commits = easier recovery if a session limit interrupts 
 Your session has a **5-hour token budget**. The project will take multiple sessions. You **will** hit the limit. This protocol ensures zero lost work and seamless resumption.
 
 **Continuous state tracking:**
-1. Maintain `WORK_LOG.md` at the repo root. Structure:
+1. Maintain `docs/work-log.md`. Structure:
    ```markdown
    # SimpleCRM Work Log
 
@@ -50,7 +50,7 @@ Your session has a **5-hour token budget**. The project will take multiple sessi
    - Migration generated
    - NEXT: write test file, run tests
    ```
-2. **Update `WORK_LOG.md` after every completed task AND after every meaningful intermediate step** (model created, migration run, tests written, tests passing). This is your save-game. If you only update at task completion, a mid-task interruption loses all context.
+2. **Update `docs/work-log.md` after every completed task AND after every meaningful intermediate step** (model created, migration run, tests written, tests passing). This is your save-game. If you only update at task completion, a mid-task interruption loses all context.
 
 **When you sense the session might be ending** (you notice slower responses, you've been working for a while, or you're about to start a large operation):
 1. **Stop and commit** whatever compiles, even if incomplete. Use commit message: `wip: Task X.Y — [what's done, what's next]`
@@ -83,10 +83,10 @@ Your session has a **5-hour token budget**. The project will take multiple sessi
    - No lint errors
    - Migration applied to dev DB
    ```
-3. Commit `RESUME.md` and `WORK_LOG.md`.
+3. Commit `RESUME.md` and `docs/work-log.md`.
 
 **On every session start — ALWAYS do this first:**
-1. Read `WORK_LOG.md` end-to-end to understand project state.
+1. Read `docs/work-log.md` end-to-end to understand project state.
 2. Read `RESUME.md` if it exists — this is your exact continuation point.
 3. Run `git log --oneline -10` to see recent commits.
 4. Run the test suite (`pytest` and `pnpm test`) to confirm the project is in a clean state.
@@ -245,7 +245,7 @@ simplecrm/
 │   └── skills/              # Worker skill files
 ├── docker-compose.yml       # Local dev
 ├── docker-compose.prod.yml  # Production template
-├── WORK_LOG.md              # Maintained by Manager
+├── docs/work-log.md         # Maintained by Manager
 ├── RESUME.md                # Written at session end if interrupted
 └── README.md
 ```
@@ -582,7 +582,7 @@ After completing the code for each task, explicitly switch to tester mode and:
 2. Run the full test suite and confirm zero failures.
 3. If the task involves UI: mentally walk through the screen at 390px and 1280px widths. Check that all interactive elements have focus states.
 4. Check Czech text for vykání consistency and natural phrasing.
-5. Log the result in `WORK_LOG.md`: either `✅ PASS` or `❌ FAIL — [what's wrong]`.
+5. Log the result in `docs/work-log.md`: either `✅ PASS` or `❌ FAIL — [what's wrong]`.
 6. If FAIL: fix the issue immediately, re-run tests, re-verify, then log `✅ PASS (after fix)`.
 
 ---
@@ -595,11 +595,11 @@ After completing the code for each task, explicitly switch to tester mode and:
 3. **Build**: write code, migrations, tests.
 4. **Verify**: switch to tester mode. Run lints, typechecks, tests. Re-read acceptance criteria. Fix issues.
 5. **Commit**: `git add -A && git commit -m "feat(scope): description — Task X.Y"`
-6. **Log**: update `WORK_LOG.md` with task status `✅`.
+6. **Log**: update `docs/work-log.md` with task status `✅`.
 7. Go to step 1.
 
 ### When to split a task further
-If you catch yourself working on a task and it's been >45 minutes without a commit, you probably scoped it too large. Stop, commit what works, split the remainder into a new task, log both in `WORK_LOG.md`.
+If you catch yourself working on a task and it's been >45 minutes without a commit, you probably scoped it too large. Stop, commit what works, split the remainder into a new task, log both in `docs/work-log.md`.
 
 ### Commit discipline
 - One logical change per commit.
@@ -662,8 +662,8 @@ SimpleCRM v1.0 is done when:
 ---
 
 **Begin by reading this entire document. Then:**
-1. **Read `WORK_LOG.md`** if it exists (you may be resuming a previous session).
+1. **Read `docs/work-log.md`** if it exists (you may be resuming a previous session).
 2. **Read `RESUME.md`** if it exists (pick up exactly where the last session left off, then delete the file).
-3. **If neither exists** (first session): create `WORK_LOG.md` with your initial plan, then start Task 0.1.
+3. **If neither exists** (first session): create `docs/work-log.md` with your initial plan, then start Task 0.1.
 4. **Work through tasks sequentially** following the loop in Section 13.
-5. **If you sense the session ending**: stop, commit, write `RESUME.md`, update `WORK_LOG.md`. The next session will find you.
+5. **If you sense the session ending**: stop, commit, write `RESUME.md`, update `docs/work-log.md`. The next session will find you.

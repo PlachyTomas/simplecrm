@@ -2,12 +2,12 @@
 
 - Status: Accepted
 - Date: 2026-04-17
-- Deciders: Product owner (via `MANAGER_TASK.md`)
+- Deciders: Product owner (via `../manager-task.md`)
 
 ## Context
 
 We are building SimpleCRM, a minimalistic Czech CRM for small sales teams. The brief
-(`MANAGER_TASK.md`, Section 4) locks in the technical stack. This ADR records that
+(`../manager-task.md`, Section 4) locks in the technical stack. This ADR records that
 decision and its rationale so future contributors can see the "why" without re-reading
 the whole brief.
 

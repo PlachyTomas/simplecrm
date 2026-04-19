@@ -20,8 +20,7 @@ simplecrm/
 ├── .docker/            # Dev container Dockerfile + entrypoint
 ├── scripts/            # Dev helpers
 ├── docker-compose.dev.yml
-├── MANAGER_TASK.md     # The full build brief
-├── WORK_LOG.md         # Persistent session-by-session log
+├── docs/                   # All project documentation
 └── README.md
 ```
 
@@ -29,10 +28,10 @@ simplecrm/
 
 - `docs/local-development.md` — get the stack running on your machine.
 - `docs/runbook.md` — production deploy, backup, rollback.
-- `MANAGER_TASK.md` — the complete product brief and implementation plan.
-- `README-dev-env.md` — how to run the isolated Claude Code dev container.
+- `docs/manager-task.md` — the complete product brief and implementation plan.
+- `docs/dev-container.md` — how to run the isolated Claude Code dev container.
 - `docs/adr/` — architectural decisions with rationale.
-- `WORK_LOG.md` — what has been built so far.
+- `docs/work-log.md` — what has been built so far.
 
 ## Quick start via dev container
 
@@ -50,4 +49,4 @@ and you're in as an admin. Details and safety rationale in
 
 ## Status
 
-Under active construction. See `WORK_LOG.md` for current state.
+Under active construction. See `docs/work-log.md` for current state.

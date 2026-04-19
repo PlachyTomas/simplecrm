@@ -2,7 +2,7 @@
 
 This is the single-source guide to get SimpleCRM running on your machine.
 For production deploy see [`runbook.md`](./runbook.md); for the
-Claude Code sandbox see [`../README-dev-env.md`](../README-dev-env.md).
+Claude Code sandbox see [`dev-container.md`](./dev-container.md).
 
 ## Prerequisites
 
@@ -205,7 +205,7 @@ for production doesn't mention them.
 ## 9. Useful scripts
 
 - `scripts/dev.sh` — wrapper for the Claude Code dev container.
-  See [`../README-dev-env.md`](../README-dev-env.md).
+  See [`dev-container.md`](./dev-container.md).
 - `scripts/backup_postgres.sh` — production pg_dump → S3 (not used
   locally).
 
