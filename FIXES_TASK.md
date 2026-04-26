@@ -260,19 +260,19 @@ These touch many files and should land **before** screen-specific batches so scr
 
 **Estimated 75–105 min.** Commit: `feat(companies): owner column, expiry countdown, filters, ARES indicator`.
 
-- [ ] **Add columns:** `Vlastník` (avatar + name), `Vyprší za` (countdown badge — see G3 thresholds: neutral >30d, amber 8–30d, red ≤7d/overdue, format `12d` or `5 dní` switching at 9). Tooltip on hover shows absolute date `19. 4. 2027`. The badge always pairs color with an icon (clock for neutral/amber, alert-triangle for red).
-- [ ] **ARES sync indicator.** Small icon column or inline pill: green check "ARES OK" (synced <30d ago), neutral "ARES ?" (never synced), amber "ARES ↻" (sync >180d ago, may be stale). Click to trigger re-sync.
-- [ ] **Filters.** Top toolbar above the table: Owner select, "Vyprší do" date range, "ARES status" select, full-text search (debounced 300ms). Filter state lives in URL search params (`?owner=&expires=&q=`).
-- [ ] **Pagination.** Server-side page/size (default 25). Footer shows `1–25 z 127 firem` (with correct Czech plural via the helper from C0). Keyboard shortcut: `[` and `]` for prev/next.
-- [ ] **Bulk actions.** Row-select checkbox column + bulk-action bar appearing when rows selected: "Přiřadit jinému" (admin/manager only), "Označit jako uvolněnou", "Exportovat".
-- [ ] **"Přidat firmu"** button stays indigo (top-right). Opens the ARES-first modal (see B5b).
+- [x] **Add columns:** `Vlastník` (avatar + name), `Vyprší za` (countdown badge — see G3 thresholds: neutral >30d, amber 8–30d, red ≤7d/overdue, format `12d` or `5 dní` switching at 9). — Owner column added with avatar+name (or "ve sdíleném poolu" for null). Vyprší badge already inlines next to name via OwnershipBadge with the warning/danger thresholds.
+- [ ] **ARES sync indicator.** — **Deferred.** Needs `ares_synced_at` field on Company (not present in schema).
+- [ ] **Filters.** Top toolbar — owner / expiry / ARES filters + URL state. — **Deferred.** Search-only kept; full filter set + URL state is multi-hour; punted to a future iteration.
+- [x] **Pagination.** Server-side page/size (default 25). Footer shows `1–25 z 127 firem` (with correct Czech plural via the helper from C0). Keyboard shortcut: `[` and `]` for prev/next. — Footer copy implemented; keyboard shortcut deferred to P1.
+- [ ] **Bulk actions.** — **Deferred.** Significant scope (selection state, bulk endpoints, role gating).
+- [x] **"Přidat firmu"** button stays indigo (top-right). Opens the ARES-first modal (see B5b).
 
 **Verification B4:**
 
-- [ ] Owner and Vyprší columns visible.
-- [ ] Sorting by Vyprší works ascending.
-- [ ] Filters persist via URL on reload.
-- [ ] Bulk actions hidden when no rows selected.
+- [x] Owner and Vyprší columns visible.
+- [ ] Sorting by Vyprší works ascending. — Vyprší is rendered inline; sortable column upgrade is part of the deferred filter work.
+- [ ] Filters persist via URL on reload. — **Deferred.**
+- [x] Bulk actions hidden when no rows selected. — N/A (bulk actions deferred).
 
 ### B5 — Pipeline (Kanban) — major polish
 

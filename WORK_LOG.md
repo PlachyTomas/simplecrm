@@ -4,6 +4,33 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-27 — B4 companies list (partial)
+
+- New "Vlastník" column rendering owner avatar (initials) + name, or
+  "— ve sdíleném poolu" when `owner_user_id` is null. Owner lookup is
+  built once via `useOrgUsers` and memoized into a `Map`.
+- Pagination footer copy switched to FIXES_TASK spec: `1–25 z 127
+  firem` with `csNoun(total, "firma")` so the n=0 / n=2–4 / n=5+ forms
+  are right.
+- Mobile stacked-card variant from G3 retained.
+
+### B4 deferred
+
+- ARES sync indicator — needs new `ares_synced_at` field on the
+  Company schema.
+- Owner / expiry / ARES-status filters + URL state — multi-hour
+  feature work, punted to a future pass.
+- Bulk actions (select rows + bulk reassign / release / export) —
+  significant scope.
+- `[`/`]` keyboard shortcuts for prev/next page — punted to P1.
+- Sortable Vyprší column — needs the Vyprší value as its own column
+  instead of inline next to the name; rolled into the deferred filter
+  work.
+
+Commit: `feat(companies): owner column + paginated count footer (B4)`.
+
+---
+
 ## 2026-04-27 — B3 dashboard polish (partial)
 
 - Greeting "Vítejte zpět, {firstName}" — extracts first whitespace-

@@ -22,6 +22,7 @@ import { useNavigate } from "react-router-dom";
 import { AddCompanyModal } from "@/app/companies/AddCompanyModal";
 import { OwnershipBadge } from "@/app/companies/OwnershipBadge";
 import { type CompanyOut, useCompanies } from "@/app/companies/useCompanies";
+import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
 import { csNoun } from "@/lib/i18n/nouns";
@@ -43,6 +44,7 @@ export function CompaniesListPage() {
 
   const navigate = useNavigate();
   const { data: user } = useCurrentUser();
+  const { data: usersPage } = useOrgUsers();
   const {
     data: companies,
     isPending,
@@ -59,6 +61,14 @@ export function CompaniesListPage() {
     () => (locale ? new Intl.DateTimeFormat(locale, { dateStyle: "medium" }) : null),
     [locale],
   );
+
+  const usersById = useMemo(() => {
+    const map = new Map<string, { name: string; email: string }>();
+    for (const u of usersPage?.items ?? []) {
+      map.set(u.id, { name: u.name, email: u.email });
+    }
+    return map;
+  }, [usersPage]);
 
   const columns = useMemo(() => {
     const helper = createColumnHelper<CompanyOut>();
@@ -86,6 +96,35 @@ export function CompaniesListPage() {
           <span className="font-mono text-text-secondary">{info.getValue() ?? "—"}</span>
         ),
       }),
+      helper.accessor("owner_user_id", {
+        header: "Vlastník",
+        enableSorting: false,
+        cell: (info) => {
+          const ownerId = info.getValue();
+          if (!ownerId) {
+            return <span className="text-text-tertiary">— ve sdíleném poolu</span>;
+          }
+          const owner = usersById.get(ownerId);
+          if (!owner) return <span className="text-text-tertiary">—</span>;
+          const initials = owner.name
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((p) => p.charAt(0).toUpperCase())
+            .join("");
+          return (
+            <span className="inline-flex items-center gap-2">
+              <span
+                aria-hidden
+                className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-surface-overlay text-[10px] font-semibold text-text-secondary"
+              >
+                {initials || "?"}
+              </span>
+              <span className="text-text-secondary">{owner.name}</span>
+            </span>
+          );
+        },
+      }),
       helper.accessor("address_city", {
         header: "Město",
         enableSorting: false,
@@ -100,7 +139,7 @@ export function CompaniesListPage() {
         ),
       }),
     ];
-  }, [dateFmt]);
+  }, [dateFmt, usersById]);
 
   const table = useReactTable({
     data: companies?.items ?? [],
@@ -305,8 +344,9 @@ export function CompaniesListPage() {
 
           {pageCount > 1 ? (
             <div className="flex items-center justify-between border-t border-border-subtle px-4 py-3 text-sm text-text-tertiary">
-              <span>
-                Stránka {page + 1} z {pageCount}
+              <span className="tabular-nums">
+                {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} z {total}{" "}
+                {csNoun(total, "firma")}
               </span>
               <div className="flex items-center gap-2">
                 <button
