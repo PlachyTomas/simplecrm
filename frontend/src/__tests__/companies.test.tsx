@@ -104,8 +104,11 @@ describe("Companies screens", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: /^firmy$/i })).toBeInTheDocument(),
     );
-    expect(await screen.findByText(/alza\.cz a\.s\./i)).toBeInTheDocument();
-    expect(await screen.findByText(/rohlík\.cz/i)).toBeInTheDocument();
+    // jsdom renders both the desktop table AND the mobile card stack —
+    // CSS `hidden md:table` doesn't actually mask in jsdom — so each
+    // row appears twice. Just assert >=1 occurrence.
+    expect((await screen.findAllByText(/alza\.cz a\.s\./i)).length).toBeGreaterThanOrEqual(1);
+    expect((await screen.findAllByText(/rohlík\.cz/i)).length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders empty state when list is empty", async () => {
@@ -139,10 +142,10 @@ describe("Companies screens", () => {
     });
 
     renderAt("/app/companies", { token: "fake" });
-    const cell = await screen.findByText(/alza\.cz a\.s\./i);
+    // jsdom renders both desktop and mobile lists — pick the first instance.
+    const matches = await screen.findAllByText(/alza\.cz a\.s\./i);
     const user = userEvent.setup();
-    // Each row is a clickable <tr>; click the row cell.
-    await user.click(cell);
+    await user.click(matches[0]);
 
     await waitFor(() =>
       expect(screen.getByRole("heading", { level: 1, name: /alza\.cz/i })).toBeInTheDocument(),

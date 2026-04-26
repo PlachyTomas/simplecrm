@@ -97,8 +97,8 @@ describe("Companies table: search + sorting + tabs", () => {
     });
 
     renderAt("/app/companies");
-    expect(await screen.findByText(/alza\.cz a\.s\./i)).toBeInTheDocument();
-    expect(screen.getByText(/rohlík\.cz/i)).toBeInTheDocument();
+    expect((await screen.findAllByText(/alza\.cz a\.s\./i)).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/rohlík\.cz/i).length).toBeGreaterThanOrEqual(1);
 
     const user = userEvent.setup();
     const search = screen.getByRole("searchbox", { name: /hledat firmu/i });
@@ -107,7 +107,7 @@ describe("Companies table: search + sorting + tabs", () => {
     await waitFor(() => expect(screen.queryByText(/rohlík\.cz/i)).not.toBeInTheDocument(), {
       timeout: 2000,
     });
-    expect(screen.getByText(/alza\.cz a\.s\./i)).toBeInTheDocument();
+    expect(screen.getAllByText(/alza\.cz a\.s\./i).length).toBeGreaterThanOrEqual(1);
 
     // Confirm the last fetch carried the search param.
     const lastCall = fetchMock.mock.calls.at(-1);

@@ -89,7 +89,7 @@ function StageColumn({ stage, locale, boardCurrency, draggingId }: StageColumnPr
     <section
       aria-label={`Fáze ${stage.name}`}
       className={cn(
-        "flex w-72 shrink-0 flex-col rounded-lg border border-border bg-surface transition-colors duration-fast",
+        "flex w-[92vw] shrink-0 snap-start flex-col rounded-lg border border-border bg-surface transition-colors duration-fast md:w-72",
         isOver && "ring-2 ring-accent",
       )}
     >
@@ -233,7 +233,7 @@ export function PipelinePage() {
                 setAddDealStageId(undefined);
                 setAddDealOpen(true);
               }}
-              className="inline-flex h-9 items-center gap-1 rounded-md bg-accent px-3 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
+              className="hidden h-9 items-center gap-1 rounded-md bg-accent px-3 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover md:inline-flex"
             >
               <Plus size={16} strokeWidth={1.75} aria-hidden />
               <span>Přidat obchod</span>
@@ -321,7 +321,7 @@ export function PipelinePage() {
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveDealId(null)}
       >
-        <div className="flex flex-1 gap-4 overflow-x-auto px-4 pb-6 md:px-8">
+        <div className="flex flex-1 snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-6 [scroll-padding-left:1rem] md:snap-none md:px-8">
           {filteredStages.map((stage) => (
             <StageColumn
               key={stage.id}
@@ -345,6 +345,22 @@ export function PipelinePage() {
           {activeDeal ? <DealCard deal={activeDeal} locale={locale} /> : null}
         </DragOverlay>
       </DndContext>
+
+      {/* Mobile FAB — header CTA collapses to bottom-right at <768px when
+          there are deals on the board. Empty state shows its own primary CTA. */}
+      {hasAnyDeals ? (
+        <button
+          type="button"
+          onClick={() => {
+            setAddDealStageId(undefined);
+            setAddDealOpen(true);
+          }}
+          aria-label="Přidat obchod"
+          className="fixed bottom-20 right-4 z-30 inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent text-text-on-accent shadow-lg transition-colors duration-fast hover:bg-accent-hover md:hidden"
+        >
+          <Plus size={22} strokeWidth={2} />
+        </button>
+      ) : null}
 
       <AddDealModal
         open={addDealOpen}

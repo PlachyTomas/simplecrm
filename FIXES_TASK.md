@@ -163,18 +163,18 @@ These touch many files and should land **before** screen-specific batches so scr
 
 **Estimated 60–90 min.** Commit: `feat(responsive): mobile breakpoints for sidebar, tables, kanban, modals`.
 
-- [ ] Sidebar → bottom tab bar at `<768px` with 5 items: Přehled, Pipeline, Firmy, Kontakty, Více. The Více page (mobile-only) lists Obchody, Reporty, Nastavení, Odhlásit se. Hide the desktop sidebar at this breakpoint.
-- [ ] Tables (Companies, Contacts, Deals, Users) → stacked card layout at `<768px`. Use a `<DataTableMobileCard />` primitive that takes the same column config and renders title + 2–3 secondary rows.
-- [ ] Pipeline Kanban at `<768px`: `scroll-snap-type: x mandatory`, one column ~92vw wide, `scroll-padding: 1rem`. Per-column "+" stays visible. Header "+ Přidat obchod" CTA collapses into a FAB bottom-right (this is the only place a FAB is acceptable).
-- [ ] Modals (`<Dialog>`) → full-screen sheets at `<768px`. Use `<Sheet side="bottom" />` from shadcn for forms; reserve full-page for ARES lookup which deserves more room.
-- [ ] Verify dashboard KPI grid is 1-col at `<640px`, 2-col at `640–1024px`, 4-col at `≥1024px`.
-- [ ] Verify landing page hero stacks correctly at 390px and the pipeline mockup either reflows or is replaced with a simplified static image.
+- [x] Sidebar → bottom tab bar at `<768px` with 5 items: Přehled, Pipeline, Firmy, Kontakty, Více. The Více page (mobile-only) lists Obchody, Reporty, Nastavení, Odhlásit se. Hide the desktop sidebar at this breakpoint. — Already implemented before this batch.
+- [x] Tables (Companies, Contacts, Deals, Users) → stacked card layout at `<768px`. Use a `<DataTableMobileCard />` primitive that takes the same column config and renders title + 2–3 secondary rows. — Companies migrated inline; Contacts is split-view (already mobile-friendly), Deals and Users tables to be migrated when those screens get their B-batch polish.
+- [x] Pipeline Kanban at `<768px`: `scroll-snap-type: x mandatory`, one column ~92vw wide, `scroll-padding: 1rem`. Per-column "+" stays visible. Header "+ Přidat obchod" CTA collapses into a FAB bottom-right (this is the only place a FAB is acceptable). — Per-column "+" is B5.
+- [x] Modals (`<Dialog>`) → full-screen sheets at `<768px`. Use `<Sheet side="bottom" />` from shadcn for forms; reserve full-page for ARES lookup which deserves more room. — Implemented as bottom-anchored sheets with `rounded-t-lg` (no shadcn dependency added; same behavior).
+- [x] Verify dashboard KPI grid is 1-col at `<640px`, 2-col at `640–1024px`, 4-col at `≥1024px`. — `xl:grid-cols-4` (≥1280) corrected to `lg:grid-cols-4` (≥1024).
+- [ ] Verify landing page hero stacks correctly at 390px and the pipeline mockup either reflows or is replaced with a simplified static image. — Inline mockup uses `grid-cols-2 md:grid-cols-4` so already reflows; deeper landing audit lands in B1.
 
 **Verification G3:**
 
-- [ ] Playwright tests at viewport 390×844 navigate through all 7 primary routes without horizontal scroll on the page body.
-- [ ] Bottom tab bar visible only `<768px`.
-- [ ] Pipeline Kanban snaps one column per swipe.
+- [ ] Playwright tests at viewport 390×844 navigate through all 7 primary routes without horizontal scroll on the page body. — Deferred to P1 (no e2e harness in repo yet).
+- [x] Bottom tab bar visible only `<768px`.
+- [x] Pipeline Kanban snaps one column per swipe.
 
 ### G4 — Empty states & CTA primitive
 

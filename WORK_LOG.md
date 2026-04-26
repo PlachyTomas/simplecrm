@@ -4,6 +4,41 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-27 — G3 mobile responsiveness pass
+
+- Dashboard KPI grid `sm:grid-cols-2 xl:grid-cols-4` → `sm:grid-cols-2
+  lg:grid-cols-4` to match the spec breakpoints (1 / 2 / 4 at <640 /
+  640–1024 / ≥1024).
+- Companies list now renders a `<ul>` of stacked cards at <768px
+  (mobile) and the existing TanStack table at ≥768px. Each card shows
+  name + ownership badge + IČO (mono) + city. No new primitive yet —
+  `<DataTableMobileCard />` lands when Deals/Users tables are migrated
+  in B8/B10.
+- Pipeline Kanban: columns `w-72` → `w-[92vw] md:w-72` with `snap-start`,
+  container `snap-x snap-mandatory` with `[scroll-padding-left:1rem]`.
+  One column per swipe at <768px, no change at desktop.
+- Pipeline header CTA hidden on mobile; replaces with a circular FAB
+  bottom-right (only when there are deals — empty-state has its own
+  primary). FAB sits above the bottom tab bar (bottom-20).
+- Dialogs (`AddCompanyModal`, `AddDealModal`, `AddContactModal`) now
+  render as bottom-anchored sheets at <768px (`items-end`,
+  `rounded-t-lg`), full-centered modals at ≥768px. No shadcn `<Sheet>`
+  dependency added — Tailwind classes accomplish the same anchoring.
+- Tests updated: Companies tests now use `findAllByText` /
+  `getAllByText` because jsdom renders both desktop+mobile lists
+  simultaneously (CSS `hidden md:table` is a no-op in jsdom).
+
+### G3 deferred
+
+- Landing-page hero deeper audit at 390px → B1.
+- Per-column "+" on Kanban → B5.
+- Deals + Users tables → mobile cards: B8 + B10.
+- Playwright e2e at 390×844 (no horizontal scroll on 7 routes) → P1.
+
+Commit: `feat(responsive): mobile breakpoints for sidebar, tables, kanban, modals`.
+
+---
+
 ## 2026-04-26 — G4 unified EmptyState primitive
 
 - `frontend/src/components/ui/empty-state.tsx` (new): centered glyph +

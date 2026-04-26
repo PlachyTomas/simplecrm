@@ -194,7 +194,44 @@ export function CompaniesListPage() {
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border border-border bg-surface">
-          <table className="min-w-full divide-y divide-border-subtle">
+          {/* Mobile: stacked cards (<768px) */}
+          <ul role="list" className="divide-y divide-border-subtle md:hidden">
+            {table.getRowModel().rows.map((row) => {
+              const company = row.original;
+              return (
+                <li key={row.id}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/app/companies/${company.id}`)}
+                    className="flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors duration-fast hover:bg-surface-overlay"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-sm font-medium text-text-primary">
+                        {company.name}
+                      </span>
+                      <OwnershipBadge
+                        ownershipExpiresAt={company.ownership_expires_at}
+                        ownerUserId={company.owner_user_id}
+                        compact
+                      />
+                    </div>
+                    <p className="text-xs text-text-tertiary">
+                      <span className="font-mono">{company.ico ?? "bez IČO"}</span>
+                      {company.address_city ? (
+                        <>
+                          <span> · </span>
+                          {company.address_city}
+                        </>
+                      ) : null}
+                    </p>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* Desktop: full table (≥768px) */}
+          <table className="hidden min-w-full divide-y divide-border-subtle md:table">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
