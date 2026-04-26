@@ -4,6 +4,34 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-27 — B1 landing polish
+
+- Hero headline: word "prodej" now wears the magenta underline via a
+  Tailwind arbitrary-value `bg-[linear-gradient(transparent_82%,var(--color-brand-accent)_82%,…)]`.
+  The earlier accent-blue treatment of "Nic víc, nic míň." was removed
+  per the brief — the headline reads in primary text, with one earned
+  magenta moment on the single most-weighted word.
+- Hero glow: the single accent blur was replaced with a dual radial
+  gradient — indigo bottom-left at 30% opacity, magenta top-right at
+  20% — the only place the brief allows that gradient combo.
+- FAQ accordion already keyboard-accessible (native `<button
+  aria-expanded>`); no change.
+- Pricing card untouched per spec — hero already owns the magenta
+  moment; adding a magenta "Nejoblíbenější" badge would compete.
+- Typo "Žádné zbytečností" → "Žádné zbytečnosti" not present in the
+  repo. Only "Bez zbytečností" exists, which is correct genitive after
+  the preposition `Bez`.
+
+### B1 deferred
+
+- Feature tour with 4 real screenshots — needs visual content + copy
+  pass; out of scope for autonomous run.
+- Trust strip with logos / iconography — same.
+
+Commit: `feat(landing): magenta hero accent, dual glow, FAQ confirm`.
+
+---
+
 ## 2026-04-27 — G3 mobile responsiveness pass
 
 - Dashboard KPI grid `sm:grid-cols-2 xl:grid-cols-4` → `sm:grid-cols-2

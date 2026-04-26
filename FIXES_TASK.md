@@ -198,27 +198,27 @@ These touch many files and should land **before** screen-specific batches so scr
 
 **Estimated 45–75 min.** Commit: `feat(landing): magenta hero accent, feature tour, FAQ`.
 
-- [ ] **Hero headline.** Render `"CRM pro prodej. Nic víc, nic míň."` with the word **"prodej"** carrying a magenta underline (SVG squiggle or 3px solid `#EC4899` underneath, ~6–8px below the text baseline). Implementation: wrap `<span class="hero-accent">prodej</span>` and apply `background: linear-gradient(transparent 80%, #EC4899 80%)` or an absolutely-positioned SVG path.
-- [ ] **Logo mark.** Replace lime/green sparkle with a magenta sparkle (lucide `Sparkles` icon, `text-brand-accent`). Apply globally in `<Logo />`; this affects login + sidebar collapse state too.
-- [ ] **Hero visual glow.** Add a dual radial gradient behind the pipeline mockup: indigo `#5B5BD6` at ~30% opacity bottom-left, magenta `#EC4899` at ~20% opacity top-right. CSS only.
-- [ ] **Typo fix.** Change "Žádné zbytečností" → **"Žádné zbytečnosti"** (nominative plural, not genitive).
-- [ ] **Feature tour section.** Add an alternating left/right tour with 4 features (per `MANAGER_TASK.md` §11):
+- [x] **Hero headline.** Render `"CRM pro prodej. Nic víc, nic míň."` with the word **"prodej"** carrying a magenta underline (SVG squiggle or 3px solid `#EC4899` underneath, ~6–8px below the text baseline). Implementation: wrap `<span class="hero-accent">prodej</span>` and apply `background: linear-gradient(transparent 80%, #EC4899 80%)` or an absolutely-positioned SVG path.
+- [x] **Logo mark.** Replace lime/green sparkle with a magenta sparkle (lucide `Sparkles` icon, `text-brand-accent`). Apply globally in `<Logo />`; this affects login + sidebar collapse state too. — `bg-highlight` resolves to magenta via the alias since G1.
+- [x] **Hero visual glow.** Add a dual radial gradient behind the pipeline mockup: indigo `#5B5BD6` at ~30% opacity bottom-left, magenta `#EC4899` at ~20% opacity top-right. CSS only.
+- [x] **Typo fix.** Change "Žádné zbytečností" → **"Žádné zbytečnosti"** (nominative plural, not genitive). — String not present in repo. Only "Bez zbytečností" exists, which is correct genitive after the preposition `Bez`. No change.
+- [ ] **Feature tour section.** Add an alternating left/right tour with 4 features (per `MANAGER_TASK.md` §11): — **Deferred. Requires real screenshots and copywriting; out of scope for autonomous run.**
   1. ARES auto-fill (screenshot of IČO modal in success state)
   2. Pipeline Kanban (screenshot of board with 4–6 deals across stages)
   3. Automatic company release (screenshot of countdown badge with red ≤7d state)
   4. Reports (screenshot of leaderboard + chart)
      Each row: 60% screenshot, 40% headline + 2-line body + small "Více" link. Alternate sides. Use real app screenshots committed to `app/web/public/marketing/`.
-- [ ] **FAQ accordion.** Confirm it's an actual interactive accordion (shadcn `<Accordion>`). Add 5–7 questions covering pricing, GDPR, ARES, data export, trial, cancellation, multi-team. Czech copy in vykání.
-- [ ] **Pricing card** "Po zkušební době": keep indigo border, but add a small magenta "Nejoblíbenější" or similar badge — _only if it doesn't add a competing magenta moment_ with the hero. If the hero underline is the magenta on this screen, leave the pricing untouched.
-- [ ] **Trust strip.** Add a row showing "Stačí IČO. Zbytek doplníme z ARES." + 3–4 logos (placeholder if no real customers yet — use generic Czech business iconography rather than fake logos).
+- [x] **FAQ accordion.** Confirm it's an actual interactive accordion (shadcn `<Accordion>`). Add 5–7 questions covering pricing, GDPR, ARES, data export, trial, cancellation, multi-team. Czech copy in vykání. — Already 6 questions, native `<button aria-expanded>` accordion, keyboard-accessible.
+- [x] **Pricing card** "Po zkušební době": keep indigo border, but add a small magenta "Nejoblíbenější" or similar badge — _only if it doesn't add a competing magenta moment_ with the hero. If the hero underline is the magenta on this screen, leave the pricing untouched. — Hero already carries the magenta underline; pricing untouched per the conditional clause.
+- [ ] **Trust strip.** Add a row showing "Stačí IČO. Zbytek doplníme z ARES." + 3–4 logos (placeholder if no real customers yet — use generic Czech business iconography rather than fake logos). — **Deferred to manual / real-content pass.**
 
 **Verification B1:**
 
-- [ ] Hero word "prodej" has visible magenta underline at 1280px and 390px.
-- [ ] Logo is magenta everywhere.
-- [ ] No "zbytečností" — only "zbytečnosti".
-- [ ] FAQ collapses/expands with keyboard (Enter/Space) and respects `prefers-reduced-motion`.
-- [ ] Feature tour renders 4 sections with real screenshots.
+- [x] Hero word "prodej" has visible magenta underline at 1280px and 390px.
+- [x] Logo is magenta everywhere.
+- [x] No "zbytečností" — only "zbytečnosti". — N/A; "Bez zbytečností" is correct Czech.
+- [x] FAQ collapses/expands with keyboard (Enter/Space) and respects `prefers-reduced-motion`.
+- [ ] Feature tour renders 4 sections with real screenshots. — **Deferred (real screenshots required).**
 
 ### B2 — Login page
 

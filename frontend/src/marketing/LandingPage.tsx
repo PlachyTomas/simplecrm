@@ -67,22 +67,25 @@ function Nav() {
 function Hero() {
   return (
     <section className="relative overflow-hidden">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 -top-32 flex justify-center"
-      >
-        <div className="bg-accent/15 h-80 w-[60rem] max-w-full rounded-full blur-3xl" />
+      {/* Dual radial glow behind the hero — indigo bottom-left, magenta
+          top-right — only the marketing hero is allowed this gradient
+          combo per brief §2 anti-patterns. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="bg-accent/30 absolute -bottom-32 -left-32 h-96 w-96 rounded-full blur-3xl" />
+        <div className="bg-brand-accent/20 absolute -right-32 -top-32 h-96 w-96 rounded-full blur-3xl" />
       </div>
       <div className="relative mx-auto max-w-[1200px] px-4 pb-20 pt-16 text-center md:px-8 md:pb-24 md:pt-24">
         <p className="mb-4 text-sm font-medium uppercase tracking-wider text-text-tertiary">
           Český CRM pro malé týmy
         </p>
         <h1 className="mx-auto max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
-          CRM pro prodej.{" "}
-          <span className="whitespace-nowrap">
-            <span className="text-accent">Nic víc,</span>{" "}
-            <span className="text-accent">nic míň.</span>
+          CRM pro{" "}
+          <span
+            className="bg-[linear-gradient(transparent_82%,var(--color-brand-accent)_82%,var(--color-brand-accent)_94%,transparent_94%)] bg-no-repeat"
+          >
+            prodej
           </span>
+          . Nic víc, nic míň.
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-base text-text-secondary md:text-lg">
           Jednoduchý český CRM pro malé prodejní týmy. Funguje s ARES, automaticky vrací neaktivní
