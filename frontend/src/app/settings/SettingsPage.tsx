@@ -13,14 +13,26 @@ import { TeamsSection } from "@/app/settings/TeamsSection";
 import { UsersSection } from "@/app/settings/UsersSection";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { ApiError } from "@/lib/api";
+import { ThemeToggle } from "@/lib/ThemeToggle";
 import { cn } from "@/lib/utils";
 
-type SettingsTab = "pipeline" | "teams" | "users";
+type SettingsTab =
+  | "pipeline"
+  | "teams"
+  | "users"
+  | "appearance"
+  | "permissions"
+  | "billing"
+  | "integrations";
 
 const TABS: { key: SettingsTab; label: string }[] = [
   { key: "pipeline", label: "Pipeline" },
   { key: "teams", label: "Týmy" },
   { key: "users", label: "Uživatelé" },
+  { key: "appearance", label: "Vzhled" },
+  { key: "permissions", label: "Oprávnění" },
+  { key: "billing", label: "Fakturace" },
+  { key: "integrations", label: "Integrace" },
 ];
 
 type StageType = "open" | "won" | "lost";
@@ -335,6 +347,10 @@ export function SettingsPage() {
 
       {activeTab === "teams" ? <TeamsSection /> : null}
       {activeTab === "users" ? <UsersSection /> : null}
+      {activeTab === "appearance" ? <AppearanceSection /> : null}
+      {activeTab === "permissions" ? <PermissionsSection /> : null}
+      {activeTab === "billing" ? <BillingSection /> : null}
+      {activeTab === "integrations" ? <IntegrationsSection /> : null}
       {activeTab !== "pipeline" ? null : isPending ? (
         <div className="rounded-lg border border-border bg-surface p-6 text-sm text-text-tertiary">
           Načítání pipeline…
@@ -416,5 +432,137 @@ export function SettingsPage() {
       </section>
       )}
     </div>
+  );
+}
+
+function AppearanceSection() {
+  return (
+    <section className="rounded-lg border border-border bg-surface p-6">
+      <h2 className="text-lg font-semibold">Vzhled</h2>
+      <p className="mt-1 text-sm text-text-tertiary">
+        Vyberte světlý nebo tmavý motiv. Volba se ukládá lokálně v prohlížeči.
+      </p>
+      <div className="mt-4">
+        <ThemeToggle />
+      </div>
+    </section>
+  );
+}
+
+function PermissionsSection() {
+  const rows: { action: string; rep: string; manager: string; admin: string }[] = [
+    { action: "Vidět všechny obchody v rámci pipeline", rep: "Jen vlastní", manager: "Tým", admin: "Vše" },
+    { action: "Editovat firmy", rep: "Jen vlastní", manager: "Tým", admin: "Vše" },
+    { action: "Mazat firmy a uvolňovat z poolu", rep: "—", manager: "—", admin: "Ano" },
+    { action: "Spravovat uživatele a týmy", rep: "—", manager: "—", admin: "Ano" },
+    { action: "Editovat fáze pipeline", rep: "—", manager: "—", admin: "Ano" },
+    { action: "Exportovat reporty", rep: "—", manager: "Ano", admin: "Ano" },
+  ];
+  return (
+    <section className="rounded-lg border border-border bg-surface p-6">
+      <h2 className="text-lg font-semibold">Oprávnění</h2>
+      <p className="mt-1 text-sm text-text-tertiary">
+        Oprávnění jsou v této verzi pevně daná. Pokud potřebujete vlastní role, dejte nám vědět.
+      </p>
+      <div className="mt-4 overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="text-left text-xs uppercase tracking-wider text-text-tertiary">
+              <th className="py-2 pr-4 font-medium">Akce</th>
+              <th className="py-2 pr-4 font-medium">Obchodník</th>
+              <th className="py-2 pr-4 font-medium">Manažer</th>
+              <th className="py-2 font-medium">Administrátor</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border-subtle">
+            {rows.map((r) => (
+              <tr key={r.action}>
+                <td className="py-2 pr-4 text-text-primary">{r.action}</td>
+                <td className="py-2 pr-4 text-text-secondary">{r.rep}</td>
+                <td className="py-2 pr-4 text-text-secondary">{r.manager}</td>
+                <td className="py-2 text-text-secondary">{r.admin}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function BillingSection() {
+  return (
+    <section className="rounded-lg border border-border bg-surface p-6">
+      <h2 className="text-lg font-semibold">Fakturace</h2>
+      <p className="mt-1 text-sm text-text-tertiary">
+        Detaily plánu, faktur a způsobu platby.
+      </p>
+      <div className="mt-4 rounded-md border border-border-subtle bg-surface-overlay p-4">
+        <p className="text-sm text-text-primary">Zkušební verze · 99 Kč / uživatel / měsíc po skončení.</p>
+        <p className="mt-1 text-xs text-text-tertiary">
+          Spravování plateb a fakturace připravujeme.
+        </p>
+        <button
+          type="button"
+          disabled
+          title="Brzy"
+          className="mt-3 inline-flex h-9 items-center justify-center rounded-md border border-border bg-surface px-3 text-sm font-medium text-text-tertiary"
+        >
+          Spravovat platbu
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function IntegrationsSection() {
+  const integrations = [
+    {
+      name: "ARES",
+      body: "Automatické doplňování firemních údajů z veřejného registru.",
+      active: true,
+    },
+    {
+      name: "Slack",
+      body: "Notifikace o vyhraných obchodech do týmového kanálu.",
+      active: false,
+    },
+    {
+      name: "Webhooky",
+      body: "Posílejte události (deal won / company freed) na vlastní URL.",
+      active: false,
+    },
+  ];
+  return (
+    <section className="space-y-3">
+      <header>
+        <h2 className="text-lg font-semibold">Integrace</h2>
+        <p className="mt-1 text-sm text-text-tertiary">
+          Propojte SimpleCRM s nástroji, které již používáte.
+        </p>
+      </header>
+      <ul className="space-y-3">
+        {integrations.map((i) => (
+          <li
+            key={i.name}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-4"
+          >
+            <div>
+              <p className="text-sm font-medium text-text-primary">{i.name}</p>
+              <p className="mt-0.5 text-sm text-text-secondary">{i.body}</p>
+            </div>
+            {i.active ? (
+              <span className="inline-flex items-center rounded-full bg-success-subtle px-2 py-0.5 text-xs font-medium text-success">
+                Aktivní
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-surface-overlay px-2 py-0.5 text-xs font-medium text-text-tertiary">
+                Brzy
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

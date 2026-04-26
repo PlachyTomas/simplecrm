@@ -4,6 +4,34 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-27 — B10 settings polish
+
+Tab list expanded from 3 to 7: Pipeline / Týmy / Uživatelé / Vzhled /
+Oprávnění / Fakturace / Integrace. Each new tab is a self-contained
+section component:
+
+- **Vzhled** — mirror of the G2 ThemeToggle (Světlý / Tmavý / Systém).
+- **Oprávnění** — read-only matrix of role × action with the spec copy
+  "Oprávnění jsou v této verzi pevně daná. Pokud potřebujete vlastní
+  role, dejte nám vědět."
+- **Fakturace** — disabled "Spravovat platbu" button + trial copy.
+- **Integrace** — three cards: ARES (Aktivní), Slack (Brzy), Webhooky
+  (Brzy).
+
+Pipeline-tab Vyhráno stage dot already turned magenta via the G1
+backend seed change.
+
+### B10 deferred
+
+- **Profil** tab — needs first_name/last_name split + avatar upload
+  backend.
+- **Firma** tab — needs writable tenant-company endpoint + logo upload.
+- Density toggle in Vzhled — no density tokens defined yet.
+
+Commit: `feat(settings): vzhled / oprávnění / fakturace / integrace tabs (B10)`.
+
+---
+
 ## 2026-04-27 — B9 reports polish
 
 - Leaderboard #1 row now wears a magenta crown badge (matches the
