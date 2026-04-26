@@ -4,6 +4,25 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-27 — B11 trial countdown polish
+
+- New `<TrialBanner />` mounted at the top of the inner column. Renders
+  only when `daysRemaining ≤ 3`. Red `bg-danger-subtle` band with an
+  alert-triangle icon, the spec copy "Zkušební verze končí za N dní —
+  vyprší {date}", a magenta "Upgradovat na Plný" CTA (justified
+  magenta moment per brief — conversion is a celebration), and a close
+  button that dismisses for the session via `sessionStorage`.
+- AppShell trial chip already escalates colors at >7 / 4–7 / ≤3 day
+  thresholds (shipped pre-B11).
+
+Read-only-mode write-blocking is already enforced server-side via 402;
+the existing TrialExpiredGate handles the takeover surface. Value-recap
+copy on the gate ("Vytvořili jste N firem, M kontaktů…") deferred.
+
+Commit: `feat(trial): magenta upgrade banner at ≤3 days (B11)`.
+
+---
+
 ## 2026-04-27 — B10 settings polish
 
 Tab list expanded from 3 to 7: Pipeline / Týmy / Uživatelé / Vzhled /

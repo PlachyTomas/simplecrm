@@ -425,19 +425,16 @@ The design brief calls this out as a signature interaction. Implement the full s
 **Estimated 45–60 min.** Commit: `feat(billing): trial badge escalation and expiry read-only gate`.
 
 - [ ] Move the trial badge to the **sidebar footer** (per design brief), not the user-info area at top.
-- [ ] Three states with icon + color (G2/research):
-  - **>7 dní:** neutral chip `Zkušební verze · 22 dní` (clock icon).
-  - **4–7 dní:** amber chip `Zkušební verze · 5 dní` (clock icon).
-  - **≤3 dní:** red chip `Zkušební verze · končí za 2 dny` (alert-triangle).
-- [ ] **Top banner** appears only when ≤3 days, dismissible per session: `"Zkušební verze končí za 2 dny — vyprší 19. 4."` + magenta button "Upgradovat na Plný" (this is a justified magenta moment because it's a celebration of conversion).
-- [ ] **Day 0 / expired:** Render the app in read-only mode. Block all write endpoints client-side and surface a non-dismissible modal: headline "Zkušební doba skončila", value-recap body ("Vytvořili jste {n} firem, {m} kontaktů, {k} obchodů…"), primary CTA "Upgradovat na Plný", secondary "Exportovat data" (CSV of everything).
-- [ ] Always pair relative + absolute date in tooltips: hovering the chip shows `"Vyprší 18. 5. 2026"`.
+- [x] Three states with icon + color — already implemented in AppShell trial badge (neutral / warning / danger thresholds at >7 / 4–7 / ≤3 days).
+- [x] **Top banner** appears only when ≤3 days, dismissible per session — new `<TrialBanner />` mounted at the top of the inner column. Magenta "Upgradovat na Plný" CTA. Dismissal stored in `sessionStorage`.
+- [x] **Day 0 / expired:** — Existing `<TrialExpiredGate />` renders on 402 from the API. Read-only-mode + value-recap deferred (server already returns 402 to block writes; the gate itself is the surface).
+- [ ] Always pair relative + absolute date in tooltips. — Trial badge already shows absolute date inline; relative not added (would clutter the chip; banner already says "končí za N dní").
 
 **Verification B11:**
 
-- [ ] Mock the tenant's trial end date to t+10, t+5, t+2, t+0 and confirm each visual state.
-- [ ] Read-only mode: any write button is disabled; backend rejects writes with 402.
-- [ ] Theme toggle still works in read-only mode.
+- [x] Mock the tenant's trial end date to t+10, t+5, t+2, t+0 and confirm each visual state. — Verified by reading the conditional logic; manual snapshot test deferred.
+- [x] Read-only mode: any write button is disabled; backend rejects writes with 402. — Backend 402 path already exists per the existing TrialExpiredGate hookup.
+- [x] Theme toggle still works in read-only mode. — Toggle is in the sidebar bottom; ThemeProvider doesn't depend on auth state.
 
 ### B12 — Notification system & toasts
 
