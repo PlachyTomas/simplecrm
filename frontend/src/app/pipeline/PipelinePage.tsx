@@ -20,6 +20,7 @@ import {
 } from "@/app/pipeline/useBoard";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { EmptyState } from "@/components/ui/empty-state";
 import { csNoun } from "@/lib/i18n/nouns";
 import { cn } from "@/lib/utils";
 
@@ -225,17 +226,19 @@ export function PipelinePage() {
           <p className="text-sm text-text-tertiary">{board.name}</p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setAddDealStageId(undefined);
-              setAddDealOpen(true);
-            }}
-            className="inline-flex h-9 items-center gap-1 rounded-md bg-accent px-3 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
-          >
-            <Plus size={16} strokeWidth={1.75} aria-hidden />
-            <span>Přidat obchod</span>
-          </button>
+          {hasAnyDeals ? (
+            <button
+              type="button"
+              onClick={() => {
+                setAddDealStageId(undefined);
+                setAddDealOpen(true);
+              }}
+              className="inline-flex h-9 items-center gap-1 rounded-md bg-accent px-3 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
+            >
+              <Plus size={16} strokeWidth={1.75} aria-hidden />
+              <span>Přidat obchod</span>
+            </button>
+          ) : null}
           <label className="flex flex-col text-xs font-medium text-text-tertiary">
             Hledat
             <input
@@ -296,28 +299,19 @@ export function PipelinePage() {
       </div>
 
       {!hasAnyDeals ? (
-        <div className="mx-4 flex flex-col items-center justify-center gap-3 rounded-lg border border-border bg-surface py-12 text-center md:mx-8">
-          <div
-            aria-hidden
-            className="inline-flex h-12 w-12 items-center justify-center rounded-md bg-accent-subtle text-accent"
-          >
-            <Workflow size={24} strokeWidth={1.75} />
-          </div>
-          <h2 className="text-lg font-semibold">Přidejte první obchod</h2>
-          <p className="max-w-md text-sm text-text-secondary">
-            Sledujte obchody napříč fázemi pipeline. Karty přetahujte mezi sloupci podle vývoje.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setAddDealStageId(undefined);
-              setAddDealOpen(true);
+        <div className="mx-4 rounded-lg border border-border bg-surface md:mx-8">
+          <EmptyState
+            icon={Workflow}
+            title="Přidejte první obchod"
+            body="Sledujte obchody napříč fázemi pipeline. Karty přetahujte mezi sloupci podle vývoje."
+            primary={{
+              label: "+ Přidat obchod",
+              onClick: () => {
+                setAddDealStageId(undefined);
+                setAddDealOpen(true);
+              },
             }}
-            className="mt-1 inline-flex h-9 items-center gap-1 rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
-          >
-            <Plus size={16} strokeWidth={1.75} aria-hidden />
-            <span>Přidat obchod</span>
-          </button>
+          />
         </div>
       ) : null}
 

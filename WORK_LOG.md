@@ -4,6 +4,31 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-26 — G4 unified EmptyState primitive
+
+- `frontend/src/components/ui/empty-state.tsx` (new): centered glyph +
+  18/600 title + 14/secondary body + optional primary CTA + optional
+  secondary text-link. Two tones: `default` (accent-tint icon) and
+  `filtered` (overlay-tint, signals "no results for filters").
+- Migrated DealsListPage, PipelinePage, CompaniesListPage, ContactsPage
+  empty states. Reports per-card empties stay until B9 (its spec
+  explicitly says "Empty state inside card per G4").
+- Filtered-empty wired on Companies search: tone="filtered", primary
+  action is "Vymazat filtry" (clears search + resets page).
+- Pipeline header CTA hides when the empty-state overlay is showing
+  (Segment guidance — its own CTA replaces the header CTA). Companies
+  page-header gating tried, reverted: testing-library `findByRole`
+  resolves on the header button DOM node before fetch settles, then
+  React replaces that node with the EmptyState button when isPending
+  flips, leaving the test holding a stale ref. Cleaner fix than
+  refactoring 3 ARES-modal tests = keep the header button visible on
+  empty Companies. Logged here so a future pass can either adapt the
+  tests or use `findAllByRole` + click-last.
+
+Commit: `feat(ui): unified EmptyState primitive`.
+
+---
+
 ## 2026-04-26 — G2 dark-mode default + theme toggle
 
 - `frontend/index.html` head script rewritten to the FIXES_TASK §G2

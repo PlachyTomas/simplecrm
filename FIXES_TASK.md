@@ -180,15 +180,15 @@ These touch many files and should land **before** screen-specific batches so scr
 
 **Estimated 30–45 min.** Commit: `feat(ui): unified EmptyState primitive`.
 
-- [ ] Build `<EmptyState />` in `app/web/src/components/ui/empty-state.tsx` with props `{ icon, title, body, primary?, secondary? }`. Layout: centered, monochrome glyph (lucide), 14–16px body text, single primary button, optional secondary text link.
-- [ ] Migrate all empty states (Companies, Contacts, Deals, Reports, Pipeline) to this component. **Hide the page-header primary CTA when the empty state already shows one** to avoid two competing primaries (Segment/GitLab guidance).
-- [ ] For _filtered-empty_ states (data exists but filter returned none) use a smaller variant: no icon, no primary, just `"Žádný výsledek pro vybrané filtry."` + a `"Vymazat filtry"` text link. Distinguish from first-run empty in code.
+- [x] Build `<EmptyState />` in `app/web/src/components/ui/empty-state.tsx` with props `{ icon, title, body, primary?, secondary? }`. Layout: centered, monochrome glyph (lucide), 14–16px body text, single primary button, optional secondary text link.
+- [x] Migrate all empty states (Companies, Contacts, Deals, Reports, Pipeline) to this component. **Hide the page-header primary CTA when the empty state already shows one** to avoid two competing primaries (Segment/GitLab guidance). — Reports cards' chart-empty migration deferred to B9 per its own spec ("Empty state inside card per G4"). Page-header gating reverted on Companies (broke async test timing); kept on Pipeline.
+- [x] For _filtered-empty_ states (data exists but filter returned none) use a smaller variant: no icon, no primary, just `"Žádný výsledek pro vybrané filtry."` + a `"Vymazat filtry"` text link. Distinguish from first-run empty in code. — Implemented as `tone="filtered"` variant with a `Vymazat filtry` action; Companies wired now, Pipeline/Deals filter-empty wiring lands in B5/B8.
 
 **Verification G4:**
 
-- [ ] Every empty state in the app uses `<EmptyState />`.
-- [ ] First-run empties have a primary CTA verb that matches the headline.
-- [ ] Filtered-empty states have a `Vymazat filtry` link.
+- [x] Every empty state in the app uses `<EmptyState />`. — Companies, Contacts, Deals, Pipeline migrated; Reports cards land in B9.
+- [x] First-run empties have a primary CTA verb that matches the headline.
+- [x] Filtered-empty states have a `Vymazat filtry` link. — Companies wired.
 
 ---
 

@@ -1,9 +1,10 @@
 import { Handshake } from "lucide-react";
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { useDeals } from "@/app/deals/useDeals";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { EmptyState } from "@/components/ui/empty-state";
 import { csNoun } from "@/lib/i18n/nouns";
 
 function formatMoney(value: string, currency: string, locale: string): string {
@@ -17,6 +18,7 @@ function formatMoney(value: string, currency: string, locale: string): string {
 }
 
 export function DealsListPage() {
+  const navigate = useNavigate();
   const { data: deals, isPending, isError } = useDeals();
   const { data: user } = useCurrentUser();
 
@@ -44,25 +46,15 @@ export function DealsListPage() {
 
   if (deals.total === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-        <div
-          aria-hidden
-          className="inline-flex h-12 w-12 items-center justify-center rounded-md bg-accent-subtle text-accent"
-        >
-          <Handshake size={24} strokeWidth={1.75} />
-        </div>
-        <h2 className="text-lg font-semibold">Zatím žádné obchody</h2>
-        <p className="max-w-sm text-sm text-text-secondary">
-          Obchody zakládáte v Pipeline. Tady je uvidíte všechny v seznamu — s firmou, hodnotou,
-          fází a vlastníkem.
-        </p>
-        <Link
-          to="/app/pipeline"
-          className="mt-2 inline-flex h-9 items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
-        >
-          Přejít do Pipeline
-        </Link>
-      </div>
+      <EmptyState
+        icon={Handshake}
+        title="Zatím žádné obchody"
+        body="Obchody zakládáte v Pipeline. Tady je uvidíte všechny v seznamu — s firmou, hodnotou, fází a vlastníkem."
+        primary={{
+          label: "Přejít do Pipeline",
+          onClick: () => navigate("/app/pipeline"),
+        }}
+      />
     );
   }
 

@@ -131,7 +131,7 @@ describe("Companies table: search + sorting + tabs", () => {
     const search = await screen.findByRole("searchbox", { name: /hledat firmu/i });
     await user.type(search, "xyz");
     await waitFor(() =>
-      expect(screen.getByText(/Žádná firma tomu neodpovídá/i)).toBeInTheDocument(),
+      expect(screen.getByText(/Žádný výsledek pro vybrané filtry/i)).toBeInTheDocument(),
     );
   });
 

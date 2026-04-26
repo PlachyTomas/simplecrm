@@ -120,7 +120,7 @@ describe("Companies screens", () => {
 
     renderAt("/app/companies", { token: "fake" });
     await waitFor(() =>
-      expect(screen.getByRole("heading", { name: /žádné firmy/i })).toBeInTheDocument(),
+      expect(screen.getByRole("heading", { name: /Přidejte první firmu/i })).toBeInTheDocument(),
     );
   });
 

@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { AddContactModal } from "@/app/contacts/AddContactModal";
 import { ContactDetailPanel } from "@/app/contacts/ContactDetailPanel";
 import { type ContactOut, useContacts } from "@/app/contacts/useContacts";
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 
 function ContactRow({
@@ -104,16 +105,15 @@ export function ContactsPage() {
             Načítání…
           </div>
         ) : items.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-6 text-center">
-            <div
-              aria-hidden
-              className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-accent-subtle text-accent"
-            >
-              <Users size={20} strokeWidth={1.75} />
-            </div>
-            <p className="text-sm font-medium text-text-primary">Zatím žádné kontakty</p>
-            <p className="text-xs text-text-secondary">Přidejte první kontakt pro vaši firmu.</p>
-          </div>
+          <EmptyState
+            icon={Users}
+            title="Přidejte první kontakt"
+            body="Kontakty patří k firmám. Po přidání je uvidíte v levém panelu i na detailu firmy."
+            primary={{
+              label: "+ Přidat kontakt",
+              onClick: () => setModalOpen(true),
+            }}
+          />
         ) : (
           <ul role="list" className="flex-1 overflow-y-auto">
             {items.map((contact) => (

@@ -23,6 +23,7 @@ import { AddCompanyModal } from "@/app/companies/AddCompanyModal";
 import { OwnershipBadge } from "@/app/companies/OwnershipBadge";
 import { type CompanyOut, useCompanies } from "@/app/companies/useCompanies";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { EmptyState } from "@/components/ui/empty-state";
 import { csNoun } from "@/lib/i18n/nouns";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { cn } from "@/lib/utils";
@@ -164,21 +165,32 @@ export function CompaniesListPage() {
           Firmy se nepodařilo načíst. Zkuste to prosím znovu.
         </div>
       ) : total === 0 && !isPending && !isFetching ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-border bg-surface py-12 text-center">
-          <div
-            aria-hidden
-            className="inline-flex h-12 w-12 items-center justify-center rounded-md bg-accent-subtle text-accent"
-          >
-            <Building2 size={24} strokeWidth={1.75} />
-          </div>
-          <h2 className="text-lg font-semibold">
-            {debouncedSearch ? "Žádná firma tomu neodpovídá" : "Zatím tu nejsou žádné firmy"}
-          </h2>
-          <p className="max-w-sm text-sm text-text-secondary">
-            {debouncedSearch
-              ? "Zkuste upravit hledaný výraz nebo přidejte novou firmu."
-              : "Přidejte svou první firmu — stačí zadat IČO a zbytek doplníme z ARES."}
-          </p>
+        <div className="rounded-lg border border-border bg-surface">
+          {debouncedSearch ? (
+            <EmptyState
+              icon={Building2}
+              tone="filtered"
+              title="Žádný výsledek pro vybrané filtry."
+              body="Zkuste upravit hledaný výraz nebo zrušte filtr."
+              primary={{
+                label: "Vymazat filtry",
+                onClick: () => {
+                  setSearchInput("");
+                  setPage(0);
+                },
+              }}
+            />
+          ) : (
+            <EmptyState
+              icon={Building2}
+              title="Přidejte první firmu"
+              body="Stačí zadat IČO a zbytek doplníme z ARES."
+              primary={{
+                label: "+ Přidat firmu",
+                onClick: () => setModalOpen(true),
+              }}
+            />
+          )}
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border border-border bg-surface">
