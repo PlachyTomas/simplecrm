@@ -15,9 +15,12 @@ interface KpiCardProps {
 }
 
 function KpiCard({ label, value, hint, icon: Icon, accent = "default" }: KpiCardProps) {
+  // The "highlight" accent is the screen's magenta moment — used by the
+  // Trophy icon on the "Výnosy tento měsíc" celebration KPI. Magenta tinted
+  // background, magenta icon (currentColor on the lucide stroke).
   const bg =
     accent === "highlight"
-      ? "bg-highlight-subtle text-text-primary"
+      ? "bg-brand-accent-subtle text-brand-accent"
       : "bg-accent-subtle text-accent";
   return (
     <article className="rounded-lg border border-border bg-surface p-5 shadow-sm">

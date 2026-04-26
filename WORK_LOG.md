@@ -4,6 +4,68 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-26 — G1 magenta rollout, lime retirement
+
+Tokens (`frontend/src/theme/tokens.css` + `tailwind.config.ts`):
+
+- Primary `--color-accent` retuned from electric blue `#3D5AFE` (older
+  skill) to Radix iris-9 `#5B5BD6` light / indigo-400 `#818CF8` dark, per
+  the brief's "tune deliberately a few degrees off Tailwind's default
+  `#6366F1`" rule. Subtle/border alpha bumped (8% → 10–16%) so the new
+  hue keeps adequate selected-row contrast.
+- Lost / error `--color-danger` swapped from `#EF4444` (rose-tinted) to
+  the brief's `#DC2626` (pure red) so it sits visibly distant from
+  magenta in the Kanban.
+- Info `--color-info` decoupled from accent — now `#0EA5E9` light /
+  `#38BDF8` dark per the brief's "info should not blur with action".
+- New `--color-brand-accent: #EC4899` and `--color-win: #EC4899` (same
+  hex, both themes). Light-mode `*-subtle` uses solid `#FBEAF0` (Radix
+  pink-50) per the brief's "magenta on white reads louder" rule.
+- New `--color-text-on-brand-accent: #0a0a0b` (both themes) so solid
+  magenta fills always carry near-black text — never white. Brief calls
+  this out as the most-violated rule in the wild.
+- `--color-highlight*` retained as a soft-deprecated alias pointing at
+  the magenta brand-accent so any unaudited callsite flips automatically.
+  Long-term: rename to `bg-brand-accent` everywhere; for G1, alias spares
+  a per-component churn.
+
+Tailwind config exposes new `brand-accent` and `win` namespaces alongside
+the alias. New `text-on-brand-accent` utility for the win button.
+
+Component changes:
+
+- `DealDetailPage`: "Označit jako vyhráno" button now `bg-brand-accent
+  text-text-on-brand-accent` (per brief: dopamine hit color, near-black
+  text). The settled "Vyhráno" pill switched from magenta-fill to
+  `bg-success-subtle text-success` with a check icon — per brief
+  "magenta is the dopamine, green is the record".
+- `LandingPage` Kanban mockup's "Vyhráno" stage dot was hardcoded
+  `#C9F24E`; replaced with `#EC4899` and a comment explaining the
+  exception (LandingPage is the only place currently allowed two magenta
+  moments — logo + dot today, hero word underline lands in B1).
+
+Tests: new `no-lime.test.ts` walks every component file and asserts no
+lime hex / `lime-*` Tailwind class / `bg-green-(300|400|500)` celebration
+class survives. 36/36 passing.
+
+Per-screen magenta budget audit (default empty state, dev login):
+
+- Landing dark/light: logo + Vyhráno mockup dot (2). B1 will add the
+  hero "prodej" underline — that's where the budget tightens.
+- Login: logo (1). ✓
+- AppShell mobile header: logo (1). Desktop sidebar has no magenta. ✓
+- Dashboard: "Výnosy tento měsíc" KPI icon bg (1). Manager view adds
+  leaderboard #1 row → 2; tolerated per the "1–2 instances" guideline.
+- Pipeline empty: 0 magenta on the page; the win button only appears
+  on a deal-card hover/detail. ✓
+- Reports leaderboard #1 row: 1 magenta. ✓
+- Deal detail (open): win button (1). ✓
+- Deal detail (won): success-green pill, 0 magenta on settled state. ✓
+
+Commit: `feat(theme): canonicalize magenta brand accent, retire lime`.
+
+---
+
 ## 2026-04-26 — kickoff & deliberate deviations from FIXES_TASK.md
 
 Recording two repo-wide path/file translations once so individual batch

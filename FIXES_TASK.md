@@ -92,7 +92,7 @@ These touch many files and should land **before** screen-specific batches so scr
 
 **Estimated 45–75 min.** Commit: `feat(theme): canonicalize magenta brand accent, retire lime`.
 
-- [ ] In `tailwind.config.ts` (or theme tokens file), add semantic color tokens:
+- [x] In `tailwind.config.ts` (or theme tokens file), add semantic color tokens:
 
   ```ts
   brand: { DEFAULT: '#5B5BD6', accent: '#EC4899' }
@@ -101,21 +101,21 @@ These touch many files and should land **before** screen-specific batches so scr
 
   Map `--color-brand-accent` and `--color-win` CSS vars in `globals.css` for both `[data-theme="light"]` and `[data-theme="dark"]`.
 
-- [ ] Grep for hex `#C9F24E`, `#a3e635` (lime-400), `#84cc16` (lime-500), `lime-` Tailwind classes, and any `bg-green-*` used as a celebration cue. Replace each with magenta or a neutral, depending on role:
+- [x] Grep for hex `#C9F24E`, `#a3e635` (lime-400), `#84cc16` (lime-500), `lime-` Tailwind classes, and any `bg-green-*` used as a celebration cue. Replace each with magenta or a neutral, depending on role:
   - **Celebration / win / leaderboard #1 / "Označit jako vyhráno" button** → magenta `bg-brand-accent text-white`.
   - **Currency / value / KPI numbers (positive)** → keep neutral foreground (`text-zinc-900 dark:text-zinc-100`); never paint with lime.
   - **Stage chip "Vyhráno" in pipeline settings** → magenta dot.
   - **Trophy icon on Dashboard "Výnosy tento měsíc" KPI** → magenta background `bg-brand-accent/10 text-brand-accent`.
 
-- [ ] Audit per-screen magenta budget. **Max 1–2 magenta instances visible per screen** (guideline, not hard limit). Where two would compete, keep the most semantically meaningful (Označit jako vyhráno > leaderboard badge > KPI icon).
+- [x] Audit per-screen magenta budget. **Max 1–2 magenta instances visible per screen** (guideline, not hard limit). Where two would compete, keep the most semantically meaningful (Označit jako vyhráno > leaderboard badge > KPI icon).
 
-- [ ] Add a unit-style snapshot/test using `getComputedStyle` in a Playwright/Vitest test that asserts **lime is not rendered** on any of the 11 audited screens at default empty state. (`npx playwright test e2e/no-lime.spec.ts`).
+- [x] Add a unit-style snapshot/test using `getComputedStyle` in a Playwright/Vitest test that asserts **lime is not rendered** on any of the 11 audited screens at default empty state. (`npx playwright test e2e/no-lime.spec.ts`).
 
 **Verification G1:**
 
-- [ ] No occurrence of `lime-` or `#C9F24E` in compiled CSS for the app shell.
-- [ ] `Označit jako vyhráno` button (when implemented in B5) is magenta; nothing else competing for attention on that screen is magenta.
-- [ ] Logo mark uses magenta sparkle (see B1).
+- [x] No occurrence of `lime-` or `#C9F24E` in compiled CSS for the app shell.
+- [x] `Označit jako vyhráno` button (when implemented in B5) is magenta; nothing else competing for attention on that screen is magenta.
+- [x] Logo mark uses magenta sparkle (see B1).
 
 ### G2 — Dark mode default, theme toggle, no FOUC
 

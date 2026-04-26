@@ -136,7 +136,10 @@ function MockBoard() {
     },
     {
       name: "Vyhráno",
-      color: "#C9F24E",
+      // Brand magenta — the celebration hue. The mockup is the only place on
+      // the marketing page allowed two magenta moments (this dot + the hero
+      // word underline added in B1).
+      color: "#EC4899",
       deals: [{ name: "O2 — školení", amount: "90 000 Kč" }],
     },
   ];

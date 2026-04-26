@@ -29,7 +29,9 @@ DEFAULT_STAGES: tuple[StageSeed, ...] = (
     StageSeed("Schůzka", 45, "#F59E0B", StageType.open),
     StageSeed("Nabídka", 65, "#A8D03A", StageType.open),
     StageSeed("Jednání", 85, "#10B981", StageType.open),
-    StageSeed("Vyhráno", 100, "#C9F24E", StageType.won),
+    # Vyhráno stage seed is the canonical magenta brand-accent. The brief
+    # retires lime entirely; the full progressive stage palette lands in B5.
+    StageSeed("Vyhráno", 100, "#EC4899", StageType.won),
 )
 
 

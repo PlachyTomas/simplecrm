@@ -22,6 +22,7 @@ const config: Config = {
           secondary: "var(--color-text-secondary)",
           tertiary: "var(--color-text-tertiary)",
           "on-accent": "var(--color-text-on-accent)",
+          "on-brand-accent": "var(--color-text-on-brand-accent)",
         },
         accent: {
           DEFAULT: "var(--color-accent)",
@@ -29,6 +30,19 @@ const config: Config = {
           active: "var(--color-accent-active)",
           subtle: "var(--color-accent-subtle)",
           border: "var(--color-accent-border)",
+        },
+        // Magenta brand accent — used for celebration / win moments only.
+        // `brand-accent` is the canonical name; `highlight` survives as an
+        // alias so existing `bg-highlight*` callsites flip without churn.
+        "brand-accent": {
+          DEFAULT: "var(--color-brand-accent)",
+          hover: "var(--color-brand-accent-hover)",
+          subtle: "var(--color-brand-accent-subtle)",
+          border: "var(--color-brand-accent-border)",
+        },
+        win: {
+          DEFAULT: "var(--color-win)",
+          subtle: "var(--color-win-subtle)",
         },
         highlight: {
           DEFAULT: "var(--color-highlight)",

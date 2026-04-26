@@ -176,7 +176,7 @@ export function DealDetailPage() {
               type="button"
               onClick={() => markWon.mutate()}
               disabled={markWon.isPending}
-              className="inline-flex h-10 items-center gap-2 rounded-md bg-highlight px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-highlight-hover disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-accent px-5 text-sm font-semibold text-text-on-brand-accent transition-colors duration-fast hover:bg-brand-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Check size={16} strokeWidth={1.75} /> Označit jako vyhráno
             </button>
@@ -201,8 +201,8 @@ export function DealDetailPage() {
                   Prohráno · {deal.lost_reason}
                 </span>
               ) : (
-                <span className="inline-flex items-center rounded-full bg-highlight px-3 py-1 text-xs font-medium text-text-on-accent">
-                  Vyhráno
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-success-subtle px-3 py-1 text-xs font-medium text-success">
+                  <Check size={12} strokeWidth={2} aria-hidden /> Vyhráno
                 </span>
               )
             ) : (

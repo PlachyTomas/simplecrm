@@ -5,7 +5,11 @@
  * tokens live at `:root`. Application code must reference only these semantic
  * variables, never raw hex / Tailwind default palettes.
  *
- * See `.claude/skills/ui-design.md` for the authoritative definitions.
+ * The brand accent `--color-brand-accent` is canonical magenta `#EC4899` —
+ * "Označit jako vyhráno", logo, leaderboard #1 only. Lime is retired per
+ * SIMPLECRM_DESIGN_BRIEF.md; the `--color-highlight` token alias remains and
+ * now points at the magenta brand-accent so that any leftover `bg-highlight`
+ * usage flips automatically until those callsites get audited per-screen.
  */
 
 :root {
@@ -79,26 +83,46 @@
   --color-text-secondary: #a8a8b3;
   --color-text-tertiary: #6b6b76;
   --color-text-on-accent: #0a0a0b;
+  /* Solid magenta fills always carry near-black text — never white. */
+  --color-text-on-brand-accent: #0a0a0b;
 
-  --color-accent: #3d5afe;
-  --color-accent-hover: #5470ff;
-  --color-accent-active: #2f47e5;
-  --color-accent-subtle: rgba(61, 90, 254, 0.12);
-  --color-accent-border: rgba(61, 90, 254, 0.3);
+  /* Primary interactive — Radix iris-9 (#5B5BD6) tuned a few degrees off
+     Tailwind's default indigo-500. In dark mode, lighten + slightly desaturate
+     to indigo-400 (#818CF8) per the brief. */
+  --color-accent: #818cf8;
+  --color-accent-hover: #a5b4fc;
+  --color-accent-active: #6366f1;
+  --color-accent-subtle: rgba(129, 140, 248, 0.16);
+  --color-accent-border: rgba(129, 140, 248, 0.32);
 
-  --color-highlight: #c9f24e;
-  --color-highlight-hover: #d6ff5e;
-  --color-highlight-subtle: rgba(201, 242, 78, 0.12);
-  --color-highlight-border: rgba(201, 242, 78, 0.3);
+  /* Brand accent — magenta. Reserved for celebration, win moments, logo. */
+  --color-brand-accent: #ec4899;
+  --color-brand-accent-hover: #f472b6;
+  --color-brand-accent-subtle: rgba(236, 72, 153, 0.12);
+  --color-brand-accent-border: rgba(236, 72, 153, 0.32);
+
+  /* Win — alias of brand-accent for celebration cues. */
+  --color-win: #ec4899;
+  --color-win-subtle: rgba(236, 72, 153, 0.12);
+
+  /* Lime is retired. The aliases below point at the brand-accent so any
+     `bg-highlight*` callsite still pending audit flips to magenta. */
+  --color-highlight: var(--color-brand-accent);
+  --color-highlight-hover: var(--color-brand-accent-hover);
+  --color-highlight-subtle: var(--color-brand-accent-subtle);
+  --color-highlight-border: var(--color-brand-accent-border);
 
   --color-success: #10b981;
-  --color-success-subtle: rgba(16, 185, 129, 0.12);
+  --color-success-subtle: rgba(16, 185, 129, 0.16);
   --color-warning: #f59e0b;
-  --color-warning-subtle: rgba(245, 158, 11, 0.12);
-  --color-danger: #ef4444;
-  --color-danger-subtle: rgba(239, 68, 68, 0.12);
-  --color-info: #3d5afe;
-  --color-info-subtle: rgba(61, 90, 254, 0.12);
+  --color-warning-subtle: rgba(245, 158, 11, 0.16);
+  /* Lost / error — kept as a traditional pure red specifically to stay visually
+     distinct from the magenta brand accent. */
+  --color-danger: #dc2626;
+  --color-danger-subtle: rgba(220, 38, 38, 0.16);
+  /* Info: cyan, distinct from indigo so "new info" doesn't blur with "action". */
+  --color-info: #38bdf8;
+  --color-info-subtle: rgba(56, 189, 248, 0.16);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
@@ -122,26 +146,40 @@
   --color-text-secondary: #4a4a55;
   --color-text-tertiary: #8a8a95;
   --color-text-on-accent: #ffffff;
+  /* Solid magenta fills always carry near-black text — never white. */
+  --color-text-on-brand-accent: #0a0a0b;
 
-  --color-accent: #2f47e5;
-  --color-accent-hover: #3d5afe;
-  --color-accent-active: #243bc4;
-  --color-accent-subtle: rgba(47, 71, 229, 0.08);
-  --color-accent-border: rgba(47, 71, 229, 0.25);
+  /* Primary — Radix iris-9 #5B5BD6, slightly darkened for AA on warm-white. */
+  --color-accent: #5b5bd6;
+  --color-accent-hover: #6e6ee8;
+  --color-accent-active: #4848bf;
+  --color-accent-subtle: rgba(91, 91, 214, 0.1);
+  --color-accent-border: rgba(91, 91, 214, 0.3);
 
-  --color-highlight: #c9f24e;
-  --color-highlight-hover: #d6ff5e;
-  --color-highlight-subtle: rgba(201, 242, 78, 0.2);
-  --color-highlight-border: #a8d03a;
+  /* Brand accent — magenta. Same hex in both themes; the brief notes the
+     surrounding contrast changes the perceived loudness. Use sparingly in
+     light mode (≤1 instance per screen). */
+  --color-brand-accent: #ec4899;
+  --color-brand-accent-hover: #f472b6;
+  --color-brand-accent-subtle: #fbeaf0; /* Radix pink-50 — solid for light mode */
+  --color-brand-accent-border: rgba(236, 72, 153, 0.32);
+
+  --color-win: #ec4899;
+  --color-win-subtle: #fbeaf0;
+
+  --color-highlight: var(--color-brand-accent);
+  --color-highlight-hover: var(--color-brand-accent-hover);
+  --color-highlight-subtle: var(--color-brand-accent-subtle);
+  --color-highlight-border: var(--color-brand-accent-border);
 
   --color-success: #059669;
-  --color-success-subtle: rgba(5, 150, 105, 0.08);
+  --color-success-subtle: rgba(5, 150, 105, 0.1);
   --color-warning: #d97706;
-  --color-warning-subtle: rgba(217, 119, 6, 0.08);
+  --color-warning-subtle: rgba(217, 119, 6, 0.1);
   --color-danger: #dc2626;
-  --color-danger-subtle: rgba(220, 38, 38, 0.08);
-  --color-info: #2f47e5;
-  --color-info-subtle: rgba(47, 71, 229, 0.08);
+  --color-danger-subtle: rgba(220, 38, 38, 0.1);
+  --color-info: #0ea5e9;
+  --color-info-subtle: rgba(14, 165, 233, 0.1);
 
   --shadow-sm: 0 1px 2px rgba(15, 15, 20, 0.06);
   --shadow-md: 0 4px 12px rgba(15, 15, 20, 0.08);
