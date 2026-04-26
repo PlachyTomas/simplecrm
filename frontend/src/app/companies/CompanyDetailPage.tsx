@@ -174,17 +174,17 @@ export function CompanyDetailPage() {
         ) : activeTab === "contacts" ? (
           <PlaceholderTab
             title="Kontakty"
-            description="Seznam kontaktů firmy bude součástí Fáze 4.3."
+            description="Seznam kontaktů firmy připravujeme."
           />
         ) : activeTab === "deals" ? (
           <PlaceholderTab
             title="Obchody"
-            description="Přehled obchodů firmy dorazí s Kanbanem v Fázi 5."
+            description="Přehled obchodů firmy připravujeme."
           />
         ) : activeTab === "activity" ? (
           <PlaceholderTab
             title="Aktivita"
-            description="Časová osa aktivit přibude společně s dashboardy v Fázi 6."
+            description="Časovou osu aktivit připravujeme."
           />
         ) : (
           <NotesTab note={company.note ?? null} />

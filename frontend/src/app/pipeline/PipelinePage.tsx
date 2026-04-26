@@ -8,9 +8,10 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { Workflow } from "lucide-react";
+import { Plus, Workflow } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { AddDealModal } from "@/app/deals/AddDealModal";
 import {
   type BoardDeal,
   type BoardStage,
@@ -19,6 +20,7 @@ import {
 } from "@/app/pipeline/useBoard";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { csNoun } from "@/lib/i18n/nouns";
 import { cn } from "@/lib/utils";
 
 function formatMoney(value: string, currency: string, locale: string): string {
@@ -101,8 +103,7 @@ function StageColumn({ stage, locale, boardCurrency, draggingId }: StageColumnPr
             <h2 className="truncate text-sm font-semibold">{stage.name}</h2>
           </div>
           <p className="mt-1 text-xs text-text-tertiary">
-            {stage.deal_count}{" "}
-            {stage.deal_count === 1 ? "obchod" : stage.deal_count < 5 ? "obchody" : "obchodů"} ·{" "}
+            {stage.deal_count} {csNoun(stage.deal_count, "obchod")} ·{" "}
             {formatMoney(stage.total_value, boardCurrency, locale)}
           </p>
         </div>
@@ -128,6 +129,8 @@ export function PipelinePage() {
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
   const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [addDealOpen, setAddDealOpen] = useState(false);
+  const [addDealStageId, setAddDealStageId] = useState<string | undefined>(undefined);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -170,6 +173,13 @@ export function PipelinePage() {
     }
     return null;
   }, [activeDealId, board]);
+
+  // Memoize the stage options passed to AddDealModal so that background
+  // refetches of the board don't reset the form mid-edit.
+  const modalStageOptions = useMemo(
+    () => (board?.stages ?? []).map((s) => ({ id: s.id, name: s.name })),
+    [board?.stages],
+  );
 
   const hasActiveFilter = ownerFilter !== "all" || searchTerm.trim().length > 0;
   const canPickOwner = user?.role === "admin" || user?.role === "manager";
@@ -215,6 +225,17 @@ export function PipelinePage() {
           <p className="text-sm text-text-tertiary">{board.name}</p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setAddDealStageId(undefined);
+              setAddDealOpen(true);
+            }}
+            className="inline-flex h-9 items-center gap-1 rounded-md bg-accent px-3 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
+          >
+            <Plus size={16} strokeWidth={1.75} aria-hidden />
+            <span>Přidat obchod</span>
+          </button>
           <label className="flex flex-col text-xs font-medium text-text-tertiary">
             Hledat
             <input
@@ -282,11 +303,21 @@ export function PipelinePage() {
           >
             <Workflow size={24} strokeWidth={1.75} />
           </div>
-          <h2 className="text-lg font-semibold">Žádné obchody v pipeline</h2>
+          <h2 className="text-lg font-semibold">Přidejte první obchod</h2>
           <p className="max-w-md text-sm text-text-secondary">
-            Založte první obchod ve firemním detailu nebo přes rychlé akce. Jakmile tu bude, můžete
-            ho přetáhnout mezi fázemi.
+            Sledujte obchody napříč fázemi pipeline. Karty přetahujte mezi sloupci podle vývoje.
           </p>
+          <button
+            type="button"
+            onClick={() => {
+              setAddDealStageId(undefined);
+              setAddDealOpen(true);
+            }}
+            className="mt-1 inline-flex h-9 items-center gap-1 rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
+          >
+            <Plus size={16} strokeWidth={1.75} aria-hidden />
+            <span>Přidat obchod</span>
+          </button>
         </div>
       ) : null}
 
@@ -320,6 +351,13 @@ export function PipelinePage() {
           {activeDeal ? <DealCard deal={activeDeal} locale={locale} /> : null}
         </DragOverlay>
       </DndContext>
+
+      <AddDealModal
+        open={addDealOpen}
+        onClose={() => setAddDealOpen(false)}
+        stages={modalStageOptions}
+        initialStageId={addDealStageId}
+      />
     </div>
   );
 }

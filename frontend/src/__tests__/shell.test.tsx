@@ -128,16 +128,43 @@ describe("Responsive app shell", () => {
     );
   });
 
-  it("renders the Více menu at /app/more", async () => {
+  it("renders the Více menu at /app/more on mobile", async () => {
+    // /more is mobile-only — pin matchMedia to match the (max-width: 767px) breakpoint.
+    const previousMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes("max-width: 767px"),
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+
+    try {
+      renderAt("/app/more");
+      const main = await screen.findByRole("main");
+      await waitFor(() =>
+        expect(within(main).getByRole("heading", { level: 1, name: /^Více$/ })).toBeInTheDocument(),
+      );
+      expect(within(main).getByRole("link", { name: /obchody/i })).toHaveAttribute(
+        "href",
+        "/app/deals",
+      );
+      expect(within(main).getByRole("button", { name: /odhlásit se/i })).toBeInTheDocument();
+    } finally {
+      window.matchMedia = previousMatchMedia;
+    }
+  });
+
+  it("redirects /app/more to dashboard on desktop", async () => {
     renderAt("/app/more");
-    const main = await screen.findByRole("main");
+    // Desktop matchMedia mock returns matches:false → MorePage redirects to /app.
     await waitFor(() =>
-      expect(within(main).getByRole("heading", { level: 1, name: /^Více$/ })).toBeInTheDocument(),
+      expect(
+        screen.getByRole("heading", { level: 1, name: /Vítejte zpět/ }),
+      ).toBeInTheDocument(),
     );
-    expect(within(main).getByRole("link", { name: /obchody/i })).toHaveAttribute(
-      "href",
-      "/app/deals",
-    );
-    expect(within(main).getByRole("button", { name: /odhlásit se/i })).toBeInTheDocument();
   });
 });

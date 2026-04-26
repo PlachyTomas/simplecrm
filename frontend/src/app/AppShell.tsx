@@ -8,6 +8,7 @@ import { Sidebar } from "@/app/Sidebar";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { apiFetch } from "@/lib/api";
+import { csNoun } from "@/lib/i18n/nouns";
 import { queryClient } from "@/lib/queryClient";
 
 export function AppShell() {
@@ -61,12 +62,8 @@ export function AppShell() {
                   {user.organization.name}
                 </p>
                 <p className={`truncate text-xs ${trialBadgeClass}`}>
-                  Zkušební doba do <time>{trialEndsAt}</time> ·{" "}
-                  {daysRemaining === 1
-                    ? "1 den zbývá"
-                    : daysRemaining < 5
-                      ? `${daysRemaining} dny zbývají`
-                      : `${daysRemaining} dní zbývá`}
+                  Zkušební doba do <time>{trialEndsAt}</time> · {daysRemaining}{" "}
+                  {csNoun(daysRemaining, "den")} {daysRemaining >= 2 && daysRemaining <= 4 ? "zbývají" : "zbývá"}
                 </p>
               </div>
             </div>

@@ -23,15 +23,14 @@ import { AddCompanyModal } from "@/app/companies/AddCompanyModal";
 import { OwnershipBadge } from "@/app/companies/OwnershipBadge";
 import { type CompanyOut, useCompanies } from "@/app/companies/useCompanies";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { csNoun } from "@/lib/i18n/nouns";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 25;
 
 function pluralizeCompanies(n: number): string {
-  if (n === 1) return "1 firma";
-  if (n < 5) return `${n} firmy`;
-  return `${n} firem`;
+  return `${n} ${csNoun(n, "firma")}`;
 }
 
 export function CompaniesListPage() {

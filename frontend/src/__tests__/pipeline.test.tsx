@@ -167,7 +167,7 @@ describe("Pipeline Kanban", () => {
     renderAt("/app/pipeline");
     await waitFor(() =>
       expect(
-        screen.getByRole("heading", { level: 2, name: /Žádné obchody v pipeline/ }),
+        screen.getByRole("heading", { level: 2, name: /Přidejte první obchod/ }),
       ).toBeInTheDocument(),
     );
   });

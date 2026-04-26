@@ -1,11 +1,12 @@
 import type { LucideIcon } from "lucide-react";
 import { ChevronRight, Handshake, LineChart, LogOut, Settings } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 
 import { useAuth } from "@/auth/useAuth";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 
 interface Row {
   to?: string;
@@ -15,6 +16,7 @@ interface Row {
 }
 
 export function MorePage() {
+  const isMobile = useMediaQuery("(max-width: 767px)");
   const { accessToken, clearAuth } = useAuth();
   const logout = useMutation({
     mutationFn: () => apiFetch<void>("/api/v1/auth/logout", { method: "POST", token: accessToken }),
@@ -23,6 +25,12 @@ export function MorePage() {
       queryClient.clear();
     },
   });
+
+  // The /more page is a mobile-only overflow surface. On desktop the sidebar
+  // already exposes every primary nav item — show the dashboard instead.
+  if (!isMobile) {
+    return <Navigate to="/app" replace />;
+  }
 
   const rows: Row[] = [
     { to: "/app/deals", label: "Obchody", icon: Handshake },

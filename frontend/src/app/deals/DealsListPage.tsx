@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 
 import { useDeals } from "@/app/deals/useDeals";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { csNoun } from "@/lib/i18n/nouns";
 
 function formatMoney(value: string, currency: string, locale: string): string {
   const numeric = Number(value);
@@ -52,8 +53,15 @@ export function DealsListPage() {
         </div>
         <h2 className="text-lg font-semibold">Zatím žádné obchody</h2>
         <p className="max-w-sm text-sm text-text-secondary">
-          Obchody se zakládají v Pipeline — Kanban v Fázi 5 nabídne rychlé přetažení.
+          Obchody zakládáte v Pipeline. Tady je uvidíte všechny v seznamu — s firmou, hodnotou,
+          fází a vlastníkem.
         </p>
+        <Link
+          to="/app/pipeline"
+          className="mt-2 inline-flex h-9 items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
+        >
+          Přejít do Pipeline
+        </Link>
       </div>
     );
   }
@@ -63,8 +71,7 @@ export function DealsListPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold">Obchody</h1>
         <p className="mt-1 text-sm text-text-tertiary">
-          Celkem {deals.total}{" "}
-          {deals.total === 1 ? "obchod" : deals.total < 5 ? "obchody" : "obchodů"}
+          Celkem {deals.total} {csNoun(deals.total, "obchod")}
         </p>
       </div>
 
