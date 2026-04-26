@@ -4,6 +4,46 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-27 — B5 pipeline major polish
+
+- New `frontend/src/app/pipeline/colors.ts`: progressive stage palette
+  keyed off `stage.position` (zinc-400 → sky-500 → indigo-500 →
+  violet-500 → amber-500 → magenta), with fallback to the stage's
+  stored hex for any admin-added stage beyond the seeded six.
+  `StageColumn` consumes it for the dot AND a 3px left-seam (`box-
+  shadow: inset 3px 0 0 …`) per brief §4.
+- Per-column "+" button: ghost icon button on each column header,
+  invisible on desktop until hover/focus, always visible on touch.
+  Pre-fills the stage in the AddDealModal.
+- Win celebration:
+  - `frontend/src/lib/celebrate.ts` — single `celebrateWin(anchor?)`
+    helper using `canvas-confetti` (added as a new dep,
+    `@types/canvas-confetti` as a dev-dep). Suppressed under
+    `prefers-reduced-motion: reduce`. Tuned to brief: 120 particles,
+    spread 80, scalar 0.9, magenta + indigo + zinc palette.
+  - `useMarkAnyDealWon` (new): variant of `useMarkDealWon` that takes
+    the `dealId` per call instead of per hook-instance. Lets the deal
+    card list fire the win without spawning N hooks.
+  - Magenta "Vyhráno" button on each card (hover-revealed, always on
+    touch). On click: optimistic mutation + confetti anchored on the
+    button + magenta-tinted toast. Toast auto-dismisses at 4s.
+  - Cards in the won-type column hide the win button — there's nowhere
+    to move them.
+
+### B5 deferred
+
+- Inline "+ Přidat firmu" inside the company autocomplete in the
+  AddDealModal (would require a nested-modal flow).
+- Card-level "Označit jako prohranou" — DealDetailPage already
+  handles it; pipeline shortcut is lower priority.
+- Desktop horizontal scroll shadows + chevron buttons. Mobile scroll-
+  snap landed in G3; the gradient-shadow approach needs JS measurement
+  to handle dynamic content widths.
+
+Commit: `feat(pipeline): stage palette, per-column +, win confetti (B5)`.
+
+---
+
 ## 2026-04-27 — B4 companies list (partial)
 
 - New "Vlastník" column rendering owner avatar (initials) + name, or

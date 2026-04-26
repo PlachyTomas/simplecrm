@@ -8,10 +8,12 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { Plus, Workflow } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Check, Plus, Workflow } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AddDealModal } from "@/app/deals/AddDealModal";
+import { useMarkAnyDealWon } from "@/app/deals/useDealActions";
+import { stageColor } from "@/app/pipeline/colors";
 import {
   type BoardDeal,
   type BoardStage,
@@ -21,6 +23,7 @@ import {
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
+import { celebrateWin } from "@/lib/celebrate";
 import { csNoun } from "@/lib/i18n/nouns";
 import { cn } from "@/lib/utils";
 
@@ -38,13 +41,17 @@ interface DealCardProps {
   deal: BoardDeal;
   locale: string;
   dragging?: boolean;
+  /** When this stage is "won" the win button hides — the deal is already there. */
+  onWin?: (anchor: HTMLElement | null) => void;
+  winning?: boolean;
 }
 
-function DealCard({ deal, locale, dragging }: DealCardProps) {
+function DealCard({ deal, locale, dragging, onWin, winning }: DealCardProps) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: deal.id,
     data: { type: "deal", stageId: deal.stage_id },
   });
+  const winButtonRef = useRef<HTMLButtonElement>(null);
 
   const style: React.CSSProperties = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
@@ -60,7 +67,7 @@ function DealCard({ deal, locale, dragging }: DealCardProps) {
       tabIndex={0}
       aria-label={`${deal.name} — ${formatMoney(deal.value, deal.currency, locale)}`}
       className={cn(
-        "cursor-grab select-none rounded-md border border-border bg-surface px-3 py-3 shadow-sm transition-shadow duration-fast hover:shadow-md active:cursor-grabbing",
+        "group/card relative cursor-grab select-none rounded-md border border-border bg-surface px-3 py-3 shadow-sm transition-shadow duration-fast hover:shadow-md active:cursor-grabbing",
         dragging && "opacity-0",
       )}
     >
@@ -68,6 +75,24 @@ function DealCard({ deal, locale, dragging }: DealCardProps) {
       <p className="mt-1 font-mono text-xs tabular-nums text-text-secondary">
         {formatMoney(deal.value, deal.currency, locale)}
       </p>
+      {onWin ? (
+        <button
+          ref={winButtonRef}
+          type="button"
+          onClick={(e) => {
+            // Stop drag handlers — this is a click action, not a drag start.
+            e.stopPropagation();
+            e.preventDefault();
+            onWin(winButtonRef.current);
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          disabled={winning}
+          aria-label={`Označit obchod ${deal.name} jako vyhraný`}
+          className="mt-2 inline-flex h-7 items-center gap-1 rounded-md bg-brand-accent px-2 text-xs font-semibold text-text-on-brand-accent opacity-0 transition-opacity duration-fast hover:bg-brand-accent-hover focus-visible:opacity-100 group-hover/card:opacity-100 disabled:cursor-not-allowed disabled:opacity-50 max-md:opacity-100"
+        >
+          <Check size={12} strokeWidth={2} aria-hidden /> Vyhráno
+        </button>
+      ) : null}
     </article>
   );
 }
@@ -77,29 +102,49 @@ interface StageColumnProps {
   locale: string;
   boardCurrency: string;
   draggingId: string | null;
+  onAddDeal: (stageId: string) => void;
+  onWinDeal: (deal: BoardDeal, anchor: HTMLElement | null) => void;
+  winningDealId: string | null;
 }
 
-function StageColumn({ stage, locale, boardCurrency, draggingId }: StageColumnProps) {
+function StageColumn({
+  stage,
+  locale,
+  boardCurrency,
+  draggingId,
+  onAddDeal,
+  onWinDeal,
+  winningDealId,
+}: StageColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
     data: { type: "stage" },
   });
 
+  // Stage palette is keyed off `position` so admin-renamed stages keep
+  // their semantic color. Falls back to the stored `color` for any custom
+  // stages beyond the seeded six.
+  const dotColor = stageColor(stage.position, stage.color);
+  // 2–3px left seam in the stage color — brief §4 "kanban columns get a
+  // left-seam color accent, do not tint the full card background".
+  const seamStyle: React.CSSProperties = { boxShadow: `inset 3px 0 0 ${dotColor}` };
+
   return (
     <section
       aria-label={`Fáze ${stage.name}`}
+      style={seamStyle}
       className={cn(
-        "flex w-[92vw] shrink-0 snap-start flex-col rounded-lg border border-border bg-surface transition-colors duration-fast md:w-72",
+        "group/column flex w-[92vw] shrink-0 snap-start flex-col rounded-lg border border-border bg-surface transition-colors duration-fast md:w-72",
         isOver && "ring-2 ring-accent",
       )}
     >
-      <header className="flex items-center justify-between gap-2 border-b border-border-subtle px-4 py-3">
+      <header className="flex items-start justify-between gap-2 border-b border-border-subtle px-4 py-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span
               aria-hidden
               className="inline-block h-2 w-2 rounded-full"
-              style={{ backgroundColor: stage.color }}
+              style={{ backgroundColor: dotColor }}
             />
             <h2 className="truncate text-sm font-semibold">{stage.name}</h2>
           </div>
@@ -108,13 +153,34 @@ function StageColumn({ stage, locale, boardCurrency, draggingId }: StageColumnPr
             {formatMoney(stage.total_value, boardCurrency, locale)}
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => onAddDeal(stage.id)}
+          aria-label={`Přidat obchod do fáze ${stage.name}`}
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-tertiary opacity-0 transition-opacity duration-fast hover:bg-surface-overlay hover:text-text-primary focus-visible:opacity-100 group-hover/column:opacity-100 max-md:opacity-100"
+        >
+          <Plus size={16} strokeWidth={1.75} />
+        </button>
       </header>
       <div ref={setNodeRef} className="flex flex-1 flex-col gap-2 p-3">
         {stage.deals.length === 0 ? (
           <p className="text-xs text-text-tertiary">Zatím žádné obchody.</p>
         ) : (
           stage.deals.map((deal) => (
-            <DealCard key={deal.id} deal={deal} locale={locale} dragging={draggingId === deal.id} />
+            <DealCard
+              key={deal.id}
+              deal={deal}
+              locale={locale}
+              dragging={draggingId === deal.id}
+              // Hide the win button on cards already in the won column —
+              // there's nowhere to move them.
+              onWin={
+                stage.stage_type === "won"
+                  ? undefined
+                  : (anchor) => onWinDeal(deal, anchor)
+              }
+              winning={winningDealId === deal.id}
+            />
           ))
         )}
       </div>
@@ -127,15 +193,49 @@ export function PipelinePage() {
   const { data: user } = useCurrentUser();
   const { data: usersPage } = useOrgUsers();
   const moveMutation = useMoveDealStage();
+  const winMutation = useMarkAnyDealWon();
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
   const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [addDealOpen, setAddDealOpen] = useState(false);
   const [addDealStageId, setAddDealStageId] = useState<string | undefined>(undefined);
+  const [winningDealId, setWinningDealId] = useState<string | null>(null);
+  const [winToast, setWinToast] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const locale = user?.organization.locale ?? "cs-CZ";
+
+  const moneyFmt = useMemo(
+    () =>
+      board
+        ? new Intl.NumberFormat(locale, {
+            style: "currency",
+            currency: board.currency,
+            maximumFractionDigits: 0,
+          })
+        : null,
+    [board, locale],
+  );
+
+  const handleWinDeal = useCallback(
+    (deal: BoardDeal, anchor: HTMLElement | null) => {
+      if (winningDealId) return;
+      setWinningDealId(deal.id);
+      celebrateWin(anchor);
+      const formattedValue = moneyFmt
+        ? moneyFmt.format(Number(deal.value))
+        : `${deal.value} ${deal.currency}`;
+      setWinToast(`🎉 Gratulujeme! Obchod ${deal.name} ve výši ${formattedValue} uzavřen.`);
+      winMutation.mutate(
+        { dealId: deal.id },
+        {
+          onSettled: () => setWinningDealId(null),
+        },
+      );
+    },
+    [winMutation, winningDealId, moneyFmt],
+  );
 
   const filteredStages = useMemo<BoardStage[]>(() => {
     if (!board) return [];
@@ -329,6 +429,12 @@ export function PipelinePage() {
               locale={locale}
               boardCurrency={board.currency}
               draggingId={activeDealId}
+              onAddDeal={(stageId) => {
+                setAddDealStageId(stageId);
+                setAddDealOpen(true);
+              }}
+              onWinDeal={handleWinDeal}
+              winningDealId={winningDealId}
             />
           ))}
         </div>
@@ -368,6 +474,40 @@ export function PipelinePage() {
         stages={modalStageOptions}
         initialStageId={addDealStageId}
       />
+
+      {winToast ? (
+        <WinToast message={winToast} onDismiss={() => setWinToast(null)} />
+      ) : null}
+    </div>
+  );
+}
+
+function WinToast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+  // Auto-dismiss after 4 seconds (sonner-like default for non-error toasts).
+  useEffect(() => {
+    const id = window.setTimeout(onDismiss, 4000);
+    return () => window.clearTimeout(id);
+    // Re-arm whenever the message text changes — covers the case where
+    // a second win lands while a first is still on screen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message]);
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-md border border-brand-accent bg-brand-accent-subtle px-4 py-3 text-sm text-text-primary shadow-lg"
+    >
+      <div className="flex items-center gap-3">
+        <span className="max-w-xs">{message}</span>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Zavřít oznámení"
+          className="text-text-tertiary hover:text-text-primary"
+        >
+          ×
+        </button>
+      </div>
     </div>
   );
 }

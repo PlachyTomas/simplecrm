@@ -23,6 +23,29 @@ export function useMarkDealWon(dealId: string | undefined) {
   });
 }
 
+/**
+ * Mutation variant that takes the deal id at call-time rather than at
+ * hook-creation time — useful for list / kanban surfaces where each
+ * card needs to win its own deal without spawning a separate hook
+ * instance per card.
+ */
+export function useMarkAnyDealWon() {
+  const { accessToken } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation<DealOut, Error, { dealId: string }>({
+    mutationFn: ({ dealId }) =>
+      apiFetch<DealOut>(`/api/v1/deals/${dealId}/mark-won`, {
+        method: "POST",
+        token: accessToken,
+      }),
+    onSuccess: (_data, { dealId }) => {
+      void queryClient.invalidateQueries({ queryKey: ["deal", dealId] });
+      void queryClient.invalidateQueries({ queryKey: ["deals"] });
+      void queryClient.invalidateQueries({ queryKey: ["pipeline"] });
+    },
+  });
+}
+
 export function useMarkDealLost(dealId: string | undefined) {
   const { accessToken } = useAuth();
   const queryClient = useQueryClient();

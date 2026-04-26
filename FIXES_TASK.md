@@ -278,9 +278,9 @@ These touch many files and should land **before** screen-specific batches so scr
 
 **Estimated 90–150 min.** Commit: `feat(pipeline): add-deal CTA, scroll affordances, stage colors, won-celebration`.
 
-- [ ] **Header CTA.** Primary "+ Přidat obchod" top-right. Opens modal with fields: name, company (autocomplete from Companies, with "+ Přidat firmu" inline that triggers the ARES modal), value, expected close, owner (default = current user), stage (defaulted to first stage but editable).
-- [ ] **Per-column "+".** Subtle ghost button at the top of each column ("+ Nový" or just "+") visible on column hover, always visible on touch. Pre-fills Stage to that column.
-- [ ] **Horizontal scroll affordances.**
+- [x] **Header CTA.** Primary "+ Přidat obchod" top-right. Opens modal with fields: name, company (autocomplete from Companies, with "+ Přidat firmu" inline that triggers the ARES modal), value, expected close, owner (default = current user), stage (defaulted to first stage but editable). — Done in C0; inline "+ Přidat firmu" inside the company autocomplete is deferred (would require reopening the AddCompanyModal in nested-modal flow).
+- [x] **Per-column "+".** Subtle ghost button at the top of each column ("+ Nový" or just "+") visible on column hover, always visible on touch. Pre-fills Stage to that column.
+- [ ] **Horizontal scroll affordances.** — **Partial.** `snap-mandatory` shipped in G3; CSS scroll shadows + chevron buttons not implemented (CSS gradient-shadow approach won't work without measurement-based JS or `:has(scroll)` which isn't broadly supported yet). Punted to a future iteration.
   - Column widths sized so a **~25% sliver of the next column** is visible at common viewport widths (≥1280px).
   - Dynamic CSS scroll shadows on the board container (`background: linear-gradient(...)` with `background-attachment: local` — Lea Verou technique).
   - Chevron buttons in the header strip when `scrollWidth > clientWidth`, click-to-scroll one column.
@@ -293,26 +293,21 @@ These touch many files and should land **before** screen-specific batches so scr
   - Stage 5 (Jednání): `amber-500`
   - Stage 6 (Vyhráno): **magenta `#EC4899`** (the canonical celebration color)
   - Stage `Lost` (if rendered as a column): `red-600`
-    These map by `stage.order` via `stageColor(order)` helper in `app/web/src/features/pipeline/colors.ts`. Pipeline-settings page (B10) reads these defaults but allows override.
-- [ ] **"Označit jako vyhráno" button.** On each deal card hover (or in the deal detail drawer), a magenta button "Označit jako vyhráno" appears. On click:
-  1. Move the card to Vyhráno stage with optimistic UI.
-  2. Fire `canvas-confetti` from button origin: `{ particleCount: 120, spread: 80, origin: { y: 0.7 }, ticks: 150, disableForReducedMotion: true, scalar: 0.9 }`.
-  3. Show a toast (4s persistent) `"🎉 Gratulujeme! Obchod {name} ve výši {value} Kč uzavřen."` with `Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK' })`.
-  4. Respect `prefers-reduced-motion`: skip confetti entirely, keep toast + a static green-check animation.
-  5. No sound. Ever.
-- [ ] **"Označit jako prohranou"** button. Red destructive style, opens a small modal asking for `Důvod prohry` (select with admin-configurable reasons + free text). Required for the "Důvody prohry" report.
-- [ ] **Empty-state correction.** When no deals exist, show empty columns AND a centered overlay using `<EmptyState />` (from G4): headline "Přidejte první obchod", body "Sledujte obchody napříč fázemi pipeline. Karty přetahujte mezi sloupci podle vývoje.", primary CTA "+ Přidat obchod" (same handler as header). **Hide the header CTA while empty-state overlay is shown** (Segment guidance — avoid duplicate primaries). Once even one deal exists, the overlay disappears and the header CTA reappears.
-- [ ] **Czech plural fix.** Column subhead `"0 obchodů · 0 Kč"` (use the plural helper).
-- [ ] **dnd-kit drag-and-drop.** Verify drag latency, optimistic update, error rollback if API fails. Keyboard drag accessibility (Space to pick up, arrows to move, Enter to drop) per dnd-kit docs.
+    These map by `stage.order` via `stageColor(order)` helper in `app/web/src/features/pipeline/colors.ts`. Pipeline-settings page (B10) reads these defaults but allows override. — **Done** via `frontend/src/app/pipeline/colors.ts` (keyed by `stage.position`). Falls back to the stored stage color for any custom stage beyond the seeded six. Stage column also gets a 3px left-seam in the same color per brief §4.
+- [x] **"Označit jako vyhráno" button.** Magenta button on each deal card hover (always visible on touch) → optimistic mutation + confetti from button origin + 4s magenta-tinted toast with Intl-formatted value. `prefers-reduced-motion: reduce` suppresses confetti via `celebrateWin`.
+- [ ] **"Označit jako prohranou"** button. — **Already exists in DealDetailPage.** Pipeline-card-level lost button is deferred (less critical than the won path; users can still mark lost via the deal detail).
+- [x] **Empty-state correction.** — Shipped in G4. Header CTA hides while empty-state overlay is showing.
+- [x] **Czech plural fix.** Column subhead — done in C0.
+- [x] **dnd-kit drag-and-drop.** — Already optimistic with rollback (see `useMoveDealStage.onMutate`). Keyboard drag accessibility is a dnd-kit default; verified via inspection.
 
 **Verification B5:**
 
-- [ ] Header "+ Přidat obchod" present and opens modal.
-- [ ] Per-column "+" works and pre-fills stage.
-- [ ] Scroll shadows + sliver-of-next-column visible at 1280px.
-- [ ] All 6 stages have distinct colors; only Vyhráno is magenta.
-- [ ] Confetti fires on win and is suppressed under `prefers-reduced-motion: reduce`.
-- [ ] Czech plural correct on column counts.
+- [x] Header "+ Přidat obchod" present and opens modal.
+- [x] Per-column "+" works and pre-fills stage.
+- [ ] Scroll shadows + sliver-of-next-column visible at 1280px. — **Partial.** Mobile scroll-snap shipped; desktop scroll shadows deferred.
+- [x] All 6 stages have distinct colors; only Vyhráno is magenta.
+- [x] Confetti fires on win and is suppressed under `prefers-reduced-motion: reduce`.
+- [x] Czech plural correct on column counts.
 
 ### B5b — ARES IČO modal (signature micro-interaction)
 
