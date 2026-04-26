@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useCreateCompany } from "@/app/companies/useCreateCompany";
 import { useLookupRegistry } from "@/app/companies/useLookupRegistry";
 import { ApiError } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 interface AddCompanyModalProps {
@@ -64,6 +65,7 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
 
   const lookup = useLookupRegistry({ country: "CZ", number: icoQuery, enabled: !!icoQuery });
   const createMutation = useCreateCompany();
+  const toast = useToast();
 
   useEffect(() => {
     if (lookup.data) {
@@ -101,10 +103,11 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
         address_zip: form.address_zip.trim() || null,
         legal_form: form.legal_form.trim() || null,
       });
+      toast.success("Firma uložena.");
       onCreated(created.id);
       onClose();
     } catch {
-      /* mutation.isError handles surface */
+      toast.error("Firmu se nepodařilo uložit. Zkuste to znovu.");
     }
   };
 

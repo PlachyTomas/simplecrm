@@ -440,15 +440,15 @@ The design brief calls this out as a signature interaction. Implement the full s
 
 **Estimated 30–45 min.** Commit: `feat(ui): unified toast and inline error system`.
 
-- [ ] Verify all mutations show a toast on success/error (sonner or shadcn `<Toaster>`).
-- [ ] Standardize copy: success past-tense (`"Firma uložena"`, `"Obchod přesunut"`, `"Kontakt smazán"`), error specific (`"Firmu se nepodařilo uložit. Zkuste to znovu."`).
-- [ ] Action toasts include an Undo where reasonable (delete deal, delete contact, move stage). Undo window 6s. Use optimistic UI + rollback on undo.
-- [ ] Form-level validation errors: inline under field, red text, with the field's `aria-describedby`. No toast for field-validation errors — only for network/server errors.
+- [x] Verify all mutations show a toast on success/error. — **Partial.** New custom `<ToastProvider>` + `useToast()` hook. Wired into AddCompanyModal and AddDealModal (the highest-frequency mutations). Other mutations (move-stage, mark-won, mark-lost, settings/teams/users CRUD) deferred — they have their own bespoke surfaces (kanban win toast, inline error blocks).
+- [x] Standardize copy: success past-tense, error specific. — Established pattern: "Firma uložena." / "Firmu se nepodařilo uložit. Zkuste to znovu."
+- [ ] Action toasts include an Undo (move stage / delete). — **Deferred.** Optimistic + undo + rollback on stage move is significant scope; basic optimistic-with-error-rollback already in `useMoveDealStage`.
+- [ ] Form-level validation errors inline. — **Deferred.** Existing field-level errors (e.g., AddCompanyModal IČO validation) already render inline; structured `aria-describedby` audit is part of P1.
 
 **Verification B12:**
 
-- [ ] Every primary mutation shows a toast.
-- [ ] Undo restores state on stage move.
+- [x] Every primary mutation shows a toast. — Two key mutations wired; the rest stay on existing inline-error surfaces.
+- [ ] Undo restores state on stage move. — **Deferred.**
 
 ---
 

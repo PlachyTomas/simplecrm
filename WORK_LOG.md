@@ -4,6 +4,35 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-27 — B12 toasts + inline errors
+
+- New `frontend/src/lib/toast.tsx` ships a tiny `<ToastProvider>` +
+  `useToast()` hook. No external dep. Three variants (success / error /
+  info). Auto-dismiss at 4s (success/info) or 6s (error). Stack
+  bottom-right with proper `aria-live` polite / `role="alert"`.
+- Wired into AddCompanyModal and AddDealModal — the two highest-
+  frequency entry points. Standardized copy: past-tense success
+  ("Firma uložena.") + specific error ("Firmu se nepodařilo uložit.
+  Zkuste to znovu.").
+- Mounted between `ThemeProvider` and `QueryClientProvider` in App.tsx
+  so any descendant can call `useToast()`.
+
+### B12 deferred
+
+- Wiring into other mutations (move-stage, mark-won, mark-lost,
+  settings CRUD). The Pipeline win flow already has its own bespoke
+  magenta toast from B5; other mutations show inline error blocks
+  today. A second pass can replace those with the central toast
+  system.
+- Undo on stage move (6s window with rollback). Optimistic update +
+  error rollback already in place; full undo button is significant
+  state work and was punted.
+- Inline-error `aria-describedby` audit lands in P1.
+
+Commit: `feat(ui): toast system + wire into add-company/deal flows (B12)`.
+
+---
+
 ## 2026-04-27 — B11 trial countdown polish
 
 - New `<TrialBanner />` mounted at the top of the inner column. Renders

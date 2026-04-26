@@ -5,6 +5,7 @@ import { useCompanies } from "@/app/companies/useCompanies";
 import { useCreateDeal } from "@/app/deals/useCreateDeal";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { useToast } from "@/lib/toast";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 interface PipelineStageOption {
@@ -54,6 +55,7 @@ export function AddDealModal({
   const debouncedSearch = useDebouncedValue(companySearch, 250);
   const { data: companiesPage } = useCompanies({ limit: 25, search: debouncedSearch });
   const createDeal = useCreateDeal();
+  const toast = useToast();
 
   const [form, setForm] = useState<FormState>(() => buildEmptyForm(initialStageId, stages));
 
@@ -101,10 +103,11 @@ export function AddDealModal({
         primary_contact_id: null,
         probability_override: null,
       });
+      toast.success("Obchod uložen.");
       onCreated?.(created.id);
       onClose();
     } catch {
-      /* mutation surfaces error inline */
+      toast.error("Obchod se nepodařilo uložit. Zkuste to znovu.");
     }
   };
 
