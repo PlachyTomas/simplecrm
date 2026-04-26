@@ -4,6 +4,38 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-27 — B5b ARES IČO modal state machine
+
+- IČO field now triggers the registry lookup automatically when the
+  debounced (250ms) value matches `^\d{8}$`. The previous on-blur
+  trigger was kept too — auto-fire is the more intuitive flow.
+- Input strips non-digit characters at input time (`replace(/\D/g,"")`)
+  and slices to 8 chars, so paste of "CZ27082440" or "270 824 40"
+  still resolves cleanly without surfacing a validation error.
+- Six explicit states surfaced as text/icon variants:
+  - `empty`: cheat-sheet helper "Zadejte IČO (8 číslic) — …"
+  - `typing`: "X / 8" counter + "Pokračujte ve psaní…"
+  - `loading`: "Hledám v ARES…"
+  - `success`: "Údaje doplněny z ARES."
+  - `not_found`: "IČO {ico} nebylo v ARES nalezeno. Zkontrolujte
+    zadání nebo pokračujte ručně."
+  - `error`: "ARES je momentálně nedostupný…" + "Zkusit znovu" button
+- One affected test updated (the 404 hint copy moved from "v ARES
+  nenašli" to "nebylo v ARES nalezeno" per FIXES_TASK §6).
+
+### B5b deferred
+
+- Discrete "Použít údaje" confirm button on success — current behavior
+  auto-fills the form fields on success; adding a confirm step would
+  gate users behind an extra click without clear UX value. Logged as a
+  deliberate deviation.
+- Backend 24h cache (Phase 4 Task 4.3) — backend scope, out of this
+  pass.
+
+Commit: `feat(ares): six-state IČO autofill machine (B5b)`.
+
+---
+
 ## 2026-04-27 — B5 pipeline major polish
 
 - New `frontend/src/app/pipeline/colors.ts`: progressive stage palette

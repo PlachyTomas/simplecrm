@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useCreateCompany } from "@/app/companies/useCreateCompany";
 import { useLookupRegistry } from "@/app/companies/useLookupRegistry";
 import { ApiError } from "@/lib/api";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 interface AddCompanyModalProps {
   open: boolean;
@@ -31,10 +32,10 @@ const EMPTY_FORM: FormState = {
   legal_form: "",
 };
 
-function describeLookupError(error: unknown): string {
+function describeLookupError(error: unknown, ico: string): string {
   if (error instanceof ApiError) {
     if (error.status === 404) {
-      return "Tuto firmu jsme v ARES nenašli. Zkontrolujte prosím IČO nebo vyplňte údaje ručně.";
+      return `IČO ${ico} nebylo v ARES nalezeno. Zkontrolujte zadání nebo pokračujte ručně.`;
     }
     if (error.status === 429) {
       return "Příliš mnoho vyhledávání. Počkejte chvíli a zkuste to znovu.";
@@ -42,21 +43,24 @@ function describeLookupError(error: unknown): string {
     if (error.status === 400) {
       return "IČO není ve správném formátu. Zadejte 8 číslic.";
     }
-    return "ARES momentálně nereaguje. Zkuste to prosím za chvíli.";
+    return "ARES je momentálně nedostupný. Zkuste to znovu nebo vyplňte ručně.";
   }
   return "Vyhledání selhalo. Zkuste to prosím znovu.";
 }
 
 export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalProps) {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [icoQuery, setIcoQuery] = useState<string>("");
 
   useEffect(() => {
     if (open) {
       setForm(EMPTY_FORM);
-      setIcoQuery("");
     }
   }, [open]);
+
+  // Auto-trigger the lookup when the IČO is exactly 8 digits, debounced
+  // 250ms so a fast paste of "27082440" only fires one request.
+  const debouncedIco = useDebouncedValue(form.ico, 250);
+  const icoQuery = /^\d{8}$/.test(debouncedIco) ? debouncedIco : "";
 
   const lookup = useLookupRegistry({ country: "CZ", number: icoQuery, enabled: !!icoQuery });
   const createMutation = useCreateCompany();
@@ -77,15 +81,6 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
   }, [lookup.data]);
 
   if (!open) return null;
-
-  const handleIcoBlur = () => {
-    const trimmed = form.ico.trim();
-    if (/^\d{8}$/.test(trimmed)) {
-      setIcoQuery(trimmed);
-    } else {
-      setIcoQuery("");
-    }
-  };
 
   const handleRetry = () => {
     if (icoQuery) {
@@ -113,16 +108,25 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
     }
   };
 
-  const lookupErrorMessage = lookup.isError ? describeLookupError(lookup.error) : null;
-  const lookupState: "empty" | "loading" | "success" | "not_found" | "error" = !icoQuery
+  const lookupErrorMessage = lookup.isError ? describeLookupError(lookup.error, debouncedIco) : null;
+  const icoLength = form.ico.replace(/\D/g, "").length;
+  const lookupState:
+    | "empty"
+    | "typing"
+    | "loading"
+    | "success"
+    | "not_found"
+    | "error" = !form.ico
     ? "empty"
-    : lookup.isPending
-      ? "loading"
-      : lookup.isError
-        ? lookup.error instanceof ApiError && lookup.error.status === 404
-          ? "not_found"
-          : "error"
-        : "success";
+    : !icoQuery
+      ? "typing"
+      : lookup.isPending
+        ? "loading"
+        : lookup.isError
+          ? lookup.error instanceof ApiError && lookup.error.status === 404
+            ? "not_found"
+            : "error"
+          : "success";
 
   return (
     <div
@@ -154,26 +158,46 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
 
         <div className="mt-6 space-y-5">
           <label className="block">
-            <span className="text-xs font-medium text-text-secondary">IČO</span>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-text-secondary">IČO</span>
+              {lookupState === "typing" || lookupState === "loading" ? (
+                <span className="font-mono text-[11px] tabular-nums text-text-tertiary">
+                  {icoLength} / 8
+                </span>
+              ) : null}
+            </div>
             <input
               type="text"
               inputMode="numeric"
               autoComplete="off"
               value={form.ico}
-              onChange={(e) => setForm((prev) => ({ ...prev, ico: e.target.value }))}
-              onBlur={handleIcoBlur}
+              onChange={(e) =>
+                // Strip non-digit characters at input time so paste of
+                // "270 824 40" or "CZ27082440" still resolves correctly.
+                setForm((prev) => ({ ...prev, ico: e.target.value.replace(/\D/g, "").slice(0, 8) }))
+              }
               placeholder="27082440"
               className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 font-mono text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
             />
+            {lookupState === "empty" ? (
+              <p className="mt-2 text-xs text-text-tertiary">
+                Zadejte IČO (8 číslic) — automaticky doplníme z ARES.
+              </p>
+            ) : null}
+            {lookupState === "typing" ? (
+              <p className="mt-2 text-xs text-text-tertiary">
+                Pokračujte ve psaní — po 8 číslicích spustíme vyhledávání.
+              </p>
+            ) : null}
             {lookupState === "loading" ? (
               <p className="mt-2 text-xs text-text-tertiary" role="status">
-                Vyhledáváme v ARES…
+                Hledám v ARES…
               </p>
             ) : null}
             {lookupState === "success" ? (
               <p className="mt-2 text-xs text-success">Údaje doplněny z ARES.</p>
             ) : null}
-            {lookupState === "not_found" ? (
+            {lookupState === "not_found" && lookupErrorMessage ? (
               <p className="mt-2 text-xs text-warning" role="alert">
                 {lookupErrorMessage}
               </p>

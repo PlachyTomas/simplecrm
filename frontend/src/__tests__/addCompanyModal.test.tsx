@@ -172,7 +172,9 @@ describe("AddCompanyModal", () => {
     const icoInput = await screen.findByRole("textbox", { name: /ičo/i });
     await user.type(icoInput, "99999999");
     await user.tab();
-    await waitFor(() => expect(screen.getByText(/v ARES nenašli/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(/nebylo v ARES nalezeno/i)).toBeInTheDocument(),
+    );
 
     // Name is still editable; save should still succeed.
     await user.type(screen.getByRole("textbox", { name: /název firmy/i }), "Manuální s.r.o.");

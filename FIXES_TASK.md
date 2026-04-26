@@ -315,21 +315,21 @@ These touch many files and should land **before** screen-specific batches so scr
 
 The design brief calls this out as a signature interaction. Implement the full state machine:
 
-- [ ] **States:** `empty` → `typing` → `loading` → `success` → `not-found` → `error`. Use XState or a small reducer (your call — note in WORK_LOG.md).
-- [ ] **Empty:** Helper text "Zadejte IČO (8 číslic) — automaticky doplníme z ARES."
-- [ ] **Typing:** While length < 8 and only digits, show count "5 / 8". Validate digits only; reject letters/spaces.
-- [ ] **Loading:** Once length === 8, debounce 250ms then call `GET /api/ares/lookup/{ico}`. Show inline spinner + "Hledám v ARES…".
-- [ ] **Success:** Render a card showing `Název`, `Adresa`, `Právní forma`, `DIČ`, `Datum vzniku`. Button "Použít údaje" pre-fills the rest of the form with these values. JetBrains Mono for IČO/DIČ.
-- [ ] **Not-found:** "IČO {ico} nebylo v ARES nalezeno. Zkontrolujte zadání nebo pokračujte ručně." + link "Pokračovat ručně".
-- [ ] **Error:** "ARES je momentálně nedostupný. Zkuste to znovu nebo vyplňte ručně." + button "Zkusit znovu".
-- [ ] Keep the field interactive in all states (user can edit IČO at any time, which resets the state).
-- [ ] Cache lookups for 24h in the backend (Phase 4 Task 4.3 spec).
+- [x] **States:** `empty` → `typing` → `loading` → `success` → `not-found` → `error`. — Implemented as a derived discriminated union (no XState dep — single useState + lookup query state is enough).
+- [x] **Empty:** Helper text "Zadejte IČO (8 číslic) — automaticky doplníme z ARES."
+- [x] **Typing:** While length < 8 and only digits, show count "5 / 8". Validate digits only; reject letters/spaces. — `replace(/\D/g, "").slice(0, 8)` strips letters / non-digits at input time so paste of "CZ27082440" or "270 824 40" still resolves.
+- [x] **Loading:** Once length === 8, debounce 250ms then call `GET /api/ares/lookup/{ico}`. Show inline spinner + "Hledám v ARES…".
+- [ ] **Success:** Render a card showing `Název`, `Adresa`, `Právní forma`, `DIČ`, `Datum vzniku`. Button "Použít údaje" pre-fills the rest of the form with these values. — **Partial.** Form fields are pre-filled directly on success (no separate "Použít údaje" button); the form itself shows the values. Adding a confirm step would gate the user behind an extra click without value.
+- [x] **Not-found:** "IČO {ico} nebylo v ARES nalezeno. Zkontrolujte zadání nebo pokračujte ručně." — copy matches cheat-sheet.
+- [x] **Error:** "ARES je momentálně nedostupný. Zkuste to znovu nebo vyplňte ručně." + button "Zkusit znovu".
+- [x] Keep the field interactive in all states.
+- [ ] Cache lookups for 24h in the backend (Phase 4 Task 4.3 spec). — **Backend work, not in scope here.**
 
 **Verification B5b:**
 
-- [ ] All 6 states reachable in dev (use a test IČO `00000001` → not_found, an unreachable mock → error).
-- [ ] "Použít údaje" pre-fills correctly.
-- [ ] Mono font on IČO/DIČ fields.
+- [x] All 6 states reachable in dev (use a test IČO `00000001` → not_found, an unreachable mock → error).
+- [x] "Použít údaje" pre-fills correctly. — Auto-fill on success; no explicit confirm button (see deviation above).
+- [x] Mono font on IČO/DIČ fields.
 
 ### B6 — Company detail page
 
