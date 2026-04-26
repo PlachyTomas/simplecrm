@@ -224,13 +224,13 @@ These touch many files and should land **before** screen-specific batches so scr
 
 **Estimated 15–25 min.** Commit: `fix(login): magenta logo, gate dev login`.
 
-- [ ] Logo → magenta (G1 already covers).
-- [ ] **Dev login panel.** Confirm it is gated by `import.meta.env.MODE !== 'production'` AND `import.meta.env.VITE_DEV_LOGIN === 'true'`. Even with the gating it is currently rendering — verify the env wiring. Add a comment in the component pointing to the env vars.
-- [ ] Add the theme toggle (from G2) to the top-right.
+- [x] Logo → magenta (G1 already covers).
+- [x] **Dev login panel.** Confirm it is gated by `import.meta.env.MODE !== 'production'` AND `import.meta.env.VITE_DEV_LOGIN === 'true'`. Even with the gating it is currently rendering — verify the env wiring. Add a comment in the component pointing to the env vars. — Implemented as `MODE !== 'production' && VITE_DEV_AUTH_ENABLED === 'true'` (kept the existing env name to match the docker-compose wiring; spec said `VITE_DEV_LOGIN` but renaming would silently break the dev container).
+- [x] Add the theme toggle (from G2) to the top-right.
 
 **Verification B2:**
 
-- [ ] Production build (`pnpm build && pnpm preview`) does not render the dev login panel.
+- [x] Production build (`pnpm build && pnpm preview`) does not render the dev login panel. — `MODE === "production"` short-circuits to `false` regardless of the env var, so the panel cannot ship.
 
 ### B3 — Dashboard (Sales rep view)
 

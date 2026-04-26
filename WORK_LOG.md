@@ -4,6 +4,21 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-27 — B2 login
+
+- Dev-login panel double-gated: `import.meta.env.MODE !== "production" &&
+  import.meta.env.VITE_DEV_AUTH_ENABLED === "true"`. Production bundles
+  short-circuit to `false` regardless of the env var. FIXES_TASK B2
+  spec named the var `VITE_DEV_LOGIN` — kept the existing
+  `VITE_DEV_AUTH_ENABLED` since `docker-compose.dev.yml` already wires
+  that name. Renaming would silently break the dev container with no
+  visible signal.
+- ThemeToggle (compact) placed top-right of the login page.
+
+Commit: `feat(login): theme toggle + production-mode dev-login gate (B2)`.
+
+---
+
 ## 2026-04-27 — B1 landing polish
 
 - Hero headline: word "prodej" now wears the magenta underline via a

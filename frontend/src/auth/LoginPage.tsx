@@ -4,9 +4,16 @@ import { useNavigate } from "react-router-dom";
 
 import { AuthContext } from "@/auth/AuthContext";
 import { API_BASE_URL, apiFetch } from "@/lib/api";
+import { ThemeToggle } from "@/lib/ThemeToggle";
 
 const GOOGLE_LOGIN_PATH = "/api/v1/auth/google/login";
-const DEV_AUTH_ENABLED = import.meta.env.VITE_DEV_AUTH_ENABLED === "true";
+// Dev login panel is double-gated: never appears in a production bundle
+// (`import.meta.env.MODE === "production"`) AND requires the explicit
+// `VITE_DEV_AUTH_ENABLED=true` flag set on the dev compose service. Both
+// must be true. See docker-compose.dev.yml for the wiring.
+const DEV_AUTH_ENABLED =
+  import.meta.env.MODE !== "production" &&
+  import.meta.env.VITE_DEV_AUTH_ENABLED === "true";
 
 interface DevLoginResponse {
   access_token: string;
@@ -77,7 +84,10 @@ function DevLoginPanel() {
 
 export function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg px-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-bg px-4">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle variant="compact" />
+      </div>
       <div className="w-full max-w-md rounded-lg border border-border bg-surface p-6 text-center shadow-md">
         <div
           aria-hidden
