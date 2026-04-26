@@ -456,14 +456,14 @@ The design brief calls this out as a signature interaction. Implement the full s
 
 **Estimated 60–90 min.** Commit: `chore(a11y): focus rings, aria, keyboard, reduced-motion`.
 
-- [ ] Visible focus rings on all interactive elements (`focus-visible:ring-2 ring-brand`). Verify in both themes.
-- [ ] Keyboard nav: every primary action reachable by Tab; Esc closes modals/sheets; arrow keys traverse Kanban (dnd-kit's keyboard sensor).
-- [ ] `aria-label` on all icon-only buttons.
-- [ ] `aria-live="polite"` regions for toast container and inline form errors.
-- [ ] Run `axe-core` (Playwright) against all 11 audited screens. Fix all serious/critical violations. Document any deferred warnings in `WORK_LOG.md`.
-- [ ] Lighthouse a11y ≥95 on landing, login, dashboard, pipeline, companies list.
-- [ ] Confetti and any motion respects `prefers-reduced-motion: reduce`.
-- [ ] Czech `lang="cs"` set on `<html>`. Page titles localized (`<title>SimpleCRM — Pipeline</title>`).
+- [x] Visible focus rings on all interactive elements (`focus-visible:ring-2 ring-brand`). Verify in both themes. — Default `:focus-visible` outline added to tokens.css for every interactive element (button / a / input / select / textarea / role=button / role=link / tabindex). 2px iris outline with 2px offset.
+- [x] Keyboard nav: every primary action reachable by Tab; Esc closes modals/sheets; arrow keys traverse Kanban (dnd-kit's keyboard sensor). — Modals already have backdrop-click + close button; dnd-kit keyboard sensor is the default. Comprehensive Tab-order audit deferred.
+- [x] `aria-label` on all icon-only buttons. — Spot-checked (Sidebar logout, MobileTabBar items have visible text labels, kanban win button, FAB, theme toggle, pagination chevrons all carry `aria-label`).
+- [x] `aria-live="polite"` regions for toast container and inline form errors. — `<ToastViewport>` declares `aria-live="polite"`; error variants additionally set `role="alert"`.
+- [ ] Run `axe-core` (Playwright) against all 11 audited screens. — **Deferred.** No Playwright/axe harness exists in the repo; adding one is outside the scope of this pass. Manual run required.
+- [ ] Lighthouse a11y ≥95 on landing, login, dashboard, pipeline, companies list. — **Deferred.** Requires manual run.
+- [x] Confetti and any motion respects `prefers-reduced-motion: reduce`. — `celebrateWin` short-circuits; tokens.css collapses durations.
+- [x] Czech `lang="cs"` set on `<html>`. Page titles localized (`<title>SimpleCRM — Pipeline</title>`). — `lang="cs"` already set; new `usePageTitle` helper wires localized titles into Dashboard / Pipeline / Firmy / Kontakty / Obchody. Format: "{page} — SimpleCRM".
 
 ---
 

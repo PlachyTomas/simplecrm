@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { type KpiSummary, useKpiSummary } from "@/app/dashboard/useKpi";
 import { useLeaderboard, useVelocity } from "@/app/reports/useReports";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { usePageTitle } from "@/lib/usePageTitle";
 
 /**
  * Extract a friendly first name. The backend's `user.name` is "first last"
@@ -177,6 +178,7 @@ function ManagerWidgets({ locale }: { locale: string }) {
 }
 
 export function DashboardPage() {
+  usePageTitle("Přehled");
   const { data: user } = useCurrentUser();
   const { data: kpi, isPending, isError } = useKpiSummary();
 

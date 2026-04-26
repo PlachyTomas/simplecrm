@@ -7,6 +7,7 @@ import { ContactDetailPanel } from "@/app/contacts/ContactDetailPanel";
 import { type ContactOut, useContacts } from "@/app/contacts/useContacts";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 
 function ContactRow({
@@ -59,6 +60,7 @@ function ContactRow({
 }
 
 export function ContactsPage() {
+  usePageTitle("Kontakty");
   const { contactId } = useParams<{ contactId: string }>();
   const navigate = useNavigate();
   const [modalOpen, setModalOpen] = useState(false);

@@ -27,6 +27,7 @@ import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
 import { csNoun } from "@/lib/i18n/nouns";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 25;
@@ -36,6 +37,7 @@ function pluralizeCompanies(n: number): string {
 }
 
 export function CompaniesListPage() {
+  usePageTitle("Firmy");
   const [modalOpen, setModalOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebouncedValue(searchInput, 300);

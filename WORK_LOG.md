@@ -4,6 +4,31 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-27 — P1 accessibility
+
+- New `usePageTitle(page)` helper sets `document.title` to "{page} —
+  SimpleCRM" on mount and restores on unmount. Wired into Dashboard
+  ("Přehled"), Pipeline, Firmy, Kontakty, Obchody.
+- `tokens.css` gains a default `:focus-visible` outline rule for every
+  interactive element (`button`, `a`, `input`, `select`, `textarea`,
+  `role="button"`, `role="link"`, `tabindex`). 2px iris outline with
+  2px offset; works in both themes.
+- `prefers-reduced-motion` already collapses transitions in tokens.css;
+  `celebrateWin` already short-circuits. No regression from this pass.
+- Toast viewport already has `aria-live="polite"` (B12).
+
+### P1 deferred
+
+- axe-core / Playwright a11y harness — no e2e harness in the repo
+  yet. Adding it is its own project.
+- Lighthouse a11y ≥95 across the 5 named screens — requires manual
+  run with the dev server.
+- Comprehensive Tab-order + Esc-closes-modal audit — manual run.
+
+Commit: `chore(a11y): focus-visible defaults + page titles (P1)`.
+
+---
+
 ## 2026-04-27 — B12 toasts + inline errors
 
 - New `frontend/src/lib/toast.tsx` ships a tiny `<ToastProvider>` +

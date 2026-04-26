@@ -10,6 +10,7 @@ import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
 import { csNoun } from "@/lib/i18n/nouns";
+import { usePageTitle } from "@/lib/usePageTitle";
 
 function formatMoney(value: string, currency: string, locale: string): string {
   const numeric = Number(value);
@@ -22,6 +23,7 @@ function formatMoney(value: string, currency: string, locale: string): string {
 }
 
 export function DealsListPage() {
+  usePageTitle("Obchody");
   const navigate = useNavigate();
   const { data: deals, isPending, isError } = useDeals();
   const { data: user } = useCurrentUser();

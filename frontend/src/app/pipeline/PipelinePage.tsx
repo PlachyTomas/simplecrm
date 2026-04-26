@@ -25,6 +25,7 @@ import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
 import { celebrateWin } from "@/lib/celebrate";
 import { csNoun } from "@/lib/i18n/nouns";
+import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 
 function formatMoney(value: string, currency: string, locale: string): string {
@@ -189,6 +190,7 @@ function StageColumn({
 }
 
 export function PipelinePage() {
+  usePageTitle("Pipeline");
   const { data: board, isPending, isError } = usePipelineBoard();
   const { data: user } = useCurrentUser();
   const { data: usersPage } = useOrgUsers();
