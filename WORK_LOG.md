@@ -4,6 +4,24 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-27 — B7 contacts polish
+
+- Bare "+" header button replaced with labeled "+ Přidat kontakt"
+  (indigo, text + icon).
+- New search field (debounced 250ms) filters the list across first
+  name + last name + email + phone.
+- Filtered-empty state with "Vymazat filtry" primary; first-run empty
+  state unchanged.
+- Selected row gets a 2px indigo seam on the left edge per brief §5.
+
+Filter-by-company dropdown and explicit "Naposledy přidané" sort
+deferred — both would benefit from backend support (sort param on the
+contacts list endpoint).
+
+Commit: `feat(contacts): labeled add button + search filter + selected seam (B7)`.
+
+---
+
 ## 2026-04-27 — B6 company detail (partial)
 
 - Header now surfaces owner name ("Vlastník: …" or "Ve sdíleném

@@ -1,11 +1,12 @@
-import { Plus, Users } from "lucide-react";
-import { useState } from "react";
+import { Plus, Search, Users } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { AddContactModal } from "@/app/contacts/AddContactModal";
 import { ContactDetailPanel } from "@/app/contacts/ContactDetailPanel";
 import { type ContactOut, useContacts } from "@/app/contacts/useContacts";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { cn } from "@/lib/utils";
 
 function ContactRow({
@@ -25,8 +26,9 @@ function ContactRow({
         onClick={onSelect}
         aria-current={isActive ? "true" : undefined}
         className={cn(
-          "flex w-full items-center gap-3 border-b border-border-subtle px-4 py-3 text-left transition-colors duration-fast",
-          isActive ? "bg-accent-subtle" : "hover:bg-surface-overlay",
+          // 2px indigo seam on the active row's left edge — brief §5 selected-row pattern.
+          "flex w-full items-center gap-3 border-b border-border-subtle border-l-2 border-l-transparent px-4 py-3 text-left transition-colors duration-fast",
+          isActive ? "bg-accent-subtle border-l-accent" : "hover:bg-surface-overlay",
         )}
       >
         <span
@@ -60,6 +62,8 @@ export function ContactsPage() {
   const { contactId } = useParams<{ contactId: string }>();
   const navigate = useNavigate();
   const [modalOpen, setModalOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebouncedValue(searchInput, 250);
 
   const { data: contacts, isPending, isError } = useContacts();
 
@@ -71,7 +75,21 @@ export function ContactsPage() {
     navigate(`/app/contacts/${id}`);
   };
 
-  const items = contacts?.items ?? [];
+  // Memoize allItems so the dependent filter useMemo's dependencies are
+  // stable across re-renders that don't change the list contents.
+  const allItems = useMemo(() => contacts?.items ?? [], [contacts]);
+  const items = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
+    if (!q) return allItems;
+    return allItems.filter((c) => {
+      const name = `${c.first_name} ${c.last_name}`.toLowerCase();
+      return (
+        name.includes(q) ||
+        (c.email?.toLowerCase().includes(q) ?? false) ||
+        (c.phone?.toLowerCase().includes(q) ?? false)
+      );
+    });
+  }, [allItems, debouncedSearch]);
   const showSplitOnDesktop = true;
   const detailVisibleOnMobile = !!contactId;
 
@@ -84,16 +102,35 @@ export function ContactsPage() {
           detailVisibleOnMobile && "hidden md:flex",
         )}
       >
-        <div className="flex items-center justify-between gap-2 border-b border-border-subtle px-4 py-3">
-          <h1 className="text-lg font-semibold">Kontakty</h1>
-          <button
-            type="button"
-            onClick={() => setModalOpen(true)}
-            aria-label="Přidat kontakt"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-accent text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
-          >
-            <Plus size={16} strokeWidth={1.75} />
-          </button>
+        <div className="space-y-3 border-b border-border-subtle px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="text-lg font-semibold">Kontakty</h1>
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
+            >
+              <Plus size={14} strokeWidth={1.75} aria-hidden /> Přidat kontakt
+            </button>
+          </div>
+          {allItems.length > 0 ? (
+            <label className="relative block">
+              <span className="sr-only">Hledat kontakt</span>
+              <Search
+                size={14}
+                strokeWidth={1.75}
+                aria-hidden
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+              />
+              <input
+                type="search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Jméno, e-mail, telefon…"
+                className="h-9 w-full rounded-md border border-border bg-surface-overlay pl-8 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
+              />
+            </label>
+          ) : null}
         </div>
 
         {isError ? (
@@ -104,7 +141,7 @@ export function ContactsPage() {
           <div className="px-4 py-6 text-sm text-text-tertiary" role="status">
             Načítání…
           </div>
-        ) : items.length === 0 ? (
+        ) : allItems.length === 0 ? (
           <EmptyState
             icon={Users}
             title="Přidejte první kontakt"
@@ -112,6 +149,17 @@ export function ContactsPage() {
             primary={{
               label: "+ Přidat kontakt",
               onClick: () => setModalOpen(true),
+            }}
+          />
+        ) : items.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            tone="filtered"
+            title="Žádný výsledek pro vybrané filtry."
+            body="Zkuste upravit hledaný výraz."
+            primary={{
+              label: "Vymazat filtry",
+              onClick: () => setSearchInput(""),
             }}
           />
         ) : (

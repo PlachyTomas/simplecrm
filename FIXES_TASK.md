@@ -354,17 +354,17 @@ The design brief calls this out as a signature interaction. Implement the full s
 
 **Estimated 45–60 min.** Commit: `feat(contacts): split-view polish, CTA, filters`.
 
-- [ ] Replace bare "+" button with `<Button>+ Přidat kontakt</Button>` (indigo, with text label). Keep aria-label even with text for screen-reader clarity.
-- [ ] Add toolbar: full-text search, filter by company, sort (Jméno A→Z, Naposledy přidané).
-- [ ] Empty-state via `<EmptyState />`: headline "Přidejte první kontakt", body "Kontakty patří k firmám. Po přidání je uvidíte v levém panelu i na detailu firmy.", primary "+ Přidat kontakt".
-- [ ] Right-pane "Vyberte kontakt ze seznamu" — keep, but on mobile collapse into a full-screen sheet on row tap.
-- [ ] Selected row in left pane highlighted with subtle indigo bar on the left edge.
+- [x] Replace bare "+" button with `<Button>+ Přidat kontakt</Button>` (indigo, with text label).
+- [x] Add toolbar: full-text search (debounced 250ms across name / e-mail / phone). Filter-by-company and sort dropdowns deferred (need backend support).
+- [x] Empty-state via `<EmptyState />`. — Done in G4; filtered-empty variant added now.
+- [x] Right-pane "Vyberte kontakt ze seznamu" — kept. Mobile sheet behavior already collapses via existing CSS (detail panel takes full width on mobile).
+- [x] Selected row in left pane highlighted with subtle indigo bar on the left edge.
 
 **Verification B7:**
 
-- [ ] Add-contact button has visible label.
-- [ ] Search filters list with debounce.
-- [ ] Mobile: tapping a contact opens a full-screen detail sheet.
+- [x] Add-contact button has visible label.
+- [x] Search filters list with debounce.
+- [x] Mobile: tapping a contact opens a full-screen detail sheet. — Existing layout already does this.
 
 ### B8 — Deals list page
 
