@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { Building2, Handshake, Home, LogOut, Settings, Users, Workflow } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
+import { ThemeToggle } from "@/lib/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -67,6 +68,9 @@ export function Sidebar({ onLogout }: SidebarProps) {
           <LogOut size={18} strokeWidth={1.75} />
           <span>Odhlásit se</span>
         </button>
+        <div className="px-1 pt-3">
+          <ThemeToggle variant="compact" className="w-full justify-between" />
+        </div>
       </div>
     </nav>
   );

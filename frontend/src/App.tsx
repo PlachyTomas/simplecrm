@@ -16,6 +16,7 @@ import { AuthProvider } from "@/auth/AuthContext";
 import { LoginPage } from "@/auth/LoginPage";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { queryClient } from "@/lib/queryClient";
+import { ThemeProvider } from "@/lib/theme";
 import { LandingPage } from "@/marketing/LandingPage";
 
 export function AppRoutes() {
@@ -50,12 +51,14 @@ export function AppRoutes() {
 
 export function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

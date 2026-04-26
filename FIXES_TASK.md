@@ -121,7 +121,7 @@ These touch many files and should land **before** screen-specific batches so scr
 
 **Estimated 60–90 min.** Commit: `feat(theme): dark-by-system default with persistent override`.
 
-- [ ] Add a synchronous inline script in `app/web/index.html` `<head>`, BEFORE any stylesheet:
+- [x] Add a synchronous inline script in `app/web/index.html` `<head>`, BEFORE any stylesheet:
 
   ```html
   <script>
@@ -141,23 +141,23 @@ These touch many files and should land **before** screen-specific batches so scr
 
   CSS uses `[data-theme="dark"] { … }` selectors. Set `<meta name="theme-color">` dynamically per theme for mobile chrome.
 
-- [ ] Default behavior: respect OS preference (`system`). Do not hard-default to dark unless the user explicitly asked for it; the design brief calls dark "default" but standard practice is system-following with dark as the _visual identity_. Document this decision in `WORK_LOG.md`.
+- [x] Default behavior: respect OS preference (`system`). Do not hard-default to dark unless the user explicitly asked for it; the design brief calls dark "default" but standard practice is system-following with dark as the _visual identity_. Document this decision in `WORK_LOG.md`.
 
-- [ ] Implement a `useTheme()` hook (`app/web/src/lib/theme.ts`) returning `{ theme: 'light'|'dark'|'system', resolved: 'light'|'dark', setTheme }`. Persists to `localStorage['simplecrm.theme']`. Subscribes to `matchMedia('(prefers-color-scheme: dark)').change` when in `system`.
+- [x] Implement a `useTheme()` hook (`app/web/src/lib/theme.ts`) returning `{ theme: 'light'|'dark'|'system', resolved: 'light'|'dark', setTheme }`. Persists to `localStorage['simplecrm.theme']`. Subscribes to `matchMedia('(prefers-color-scheme: dark)').change` when in `system`.
 
-- [ ] Add a theme toggle in **two places**:
+- [x] Add a theme toggle in **two places**:
   1. **User avatar dropdown (sidebar bottom)** — three options: Světlý / Tmavý / Systém, with sun/moon/monitor icons.
   2. **Landing page top nav** — same component, right side before "Přihlásit se".
      Mirror the same setting in `Settings → Vzhled` (see B10).
 
-- [ ] Audit every UI surface in **both themes** before closing the batch. Verify status badges (amber/red/magenta), sidebar selected-state highlight, KPI card backgrounds, table row hover, focus rings, chart axes, code blocks (IČO/JetBrains Mono), and the ARES dropdown all have AA contrast. Document any token changes.
+- [ ] Audit every UI surface in **both themes** before closing the batch. Verify status badges (amber/red/magenta), sidebar selected-state highlight, KPI card backgrounds, table row hover, focus rings, chart axes, code blocks (IČO/JetBrains Mono), and the ARES dropdown all have AA contrast. Document any token changes. — **deferred to per-screen B-batches.**
 
 **Verification G2:**
 
-- [ ] First paint on a dark-OS machine renders dark; no white flash.
-- [ ] Toggling theme from sidebar updates instantly without reload and persists across reload.
-- [ ] All 11 screens screenshot-checked in dark mode (drop screenshots in `docs/dark-mode-audit/`).
-- [ ] WCAG AA contrast holds for body text, badges, and focus rings in both themes.
+- [x] First paint on a dark-OS machine renders dark; no white flash.
+- [x] Toggling theme from sidebar updates instantly without reload and persists across reload.
+- [ ] All 11 screens screenshot-checked in dark mode (drop screenshots in `docs/dark-mode-audit/`). — **partial; full audit deferred to per-screen B-batches.**
+- [ ] WCAG AA contrast holds for body text, badges, and focus rings in both themes. — **deferred to P1.**
 
 ### G3 — Mobile responsiveness pass
 

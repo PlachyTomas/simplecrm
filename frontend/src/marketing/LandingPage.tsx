@@ -14,6 +14,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { API_BASE_URL } from "@/lib/api";
+import { ThemeToggle } from "@/lib/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 const GOOGLE_LOGIN_URL = `${API_BASE_URL}/api/v1/auth/google/login`;
@@ -43,7 +44,8 @@ function Nav() {
             FAQ
           </a>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <ThemeToggle variant="compact" className="hidden sm:inline-flex" />
           <Link
             to="/login"
             className="hidden h-10 items-center justify-center rounded-md px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary sm:inline-flex"

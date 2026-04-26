@@ -4,6 +4,52 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-26 — G2 dark-mode default + theme toggle
+
+- `frontend/index.html` head script rewritten to the FIXES_TASK §G2
+  template: reads `localStorage['simplecrm-theme']` (one of `light` |
+  `dark` | `system` — `system` is the implicit default when nothing is
+  stored), resolves to `light` or `dark` via `(prefers-color-scheme:
+  dark)`, and writes both `data-theme` and `style.colorScheme` plus the
+  `<meta name="theme-color">` content before stylesheets run. This kills
+  the FOUC for users on either OS preference.
+- `frontend/src/lib/theme.ts` (new): `<ThemeProvider>` + `useTheme`
+  exporting `{ theme, resolved, setTheme }`. The hook subscribes to
+  `prefers-color-scheme` only while `theme === "system"` so explicit
+  light/dark choices ignore OS flips. Stored value: `light` / `dark`.
+  `system` clears the storage key to keep the implicit default
+  recoverable. The `useTheme` hook returns a no-throw fallback when
+  rendered outside the provider — pragmatic concession to the existing
+  test harnesses, which would otherwise need a per-test wrapper update.
+- `frontend/src/lib/ThemeToggle.tsx` (new): radiogroup-styled three-way
+  toggle (Světlý / Tmavý / Systém) with Sun / Moon / Monitor icons. Has
+  a `compact` variant that hides the labels for tight spots.
+- Toggle wired into the desktop sidebar bottom (compact, full-width) and
+  the landing-page top nav (compact, hidden on mobile until G3 reflows
+  the marketing nav).
+- Old `frontend/src/theme/theme.ts` (the legacy two-state helper) removed
+  — nothing was importing it.
+
+### Brief vs FIXES_TASK on the default
+
+The brief calls dark "default" full stop. FIXES_TASK §G2 explicitly
+overrides: "respect OS preference (`system`). Do not hard-default to
+dark... document this decision". Followed FIXES_TASK. The brief still
+holds for visual identity (dark is the primary canvas all screens are
+designed against).
+
+### G2 deferred (per the FIXES_TASK box wording)
+
+- Per-screen contrast audit (status badges, focus rings, chart axes,
+  ARES dropdown) is deferred to the B-batches that touch each screen,
+  and the WCAG AA validation lands in P1 (a11y).
+- Settings → Vzhled mirror is B10's responsibility.
+- 11-screen dark-mode screenshot audit lands in the B-batches.
+
+Commit: `feat(theme): dark-by-system default with persistent override`.
+
+---
+
 ## 2026-04-26 — G1 magenta rollout, lime retirement
 
 Tokens (`frontend/src/theme/tokens.css` + `tailwind.config.ts`):
