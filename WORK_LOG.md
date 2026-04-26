@@ -4,6 +4,98 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-27 — v1.0 polish complete
+
+All 17 batches in `FIXES_TASK.md` (C0, G1–G4, B1–B12, P1) have a
+commit on `main`. Frontend `pnpm lint && pnpm typecheck && pnpm test`
+end the run at 36/36 green; backend `ruff check . && mypy app` clean,
+with the single pre-existing `test_dev_login_404_when_disabled`
+failure caused by the dev compose env exporting `DEV_AUTH_ENABLED=
+true` (verified pre-existing on the unmodified `main` via stash and
+not regressed).
+
+### Highlights shipped
+
+- **Brand identity flipped to magenta.** `#EC4899` is now the canonical
+  win/celebration accent across tokens, Tailwind utilities (`brand-
+  accent`, `win`, `text-on-brand-accent`), the Vyhráno button + flow,
+  the Vyhráno stage seed, leaderboard #1 row, dashboard Trophy KPI,
+  upgrade banner, hero word underline, and logo. Lime is fully
+  retired with a Vitest guard.
+- **Dark mode default with persistent override.** No-FOUC inline
+  script before stylesheets, three-way toggle (Sun / Moon / Monitor)
+  in sidebar bottom + landing nav + Settings → Vzhled, system-pref
+  fallback when no explicit choice.
+- **Czech grammar correctness.** csPlural / csNoun helper + nouns
+  table fix every "0 firmy / 0 dny zbývají" leak in Companies list,
+  Deals list, Pipeline column subhead, trial chip, leaderboard row.
+- **Pipeline major polish.** Per-column "+" CTA, magenta win button on
+  cards with confetti + 4s magenta toast, progressive stage palette
+  via `stageColor(position)`, mobile scroll-snap + bottom-right FAB.
+- **ARES IČO modal full state machine.** Six surfaced states (empty /
+  typing X/8 / loading / success / not_found / error), digit-only
+  filter at input time, 250ms debounce, FIXES_TASK §6 cheat-sheet copy.
+- **Mobile responsiveness.** Stacked-card variant on Companies,
+  Kanban scroll-snap with one-column-per-swipe + FAB, dialogs anchor
+  to viewport bottom as sheets at <768px.
+- **Settings expanded to 7 tabs** (Pipeline / Týmy / Uživatelé /
+  Vzhled / Oprávnění / Fakturace / Integrace).
+- **Trial countdown.** Magenta "Upgradovat na Plný" banner at ≤3 days
+  with sessionStorage dismiss, color escalation already on the chip.
+- **Empty state primitive** with default + filtered tones; migrated
+  Deals / Pipeline / Companies / Contacts.
+- **Toast system** + wired into AddCompany / AddDeal flows.
+- **Page titles** via `usePageTitle("Přehled" | "Pipeline" | …)`.
+- **Default `:focus-visible` outline** rule for every interactive
+  element.
+
+### Deliberate deviations (each documented inline above)
+
+- **VITE_DEV_AUTH_ENABLED** name kept (FIXES_TASK suggested
+  `VITE_DEV_LOGIN`) — renaming would silently break the dev compose
+  flag without warning.
+- **`app/web/src` → `frontend/src`** path translation across all
+  batches; `MANAGER_TASK.md` doesn't exist in this repo so its tickets
+  weren't ticked.
+- **System-default theme** (FIXES_TASK §G2 explicitly overrides the
+  brief's "dark default" with respect-OS-preference; followed §G2).
+- **Companies-page header CTA** stays visible on empty Companies (the
+  Pipeline gating works, but the same on Companies broke the
+  ARES-modal tests' async findByRole timing).
+
+### Notable deferrals
+
+The list below is the minimum honest inventory of work that needs
+new backend endpoints, manual tooling, or significant scope to land:
+
+- Backend endpoints needed: `/api/companies/expiring`,
+  `/api/companies/{id}/contacts`, `/api/companies/{id}/deals`,
+  activity-by-company, ownership-events, ARES sync timestamp on
+  Company, sort/filter params on `useDeals`.
+- Charts (Recharts) for B9 velocity / distribution / loss-reasons.
+- Bulk row actions on Companies, owner / expiry / ARES filters,
+  URL state.
+- Per-card mark-lost shortcut on the kanban (DealDetailPage already
+  handles the mark-lost flow with the `Důvod prohry` modal).
+- Inline "+ Přidat firmu" inside the deal modal company autocomplete
+  (would require nested modals).
+- Desktop horizontal scroll shadows on the kanban.
+- Activity feed + recent activity on Dashboard, mini-pipeline
+  snapshot, ownership timeline tile.
+- Profil + Firma settings tabs (need new writable endpoints).
+- B1 feature tour with 4 real screenshots, trust-strip logos.
+- Stage-move undo (6s window with rollback) for B12.
+- axe-core / Playwright e2e a11y harness, Lighthouse runs,
+  comprehensive Tab-order audit (P1).
+- Backend test fixture override for `DEV_AUTH_ENABLED` so
+  `test_dev_login_404_when_disabled` passes inside the dev compose
+  env.
+
+`RESUME.md` describes the next-up state should anyone want to
+continue this work.
+
+---
+
 ## 2026-04-27 — P1 accessibility
 
 - New `usePageTitle(page)` helper sets `document.title` to "{page} —
