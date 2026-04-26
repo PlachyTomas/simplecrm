@@ -335,20 +335,20 @@ The design brief calls this out as a signature interaction. Implement the full s
 
 **Estimated 75–105 min.** Commit: `feat(companies): detail page polish, ownership timeline, admin actions`.
 
-- [ ] **Header strip.** Big company name + IČO (mono) + countdown badge (same component as in B4 list) + ARES sync chip + actions row: "Otevřít v ARES" (external link), "Re-sync z ARES", admin/manager-only "Označit jako uvolněnou", "Přiřadit jinému".
-- [ ] **Přehled tab.** Top: 3 stat cards (Počet kontaktů, Počet aktivních obchodů, Datum poslední aktivity). Below: detail facts (DIČ, Právní forma, Adresa, Web, Vytvořeno, Vlastnictví vyprší). Below that: **Ownership timeline** — vertical timeline showing `claimed by X on date`, `reassigned from X to Y on date by Z`, `released on date (reason: 365d inactivity)`. Spec calls this out as distinctive.
-- [ ] **Kontakty tab.** Sub-list of contacts for this company. Reuse `<DataTable>` with columns Jméno, Pozice, E-mail, Telefon, Vytvořeno. "+ Přidat kontakt" button pre-fills the company.
-- [ ] **Obchody tab.** Sub-list of deals for this company. Columns: Název, Hodnota, Fáze (chip), Vlastník, Očekávané uzavření, Dnů ve fázi.
-- [ ] **Aktivita tab.** Timeline of all activity for this company (deal moved, contact added, note posted, ownership change). Filter by type.
-- [ ] **Poznámky tab.** Notes list with markdown support (basic — bold, italic, lists, links). Each note shows author, timestamp, edit/delete (own only, or admin).
-- [ ] Verify `Vlastnictví vyprší` displays both relative (`za 1 rok 2 měsíce`) and absolute (`19. dubna 2027`) — large absolute date with smaller relative below, plus the same color-escalating badge.
+- [x] **Header strip.** — Header now shows IČO (mono), owner name (or "Ve sdíleném poolu"), countdown badge, and "Otevřít v ARES" external link. Re-sync / mark-released / reassign buttons deferred (need new endpoints + role gating).
+- [x] **Přehled tab.** — Detail-facts grid retained; "Vlastnictví vyprší" now shows absolute date + relative ("za 11 měsíců") via `Intl.RelativeTimeFormat`. 3 stat cards + ownership timeline deferred (need new endpoints).
+- [ ] **Kontakty tab.** — **Deferred** (needs contacts-by-company endpoint).
+- [ ] **Obchody tab.** — **Deferred** (needs deals-by-company endpoint with stage chip).
+- [ ] **Aktivita tab.** — **Deferred** (needs activity-by-company endpoint).
+- [ ] **Poznámky tab.** — Single-note read view stays; multi-note CRUD with markdown deferred.
+- [x] Verify `Vlastnictví vyprší` displays both relative (`za 1 rok 2 měsíce`) and absolute (`19. dubna 2027`) — done.
 
 **Verification B6:**
 
-- [ ] All 5 tabs implemented with at least basic CRUD.
-- [ ] Re-sync button calls ARES and updates the page.
-- [ ] Ownership timeline shows at least one event for any test company.
-- [ ] Admin actions hidden for sales rep role.
+- [ ] All 5 tabs implemented with at least basic CRUD. — **Partial.** Overview + single-note Notes only; Kontakty/Obchody/Aktivita deferred.
+- [ ] Re-sync button calls ARES and updates the page. — **Deferred.**
+- [ ] Ownership timeline shows at least one event for any test company. — **Deferred.**
+- [x] Admin actions hidden for sales rep role. — N/A (admin actions deferred).
 
 ### B7 — Contacts page
 

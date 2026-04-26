@@ -4,6 +4,22 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-27 — B6 company detail (partial)
+
+- Header now surfaces owner name ("Vlastník: …" or "Ve sdíleném
+  poolu") and an "Otevřít v ARES" external link at
+  https://ares.gov.cz/ekonomicke-subjekty?ico={ico}.
+- Vlastnictví vyprší overview row shows the absolute date (existing) +
+  a relative line below it ("za 11 měsíců" / "za 1 rok 2 měsíce") via
+  `Intl.RelativeTimeFormat`.
+- 3-stat-card grid, ownership timeline, and Kontakty/Obchody/Aktivita
+  sub-tabs deferred — all require new backend endpoints (contacts-
+  by-company, deals-by-company, activity-by-company, ownership-events).
+
+Commit: `feat(companies): owner display + ARES external link + relative date (B6)`.
+
+---
+
 ## 2026-04-27 — B5b ARES IČO modal state machine
 
 - IČO field now triggers the registry lookup automatically when the

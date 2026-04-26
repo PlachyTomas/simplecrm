@@ -1,10 +1,11 @@
-import { ArrowLeft } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
+import { type ReactNode, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { OwnershipBadge } from "@/app/companies/OwnershipBadge";
 import { useCompany } from "@/app/companies/useCompany";
 import type { CompanyOut } from "@/app/companies/useCompanies";
+import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { cn } from "@/lib/utils";
 
@@ -32,8 +33,22 @@ function FieldRow({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function relativeFromNow(targetIso: string, locale: string): string {
+  const target = new Date(targetIso).getTime();
+  const diffDays = Math.round((target - Date.now()) / (1000 * 60 * 60 * 24));
+  try {
+    const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+    if (Math.abs(diffDays) < 60) return rtf.format(diffDays, "day");
+    if (Math.abs(diffDays) < 365 * 2) return rtf.format(Math.round(diffDays / 30), "month");
+    return rtf.format(Math.round(diffDays / 365), "year");
+  } catch {
+    return "";
+  }
+}
+
 function OverviewTab({ company, locale }: { company: CompanyOut; locale: string }) {
   const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: "long" });
+  const expiresRelative = relativeFromNow(company.ownership_expires_at, locale);
   return (
     <section className="rounded-lg border border-border bg-surface">
       <dl className="divide-y divide-border-subtle px-6">
@@ -55,7 +70,12 @@ function OverviewTab({ company, locale }: { company: CompanyOut; locale: string 
         </FieldRow>
         <FieldRow label="Vytvořeno">{dateFmt.format(new Date(company.created_at))}</FieldRow>
         <FieldRow label="Vlastnictví vyprší">
-          {dateFmt.format(new Date(company.ownership_expires_at))}
+          <div>
+            <p>{dateFmt.format(new Date(company.ownership_expires_at))}</p>
+            {expiresRelative ? (
+              <p className="mt-0.5 text-xs text-text-tertiary">{expiresRelative}</p>
+            ) : null}
+          </div>
         </FieldRow>
       </dl>
     </section>
@@ -91,6 +111,11 @@ export function CompanyDetailPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const { data: company, isPending, isError } = useCompany(companyId);
   const { data: user } = useCurrentUser();
+  const { data: usersPage } = useOrgUsers();
+  const ownerName = useMemo(() => {
+    if (!company?.owner_user_id) return null;
+    return usersPage?.items.find((u) => u.id === company.owner_user_id)?.name ?? null;
+  }, [company, usersPage]);
 
   if (isPending) {
     return (
@@ -135,9 +160,26 @@ export function CompanyDetailPage() {
             ownerUserId={company.owner_user_id}
           />
         </div>
-        {company.ico ? (
-          <p className="mt-1 font-mono text-sm text-text-tertiary">IČO {company.ico}</p>
-        ) : null}
+        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-tertiary">
+          {company.ico ? <span className="font-mono">IČO {company.ico}</span> : null}
+          {ownerName ? (
+            <span>
+              Vlastník: <span className="text-text-secondary">{ownerName}</span>
+            </span>
+          ) : (
+            <span>Ve sdíleném poolu</span>
+          )}
+          {company.ico ? (
+            <a
+              href={`https://ares.gov.cz/ekonomicke-subjekty?ico=${company.ico}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-accent hover:text-accent-hover"
+            >
+              <ExternalLink size={12} strokeWidth={1.75} aria-hidden /> Otevřít v ARES
+            </a>
+          ) : null}
+        </div>
       </header>
 
       <nav aria-label="Karty detailu" className="mb-6 border-b border-border-subtle">
