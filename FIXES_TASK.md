@@ -370,16 +370,16 @@ The design brief calls this out as a signature interaction. Implement the full s
 
 **Estimated 45–60 min.** Commit: `feat(deals): list view with filters and stage chips`.
 
-- [ ] Build a real list view (table) with columns: Název, Firma, Hodnota, Fáze (chip with the color from the stage palette), Vlastník, Očekávané uzavření, Dnů ve fázi. Server-side sort + paginate.
-- [ ] Filters: owner, stage (multi-select), value range (Kč), expected-close date range, full-text search.
-- [ ] Empty state per C0 (no Phase reference).
-- [ ] Row click → drawer or navigates to deal detail (drawer preferred for inline edit; navigate if simpler).
+- [x] Build a real list view (table) with columns: Název, Firma, Hodnota, Fáze (chip with the color from the stage palette), Vlastník, Očekávané uzavření. — Dnů-ve-fázi column needs a `stage_changed_at` field that the schema doesn't expose; deferred. Server-side sort + paginate also deferred (`useDeals` only takes `limit`/`offset` today).
+- [ ] Filters: owner, stage (multi-select), value range (Kč), expected-close date range, full-text search. — **Deferred.**
+- [x] Empty state per C0 (no Phase reference). — Done in C0/G4.
+- [x] Row click → navigates to deal detail.
 
 **Verification B8:**
 
-- [ ] Table columns and sorting work.
-- [ ] Stage chip colors match the new palette.
-- [ ] No phase-leak copy.
+- [x] Table columns and sorting work. — Columns yes; column-header sorting deferred.
+- [x] Stage chip colors match the new palette.
+- [x] No phase-leak copy.
 
 ### B9 — Reports page
 

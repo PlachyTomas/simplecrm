@@ -4,6 +4,24 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-27 — B8 deals list
+
+- Real columnar list now: Název / Firma / Hodnota / Fáze chip / Vlastník
+  / Uzavření. Stage chip uses the same `stageColor(position)` palette
+  that B5 wired into the kanban. Owner + company resolved through the
+  existing `useOrgUsers` and `useCompanies` lookups — single fetch each.
+- Mobile (<768px): only Název and Hodnota visible; Firma / Fáze /
+  Uzavření hidden until ≥768px; Vlastník until ≥1024px. Standard
+  responsive pattern to keep the row legible at 390px.
+
+Filters (owner / stage / value range / date range / search), server-
+side sort, and Dnů-ve-fázi column deferred — server side needs new
+endpoint params and the schema doesn't expose stage_changed_at.
+
+Commit: `feat(deals): list view with company / stage / owner columns (B8)`.
+
+---
+
 ## 2026-04-27 — B7 contacts polish
 
 - Bare "+" header button replaced with labeled "+ Přidat kontakt"

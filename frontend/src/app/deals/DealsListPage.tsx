@@ -2,7 +2,11 @@ import { Handshake } from "lucide-react";
 import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { useCompanies } from "@/app/companies/useCompanies";
 import { useDeals } from "@/app/deals/useDeals";
+import { stageColor } from "@/app/pipeline/colors";
+import { usePipelineBoard } from "@/app/pipeline/useBoard";
+import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
 import { csNoun } from "@/lib/i18n/nouns";
@@ -21,9 +25,34 @@ export function DealsListPage() {
   const navigate = useNavigate();
   const { data: deals, isPending, isError } = useDeals();
   const { data: user } = useCurrentUser();
+  const { data: usersPage } = useOrgUsers();
+  const { data: board } = usePipelineBoard();
+  // Pull a generous batch of companies so we can resolve names without an
+  // N+1 fetch per row. Org's full company list usually fits in 200.
+  const { data: companiesPage } = useCompanies({ limit: 200 });
 
   const locale = user?.organization.locale ?? "cs-CZ";
   const dateFmt = useMemo(() => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }), [locale]);
+
+  const stageById = useMemo(() => {
+    const map = new Map<string, { name: string; position: number; color: string }>();
+    for (const s of board?.stages ?? []) {
+      map.set(s.id, { name: s.name, position: s.position, color: s.color });
+    }
+    return map;
+  }, [board]);
+
+  const ownerNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const u of usersPage?.items ?? []) map.set(u.id, u.name);
+    return map;
+  }, [usersPage]);
+
+  const companyNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of companiesPage?.items ?? []) map.set(c.id, c.name);
+    return map;
+  }, [companiesPage]);
 
   if (isError) {
     return (
@@ -71,50 +100,66 @@ export function DealsListPage() {
         <table className="min-w-full divide-y divide-border-subtle">
           <thead>
             <tr>
-              <th
-                scope="col"
-                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary"
-              >
-                Název
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-text-tertiary"
-              >
-                Hodnota
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary"
-              >
-                Uzavření
-              </th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary">Název</th>
+              <th scope="col" className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary md:table-cell">Firma</th>
+              <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-text-tertiary">Hodnota</th>
+              <th scope="col" className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary md:table-cell">Fáze</th>
+              <th scope="col" className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary lg:table-cell">Vlastník</th>
+              <th scope="col" className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary md:table-cell">Uzavření</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-subtle">
-            {deals.items.map((deal) => (
-              <tr
-                key={deal.id}
-                className="transition-colors duration-fast hover:bg-surface-overlay"
-              >
-                <td className="px-4 py-3 text-sm">
-                  <Link
-                    to={`/app/deals/${deal.id}`}
-                    className="font-medium text-text-primary hover:text-accent"
-                  >
-                    {deal.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 text-right text-sm tabular-nums text-text-primary">
-                  {formatMoney(deal.value, deal.currency, locale)}
-                </td>
-                <td className="px-4 py-3 text-sm text-text-tertiary">
-                  {deal.expected_close_date
-                    ? dateFmt.format(new Date(deal.expected_close_date))
-                    : "—"}
-                </td>
-              </tr>
-            ))}
+            {deals.items.map((deal) => {
+              const stage = stageById.get(deal.stage_id);
+              const stageDot = stage ? stageColor(stage.position, stage.color) : "#71717A";
+              const owner = deal.owner_user_id
+                ? ownerNameById.get(deal.owner_user_id) ?? "—"
+                : "—";
+              const companyName = companyNameById.get(deal.company_id) ?? "—";
+              return (
+                <tr
+                  key={deal.id}
+                  className="transition-colors duration-fast hover:bg-surface-overlay"
+                >
+                  <td className="px-4 py-3 text-sm">
+                    <Link
+                      to={`/app/deals/${deal.id}`}
+                      className="font-medium text-text-primary hover:text-accent"
+                    >
+                      {deal.name}
+                    </Link>
+                  </td>
+                  <td className="hidden px-4 py-3 text-sm text-text-secondary md:table-cell">
+                    {companyName}
+                  </td>
+                  <td className="px-4 py-3 text-right text-sm tabular-nums text-text-primary">
+                    {formatMoney(deal.value, deal.currency, locale)}
+                  </td>
+                  <td className="hidden px-4 py-3 text-sm md:table-cell">
+                    {stage ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-overlay px-2 py-0.5 text-xs">
+                        <span
+                          aria-hidden
+                          className="inline-block h-1.5 w-1.5 rounded-full"
+                          style={{ backgroundColor: stageDot }}
+                        />
+                        <span className="text-text-secondary">{stage.name}</span>
+                      </span>
+                    ) : (
+                      <span className="text-text-tertiary">—</span>
+                    )}
+                  </td>
+                  <td className="hidden px-4 py-3 text-sm text-text-secondary lg:table-cell">
+                    {owner}
+                  </td>
+                  <td className="hidden px-4 py-3 text-sm text-text-tertiary md:table-cell">
+                    {deal.expected_close_date
+                      ? dateFmt.format(new Date(deal.expected_close_date))
+                      : "—"}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
