@@ -1,10 +1,26 @@
-import { Handshake, Target, Trophy, Workflow } from "lucide-react";
+import { Crown, Handshake, Target, Trophy, Workflow } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useMemo } from "react";
 
 import { type KpiSummary, useKpiSummary } from "@/app/dashboard/useKpi";
 import { useLeaderboard, useVelocity } from "@/app/reports/useReports";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+
+/**
+ * Extract a friendly first name. The backend's `user.name` is "first last"
+ * for Google OAuth signups, but falls back to the email local-part for
+ * dev-login. Splitting on whitespace handles both cases without showing
+ * the role or domain.
+ */
+function firstName(name: string, email: string): string {
+  const trimmed = name.trim();
+  if (trimmed) {
+    const [head] = trimmed.split(/\s+/);
+    if (head) return head;
+  }
+  const local = email.split("@")[0] ?? "";
+  return local || "uživateli";
+}
 
 interface KpiCardProps {
   label: string;
@@ -86,9 +102,23 @@ function ManagerWidgets({ locale }: { locale: string }) {
         ) : (
           <ol className="mt-4 space-y-2">
             {leaderboard.data.rows.slice(0, 5).map((row, idx) => (
-              <li key={row.user_id} className="flex items-center justify-between text-sm">
-                <span className="text-text-primary">
-                  <span className="mr-2 tabular-nums text-text-tertiary">{idx + 1}.</span>
+              <li
+                key={row.user_id}
+                className="flex items-center justify-between text-sm"
+              >
+                <span className="flex items-center gap-2 text-text-primary">
+                  {idx === 0 ? (
+                    <span
+                      aria-label="Vedoucí leaderboardu"
+                      className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-accent text-text-on-brand-accent"
+                    >
+                      <Crown size={11} strokeWidth={2} aria-hidden />
+                    </span>
+                  ) : (
+                    <span className="w-5 text-right tabular-nums text-text-tertiary">
+                      {idx + 1}.
+                    </span>
+                  )}
                   {row.name}
                 </span>
                 <span className="tabular-nums text-text-secondary">
@@ -183,7 +213,7 @@ export function DashboardPage() {
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold">Vítejte zpět, {user.name}</h1>
+        <h1 className="text-2xl font-semibold">Vítejte zpět, {firstName(user.name, user.email)}</h1>
         <p className="mt-1 text-sm text-text-tertiary">
           Rychlý přehled za {monthLabel.toLowerCase() || "tento měsíc"}.
         </p>

@@ -236,27 +236,25 @@ These touch many files and should land **before** screen-specific batches so scr
 
 **Estimated 90–120 min.** Commit: `feat(dashboard): companies-near-release widget, activity feed, mini-pipeline`.
 
-- [ ] **Greeting.** "Vítejte zpět, {firstName}" (use `user.firstName` falling back to email-local-part). Never display the role.
-- [ ] **KPIs.** Keep the 4 KPIs but:
-  - "Hodnota pipeline" — indigo `bg-brand/10 text-brand` (kept).
-  - "Výnosy tento měsíc" — switch icon background to magenta `bg-brand-accent/10 text-brand-accent` (this is a celebration KPI).
-  - All zero-states: render the value plus a one-line empty hint ("Zatím nic — přidejte první obchod →" linking to Pipeline) **only when ALL four KPIs are zero**. Avoid hint spam when partial data exists.
-- [ ] **"Firmy blížící se uvolnění" widget** (Phase 6 Task 6.2). Server endpoint `GET /api/companies/expiring?days=60` returning companies whose `ownership_expires_at <= now + 60 days`. Render as a list with: company name, IČO (mono), days remaining badge (G3 colors: neutral >30d, amber 8–30d, red ≤7d), owner avatar, "Zobrazit" link. Empty state inside the widget: "Žádná firma se v nejbližších 60 dnech neuvolňuje."
-- [ ] **Recent activity feed.** Latest 10 activities (deal moved, deal won, note added, contact added, company claimed) grouped by day. Each row: actor avatar, verb, target, relative time ("před 2 hodinami"). Use Czech relative time formatter from `Intl.RelativeTimeFormat('cs-CZ')`.
-- [ ] **Mini-pipeline snapshot.** Horizontal bar visualization of stage counts/values, clickable per stage to open Pipeline filtered.
-- [ ] **Manager Dashboard variant** (Phase 6 Task 6.3) — only rendered when `user.role === 'manager' || 'admin'`:
-  - Leaderboard (top 5 by closed-deal value this month). The #1 row gets a small **magenta badge** (this is the screen's magenta moment).
-  - Pipeline-velocity chart (Recharts line chart, average days-in-stage over last 90 days).
-  - Stage-distribution chart (Recharts stacked bar, count by stage by week).
-    Both charts respect dark mode (axis colors via CSS vars).
+- [x] **Greeting.** "Vítejte zpět, {firstName}" (use `user.firstName` falling back to email-local-part). Never display the role. — Implemented via `firstName(user.name, user.email)` helper.
+- [x] **KPIs.** Keep the 4 KPIs but:
+  - "Hodnota pipeline" — indigo `bg-brand/10 text-brand` (kept). — `bg-accent-subtle text-accent` (semantic alias). ✓
+  - "Výnosy tento měsíc" — switch icon background to magenta `bg-brand-accent/10 text-brand-accent` (this is a celebration KPI). — done in G1.
+  - All zero-states: render the value plus a one-line empty hint ("Zatím nic — přidejte první obchod →" linking to Pipeline) **only when ALL four KPIs are zero**. — Deferred (low-priority polish; pure UX nicety, not a regression).
+- [ ] **"Firmy blížící se uvolnění" widget** (Phase 6 Task 6.2). Server endpoint `GET /api/companies/expiring?days=60` returning companies whose `ownership_expires_at <= now + 60 days`. — **Deferred.** Requires new backend endpoint. Will need to be picked up in a future iteration with backend + frontend coordination.
+- [ ] **Recent activity feed.** — **Deferred.** Same — needs new endpoint.
+- [ ] **Mini-pipeline snapshot.** — **Deferred.** Needs stage-count summary endpoint or client-side reduce on board data.
+- [x] **Manager Dashboard variant** (Phase 6 Task 6.3) — only rendered when `user.role === 'manager' || 'admin'`:
+  - Leaderboard top-5 already implemented. **#1 row now wears a magenta crown badge — the screen's magenta moment.** ✓
+  - Pipeline-velocity chart and stage-distribution chart land in B9 (the spec also covers them under Reports).
 
 **Verification B3:**
 
-- [ ] Greeting uses first name.
-- [ ] Widget shows companies-near-release with proper color escalation.
-- [ ] Manager-only widgets hidden for sales rep role.
-- [ ] Charts render in both themes without overflow at 1024px.
-- [ ] Leaderboard #1 has a magenta crown/star badge.
+- [x] Greeting uses first name.
+- [ ] Widget shows companies-near-release with proper color escalation. — **Deferred (no endpoint).**
+- [x] Manager-only widgets hidden for sales rep role.
+- [ ] Charts render in both themes without overflow at 1024px. — **Deferred to B9.**
+- [x] Leaderboard #1 has a magenta crown/star badge.
 
 ### B4 — Companies list
 

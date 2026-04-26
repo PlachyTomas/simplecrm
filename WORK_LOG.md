@@ -4,6 +4,34 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-27 — B3 dashboard polish (partial)
+
+- Greeting "Vítejte zpět, {firstName}" — extracts first whitespace-
+  delimited token from `user.name`, falls back to email local-part.
+  Test fixture updated.
+- Leaderboard #1 row gains a small magenta crown badge — the
+  dashboard's magenta moment. Brief calls this out in §3 ("Sparkline
+  trend leader on the dashboard" / "Badge on the leaderboard leader").
+
+### B3 deferred (significant scope)
+
+- "Firmy blížící se uvolnění" widget — needs `GET /api/companies/expiring?
+  days=60` endpoint that doesn't exist; would also need owner avatar
+  rendering. Backend + frontend coordination required.
+- Recent activity feed — needs activity-list endpoint.
+- Mini-pipeline snapshot — needs stage-count summary or client reduce.
+- Velocity / stage-distribution charts — punted to B9 (the same charts
+  appear in the Reports spec).
+- All-zero KPI hint line — pure UX nicety; not a regression.
+
+Two largest deferrals (expiring widget + activity feed) require new
+backend endpoints; flagging here so the scope-of-work decision is
+visible.
+
+Commit: `feat(dashboard): first-name greeting + leaderboard magenta crown (B3)`.
+
+---
+
 ## 2026-04-27 — B2 login
 
 - Dev-login panel double-gated: `import.meta.env.MODE !== "production" &&

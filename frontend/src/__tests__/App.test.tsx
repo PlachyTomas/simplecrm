@@ -88,7 +88,8 @@ describe("App routing", () => {
     renderAt("/app", { token: "fake-token" });
     await waitFor(() =>
       expect(
-        screen.getByRole("heading", { name: /Vítejte zpět, Testovací Uživatel/i }),
+        // First name only per B3 ("Vítejte zpět, {firstName}").
+        screen.getByRole("heading", { name: /^Vítejte zpět, Testovací$/i }),
       ).toBeInTheDocument(),
     );
     expect(screen.getByText(/Alza s\.r\.o\./)).toBeInTheDocument();
