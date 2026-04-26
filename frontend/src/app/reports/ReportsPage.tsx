@@ -1,4 +1,4 @@
-import { Download } from "lucide-react";
+import { Crown, Download, Trophy } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -12,6 +12,8 @@ import {
 } from "@/app/reports/useReports";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { EmptyState } from "@/components/ui/empty-state";
+import { csNoun } from "@/lib/i18n/nouns";
 
 function defaultRange(): { from: string; to: string } {
   const today = new Date();
@@ -50,9 +52,13 @@ function LeaderboardSection({
         Vítězné obchody obchodníků za vybrané období.
       </p>
       {data.rows.length === 0 ? (
-        <p className="mt-6 text-sm text-text-secondary">
-          V tomto období nebyly uzavřeny žádné vítězné obchody.
-        </p>
+        <div className="mt-6">
+          <EmptyState
+            icon={Trophy}
+            title="V tomto období nebyly uzavřeny vítězné obchody."
+            body="Až někdo vyhraje obchod, objeví se zde s počtem a celkovou hodnotou."
+          />
+        </div>
       ) : (
         <ol className="mt-4 space-y-3">
           {data.rows.map((row, idx) => {
@@ -63,14 +69,24 @@ function LeaderboardSection({
             const highlight = idx === 0;
             return (
               <li key={row.user_id} className="flex items-center gap-4">
-                <span className="w-6 text-right text-sm font-medium text-text-tertiary tabular-nums">
-                  {idx + 1}.
-                </span>
+                {highlight ? (
+                  <span
+                    aria-label="Vedoucí leaderboardu"
+                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-accent text-text-on-brand-accent"
+                  >
+                    <Crown size={12} strokeWidth={2} aria-hidden />
+                  </span>
+                ) : (
+                  <span className="w-6 text-right text-sm font-medium text-text-tertiary tabular-nums">
+                    {idx + 1}.
+                  </span>
+                )}
                 <div className="flex-1">
                   <div className="flex items-baseline justify-between">
                     <span className="text-sm font-medium text-text-primary">{row.name}</span>
                     <span className="text-sm tabular-nums text-text-secondary">
-                      {row.won_count} · {formatMoney(row.won_value, data.currency, locale)}
+                      {row.won_count} {csNoun(row.won_count, "obchod")} ·{" "}
+                      {formatMoney(row.won_value, data.currency, locale)}
                     </span>
                   </div>
                   <div
@@ -80,7 +96,7 @@ function LeaderboardSection({
                     <div
                       className={
                         highlight
-                          ? "h-full rounded-full bg-highlight"
+                          ? "h-full rounded-full bg-brand-accent"
                           : "h-full rounded-full bg-accent"
                       }
                       style={{ width: `${pct}%` }}

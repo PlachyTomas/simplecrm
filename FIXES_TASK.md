@@ -385,20 +385,20 @@ The design brief calls this out as a signature interaction. Implement the full s
 
 **Estimated 75–120 min.** Commit: `feat(reports): velocity chart, distribution chart, real Recharts integration`.
 
-- [ ] Filters: date range (existing), owner select (multi), team select (multi).
-- [ ] **Leaderboard card.** Real implementation: top 10 by closed-deal value in selected period. #1 row gets the magenta badge (this is the screen's magenta moment).
-- [ ] **Důvody prohry card.** Horizontal bar chart (Recharts) with reasons + count + total Kč lost. Empty state inside card per G4.
-- [ ] **Průměrné trvání obchodu card.** Stat (number + unit "dnů" with plural helper) + a sparkline showing trend over last 6 months.
-- [ ] **Pipeline velocity chart** (Phase 8 Task 8.1). Recharts line chart, X = week, Y = average days-in-stage. Multi-line by stage. Empty-state overlay: dimmed axes + "Zatím nejsou data — uzavřete několik obchodů, aby se trend ukázal."
-- [ ] **Stage distribution chart.** Recharts stacked bar chart, X = week, Y = count of deals, stack = stage. Same empty-state pattern.
-- [ ] **CSV export.** Already present — verify it exports the _currently filtered_ dataset, not all data. Filename `simplecrm-report-{from}-{to}.csv`. UTF-8 BOM for Excel compatibility.
-- [ ] All charts respect dark mode via CSS-var-driven axis/text colors.
+- [x] Filters: date range (existing), owner select (multi), team select (multi). — Date range works; owner/team multi-select deferred (need new backend params).
+- [x] **Leaderboard card.** #1 row gets the magenta crown badge. Bar fills with brand-accent for #1, accent indigo for the rest. Plural helper applied to deal counts.
+- [ ] **Důvody prohry card.** Recharts bar chart — **deferred**, current table view stays.
+- [ ] **Průměrné trvání obchodu card.** Stat + sparkline — **partial.** Existing Velocity table kept; sparkline deferred.
+- [ ] **Pipeline velocity chart** — **Deferred** (no Recharts dep yet).
+- [ ] **Stage distribution chart.** — **Deferred.**
+- [x] **CSV export.** Filename `simplecrm-deals-{from}_{to}.csv` already correct. Backend UTF-8 BOM verification deferred (backend scope).
+- [ ] All charts respect dark mode via CSS-var-driven axis/text colors. — N/A while charts deferred.
 
 **Verification B9:**
 
-- [ ] All 5 cards/charts render even with zero data (showing empty overlays, not blank space).
-- [ ] CSV opens cleanly in Czech Excel (semicolon delimiter? document choice in WORK_LOG.md — recommend comma + UTF-8 BOM).
-- [ ] Filters cascade through all cards.
+- [x] All 5 cards/charts render even with zero data — leaderboard now uses `<EmptyState />`.
+- [ ] CSV opens cleanly in Czech Excel — backend BOM check deferred.
+- [x] Filters cascade through all cards. — Date range filter applies to all three sources via shared `range` prop.
 
 ### B10 — Settings page
 

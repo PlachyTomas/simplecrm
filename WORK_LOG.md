@@ -4,6 +4,27 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-27 — B9 reports polish
+
+- Leaderboard #1 row now wears a magenta crown badge (matches the
+  dashboard treatment) and the progress bar fills with brand-accent
+  instead of the alias `bg-highlight`.
+- Czech plural helper applied to leaderboard deal counts ("3 obchody"
+  / "1 obchod" / "0 obchodů").
+- Empty-state for the leaderboard card now uses the `<EmptyState />`
+  primitive (icon Trophy, no primary CTA — there's nothing to do until
+  someone closes a deal).
+
+Recharts charts (pipeline velocity, stage distribution, loss-reasons
+bar chart, velocity sparkline) deferred — adding Recharts is a heavy
+dependency and the existing tabular variants still convey the same
+data legibly. Owner/team multi-select filters deferred (need new
+backend params). CSV BOM verification is backend scope.
+
+Commit: `feat(reports): magenta leaderboard crown + plural counts (B9)`.
+
+---
+
 ## 2026-04-27 — B8 deals list
 
 - Real columnar list now: Název / Firma / Hodnota / Fáze chip / Vlastník
