@@ -4,6 +4,12 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-28 — QA pass blocked at pre-flight
+
+Session 1 — QA pass blocked at §2.1. 0 findings (P0:0, P1:0, P2:0, P3:0). Playwright MCP cannot launch a browser; see `QA_REPORT.md` Appendix A for the one-line `~/.claude.json` fix. Static rg-sweep findings (glassmorphism in 6 files, missing skip link, missing colorblind toggle, hardcoded `Kč` and hex codes, off-scale text sizes, skill drift) captured as un-numbered Appendix B notes for the next session to triage.
+
+---
+
 ## 2026-04-27 — v1.0 polish complete
 
 All 17 batches in `FIXES_TASK.md` (C0, G1–G4, B1–B12, P1) have a
