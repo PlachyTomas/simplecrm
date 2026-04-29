@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import secrets
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -42,18 +43,32 @@ def create_access_token(user_id: uuid.UUID, organization_id: uuid.UUID, role: Us
     return encoded
 
 
-def create_refresh_token(user_id: uuid.UUID) -> str:
+@dataclass(frozen=True)
+class IssuedRefreshToken:
+    """The encoded JWT plus the structured fields the auth router needs to
+    record an active-jti row in `refresh_tokens` (QA-024 Part B).
+
+    The router stays the only caller that touches the DB; this module
+    remains DB-free so it's still safe to use from tests and helpers."""
+
+    token: str
+    jti: str
+    expires_at: datetime
+
+
+def create_refresh_token(user_id: uuid.UUID) -> IssuedRefreshToken:
     settings = get_settings()
     expire = _now() + timedelta(days=settings.refresh_token_ttl_days)
+    jti = secrets.token_urlsafe(16)
     payload: dict[str, Any] = {
         "sub": str(user_id),
         "type": REFRESH_TOKEN_TYPE,
         "exp": expire,
         "iat": _now(),
-        "jti": secrets.token_urlsafe(16),
+        "jti": jti,
     }
     encoded: str = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
-    return encoded
+    return IssuedRefreshToken(token=encoded, jti=jti, expires_at=expire)
 
 
 def decode_token(token: str) -> dict[str, Any]:
@@ -84,6 +99,7 @@ def verify_oauth_state(token: str, max_age_seconds: int = 600) -> dict[str, Any]
 __all__ = [
     "ACCESS_TOKEN_TYPE",
     "REFRESH_TOKEN_TYPE",
+    "IssuedRefreshToken",
     "JWTError",
     "create_access_token",
     "create_refresh_token",

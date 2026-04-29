@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth import REFRESH_COOKIE_NAME, STATE_COOKIE_NAME
 from app.core.config import get_settings
-from app.core.security import create_access_token, create_refresh_token, sign_oauth_state
+from app.core.security import create_access_token, sign_oauth_state
 from app.db.models import Organization, User, UserRole
 from app.db.session import AsyncSessionLocal
 from app.main import app
@@ -307,16 +307,15 @@ async def test_refresh_returns_new_access_token_and_rotates_cookie(
     db_session: AsyncSession,
 ) -> None:
     state = sign_oauth_state({"nonce": "n"})
-    await client.get(
+    callback = await client.get(
         "/api/v1/auth/google/callback",
         params={"code": "test-auth-code", "state": state},
         cookies={STATE_COOKIE_NAME: state},
         follow_redirects=False,
     )
-    user = (
-        await db_session.execute(select(User).where(User.email == "hero@testorg.cz"))
-    ).scalar_one()
-    refresh_jwt = create_refresh_token(user.id)
+    # Use the refresh cookie set by the callback — it's the only one whose
+    # `jti` is in the active allowlist (QA-024 Part B).
+    refresh_jwt = callback.cookies[REFRESH_COOKIE_NAME]
 
     response = await client.post(
         "/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: refresh_jwt}
@@ -347,12 +346,13 @@ async def test_refresh_bypasses_trial_gate_for_expired_orgs(
     from datetime import UTC, datetime, timedelta
 
     state = sign_oauth_state({"nonce": "n"})
-    await client.get(
+    callback = await client.get(
         "/api/v1/auth/google/callback",
         params={"code": "test-auth-code", "state": state},
         cookies={STATE_COOKIE_NAME: state},
         follow_redirects=False,
     )
+    refresh_jwt = callback.cookies[REFRESH_COOKIE_NAME]
 
     # Roll the org's trial back via a fresh session, then refetch the user id.
     async with AsyncSessionLocal() as s:
@@ -367,7 +367,6 @@ async def test_refresh_bypasses_trial_gate_for_expired_orgs(
         await s.commit()
 
     try:
-        refresh_jwt = create_refresh_token(user_id)
         response = await client.post(
             "/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: refresh_jwt}
         )
@@ -382,6 +381,7 @@ async def test_refresh_bypasses_trial_gate_for_expired_orgs(
         assert me_resp.status_code == 402
     finally:
         # Clean up the user + org so the next test gets a fresh slate.
+        # Refresh-token rows cascade via ON DELETE CASCADE.
         async with AsyncSessionLocal() as s:
             await s.execute(delete(User).where(User.id == user_id))
             await s.execute(delete(Organization).where(Organization.id == org_id))
@@ -393,12 +393,13 @@ async def test_refresh_rejects_deactivated_user(
     with_fake_google: FakeGoogleOAuthClient,
 ) -> None:
     state = sign_oauth_state({"nonce": "n"})
-    await client.get(
+    callback = await client.get(
         "/api/v1/auth/google/callback",
         params={"code": "test-auth-code", "state": state},
         cookies={STATE_COOKIE_NAME: state},
         follow_redirects=False,
     )
+    refresh_jwt = callback.cookies[REFRESH_COOKIE_NAME]
 
     async with AsyncSessionLocal() as s:
         user_row = (
@@ -410,11 +411,160 @@ async def test_refresh_rejects_deactivated_user(
         await s.commit()
 
     try:
-        refresh_jwt = create_refresh_token(user_id)
         response = await client.post(
             "/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: refresh_jwt}
         )
         assert response.status_code == 401
+    finally:
+        async with AsyncSessionLocal() as s:
+            await s.execute(delete(User).where(User.id == user_id))
+            await s.execute(delete(Organization).where(Organization.id == org_id))
+            await s.commit()
+
+
+async def test_refresh_rejects_replayed_jti_after_rotation(
+    client: AsyncClient,
+    with_fake_google: FakeGoogleOAuthClient,
+) -> None:
+    """QA-024 Part B regression: rotate A → B; replaying A must 401.
+
+    The old refresh JWT is still cryptographically valid until its `exp`,
+    but its `jti` row was deleted on rotation, so the allowlist check rejects
+    it. Without server-side invalidation, a leaked refresh token would still
+    work after the legitimate user's next refresh.
+    """
+    state = sign_oauth_state({"nonce": "n"})
+    callback = await client.get(
+        "/api/v1/auth/google/callback",
+        params={"code": "test-auth-code", "state": state},
+        cookies={STATE_COOKIE_NAME: state},
+        follow_redirects=False,
+    )
+    refresh_a = callback.cookies[REFRESH_COOKIE_NAME]
+
+    async with AsyncSessionLocal() as s:
+        user = (
+            await s.execute(select(User).where(User.email == "hero@testorg.cz"))
+        ).scalar_one()
+        user_id = user.id
+        org_id = user.organization_id
+
+    try:
+        # First rotation: A → B succeeds and inserts B's jti, deletes A's.
+        first = await client.post(
+            "/api/v1/auth/refresh",
+            cookies={REFRESH_COOKIE_NAME: refresh_a},
+        )
+        assert first.status_code == 200, first.text
+
+        # Replay A: server-side jti is gone → 401.
+        replay = await client.post(
+            "/api/v1/auth/refresh",
+            cookies={REFRESH_COOKIE_NAME: refresh_a},
+        )
+        assert replay.status_code == 401
+    finally:
+        async with AsyncSessionLocal() as s:
+            await s.execute(delete(User).where(User.id == user_id))
+            await s.execute(delete(Organization).where(Organization.id == org_id))
+            await s.commit()
+
+
+async def test_logout_revokes_refresh_token_server_side(
+    client: AsyncClient,
+    with_fake_google: FakeGoogleOAuthClient,
+) -> None:
+    """QA-024 Part B: logout must revoke the allowlist row, not just clear
+    the cookie. Otherwise an attacker holding a copy of the cookie pre-logout
+    could keep refreshing after the user logs out."""
+    state = sign_oauth_state({"nonce": "n"})
+    callback = await client.get(
+        "/api/v1/auth/google/callback",
+        params={"code": "test-auth-code", "state": state},
+        cookies={STATE_COOKIE_NAME: state},
+        follow_redirects=False,
+    )
+    refresh_jwt = callback.cookies[REFRESH_COOKIE_NAME]
+
+    async with AsyncSessionLocal() as s:
+        user = (
+            await s.execute(select(User).where(User.email == "hero@testorg.cz"))
+        ).scalar_one()
+        user_id = user.id
+        org_id = user.organization_id
+
+    try:
+        logout_resp = await client.post(
+            "/api/v1/auth/logout",
+            cookies={REFRESH_COOKIE_NAME: refresh_jwt},
+        )
+        assert logout_resp.status_code == 204
+
+        # Same cookie, post-logout: server-side row is gone → 401.
+        replay = await client.post(
+            "/api/v1/auth/refresh",
+            cookies={REFRESH_COOKIE_NAME: refresh_jwt},
+        )
+        assert replay.status_code == 401
+    finally:
+        async with AsyncSessionLocal() as s:
+            await s.execute(delete(User).where(User.id == user_id))
+            await s.execute(delete(Organization).where(Organization.id == org_id))
+            await s.commit()
+
+
+async def test_refresh_supports_multi_device(
+    client: AsyncClient,
+    with_fake_google: FakeGoogleOAuthClient,
+    db_session: AsyncSession,
+) -> None:
+    """QA-024 Part B: two devices can hold independent refresh tokens.
+
+    The allowlist approach is multi-device-friendly — each `jti` is its own
+    row, so logging in / refreshing on phone does not invalidate the laptop.
+    Verified by issuing two tokens for the same user and refreshing each
+    independently.
+    """
+    from app.core.security import create_refresh_token
+    from app.db.models import RefreshToken
+
+    state = sign_oauth_state({"nonce": "n"})
+    callback = await client.get(
+        "/api/v1/auth/google/callback",
+        params={"code": "test-auth-code", "state": state},
+        cookies={STATE_COOKIE_NAME: state},
+        follow_redirects=False,
+    )
+    device_a = callback.cookies[REFRESH_COOKIE_NAME]
+
+    async with AsyncSessionLocal() as s:
+        user = (
+            await s.execute(select(User).where(User.email == "hero@testorg.cz"))
+        ).scalar_one()
+        user_id = user.id
+        org_id = user.organization_id
+        # Provision a second active jti by hand — simulating a second device's
+        # OAuth callback without re-running the fake-Google fixture.
+        issued_b = create_refresh_token(user_id)
+        s.add(
+            RefreshToken(
+                jti=issued_b.jti, user_id=user_id, expires_at=issued_b.expires_at
+            )
+        )
+        await s.commit()
+    device_b = issued_b.token
+
+    try:
+        # Refresh on device A — succeeds. Device B's row is untouched.
+        ra = await client.post(
+            "/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: device_a}
+        )
+        assert ra.status_code == 200, ra.text
+        # Refresh on device B — also succeeds; multi-device is supported.
+        rb = await client.post(
+            "/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: device_b}
+        )
+        assert rb.status_code == 200, rb.text
     finally:
         async with AsyncSessionLocal() as s:
             await s.execute(delete(User).where(User.id == user_id))

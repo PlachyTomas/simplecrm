@@ -21,6 +21,7 @@ from app.db.models.organization import Organization
 from app.db.models.ownership_history import OwnershipHistory
 from app.db.models.pipeline import Pipeline
 from app.db.models.plan import Plan
+from app.db.models.refresh_token import RefreshToken
 from app.db.models.stage import Stage
 from app.db.models.team import Team
 from app.db.models.user import User
@@ -38,6 +39,7 @@ __all__ = [
     "Pipeline",
     "Plan",
     "PlanInterval",
+    "RefreshToken",
     "Region",
     "Stage",
     "StageType",

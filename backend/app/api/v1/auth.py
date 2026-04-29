@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import secrets
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Response, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -15,6 +17,7 @@ from app.core.config import get_settings
 from app.core.deps import require_active_trial_or_subscription
 from app.core.security import (
     REFRESH_TOKEN_TYPE,
+    IssuedRefreshToken,
     JWTError,
     create_access_token,
     create_refresh_token,
@@ -23,7 +26,7 @@ from app.core.security import (
     verify_oauth_state,
 )
 from app.db import get_db
-from app.db.models import User
+from app.db.models import RefreshToken, User
 from app.schemas.auth import CurrentUser
 from app.services.auth import upsert_dev_user, upsert_user_from_google_profile
 from app.services.google_oauth import GoogleOAuthClient, get_google_oauth_client
@@ -51,6 +54,23 @@ def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
         samesite="lax",
         path="/api/v1/auth",
     )
+
+
+async def _issue_and_record_refresh(
+    session: AsyncSession, user_id: uuid.UUID
+) -> IssuedRefreshToken:
+    """Mint a refresh JWT and record its `jti` in the active-allowlist.
+
+    QA-024 Part B: a refresh JWT is only honored when its `jti` is present
+    in `refresh_tokens`. Issue inserts a row; rotation deletes the old row
+    and inserts the new one; logout deletes the row outright. A leaked
+    refresh JWT becomes useless at the moment the legitimate user refreshes.
+    """
+    issued = create_refresh_token(user_id)
+    session.add(
+        RefreshToken(jti=issued.jti, user_id=user_id, expires_at=issued.expires_at)
+    )
+    return issued
 
 
 @router.get("/google/login")
@@ -102,11 +122,12 @@ async def google_callback(
     await session.refresh(user, attribute_names=["organization"])
 
     access_token = create_access_token(user.id, user.organization_id, user.role)
-    refresh_token = create_refresh_token(user.id)
+    issued = await _issue_and_record_refresh(session, user.id)
+    await session.commit()
 
     redirect_url = f"{settings.frontend_success_redirect}#access_token={access_token}"
     response = RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
-    _set_refresh_cookie(response, refresh_token)
+    _set_refresh_cookie(response, issued.token)
     response.delete_cookie(STATE_COOKIE_NAME, path="/api/v1/auth")
     return response
 
@@ -120,7 +141,33 @@ async def me(user: User = Depends(require_active_trial_or_subscription)) -> User
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-async def logout(response: Response) -> None:
+async def logout(
+    response: Response,
+    refresh_cookie: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    """Clear the refresh cookie + revoke the server-side allowlist row.
+
+    Best-effort revoke: if the cookie's JWT is decodable and carries a `jti`,
+    we delete the matching row so the rotated-out token can't be replayed
+    even with a stolen pre-logout copy. A bad/missing cookie still 204s —
+    logout is idempotent from the client's perspective.
+    """
+    if refresh_cookie:
+        try:
+            payload = decode_token(refresh_cookie)
+        except JWTError:
+            payload = None
+        if (
+            payload
+            and payload.get("type") == REFRESH_TOKEN_TYPE
+            and isinstance(payload.get("jti"), str)
+        ):
+            await session.execute(
+                delete(RefreshToken).where(RefreshToken.jti == payload["jti"])
+            )
+            await session.commit()
+
     response.delete_cookie(
         REFRESH_COOKIE_NAME,
         path="/api/v1/auth",
@@ -143,11 +190,17 @@ async def refresh(
 ) -> RefreshResponse:
     """Exchange the httponly refresh cookie for a fresh access token + rotated refresh.
 
-    401 when the cookie is missing, expired, malformed, or the user no longer
-    exists / is inactive. Frontend treats any 401 here as "not logged in" and
-    routes to /login. The trial gate is **not** applied here on purpose —
-    refreshing the session must work even with an expired trial so the
-    `<TrialExpiredGate />` can render after `/auth/me` 402s.
+    401 when the cookie is missing, expired, malformed, the user no longer
+    exists / is inactive, or the `jti` is not in the active allowlist (QA-024
+    Part B — covers the leaked-then-rotated case). Frontend treats any 401
+    here as "not logged in" and routes to /login. The trial gate is **not**
+    applied here on purpose — refreshing the session must work even with an
+    expired trial so the `<TrialExpiredGate />` can render after `/auth/me`
+    402s.
+
+    Rotation: on success, the incoming `jti` is deleted and a new row is
+    inserted, so the old refresh JWT is server-side invalid even though it
+    remains cryptographically valid until its `exp`.
     """
     if not refresh_cookie:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No refresh token")
@@ -167,16 +220,45 @@ async def refresh(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Malformed refresh token"
         ) from exc
+    jti = payload.get("jti")
+    if not isinstance(jti, str):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Malformed refresh token"
+        )
+
+    record = await session.get(RefreshToken, jti)
+    if record is None or record.user_id != user_id:
+        # Either never issued, already rotated, already logged out, or stolen
+        # and bound to a different user. All collapse to the same response.
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token revoked"
+        )
+    if record.expires_at <= datetime.now(tz=UTC):
+        # JWT `exp` would have caught this above — defense in depth, and
+        # opportunistic cleanup of an expired row.
+        await session.delete(record)
+        await session.commit()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token expired"
+        )
 
     user = await session.get(User, user_id, options=[joinedload(User.organization)])
     if user is None or not user.is_active:
+        # Revoke the orphan row so a re-activation of the user later can't
+        # silently inherit a stale refresh.
+        await session.delete(record)
+        await session.commit()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive"
         )
 
+    # Rotate: delete the consumed jti, issue a new one (in the same txn).
+    await session.delete(record)
     access_token = create_access_token(user.id, user.organization_id, user.role)
-    new_refresh = create_refresh_token(user.id)
-    _set_refresh_cookie(response, new_refresh)
+    issued = await _issue_and_record_refresh(session, user.id)
+    await session.commit()
+
+    _set_refresh_cookie(response, issued.token)
     return RefreshResponse(
         access_token=access_token,
         user=CurrentUser.model_validate(user),
@@ -220,7 +302,9 @@ async def dev_login(
     await session.commit()
     await session.refresh(user, attribute_names=["organization"])
     access_token = create_access_token(user.id, user.organization_id, user.role)
-    _set_refresh_cookie(response, create_refresh_token(user.id))
+    issued = await _issue_and_record_refresh(session, user.id)
+    await session.commit()
+    _set_refresh_cookie(response, issued.token)
     return DevLoginResponse(
         access_token=access_token,
         user=CurrentUser.model_validate(user),
