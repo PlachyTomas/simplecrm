@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "@/auth/useAuth";
 import { TrialExpiredGate } from "@/auth/TrialExpiredGate";
 import { useCurrentUser } from "@/auth/useCurrentUser";
-import { type TrialExpiredPayload, isTrialExpired } from "@/lib/api";
+import { API_BASE_URL, type TrialExpiredPayload, isTrialExpired } from "@/lib/api";
 
 function extractTrialPayload(err: unknown): TrialExpiredPayload | undefined {
   if (!isTrialExpired(err)) return undefined;
@@ -20,9 +20,52 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
+/**
+ * Trial-gate "Exportovat data" handler. Hits `/api/v1/reports/export-csv`
+ * directly (the endpoint deliberately bypasses the trial gate so users
+ * can always walk away with their data) and downloads the CSV via a
+ * blob URL. The deals export is the canonical "your data" file for now;
+ * companies / contacts exports are tracked separately.
+ *
+ * Pass an open `from=1970-01-01&to=today` window so the default
+ * this-month-only filter on the reports endpoint doesn't accidentally
+ * truncate a long-tenured customer's history at the moment they're
+ * trying to walk away.
+ */
+async function downloadDataExport(accessToken: string): Promise<void> {
+  const today = new Date().toISOString().slice(0, 10);
+  const url = `${API_BASE_URL}/api/v1/reports/export-csv?from=1970-01-01&to=${today}`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    credentials: "include",
+  });
+  if (!res.ok) return;
+  const blob = await res.blob();
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = `simplecrm-export-${today}.csv`;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(href);
+}
+
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { accessToken } = useAuth();
+  const { accessToken, refreshSettled } = useAuth();
   const query = useCurrentUser();
+
+  // Cold-load: AuthProvider is exchanging the refresh cookie for an access
+  // token. Don't bounce to /login until that attempt has settled, otherwise
+  // a typed-URL nav or full reload always lands on /login first.
+  if (!accessToken && !refreshSettled) {
+    return (
+      <div className="flex h-full min-h-screen items-center justify-center bg-bg text-sm text-text-tertiary">
+        Načítání…
+      </div>
+    );
+  }
 
   if (!accessToken) {
     return <Navigate to="/login" replace />;
@@ -39,7 +82,18 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   if (query.isError) {
     const trial = extractTrialPayload(query.error);
     if (trial) {
-      return <TrialExpiredGate payload={trial} />;
+      return (
+        <TrialExpiredGate
+          payload={trial}
+          onExport={accessToken ? () => void downloadDataExport(accessToken) : undefined}
+          onSubscribe={() => {
+            // Subscription flow doesn't exist yet (Stripe lands later). Until
+            // it does, route the user to support so they can move forward
+            // without hitting a dead button.
+            window.location.href = "mailto:podpora@simplecrm.cz?subject=Předplatné%20SimpleCRM";
+          }}
+        />
+      );
     }
     return <Navigate to="/login" replace />;
   }

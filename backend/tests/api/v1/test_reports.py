@@ -355,3 +355,28 @@ async def test_export_csv_streams_deals(
     text = response.text
     assert "id,name,stage,stage_type,value,currency" in text
     assert "ExportRow" in text
+
+
+async def test_export_csv_rate_limit_returns_429(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """The ungated export bypasses the trial gate, so it must throttle abuse.
+
+    Mirrors the lookup-registry rate-limit test pattern.
+    """
+    from app.api.v1.data_export import get_export_rate_limiter
+    from app.main import app
+    from app.services.lookup_cache import RateLimiter
+
+    _, user, _, _, _ = await _setup(db_session, owned_cleanup)
+
+    # Tight limiter: only the first call is allowed.
+    tight_limiter = RateLimiter(max_calls=1, window_seconds=60.0)
+    app.dependency_overrides[get_export_rate_limiter] = lambda: tight_limiter
+    try:
+        first = await client.get("/api/v1/reports/export-csv", headers=_auth(user))
+        second = await client.get("/api/v1/reports/export-csv", headers=_auth(user))
+    finally:
+        app.dependency_overrides.pop(get_export_rate_limiter, None)
+    assert first.status_code == 200
+    assert second.status_code == 429

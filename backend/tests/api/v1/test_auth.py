@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth import REFRESH_COOKIE_NAME, STATE_COOKIE_NAME
 from app.core.config import get_settings
-from app.core.security import create_access_token, sign_oauth_state
+from app.core.security import create_access_token, create_refresh_token, sign_oauth_state
 from app.db.models import Organization, User, UserRole
 from app.db.session import AsyncSessionLocal
 from app.main import app
@@ -255,3 +255,168 @@ async def test_dev_login_404_when_disabled(client: AsyncClient) -> None:
         "/api/v1/auth/dev-login", json={"email": "nope@example.com"}
     )
     assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# /auth/refresh
+# ---------------------------------------------------------------------------
+
+
+async def test_refresh_returns_401_when_cookie_missing(client: AsyncClient) -> None:
+    response = await client.post("/api/v1/auth/refresh")
+    assert response.status_code == 401
+
+
+async def test_refresh_returns_401_when_cookie_malformed(client: AsyncClient) -> None:
+    response = await client.post(
+        "/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: "not-a-jwt"}
+    )
+    assert response.status_code == 401
+
+
+async def test_refresh_rejects_access_token_in_refresh_slot(
+    client: AsyncClient,
+    with_fake_google: FakeGoogleOAuthClient,
+    db_session: AsyncSession,
+) -> None:
+    """Sending an *access* JWT in the refresh-cookie slot must 401, not 200.
+
+    Regression test for the dependency check `payload.get("type") != REFRESH_TOKEN_TYPE`.
+    """
+    state = sign_oauth_state({"nonce": "n"})
+    await client.get(
+        "/api/v1/auth/google/callback",
+        params={"code": "test-auth-code", "state": state},
+        cookies={STATE_COOKIE_NAME: state},
+        follow_redirects=False,
+    )
+    user = (
+        await db_session.execute(select(User).where(User.email == "hero@testorg.cz"))
+    ).scalar_one()
+    access_jwt = create_access_token(user.id, user.organization_id, user.role)
+
+    response = await client.post(
+        "/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: access_jwt}
+    )
+    assert response.status_code == 401
+
+
+async def test_refresh_returns_new_access_token_and_rotates_cookie(
+    client: AsyncClient,
+    with_fake_google: FakeGoogleOAuthClient,
+    db_session: AsyncSession,
+) -> None:
+    state = sign_oauth_state({"nonce": "n"})
+    await client.get(
+        "/api/v1/auth/google/callback",
+        params={"code": "test-auth-code", "state": state},
+        cookies={STATE_COOKIE_NAME: state},
+        follow_redirects=False,
+    )
+    user = (
+        await db_session.execute(select(User).where(User.email == "hero@testorg.cz"))
+    ).scalar_one()
+    refresh_jwt = create_refresh_token(user.id)
+
+    response = await client.post(
+        "/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: refresh_jwt}
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["access_token"]
+    assert body["user"]["email"] == "hero@testorg.cz"
+    # Rotation: the response sets a fresh refresh cookie. We don't assert
+    # the *value* differs (clock-resolution flakes) — only that the response
+    # carries a Set-Cookie for the refresh slot.
+    set_cookie = response.headers.get("set-cookie", "")
+    assert REFRESH_COOKIE_NAME in set_cookie
+
+
+async def test_refresh_bypasses_trial_gate_for_expired_orgs(
+    client: AsyncClient,
+    with_fake_google: FakeGoogleOAuthClient,
+) -> None:
+    """Critical: refresh must work even on an expired trial.
+
+    The trial gate runs on `/auth/me` and every protected resource — but
+    refresh has to succeed regardless so the frontend can hydrate, then
+    receive 402 from `/auth/me`, then render `<TrialExpiredGate />` (which
+    needs the access token to drive "Exportovat data"). If refresh itself
+    402s, the gate never gets to render.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    state = sign_oauth_state({"nonce": "n"})
+    await client.get(
+        "/api/v1/auth/google/callback",
+        params={"code": "test-auth-code", "state": state},
+        cookies={STATE_COOKIE_NAME: state},
+        follow_redirects=False,
+    )
+
+    # Roll the org's trial back via a fresh session, then refetch the user id.
+    async with AsyncSessionLocal() as s:
+        user_row = (
+            await s.execute(select(User).where(User.email == "hero@testorg.cz"))
+        ).scalar_one()
+        user_id = user_row.id
+        org_id = user_row.organization_id
+        org = await s.get(Organization, org_id)
+        assert org is not None
+        org.trial_ends_at = datetime.now(tz=UTC) - timedelta(days=7)
+        await s.commit()
+
+    try:
+        refresh_jwt = create_refresh_token(user_id)
+        response = await client.post(
+            "/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: refresh_jwt}
+        )
+        assert response.status_code == 200, response.text
+
+        # Sanity: /auth/me with the same user *does* 402 — the gate kicks in
+        # downstream of refresh, not at refresh.
+        me_resp = await client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {response.json()['access_token']}"},
+        )
+        assert me_resp.status_code == 402
+    finally:
+        # Clean up the user + org so the next test gets a fresh slate.
+        async with AsyncSessionLocal() as s:
+            await s.execute(delete(User).where(User.id == user_id))
+            await s.execute(delete(Organization).where(Organization.id == org_id))
+            await s.commit()
+
+
+async def test_refresh_rejects_deactivated_user(
+    client: AsyncClient,
+    with_fake_google: FakeGoogleOAuthClient,
+) -> None:
+    state = sign_oauth_state({"nonce": "n"})
+    await client.get(
+        "/api/v1/auth/google/callback",
+        params={"code": "test-auth-code", "state": state},
+        cookies={STATE_COOKIE_NAME: state},
+        follow_redirects=False,
+    )
+
+    async with AsyncSessionLocal() as s:
+        user_row = (
+            await s.execute(select(User).where(User.email == "hero@testorg.cz"))
+        ).scalar_one()
+        user_id = user_row.id
+        org_id = user_row.organization_id
+        user_row.is_active = False
+        await s.commit()
+
+    try:
+        refresh_jwt = create_refresh_token(user_id)
+        response = await client.post(
+            "/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: refresh_jwt}
+        )
+        assert response.status_code == 401
+    finally:
+        async with AsyncSessionLocal() as s:
+            await s.execute(delete(User).where(User.id == user_id))
+            await s.execute(delete(Organization).where(Organization.id == org_id))
+            await s.commit()

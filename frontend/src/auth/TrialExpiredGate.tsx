@@ -1,8 +1,15 @@
 import { LifeBuoy, LogIn } from "lucide-react";
 
 import type { TrialExpiredPayload } from "@/lib/api";
+import { usePageTitle } from "@/lib/usePageTitle";
 
 const SUPPORT_EMAIL = "podpora@simplecrm.cz";
+const PRICE_PER_USER_CZK = 99;
+const priceFormatter = new Intl.NumberFormat("cs-CZ", {
+  style: "currency",
+  currency: "CZK",
+  maximumFractionDigits: 0,
+});
 
 interface TrialExpiredGateProps {
   payload?: TrialExpiredPayload;
@@ -16,6 +23,7 @@ interface TrialExpiredGateProps {
  * composition follow ui-design.md §5.11 verbatim.
  */
 export function TrialExpiredGate({ payload, onSubscribe, onExport }: TrialExpiredGateProps) {
+  usePageTitle("Zkušební doba skončila");
   const endedOn = payload?.trial_ends_at
     ? new Intl.DateTimeFormat("cs-CZ", { dateStyle: "long" }).format(
         new Date(payload.trial_ends_at),
@@ -39,7 +47,7 @@ export function TrialExpiredGate({ payload, onSubscribe, onExport }: TrialExpire
           Vaše zkušební doba skončila
         </h1>
         <p className="mt-3 text-base text-text-secondary">
-          Pokračujte za 99 Kč/uživatel/měsíc. Vaše data zůstanou v bezpečí.
+          Pokračujte za {priceFormatter.format(PRICE_PER_USER_CZK)}/uživatel/měsíc. Vaše data zůstanou v bezpečí.
         </p>
         {endedOn ? (
           <p className="mt-2 text-sm text-text-tertiary">Zkušební doba skončila {endedOn}.</p>

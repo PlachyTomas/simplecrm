@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-import csv
 import dataclasses
-import io
 import uuid
 from collections import defaultdict
 from datetime import UTC, date, datetime, time
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Query
-from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -255,66 +252,7 @@ async def pipeline_velocity(
     return Velocity(from_date=resolved_from, to_date=resolved_to, stages=stages)
 
 
-@router.get("/export-csv")
-async def export_deals_csv(
-    from_date: date | None = Query(default=None, alias="from"),
-    to_date: date | None = Query(default=None, alias="to"),
-    user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
-) -> StreamingResponse:
-    """Deals CSV export matching the caller's visibility scope."""
-    resolved_from, resolved_to, start, end = _date_window(from_date, to_date)
-
-    stmt = (
-        select(Deal, Stage)
-        .join(Stage, Stage.id == Deal.stage_id)
-        .where(
-            Deal.organization_id == user.organization_id,
-            Deal.created_at <= end,
-            (Deal.closed_at.is_(None)) | (Deal.closed_at >= start),
-        )
-    )
-    scoped = await scope_by_owner(stmt, session=session, user=user, owner_col=Deal.owner_user_id)
-
-    buffer = io.StringIO()
-    writer = csv.writer(buffer)
-    writer.writerow(
-        [
-            "id",
-            "name",
-            "stage",
-            "stage_type",
-            "value",
-            "currency",
-            "owner_user_id",
-            "company_id",
-            "expected_close_date",
-            "closed_at",
-            "lost_reason",
-            "created_at",
-        ]
-    )
-    for deal, stage in (await session.execute(scoped)).all():
-        writer.writerow(
-            [
-                str(deal.id),
-                deal.name,
-                stage.name,
-                stage.stage_type.value,
-                str(deal.value),
-                deal.currency,
-                str(deal.owner_user_id) if deal.owner_user_id else "",
-                str(deal.company_id),
-                deal.expected_close_date.isoformat() if deal.expected_close_date else "",
-                deal.closed_at.isoformat() if deal.closed_at else "",
-                deal.lost_reason or "",
-                deal.created_at.isoformat(),
-            ]
-        )
-    buffer.seek(0)
-    filename = f"simplecrm-deals-{resolved_from.isoformat()}_{resolved_to.isoformat()}.csv"
-    return StreamingResponse(
-        iter([buffer.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+# NOTE: export-csv used to live here. It now lives in `api/v1/data_export.py`
+# and is mounted on a separate router so the trial gate doesn't apply —
+# users must be able to walk away with their data even after their trial
+# ends. See the module docstring there.
