@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Building2, Handshake, Home, LogOut, Settings, Users, Workflow } from "lucide-react";
+import { Building2, Handshake, Home, LineChart, LogOut, Settings, Users, Workflow } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 import { ThemeToggle } from "@/lib/ThemeToggle";
@@ -18,6 +18,7 @@ const PRIMARY_ITEMS: NavItem[] = [
   { to: "/app/companies", label: "Firmy", icon: Building2 },
   { to: "/app/contacts", label: "Kontakty", icon: Users },
   { to: "/app/deals", label: "Obchody", icon: Handshake },
+  { to: "/app/reports", label: "Reporty", icon: LineChart },
 ];
 
 const SECONDARY_ITEMS: NavItem[] = [{ to: "/app/settings", label: "Nastavení", icon: Settings }];

@@ -11,7 +11,7 @@ class PaginationParams:
 
     def __init__(
         self,
-        limit: Annotated[int, Query(ge=1, le=100)] = 50,
+        limit: Annotated[int, Query(ge=1, le=200)] = 50,
         offset: Annotated[int, Query(ge=0)] = 0,
     ) -> None:
         self.limit = limit
@@ -23,5 +23,5 @@ class Page[T](BaseModel):
 
     items: list[T]
     total: int = Field(ge=0)
-    limit: int = Field(ge=1, le=100)
+    limit: int = Field(ge=1, le=200)
     offset: int = Field(ge=0)

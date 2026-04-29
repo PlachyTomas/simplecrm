@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "@/app/AppShell";
 import { MorePage } from "@/app/MorePage";
@@ -19,6 +19,7 @@ import { queryClient } from "@/lib/queryClient";
 import { ThemeProvider } from "@/lib/theme";
 import { ToastProvider } from "@/lib/toast";
 import { LandingPage } from "@/marketing/LandingPage";
+import { NotFoundPage } from "@/marketing/NotFoundPage";
 
 export function AppRoutes() {
   return (
@@ -45,7 +46,7 @@ export function AppRoutes() {
         <Route path="settings" element={<SettingsPage />} />
         <Route path="more" element={<MorePage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

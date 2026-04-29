@@ -415,44 +415,44 @@ export function PipelinePage() {
             }}
           />
         </div>
-      ) : null}
+      ) : (
+        <DndContext
+          sensors={sensors}
+          onDragStart={(event) => setActiveDealId(String(event.active.id))}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => setActiveDealId(null)}
+        >
+          <div className="flex flex-1 snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-6 [scroll-padding-left:1rem] md:snap-none md:px-8">
+            {filteredStages.map((stage) => (
+              <StageColumn
+                key={stage.id}
+                stage={stage}
+                locale={locale}
+                boardCurrency={board.currency}
+                draggingId={activeDealId}
+                onAddDeal={(stageId) => {
+                  setAddDealStageId(stageId);
+                  setAddDealOpen(true);
+                }}
+                onWinDeal={handleWinDeal}
+                winningDealId={winningDealId}
+              />
+            ))}
+          </div>
+          {!hasFilteredDeals ? (
+            <p
+              className="px-4 pb-4 text-center text-sm text-text-tertiary md:px-8"
+              role="status"
+            >
+              Žádné obchody neodpovídají filtru.
+            </p>
+          ) : null}
 
-      <DndContext
-        sensors={sensors}
-        onDragStart={(event) => setActiveDealId(String(event.active.id))}
-        onDragEnd={handleDragEnd}
-        onDragCancel={() => setActiveDealId(null)}
-      >
-        <div className="flex flex-1 snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-6 [scroll-padding-left:1rem] md:snap-none md:px-8">
-          {filteredStages.map((stage) => (
-            <StageColumn
-              key={stage.id}
-              stage={stage}
-              locale={locale}
-              boardCurrency={board.currency}
-              draggingId={activeDealId}
-              onAddDeal={(stageId) => {
-                setAddDealStageId(stageId);
-                setAddDealOpen(true);
-              }}
-              onWinDeal={handleWinDeal}
-              winningDealId={winningDealId}
-            />
-          ))}
-        </div>
-        {hasAnyDeals && !hasFilteredDeals ? (
-          <p
-            className="px-4 pb-4 text-center text-sm text-text-tertiary md:px-8"
-            role="status"
-          >
-            Žádné obchody neodpovídají filtru.
-          </p>
-        ) : null}
-
-        <DragOverlay>
-          {activeDeal ? <DealCard deal={activeDeal} locale={locale} /> : null}
-        </DragOverlay>
-      </DndContext>
+          <DragOverlay>
+            {activeDeal ? <DealCard deal={activeDeal} locale={locale} /> : null}
+          </DragOverlay>
+        </DndContext>
+      )}
 
       {/* Mobile FAB — header CTA collapses to bottom-right at <768px when
           there are deals on the board. Empty state shows its own primary CTA. */}

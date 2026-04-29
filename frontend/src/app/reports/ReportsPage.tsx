@@ -14,6 +14,7 @@ import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
 import { csNoun } from "@/lib/i18n/nouns";
+import { usePageTitle } from "@/lib/usePageTitle";
 
 function defaultRange(): { from: string; to: string } {
   const today = new Date();
@@ -197,6 +198,7 @@ function VelocitySection({ data }: { data: Velocity }) {
 }
 
 export function ReportsPage() {
+  usePageTitle("Reporty");
   const { data: user } = useCurrentUser();
   const { accessToken } = useAuth();
   const locale = user?.organization.locale ?? "cs-CZ";

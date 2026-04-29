@@ -118,7 +118,7 @@ export function CompaniesListPage() {
             <span className="inline-flex items-center gap-2">
               <span
                 aria-hidden
-                className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-surface-overlay text-[10px] font-semibold text-text-secondary"
+                className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-surface-overlay text-xs font-semibold text-text-secondary"
               >
                 {initials || "?"}
               </span>

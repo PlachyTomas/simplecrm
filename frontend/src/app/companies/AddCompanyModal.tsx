@@ -1,5 +1,5 @@
 import { Building2, RefreshCcw } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { useCreateCompany } from "@/app/companies/useCreateCompany";
 import { useLookupRegistry } from "@/app/companies/useLookupRegistry";
@@ -51,10 +51,16 @@ function describeLookupError(error: unknown, ico: string): string {
 
 export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalProps) {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  // Tracks the IČO whose ARES result currently fills the form. When the user
+  // edits IČO away from this value (or wipes it), the auto-filled fields are
+  // cleared so a subsequent failed lookup can't leave the previous record's
+  // name + address bound to the new IČO.
+  const lastFilledIcoRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setForm(EMPTY_FORM);
+      lastFilledIcoRef.current = null;
     }
   }, [open]);
 
@@ -68,7 +74,8 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
   const toast = useToast();
 
   useEffect(() => {
-    if (lookup.data) {
+    if (lookup.data && lookup.data.ico === form.ico) {
+      lastFilledIcoRef.current = lookup.data.ico;
       setForm((prev) => ({
         ...prev,
         name: lookup.data!.name,
@@ -79,8 +86,13 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
         address_zip: lookup.data!.address_zip ?? prev.address_zip,
         legal_form: lookup.data!.legal_form ?? prev.legal_form,
       }));
+      return;
     }
-  }, [lookup.data]);
+    if (lastFilledIcoRef.current && form.ico !== lastFilledIcoRef.current) {
+      lastFilledIcoRef.current = null;
+      setForm((prev) => ({ ...EMPTY_FORM, ico: prev.ico }));
+    }
+  }, [lookup.data, form.ico]);
 
   if (!open) return null;
 
@@ -164,7 +176,7 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-text-secondary">IČO</span>
               {lookupState === "typing" || lookupState === "loading" ? (
-                <span className="font-mono text-[11px] tabular-nums text-text-tertiary">
+                <span className="font-mono text-xs tabular-nums text-text-tertiary">
                   {icoLength} / 8
                 </span>
               ) : null}

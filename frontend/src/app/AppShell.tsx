@@ -46,6 +46,12 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-screen bg-bg text-text-primary">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-text-on-accent focus:shadow-lg"
+      >
+        Přeskočit na obsah
+      </a>
       <Sidebar onLogout={() => logout.mutate()} />
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
@@ -63,9 +69,13 @@ export function AppShell() {
                 <p className="truncate text-sm font-medium text-text-primary">
                   {user.organization.name}
                 </p>
-                <p className={`truncate text-xs ${trialBadgeClass}`}>
-                  Zkušební doba do <time>{trialEndsAt}</time> · {daysRemaining}{" "}
-                  {csNoun(daysRemaining, "den")} {daysRemaining >= 2 && daysRemaining <= 4 ? "zbývají" : "zbývá"}
+                <p className={`text-xs ${trialBadgeClass}`}>
+                  <span className="hidden sm:inline">
+                    Zkušební doba do <time>{trialEndsAt}</time> ·{" "}
+                  </span>
+                  {daysRemaining}{" "}
+                  {csNoun(daysRemaining, "den")}{" "}
+                  {daysRemaining >= 2 && daysRemaining <= 4 ? "zbývají" : "zbývá"}
                 </p>
               </div>
             </div>
@@ -99,7 +109,11 @@ export function AppShell() {
           />
         ) : null}
 
-        <main className="mx-auto w-full max-w-[1200px] flex-1 pb-20 md:pb-12">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="mx-auto w-full max-w-[1200px] flex-1 pb-20 md:pb-12 focus:outline-none"
+        >
           <Outlet />
         </main>
       </div>

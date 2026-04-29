@@ -77,15 +77,20 @@ export function DealsListPage() {
 
   if (deals.total === 0) {
     return (
-      <EmptyState
-        icon={Handshake}
-        title="Zatím žádné obchody"
-        body="Obchody zakládáte v Pipeline. Tady je uvidíte všechny v seznamu — s firmou, hodnotou, fází a vlastníkem."
-        primary={{
-          label: "Přejít do Pipeline",
-          onClick: () => navigate("/app/pipeline"),
-        }}
-      />
+      <div className="px-4 py-6 md:px-8 md:py-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold">Obchody</h1>
+        </div>
+        <EmptyState
+          icon={Handshake}
+          title="Zatím žádné obchody"
+          body="Obchody zakládáte v Pipeline. Tady je uvidíte všechny v seznamu — s firmou, hodnotou, fází a vlastníkem."
+          primary={{
+            label: "Přejít do Pipeline",
+            onClick: () => navigate("/app/pipeline"),
+          }}
+        />
+      </div>
     );
   }
 
@@ -113,7 +118,7 @@ export function DealsListPage() {
           <tbody className="divide-y divide-border-subtle">
             {deals.items.map((deal) => {
               const stage = stageById.get(deal.stage_id);
-              const stageDot = stage ? stageColor(stage.position, stage.color) : "#71717A";
+              const stageDot = stage ? stageColor(stage.position, stage.color) : null;
               const owner = deal.owner_user_id
                 ? ownerNameById.get(deal.owner_user_id) ?? "—"
                 : "—";
@@ -138,7 +143,7 @@ export function DealsListPage() {
                     {formatMoney(deal.value, deal.currency, locale)}
                   </td>
                   <td className="hidden px-4 py-3 text-sm md:table-cell">
-                    {stage ? (
+                    {stage && stageDot ? (
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-overlay px-2 py-0.5 text-xs">
                         <span
                           aria-hidden

@@ -7,6 +7,7 @@ import { useCompany } from "@/app/companies/useCompany";
 import type { CompanyOut } from "@/app/companies/useCompanies";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 
 type TabKey = "overview" | "contacts" | "deals" | "activity" | "notes";
@@ -112,6 +113,7 @@ export function CompanyDetailPage() {
   const { data: company, isPending, isError } = useCompany(companyId);
   const { data: user } = useCurrentUser();
   const { data: usersPage } = useOrgUsers();
+  usePageTitle(company?.name ?? "Detail firmy");
   const ownerName = useMemo(() => {
     if (!company?.owner_user_id) return null;
     return usersPage?.items.find((u) => u.id === company.owner_user_id)?.name ?? null;

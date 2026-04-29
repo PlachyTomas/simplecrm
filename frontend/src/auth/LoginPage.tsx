@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { AuthContext } from "@/auth/AuthContext";
 import { API_BASE_URL, apiFetch } from "@/lib/api";
 import { ThemeToggle } from "@/lib/ThemeToggle";
+import { usePageTitle } from "@/lib/usePageTitle";
 
 const GOOGLE_LOGIN_PATH = "/api/v1/auth/google/login";
 // Dev login panel is double-gated: never appears in a production bundle
@@ -83,19 +84,23 @@ function DevLoginPanel() {
 }
 
 export function LoginPage() {
+  usePageTitle("Přihlášení");
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-bg px-4">
       <div className="absolute right-4 top-4">
         <ThemeToggle variant="compact" />
       </div>
-      <div className="w-full max-w-md rounded-lg border border-border bg-surface p-6 text-center shadow-md">
+      <main
+        aria-labelledby="login-title"
+        className="w-full max-w-md rounded-lg border border-border bg-surface p-6 text-center shadow-md"
+      >
         <div
           aria-hidden
           className="mx-auto mb-5 inline-flex h-12 w-12 items-center justify-center rounded-md bg-highlight text-text-on-accent"
         >
           <Sparkles size={24} strokeWidth={1.75} />
         </div>
-        <h1 className="text-2xl font-semibold">Vítejte v SimpleCRM</h1>
+        <h1 id="login-title" className="text-2xl font-semibold">Vítejte v SimpleCRM</h1>
         <p className="mt-3 text-base text-text-secondary">
           Přihlaste se pomocí Google účtu. První uživatel získá 30 dní zdarma.
         </p>
@@ -112,7 +117,7 @@ export function LoginPage() {
         </p>
 
         {DEV_AUTH_ENABLED ? <DevLoginPanel /> : null}
-      </div>
+      </main>
     </div>
   );
 }

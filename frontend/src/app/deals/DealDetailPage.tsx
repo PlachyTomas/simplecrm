@@ -5,6 +5,7 @@ import { Link, useParams } from "react-router-dom";
 import { useMarkDealLost, useMarkDealWon } from "@/app/deals/useDealActions";
 import { useDeal } from "@/app/deals/useDeals";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { usePageTitle } from "@/lib/usePageTitle";
 
 const LOST_REASONS = [
   "Cena",
@@ -119,6 +120,7 @@ export function DealDetailPage() {
   const { data: deal, isPending, isError } = useDeal(dealId);
   const { data: user } = useCurrentUser();
   const [lostDialogOpen, setLostDialogOpen] = useState(false);
+  usePageTitle(deal?.name ?? "Detail obchodu");
 
   const markWon = useMarkDealWon(dealId);
   const markLost = useMarkDealLost(dealId);

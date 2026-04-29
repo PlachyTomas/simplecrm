@@ -14,6 +14,7 @@ import { UsersSection } from "@/app/settings/UsersSection";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { ApiError } from "@/lib/api";
 import { ThemeToggle } from "@/lib/ThemeToggle";
+import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 
 type SettingsTab =
@@ -25,14 +26,42 @@ type SettingsTab =
   | "billing"
   | "integrations";
 
-const TABS: { key: SettingsTab; label: string }[] = [
-  { key: "pipeline", label: "Pipeline" },
-  { key: "teams", label: "Týmy" },
-  { key: "users", label: "Uživatelé" },
-  { key: "appearance", label: "Vzhled" },
-  { key: "permissions", label: "Oprávnění" },
-  { key: "billing", label: "Fakturace" },
-  { key: "integrations", label: "Integrace" },
+const TABS: { key: SettingsTab; label: string; description: string }[] = [
+  {
+    key: "pipeline",
+    label: "Pipeline",
+    description: "Spravujte fáze pipeline a jejich pořadí.",
+  },
+  {
+    key: "teams",
+    label: "Týmy",
+    description: "Sdružujte obchodníky pod manažery.",
+  },
+  {
+    key: "users",
+    label: "Uživatelé",
+    description: "Spravujte role, týmovou příslušnost a aktivitu členů.",
+  },
+  {
+    key: "appearance",
+    label: "Vzhled",
+    description: "Motiv, barvy a další vizuální nastavení.",
+  },
+  {
+    key: "permissions",
+    label: "Oprávnění",
+    description: "Pravidla, kdo a co může v aplikaci dělat.",
+  },
+  {
+    key: "billing",
+    label: "Fakturace",
+    description: "Detaily plánu, faktur a způsobu platby.",
+  },
+  {
+    key: "integrations",
+    label: "Integrace",
+    description: "Propojení s externími službami.",
+  },
 ];
 
 type StageType = "open" | "won" | "lost";
@@ -250,6 +279,9 @@ export function SettingsPage() {
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>("pipeline");
 
+  const activeTabMeta = TABS.find((t) => t.key === activeTab) ?? TABS[0];
+  usePageTitle(`Nastavení — ${activeTabMeta.label}`);
+
   if (!user) {
     return (
       <div className="p-8 text-sm text-text-tertiary" role="status">
@@ -304,10 +336,8 @@ export function SettingsPage() {
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold">Nastavení pipeline</h1>
-        <p className="mt-1 text-sm text-text-tertiary">
-          Spravujte fáze pipeline, týmy a uživatele vaší organizace.
-        </p>
+        <h1 className="text-2xl font-semibold">Nastavení — {activeTabMeta.label}</h1>
+        <p className="mt-1 text-sm text-text-tertiary">{activeTabMeta.description}</p>
       </header>
 
       <nav aria-label="Karty nastavení" className="mb-6 border-b border-border-subtle">
@@ -490,6 +520,13 @@ function PermissionsSection() {
   );
 }
 
+const PRICE_PER_USER_CZK = 99;
+const priceFormatter = new Intl.NumberFormat("cs-CZ", {
+  style: "currency",
+  currency: "CZK",
+  maximumFractionDigits: 0,
+});
+
 function BillingSection() {
   return (
     <section className="rounded-lg border border-border bg-surface p-6">
@@ -498,7 +535,10 @@ function BillingSection() {
         Detaily plánu, faktur a způsobu platby.
       </p>
       <div className="mt-4 rounded-md border border-border-subtle bg-surface-overlay p-4">
-        <p className="text-sm text-text-primary">Zkušební verze · 99 Kč / uživatel / měsíc po skončení.</p>
+        <p className="text-sm text-text-primary">
+          Zkušební verze · {priceFormatter.format(PRICE_PER_USER_CZK)} / uživatel / měsíc po
+          skončení.
+        </p>
         <p className="mt-1 text-xs text-text-tertiary">
           Spravování plateb a fakturace připravujeme.
         </p>

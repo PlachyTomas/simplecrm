@@ -7,6 +7,7 @@ import { useAuth } from "@/auth/useAuth";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { useMediaQuery } from "@/lib/useMediaQuery";
+import { usePageTitle } from "@/lib/usePageTitle";
 
 interface Row {
   to?: string;
@@ -16,6 +17,7 @@ interface Row {
 }
 
 export function MorePage() {
+  usePageTitle("Více");
   const isMobile = useMediaQuery("(max-width: 767px)");
   const { accessToken, clearAuth } = useAuth();
   const logout = useMutation({
