@@ -4,13 +4,16 @@ import {
   ChevronDown,
   Database,
   Mail,
+  Menu,
   MousePointerClick,
   RefreshCw,
   Scissors,
   Sparkles,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 
 import { API_BASE_URL } from "@/lib/api";
@@ -20,10 +23,34 @@ import { cn } from "@/lib/utils";
 const GOOGLE_LOGIN_URL = `${API_BASE_URL}/api/v1/auth/google/login`;
 const PRICE_PER_USER_CZK = 99;
 
+const NAV_LINKS: { href: string; label: string }[] = [
+  { href: "#funkce", label: "Funkce" },
+  { href: "#cenik", label: "Ceník" },
+  { href: "#faq", label: "FAQ" },
+];
+
 function Nav() {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // Close on Escape; lock body scroll while open.
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDrawerOpen(false);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [drawerOpen]);
+
   return (
     <header className="bg-bg/90 sticky top-0 z-30 border-b border-border-subtle backdrop-blur">
-      <div className="mx-auto flex max-w-[1200px] items-center justify-between px-4 py-4 md:px-8">
+      <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-4 px-4 py-4 md:gap-8 md:px-8">
         <Link to="/" className="flex items-center gap-2" aria-label="SimpleCRM">
           <span
             aria-hidden
@@ -34,33 +61,155 @@ function Nav() {
           <span className="text-lg font-semibold">SimpleCRM</span>
         </Link>
         <nav aria-label="Hlavní" className="hidden items-center gap-6 md:flex">
-          <a href="#funkce" className="text-sm text-text-secondary hover:text-text-primary">
-            Funkce
-          </a>
-          <a href="#cenik" className="text-sm text-text-secondary hover:text-text-primary">
-            Ceník
-          </a>
-          <a href="#faq" className="text-sm text-text-secondary hover:text-text-primary">
-            FAQ
-          </a>
+          {NAV_LINKS.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="text-sm text-text-secondary hover:text-text-primary"
+            >
+              {link.label}
+            </a>
+          ))}
         </nav>
         <div className="flex items-center gap-3">
-          <ThemeToggle variant="compact" className="hidden sm:inline-flex" />
+          <ThemeToggle variant="compact" className="hidden md:inline-flex" />
           <Link
             to="/login"
-            className="hidden h-10 items-center justify-center rounded-md px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary sm:inline-flex"
+            className="hidden h-10 items-center justify-center rounded-md px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary md:inline-flex"
           >
             Přihlásit se
           </Link>
           <a
             href={GOOGLE_LOGIN_URL}
-            className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover sm:px-5"
           >
             Vyzkoušet zdarma
           </a>
+          <button
+            ref={triggerRef}
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Otevřít menu"
+            aria-expanded={drawerOpen}
+            aria-controls="landing-mobile-drawer"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-surface text-text-secondary transition-colors duration-fast hover:text-text-primary md:hidden"
+          >
+            <Menu size={20} strokeWidth={1.75} />
+          </button>
         </div>
       </div>
+
+      {drawerOpen ? (
+        <MobileDrawer onClose={() => setDrawerOpen(false)} triggerRef={triggerRef} />
+      ) : null}
     </header>
+  );
+}
+
+const FOCUSABLE_SELECTOR =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+function MobileDrawer({
+  onClose,
+  triggerRef,
+}: {
+  onClose: () => void;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
+}) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Move focus into the drawer on open; restore to the trigger on close.
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+    const trigger = triggerRef.current;
+    return () => {
+      // Only restore if the trigger is still in the document and focusable.
+      // Link/anchor clicks inside the drawer navigate away — focus restore
+      // is a no-op there, which is fine.
+      trigger?.focus();
+    };
+  }, [triggerRef]);
+
+  // Trap Tab/Shift+Tab inside the dialog.
+  useEffect(() => {
+    const node = dialogRef.current;
+    if (!node) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusables = node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey && (active === first || !node.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    node.addEventListener("keydown", onKey);
+    return () => node.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Portaled to body so the drawer escapes the sticky header's
+  // backdrop-filter stacking context (which would otherwise clip
+  // `position: fixed` children to the header's bounds, not the viewport).
+  return createPortal(
+    <div
+      ref={dialogRef}
+      id="landing-mobile-drawer"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="landing-mobile-drawer-title"
+      className="fixed inset-0 z-50 flex flex-col bg-bg md:hidden"
+    >
+      <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-4 py-4">
+        <p id="landing-mobile-drawer-title" className="text-sm font-semibold uppercase tracking-wider text-text-tertiary">
+          Menu
+        </p>
+        <button
+          ref={closeButtonRef}
+          type="button"
+          onClick={onClose}
+          aria-label="Zavřít menu"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary"
+        >
+          <X size={20} strokeWidth={1.75} />
+        </button>
+      </div>
+      <nav aria-label="Hlavní mobilní" className="flex flex-1 flex-col gap-1 p-4">
+        {NAV_LINKS.map((link) => (
+          <a
+            key={link.href}
+            href={link.href}
+            onClick={onClose}
+            className="rounded-md px-3 py-3 text-base font-medium text-text-primary transition-colors duration-fast hover:bg-surface-overlay"
+          >
+            {link.label}
+          </a>
+        ))}
+        <Link
+          to="/login"
+          onClick={onClose}
+          className="mt-2 rounded-md px-3 py-3 text-base font-medium text-text-primary transition-colors duration-fast hover:bg-surface-overlay"
+        >
+          Přihlásit se
+        </Link>
+      </nav>
+      <div className="flex items-center justify-between gap-3 border-t border-border-subtle px-4 py-4">
+        <ThemeToggle variant="compact" />
+        <a
+          href={GOOGLE_LOGIN_URL}
+          className="inline-flex h-10 flex-1 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
+        >
+          Vyzkoušet zdarma
+        </a>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -170,7 +319,7 @@ function MockBoard() {
                   className="rounded border border-border bg-surface p-2 text-left shadow-sm"
                 >
                   <p className="truncate text-xs font-medium">{deal.name}</p>
-                  <p className="mt-1 font-mono text-[11px] tabular-nums text-text-secondary">
+                  <p className="mt-1 font-mono text-xs tabular-nums text-text-secondary">
                     {deal.amount}
                   </p>
                 </div>
