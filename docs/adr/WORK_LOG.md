@@ -4,6 +4,20 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-29 — QA-024 Part B closed (refresh-token allowlist table)
+
+User confirmed the multi-device-friendly allowlist approach was the right path, so the deferred half of QA-024 is now done. Frontend untouched; the API contract is unchanged — only enforcement tightens.
+
+- New `refresh_tokens` table (Alembic `d4eeb0570c57_phase3_refresh_tokens_allowlist`): `jti VARCHAR(64) PK`, `user_id UUID FK ON DELETE CASCADE`, `expires_at TIMESTAMPTZ`, `created_at TIMESTAMPTZ`. Indexed on `user_id` and `expires_at`.
+- `app/core/security.create_refresh_token` now returns `IssuedRefreshToken(token, jti, expires_at)` so the auth router can record the row alongside issuing the JWT. Module stays DB-free.
+- `app/api/v1/auth.py` gains `_issue_and_record_refresh(session, user_id)` and uses it from `google_callback`, `dev_login`, and `/auth/refresh` (rotation: delete old `jti`, insert new). `/auth/logout` best-effort revokes by deleting the row whose `jti` matches the cookie. `/auth/refresh` returns 401 when the `jti` is missing from the allowlist (covers replay-after-rotation, post-logout replay, stolen-and-bound-to-different-user).
+- Three new pytest cases verify the security guarantees: `test_refresh_rejects_replayed_jti_after_rotation`, `test_logout_revokes_refresh_token_server_side`, `test_refresh_supports_multi_device`. Existing tests updated to use the cookie set by `google_callback` instead of out-of-band-minted tokens (which no longer satisfy the allowlist by design).
+- Verified live against the running uvicorn: dev-login → refresh (200, rotated `jti`) → replay original cookie (401 "Refresh token revoked"); logout (204) → refresh same cookie (401).
+
+Backend `ruff check && mypy app && pytest -q` 191 passed (188 → 191 — three new tests, no regressions). Frontend untouched, still 37/37.
+
+QA report status: **21 of 24 fixed**, only the three Tier 3 spec gaps remain (QA-010, QA-011, QA-016).
+
 ## 2026-04-29 — QA-023 / QA-025 / QA-024 Part A (open follow-ups)
 
 Closed two of the three open follow-ups discovered during the Tier 2 verification pass, plus the operationally-important half of the third. Frontend `pnpm typecheck && pnpm lint && pnpm test` 37/37 green; backend `ruff && mypy && pytest -q` 188 passed (one new test, plus the pre-existing dev-login env-flag failure).
