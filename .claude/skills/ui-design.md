@@ -21,7 +21,7 @@ When in doubt, imagine the page sitting next to these references:
 
 It must **not** look like:
 - A generic shadcn demo (use shadcn as foundation, but tune tokens and spacing).
-- A crypto dashboard (no gradient overload, no glassmorphism everywhere).
+- A crypto dashboard (no gradient overload).
 - A corporate SaaS (no baby blue, no rounded cartoon illustrations).
 - A Notion clone (we are denser and more decisive).
 
@@ -589,7 +589,6 @@ Always respect `prefers-reduced-motion: reduce` — reduce all motion to 0ms dur
 - **Do not** use inline `style={{ color: '#...' }}` for anything that should be themed.
 - **Do not** nest shadcn components five levels deep when a custom component would be clearer.
 - **Do not** use gradients on surfaces. Gradients are allowed only on: the landing page hero glow, charts, and the loading-skeleton shimmer. That's it.
-- **Do not** use glassmorphism (`backdrop-filter: blur`) anywhere. It's dated and hurts performance.
 - **Do not** use pure black (`#000000`) or pure white (`#FFFFFF`) anywhere — always use the token values.
 - **Do not** add `border-radius` on the outermost page container. Cards yes, pages no.
 - **Do not** use three or more font weights on the same screen. Usually 400 + 500 + 600 is plenty; 700 is for display contexts only.

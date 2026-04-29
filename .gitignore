@@ -52,3 +52,4 @@ pnpm-debug.log*
 playwright-report/
 test-results/
 misc/
+.playwright-mcp/

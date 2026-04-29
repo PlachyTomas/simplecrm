@@ -147,7 +147,6 @@ Headline "CRM pro prodej. Nic víc, nic míň." — the word **"prodej"** carrie
 - **Magenta text on white.** WCAG passes but register is wrong — reads "notification dot," not "brand moment."
 - **More than one magenta element per light-mode screen.** The color reads louder on white than on black. Restraint scales with surface brightness.
 - **Cool slate + cobalt blue + pure white.** The 2019 B2B SaaS cliché. Migrating buyers already associate this with Salesforce and Zoho.
-- **Glassmorphism.** `backdrop-filter: blur()` anywhere. Dated, performance-bad.
 - **Mesh gradients or harsh multi-stop gradients.** Stripe-2017 era. The one exception: the hero visual's subtle magenta/indigo glow on the landing page.
 - **Full card tints on Kanban.** Destroys scannability at density. Left-seam only.
 - **Rainbow status pills everywhere in data tables.** monday.com gets away with it because that IS their product; in a CRM chart it's noise.

@@ -4,6 +4,54 @@ Per-batch entries for the work driven by `FIXES_TASK.md`. Newest at the top.
 
 ---
 
+## 2026-04-29 — QA-023 / QA-025 / QA-024 Part A (open follow-ups)
+
+Closed two of the three open follow-ups discovered during the Tier 2 verification pass, plus the operationally-important half of the third. Frontend `pnpm typecheck && pnpm lint && pnpm test` 37/37 green; backend `ruff && mypy && pytest -q` 188 passed (one new test, plus the pre-existing dev-login env-flag failure).
+
+- **QA-023 (P3, A11Y) `/app/deals` empty-state missing `<h1>`** — `DealsListPage`'s zero-deals branch wrapped the `<EmptyState />` in a top-level early-return, bypassing the page header. Fix: lift `<h1>Obchody</h1>` into the empty-state branch (subtitle omitted because there's nothing to count). Verified at 1280×800 — Playwright snapshot now reports `heading "Obchody" [level=1]` followed by the empty-state's `[level=2]`. Companies/Pipeline/Contacts/Reports list pages already render their `<h1>` outside the conditional, audited.
+- **QA-025 (P3, A11Y) mobile drawer focus management** — `MobileDrawer` now: (1) takes a `triggerRef` from `Nav` and restores focus to the hamburger via the effect's cleanup on unmount, (2) auto-focuses the close button on mount, (3) traps Tab/Shift+Tab inside the dialog node via a keydown listener that wraps last↔first using a standard focusables selector. Verified end-to-end via Playwright at 390×844: open → close-button focused; Tab from last wraps to first; Shift+Tab from first wraps to last; X click and Escape both close the drawer and return focus to the hamburger.
+- **QA-024 (P3, SEC) Part A — rate-limit on the ungated export** — `RateLimiter(max_calls=10, window_seconds=60)` added to `app/api/v1/data_export.py` keyed by `user.id`. Returns 429 once full. New `test_export_csv_rate_limit_returns_429` mirrors the existing companies/lookup-registry test pattern (override the dep, fire two calls, assert 200 then 429). Module-level limiter — same Redis-on-horizontal-scale caveat as the existing `_registry_rate_limiter`, called out in the report.
+- **QA-024 Part B — server-side jti invalidation: deferred.** Three approaches with real tradeoffs (column on `users` = breaks multi-device; allowlist table = ~half-day; denylist table = grows). Surfaced as a product decision in the QA report rather than building speculatively for a P3 defense-in-depth gap that wasn't introduced by this work.
+
+Status across the QA report: **20 of 24 findings fixed**, 1 partially fixed (QA-024), 3 Tier 3 spec gaps still open.
+
+## 2026-04-29 — Tier 2 follow-up: trial gate, mobile drawer, refresh-token
+
+All three Tier 2 items closed in a follow-up pass. Frontend `pnpm typecheck && pnpm lint && pnpm test` 36/36 green; backend `ruff && mypy && pytest -q` 181/181 (plus the documented pre-existing dev-login env-flag failure).
+
+- **QA-001 (P0) trial gate** — Wired the existing `require_active_trial_or_subscription` dependency: every protected router in `app/api/v1/__init__.py` mounted with `dependencies=[Depends(require_active_trial_or_subscription)]`; `/auth/me` switched to depend on the same. `/auth/logout` and `/auth/refresh` deliberately bypass so users can still sign out + refresh on an expired trial. Browser-verified: expired-org user lands on `<TrialExpiredGate />` full-screen overlay; curl-verified: every protected endpoint 402s with the trial payload, `/auth/logout` 204s. Page title now flips to "Zkušební doba skončila — SimpleCRM" via a small `usePageTitle` add to `TrialExpiredGate.tsx`.
+- **QA-004 (P1) mobile landing drawer** — Hamburger menu + portaled full-screen drawer. Drawer is portaled to `document.body` because the sticky header's `backdrop-filter` creates a containing block that would otherwise clip `position: fixed` (caught during verification). Escape closes; body scroll locked while open; anchor links auto-close on click. Theme toggle + "Přihlásit se" desktop visibility raised from `sm:` to `md:` so the drawer is the single source of truth on `<md`.
+- **QA-006 (P2) refresh-token wiring** — New `POST /auth/refresh` exchanges the httponly `simplecrm_refresh` cookie for a fresh access token + rotates the refresh; `dev-login` also sets the cookie now (parity with OAuth). `AuthProvider` does cold-load refresh and exposes `refreshSettled`; `ProtectedRoute` renders a "Načítání…" placeholder while the attempt is in flight rather than bouncing to `/login`. Verified: after dev-login, typing `/app/companies` into the address bar (full reload) keeps the user authenticated. One test in `App.test.tsx` updated to `waitFor` + mock the refresh 401 (the synchronous-redirect assumption no longer holds).
+
+Polish that landed alongside, prompted by an advisor pre-commit pass:
+- Trial gate's `Exportovat data` and `Přejít na předplatné` buttons used to be no-ops because `ProtectedRoute` rendered the gate without `onExport` / `onSubscribe` props. Now wired: export hits a new ungated `/api/v1/reports/export-csv` extracted into `app/api/v1/data_export.py` (so users can always walk away with their data, even on an expired trial); subscribe falls back to a `mailto:podpora@simplecrm.cz` until Stripe lands. The new export adds a UTF-8 BOM so Excel renders Czech diacritics correctly (closes the brief §4.6 spot-check informally).
+- `backend/tests/api/v1/test_auth.py` gains 5 tests covering `/auth/refresh`: missing/malformed cookie → 401, access-JWT-in-refresh-slot → 401, valid → 200 + rotated `Set-Cookie`, **expired-trial bypass → 200** (with a sanity assertion that `/auth/me` then 402s for the same user), deactivated user → 401.
+- `frontend/src/__tests__/App.test.tsx` gains a "hydrates the session via /auth/refresh on cold-load" test for the success path (the existing test only covered the failure path).
+- The QA report's QA-006 "rotation" claim was softened — it's *cookie-value* rotation, not server-side invalidation. The previous JWT remains cryptographically valid until TTL. Logged as **QA-024 (P3, SEC)** with the suggested `jti`-blocklist fix.
+
+Status across the QA report: **18 of 24 findings fixed**. Three Tier 3 spec gaps still open (QA-010 Fakturace, QA-011 invite-user, QA-016 CVD toggle). Three new follow-ups logged: QA-023 (`/app/deals` empty-state has no `<h1>`), QA-024 (refresh-token rotation has no server-side invalidation), QA-025 (mobile drawer doesn't trap focus or restore on close).
+
+## 2026-04-29 — QA fix pass: 15 of 22 findings closed
+
+Worked through `docs/qa/2026-04-28-qa-report.md` triaged into Tier 1 (safe quick wins, fixed now), Tier 2 (architectural, needs decision before touching), Tier 3 (spec gaps, not fixes). **15 fixes shipped**, all verified via Playwright + axe-core re-run + `pnpm typecheck && pnpm lint && pnpm test` (36/36) + `ruff && mypy && pytest -q` (181/181 plus the documented pre-existing `test_dev_login_404_when_disabled` env-flag failure). Per-finding annotations and screenshots in the report itself; artifacts in `qa-artifacts/2026-04-29/snapshots/`.
+
+Highlights:
+- **QA-002 stale ARES auto-fill:** new `lastFilledIcoRef` clears the form when the user edits IČO away from the previously-filled value.
+- **QA-003 limit cap mismatch:** `PaginationParams.limit` raised `le=100` → `le=200` in `backend/app/schemas/pagination.py`.
+- **QA-007 404 page:** new `NotFoundPage` with Czech copy; replaces silent `<Navigate to="/">`.
+- **QA-008 Reports link:** added to the desktop sidebar.
+- **QA-009 Settings heading:** now reflects the active tab + drives `usePageTitle`.
+- **QA-013 contrast:** `--color-text-tertiary` bumped in both themes; axe-core color-contrast on dashboard 21 → 0.
+- **QA-015 skip link:** `Přeskočit na obsah` lands on first Tab; `<main id="main-content">` target.
+- **QA-017 Intl currency:** `99 Kč` literals in Fakturace + TrialExpiredGate now `Intl.NumberFormat`.
+- Plus QA-012 (page titles on 7 pages), QA-014 (login `<main>` landmark), QA-018 (768 header gap), QA-019 (mobile banner truncation), QA-020 (pipeline empty-state dedupe), QA-021 (off-scale fonts), QA-022 (deals fallback hex).
+
+Still open (Tier 2 — flagged for next session): QA-001 (P0 trial gate, needs `Depends(require_active_trial)` + 402 path), QA-004 (mobile landing nav drawer), QA-006 (refresh-token wiring). One new minor finding: **QA-023 (P3, A11Y)** — `/app/deals` empty-state has no `<h1>`. Tier 3 left as documented spec gaps: QA-010, QA-011, QA-016. Updated counts: 22 findings total (was 21; QA-023 added).
+
+## 2026-04-28 — QA pass complete (re-run after Playwright fix)
+
+Session 2 — QA pass complete. **21 findings (P0:1, P1:3, P2:13, P3:4).** Playwright unblocked by installing Chrome-for-Testing v147 (`npx @playwright/mcp install-browser chrome-for-testing`). Headline: trial gate fails open (P0 — expired-trial org has full app and API access, no `TrialExpiredGate` ever triggers); Add-Firma modal keeps stale ARES auto-fill after a failed second lookup (P1); `DealsListPage` requests `limit=200` but backend caps at 100, every visit logs 422 (P1); mobile landing has no nav drawer (P1); `text-text-tertiary` token fails AA contrast (P2, ~33+ nodes); 7 pages still don't set `document.title`. Full report: `docs/qa/2026-04-28-qa-report.md`. Artifacts under `qa-artifacts/2026-04-28/`. Root-level `QA_REPORT.md` from session 1 has been deleted (superseded). 2026-04-29: design brief and `ui-design.md` updated to permit glassmorphism; QA-005 retired.
+
 ## 2026-04-28 — QA pass blocked at pre-flight
 
 Session 1 — QA pass blocked at §2.1. 0 findings (P0:0, P1:0, P2:0, P3:0). Playwright MCP cannot launch a browser; see `QA_REPORT.md` Appendix A for the one-line `~/.claude.json` fix. Static rg-sweep findings (glassmorphism in 6 files, missing skip link, missing colorblind toggle, hardcoded `Kč` and hex codes, off-scale text sizes, skill drift) captured as un-numbered Appendix B notes for the next session to triage.
