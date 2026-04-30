@@ -19,6 +19,7 @@ import { Link } from "react-router-dom";
 import { API_BASE_URL } from "@/lib/api";
 import { ThemeToggle } from "@/lib/ThemeToggle";
 import { cn } from "@/lib/utils";
+import { InteractivePipeline } from "@/marketing/InteractivePipeline";
 
 const GOOGLE_LOGIN_URL = `${API_BASE_URL}/api/v1/auth/google/login`;
 const PRICE_PER_USER_CZK = 99;
@@ -260,75 +261,11 @@ function Hero() {
           Žádná kreditní karta při registraci. Přihlášení přes Google.
         </p>
 
-        <div className="mx-auto mt-16 max-w-4xl">
-          <MockBoard />
+        <div className="mx-auto mt-16 max-w-5xl">
+          <InteractivePipeline />
         </div>
       </div>
     </section>
-  );
-}
-
-function MockBoard() {
-  const stages: { name: string; color: string; deals: { name: string; amount: string }[] }[] = [
-    {
-      name: "Nový lead",
-      color: "#3D5AFE",
-      deals: [
-        { name: "Obchod s Alza.cz", amount: "42 500 Kč" },
-        { name: "Rohlík — nabídka", amount: "28 000 Kč" },
-      ],
-    },
-    {
-      name: "Schůzka",
-      color: "#F59E0B",
-      deals: [{ name: "Notino – konzultace", amount: "60 000 Kč" }],
-    },
-    {
-      name: "Nabídka",
-      color: "#10B981",
-      deals: [{ name: "Mattoni — servis", amount: "125 000 Kč" }],
-    },
-    {
-      name: "Vyhráno",
-      // Brand magenta — the celebration hue. The mockup is the only place on
-      // the marketing page allowed two magenta moments (this dot + the hero
-      // word underline added in B1).
-      color: "#EC4899",
-      deals: [{ name: "O2 — školení", amount: "90 000 Kč" }],
-    },
-  ];
-  return (
-    <div aria-hidden className="rounded-xl border border-border bg-surface p-4 shadow-lg md:p-6">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {stages.map((stage) => (
-          <div
-            key={stage.name}
-            className="rounded-md border border-border-subtle bg-surface-overlay p-3"
-          >
-            <div className="flex items-center gap-2 border-b border-border-subtle pb-2">
-              <span
-                className="inline-block h-2 w-2 rounded-full"
-                style={{ backgroundColor: stage.color }}
-              />
-              <span className="text-xs font-semibold">{stage.name}</span>
-            </div>
-            <div className="mt-3 space-y-2">
-              {stage.deals.map((deal) => (
-                <div
-                  key={deal.name}
-                  className="rounded border border-border bg-surface p-2 text-left shadow-sm"
-                >
-                  <p className="truncate text-xs font-medium">{deal.name}</p>
-                  <p className="mt-1 font-mono text-xs tabular-nums text-text-secondary">
-                    {deal.amount}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
 
