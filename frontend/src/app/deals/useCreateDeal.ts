@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { BOARD_QUERY_KEY } from "@/app/pipeline/useBoard";
+import { invalidateDealReadModels } from "@/app/deals/cache";
 import { useAuth } from "@/auth/useAuth";
 import { apiFetch } from "@/lib/api";
 import type { components } from "@/types/api.generated";
@@ -19,8 +19,7 @@ export function useCreateDeal() {
         body: payload as unknown as Record<string, unknown>,
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: BOARD_QUERY_KEY });
-      void queryClient.invalidateQueries({ queryKey: ["deals"] });
+      invalidateDealReadModels(queryClient);
     },
   });
 }

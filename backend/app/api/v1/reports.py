@@ -264,7 +264,10 @@ async def pipeline_velocity(
     for deal, stage in (await session.execute(scoped)).all():
         if deal.closed_at is None:
             continue
-        days = (deal.closed_at - deal.created_at).total_seconds() / 86400.0
+        # Defensive clamp: a corrupt/back-dated row where closed_at < created_at
+        # would otherwise produce a negative cycle. We don't error — we floor at
+        # zero so the chart still renders sensibly.
+        days = max(0.0, (deal.closed_at - deal.created_at).total_seconds() / 86400.0)
         bucket = per_stage[stage.id]
         bucket.stage_id = stage.id
         bucket.name = stage.name
@@ -401,7 +404,10 @@ async def team_leaderboard(
             bucket.won_count += 1
             if deal.currency == org.currency:
                 bucket.won_value += deal.value
-        days = (deal.closed_at - deal.created_at).total_seconds() / 86400.0
+        # Defensive clamp: a corrupt/back-dated row where closed_at < created_at
+        # would otherwise produce a negative cycle. We don't error — we floor at
+        # zero so the chart still renders sensibly.
+        days = max(0.0, (deal.closed_at - deal.created_at).total_seconds() / 86400.0)
         bucket.cycle_days_sum += days
         bucket.cycle_days_count += 1
 
@@ -533,7 +539,9 @@ async def my_summary(
             if deal.currency == org.currency:
                 won_value += deal.value
         if deal.closed_at is not None:
-            cycle_sum += (deal.closed_at - deal.created_at).total_seconds() / 86400.0
+            cycle_sum += max(
+                0.0, (deal.closed_at - deal.created_at).total_seconds() / 86400.0
+            )
             cycle_count += 1
 
     return MySummary(

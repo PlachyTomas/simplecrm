@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { invalidateDealReadModels } from "@/app/deals/cache";
 import { useAuth } from "@/auth/useAuth";
 import { apiFetch } from "@/lib/api";
 import type { components } from "@/types/api.generated";
@@ -16,9 +17,7 @@ export function useMarkDealWon(dealId: string | undefined) {
         token: accessToken,
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["deal", dealId] });
-      void queryClient.invalidateQueries({ queryKey: ["deals"] });
-      void queryClient.invalidateQueries({ queryKey: ["pipeline"] });
+      invalidateDealReadModels(queryClient, dealId);
     },
   });
 }
@@ -39,9 +38,7 @@ export function useMarkAnyDealWon() {
         token: accessToken,
       }),
     onSuccess: (_data, { dealId }) => {
-      void queryClient.invalidateQueries({ queryKey: ["deal", dealId] });
-      void queryClient.invalidateQueries({ queryKey: ["deals"] });
-      void queryClient.invalidateQueries({ queryKey: ["pipeline"] });
+      invalidateDealReadModels(queryClient, dealId);
     },
   });
 }
@@ -57,9 +54,7 @@ export function useMarkDealLost(dealId: string | undefined) {
         body: payload,
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["deal", dealId] });
-      void queryClient.invalidateQueries({ queryKey: ["deals"] });
-      void queryClient.invalidateQueries({ queryKey: ["pipeline"] });
+      invalidateDealReadModels(queryClient, dealId);
     },
   });
 }

@@ -159,10 +159,18 @@ export function DealsListPage() {
                   <td className="hidden px-4 py-3 text-sm text-text-secondary lg:table-cell">
                     {owner}
                   </td>
-                  <td className="hidden px-4 py-3 text-sm text-text-tertiary md:table-cell">
-                    {deal.expected_close_date
-                      ? dateFmt.format(new Date(deal.expected_close_date))
-                      : "—"}
+                  <td className="hidden px-4 py-3 text-sm md:table-cell">
+                    {deal.closed_at ? (
+                      <span className="text-text-secondary">
+                        {dateFmt.format(new Date(deal.closed_at))}
+                      </span>
+                    ) : deal.expected_close_date ? (
+                      <span className="text-text-tertiary">
+                        ~{dateFmt.format(new Date(deal.expected_close_date))}
+                      </span>
+                    ) : (
+                      <span className="text-text-tertiary">—</span>
+                    )}
                   </td>
                 </tr>
               );

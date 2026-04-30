@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { invalidateDealReadModels } from "@/app/deals/cache";
 import { useAuth } from "@/auth/useAuth";
 import { apiFetch } from "@/lib/api";
 import type { components } from "@/types/api.generated";
@@ -69,8 +70,8 @@ export function useMoveDealStage() {
         queryClient.setQueryData(BOARD_QUERY_KEY, ctx.previous);
       }
     },
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: BOARD_QUERY_KEY });
+    onSettled: (_data, _err, { dealId }) => {
+      invalidateDealReadModels(queryClient, dealId);
     },
   });
 }
