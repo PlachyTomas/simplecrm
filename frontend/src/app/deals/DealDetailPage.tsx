@@ -1,10 +1,15 @@
-import { ArrowLeft, Check, X } from "lucide-react";
+import { ArrowLeft, Check, Pencil, RotateCcw, Trash2, X } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
+import { useCompany } from "@/app/companies/useCompany";
+import { useContact, useContacts } from "@/app/contacts/useContacts";
 import { useMarkDealLost, useMarkDealWon } from "@/app/deals/useDealActions";
-import { useDeal } from "@/app/deals/useDeals";
+import { useDeal, useDeleteDeal, useUpdateDeal } from "@/app/deals/useDeals";
+import { usePipelineBoard } from "@/app/pipeline/useBoard";
+import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { useToast } from "@/lib/toast";
 import { usePageTitle } from "@/lib/usePageTitle";
 
 const LOST_REASONS = [
@@ -115,15 +120,39 @@ function MarkLostDialog({
   );
 }
 
+interface EditState {
+  name: string;
+  value: string;
+  expected_close_date: string;
+  owner_user_id: string;
+  stage_id: string;
+  probability_override: string;
+  primary_contact_id: string;
+}
+
 export function DealDetailPage() {
   const { dealId } = useParams<{ dealId: string }>();
+  const navigate = useNavigate();
   const { data: deal, isPending, isError } = useDeal(dealId);
   const { data: user } = useCurrentUser();
+  const { data: usersPage } = useOrgUsers();
+  const { data: board } = usePipelineBoard();
+  const { data: company } = useCompany(deal?.company_id);
+  const { data: primaryContact } = useContact(deal?.primary_contact_id ?? undefined);
+  const { data: companyContactsPage } = useContacts({
+    companyId: deal?.company_id,
+    limit: 100,
+  });
   const [lostDialogOpen, setLostDialogOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [edit, setEdit] = useState<EditState | null>(null);
   usePageTitle(deal?.name ?? "Detail obchodu");
 
   const markWon = useMarkDealWon(dealId);
   const markLost = useMarkDealLost(dealId);
+  const updateDeal = useUpdateDeal(dealId);
+  const deleteDeal = useDeleteDeal(dealId);
+  const toast = useToast();
 
   const locale = user?.organization.locale ?? "cs-CZ";
   const dateFmt = useMemo(() => new Intl.DateTimeFormat(locale, { dateStyle: "long" }), [locale]);
@@ -155,6 +184,78 @@ export function DealDetailPage() {
   const moneyFmt = new Intl.NumberFormat(locale, { style: "currency", currency: deal.currency });
   const value = Number(deal.value);
   const isClosed = !!deal.closed_at;
+  const orgUsers = (usersPage?.items ?? []).filter((u) => u.is_active);
+  const stages = board?.stages ?? [];
+  const stage = stages.find((s) => s.id === deal.stage_id);
+  const owner = deal.owner_user_id
+    ? orgUsers.find((u) => u.id === deal.owner_user_id)?.name ?? "—"
+    : "—";
+  const companyContacts = companyContactsPage?.items ?? [];
+
+  function startEditing() {
+    setEdit({
+      name: deal!.name,
+      value: deal!.value,
+      expected_close_date: deal!.expected_close_date ?? "",
+      owner_user_id: deal!.owner_user_id ?? "",
+      stage_id: deal!.stage_id,
+      probability_override:
+        deal!.probability_override != null ? String(deal!.probability_override) : "",
+      primary_contact_id: deal!.primary_contact_id ?? "",
+    });
+    setEditing(true);
+  }
+
+  async function handleSave() {
+    if (!edit) return;
+    const numericValue = edit.value.trim() === "" ? 0 : Number(edit.value.replace(/\s/g, ""));
+    if (Number.isNaN(numericValue)) return;
+    const probability =
+      edit.probability_override.trim() === "" ? null : Number(edit.probability_override);
+    if (probability != null && (Number.isNaN(probability) || probability < 0 || probability > 100))
+      return;
+    try {
+      await updateDeal.mutateAsync({
+        name: edit.name.trim(),
+        value: String(numericValue),
+        expected_close_date: edit.expected_close_date || null,
+        owner_user_id: edit.owner_user_id || null,
+        stage_id: edit.stage_id,
+        probability_override: probability,
+        primary_contact_id: edit.primary_contact_id || null,
+      });
+      toast.success("Obchod uložen.");
+      setEditing(false);
+      setEdit(null);
+    } catch {
+      toast.error("Obchod se nepodařilo uložit.");
+    }
+  }
+
+  async function handleReopen() {
+    if (!window.confirm("Znovu otevřít tento obchod? Datum uzavření a důvod budou odstraněny."))
+      return;
+    try {
+      await updateDeal.mutateAsync({
+        closed_at: null,
+        lost_reason: null,
+      });
+      toast.success("Obchod znovu otevřen.");
+    } catch {
+      toast.error("Obchod se nepodařilo znovu otevřít.");
+    }
+  }
+
+  async function handleDelete() {
+    if (!window.confirm(`Smazat obchod "${deal!.name}"? Akci nelze vrátit zpět.`)) return;
+    try {
+      await deleteDeal.mutateAsync();
+      toast.success("Obchod smazán.");
+      navigate("/app/deals");
+    } catch {
+      toast.error("Obchod se nepodařilo smazat.");
+    }
+  }
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
@@ -172,26 +273,57 @@ export function DealDetailPage() {
             {Number.isNaN(value) ? `${deal.value} ${deal.currency}` : moneyFmt.format(value)}
           </p>
         </div>
-        {!isClosed ? (
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {!isClosed ? (
+            <>
+              <button
+                type="button"
+                onClick={() => markWon.mutate()}
+                disabled={markWon.isPending}
+                className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-accent px-5 text-sm font-semibold text-text-on-brand-accent transition-colors duration-fast hover:bg-brand-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Check size={16} strokeWidth={1.75} /> Označit jako vyhráno
+              </button>
+              <button
+                type="button"
+                onClick={() => setLostDialogOpen(true)}
+                disabled={markLost.isPending}
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
+              >
+                <X size={16} strokeWidth={1.75} /> Označit jako prohráno
+              </button>
+            </>
+          ) : (
             <button
               type="button"
-              onClick={() => markWon.mutate()}
-              disabled={markWon.isPending}
-              className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-accent px-5 text-sm font-semibold text-text-on-brand-accent transition-colors duration-fast hover:bg-brand-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Check size={16} strokeWidth={1.75} /> Označit jako vyhráno
-            </button>
-            <button
-              type="button"
-              onClick={() => setLostDialogOpen(true)}
-              disabled={markLost.isPending}
+              onClick={handleReopen}
+              disabled={updateDeal.isPending}
               className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
             >
-              <X size={16} strokeWidth={1.75} /> Označit jako prohráno
+              <RotateCcw size={16} strokeWidth={1.75} /> Znovu otevřít
             </button>
-          </div>
-        ) : null}
+          )}
+          {!editing ? (
+            <button
+              type="button"
+              onClick={startEditing}
+              className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
+            >
+              <Pencil size={14} strokeWidth={1.75} /> Upravit
+            </button>
+          ) : null}
+          {user?.role === "admin" ? (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleteDeal.isPending}
+              aria-label="Smazat obchod"
+              className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-3 text-sm font-medium text-text-secondary transition-colors duration-fast hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger disabled:opacity-60"
+            >
+              <Trash2 size={14} strokeWidth={1.75} />
+            </button>
+          ) : null}
+        </div>
       </header>
 
       <section className="rounded-lg border border-border bg-surface">
@@ -213,19 +345,139 @@ export function DealDetailPage() {
               </span>
             )}
           </Field>
+          <Field label="Název">
+            {editing && edit ? (
+              <input
+                type="text"
+                value={edit.name}
+                onChange={(e) => setEdit((p) => p && { ...p, name: e.target.value })}
+                className="block h-9 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
+              />
+            ) : (
+              deal.name
+            )}
+          </Field>
+          <Field label="Hodnota">
+            {editing && edit ? (
+              <input
+                type="text"
+                inputMode="decimal"
+                value={edit.value}
+                onChange={(e) => setEdit((p) => p && { ...p, value: e.target.value })}
+                className="block h-9 w-full rounded-md border border-border bg-surface-overlay px-3 font-mono text-sm tabular-nums focus:border-accent focus:outline-none"
+              />
+            ) : Number.isNaN(value) ? (
+              `${deal.value} ${deal.currency}`
+            ) : (
+              moneyFmt.format(value)
+            )}
+          </Field>
           <Field label="Firma">
             <Link
               to={`/app/companies/${deal.company_id}`}
               className="text-accent hover:text-accent-hover"
             >
-              Přejít na firmu
+              {company?.name ?? "Přejít na firmu"}
             </Link>
           </Field>
+          <Field label="Vlastník">
+            {editing && edit ? (
+              <select
+                value={edit.owner_user_id}
+                onChange={(e) =>
+                  setEdit((p) => p && { ...p, owner_user_id: e.target.value })
+                }
+                className="block h-9 rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
+              >
+                <option value="">Bez vlastníka</option>
+                {orgUsers.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              owner
+            )}
+          </Field>
+          <Field label="Fáze">
+            {editing && edit ? (
+              <select
+                value={edit.stage_id}
+                onChange={(e) => setEdit((p) => p && { ...p, stage_id: e.target.value })}
+                className="block h-9 rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
+              >
+                {stages.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              stage?.name ?? "—"
+            )}
+          </Field>
+          <Field label="Hlavní kontakt">
+            {editing && edit ? (
+              <select
+                value={edit.primary_contact_id}
+                onChange={(e) =>
+                  setEdit((p) => p && { ...p, primary_contact_id: e.target.value })
+                }
+                className="block h-9 rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
+              >
+                <option value="">Bez hlavního kontaktu</option>
+                {companyContacts.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.first_name} {c.last_name}
+                  </option>
+                ))}
+              </select>
+            ) : primaryContact ? (
+              <Link
+                to={`/app/contacts/${primaryContact.id}`}
+                className="text-accent hover:text-accent-hover"
+              >
+                {primaryContact.first_name} {primaryContact.last_name}
+              </Link>
+            ) : (
+              "—"
+            )}
+          </Field>
           <Field label="Očekávané uzavření">
-            {deal.expected_close_date ? dateFmt.format(new Date(deal.expected_close_date)) : "—"}
+            {editing && edit ? (
+              <input
+                type="date"
+                value={edit.expected_close_date}
+                onChange={(e) =>
+                  setEdit((p) => p && { ...p, expected_close_date: e.target.value })
+                }
+                className="block h-9 rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
+              />
+            ) : deal.expected_close_date ? (
+              dateFmt.format(new Date(deal.expected_close_date))
+            ) : (
+              "—"
+            )}
           </Field>
           <Field label="Pravděpodobnost">
-            {deal.probability_override != null ? `${deal.probability_override} %` : "dle fáze"}
+            {editing && edit ? (
+              <input
+                type="number"
+                min={0}
+                max={100}
+                placeholder="dle fáze"
+                value={edit.probability_override}
+                onChange={(e) =>
+                  setEdit((p) => p && { ...p, probability_override: e.target.value })
+                }
+                className="block h-9 w-32 rounded-md border border-border bg-surface-overlay px-3 text-sm tabular-nums focus:border-accent focus:outline-none"
+              />
+            ) : deal.probability_override != null ? (
+              `${deal.probability_override} %`
+            ) : (
+              "dle fáze"
+            )}
           </Field>
           <Field label="Vytvořeno">{dateFmt.format(new Date(deal.created_at))}</Field>
           {deal.closed_at ? (
@@ -233,6 +485,29 @@ export function DealDetailPage() {
           ) : null}
         </dl>
       </section>
+
+      {editing ? (
+        <div className="mt-4 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={updateDeal.isPending}
+            className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent disabled:opacity-60"
+          >
+            {updateDeal.isPending ? "Ukládám…" : "Uložit změny"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setEditing(false);
+              setEdit(null);
+            }}
+            className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary"
+          >
+            Zrušit
+          </button>
+        </div>
+      ) : null}
 
       <MarkLostDialog
         open={lostDialogOpen}

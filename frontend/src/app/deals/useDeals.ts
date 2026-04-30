@@ -55,3 +55,18 @@ export function useUpdateDeal(dealId: string | undefined) {
     },
   });
 }
+
+export function useDeleteDeal(dealId: string | undefined) {
+  const { accessToken } = useAuth();
+  const qc = useQueryClient();
+  return useMutation<void, Error, void>({
+    mutationFn: () =>
+      apiFetch<void>(`/api/v1/deals/${dealId}`, {
+        method: "DELETE",
+        token: accessToken,
+      }),
+    onSuccess: () => {
+      invalidateDealReadModels(qc, dealId);
+    },
+  });
+}

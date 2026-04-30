@@ -2,6 +2,7 @@ import { Handshake } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { useCompanies } from "@/app/companies/useCompanies";
+import { useContacts } from "@/app/contacts/useContacts";
 import { useCreateDeal } from "@/app/deals/useCreateDeal";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
@@ -26,6 +27,7 @@ interface FormState {
   name: string;
   companyId: string;
   ownerId: string;
+  primaryContactId: string;
   value: string;
   expectedCloseDate: string;
   stageId: string;
@@ -36,6 +38,7 @@ function buildEmptyForm(initialStageId: string | undefined, stages: PipelineStag
     name: "",
     companyId: "",
     ownerId: "",
+    primaryContactId: "",
     value: "",
     expectedCloseDate: "",
     stageId: initialStageId ?? stages[0]?.id ?? "",
@@ -81,6 +84,21 @@ export function AddDealModal({
     () => (usersPage?.items ?? []).filter((u) => u.is_active),
     [usersPage],
   );
+  // Once a Firma is picked, fetch that company's contacts for the optional
+  // "Hlavní kontakt" picker. Skipped while companyId is empty.
+  const { data: contactsPage } = useContacts({
+    companyId: form.companyId || undefined,
+    limit: 100,
+  });
+  const companyContacts = contactsPage?.items ?? [];
+
+  // Reset primaryContactId when the company changes — the previously chosen
+  // contact almost certainly belonged to a different firma.
+  useEffect(() => {
+    setForm((prev) =>
+      prev.primaryContactId ? { ...prev, primaryContactId: "" } : prev,
+    );
+  }, [form.companyId]);
 
   if (!open) return null;
 
@@ -100,7 +118,7 @@ export function AddDealModal({
         value: String(valueNumber),
         expected_close_date: form.expectedCloseDate || null,
         currency: null,
-        primary_contact_id: null,
+        primary_contact_id: form.primaryContactId || null,
         probability_override: null,
       });
       toast.success("Obchod uložen.");
@@ -217,6 +235,34 @@ export function AddDealModal({
               />
             </label>
           </div>
+
+          {form.companyId ? (
+            <label className="block">
+              <span className="text-xs font-medium text-text-secondary">
+                Hlavní kontakt (volitelné)
+              </span>
+              <select
+                value={form.primaryContactId}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, primaryContactId: e.target.value }))
+                }
+                className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
+              >
+                <option value="">— bez kontaktu —</option>
+                {companyContacts.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.first_name} {c.last_name}
+                    {c.position ? ` · ${c.position}` : ""}
+                  </option>
+                ))}
+              </select>
+              {companyContacts.length === 0 ? (
+                <span className="mt-1 block text-xs text-text-tertiary">
+                  Tato firma zatím nemá kontakty. Můžete je doplnit později z detailu firmy.
+                </span>
+              ) : null}
+            </label>
+          ) : null}
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
