@@ -12,7 +12,12 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi import HTTPException
 
-from app.core.deps import require_active_trial_or_subscription, require_role, require_roles
+from app.core.deps import (
+    require_active_trial_or_subscription,
+    require_leaderboard_visibility,
+    require_role,
+    require_roles,
+)
 from app.db.models import Organization, User, UserRole
 
 
@@ -21,6 +26,7 @@ def _build_user(
     *,
     trial_delta: timedelta = timedelta(days=5),
     stripe_customer_id: str | None = None,
+    show_leaderboard_to_salespeople: bool = False,
 ) -> User:
     org = Organization(
         id=uuid.uuid4(),
@@ -30,6 +36,7 @@ def _build_user(
         region="eu-cz",  # type: ignore[arg-type]
         trial_ends_at=datetime.now(tz=UTC) + trial_delta,
         stripe_customer_id=stripe_customer_id,
+        show_leaderboard_to_salespeople=show_leaderboard_to_salespeople,
     )
     user = User(
         id=uuid.uuid4(),
@@ -93,3 +100,24 @@ async def test_trial_gate_admits_expired_trial_with_subscription() -> None:
         stripe_customer_id="cus_test",
     )
     assert await require_active_trial_or_subscription(user=user) is user
+
+
+async def test_leaderboard_visibility_admits_admin_and_manager() -> None:
+    admin = _build_user(UserRole.admin)
+    manager = _build_user(UserRole.manager)
+    assert await require_leaderboard_visibility(user=admin) is admin
+    assert await require_leaderboard_visibility(user=manager) is manager
+
+
+async def test_leaderboard_visibility_blocks_salesperson_when_off() -> None:
+    user = _build_user(UserRole.salesperson, show_leaderboard_to_salespeople=False)
+    with pytest.raises(HTTPException) as exc:
+        await require_leaderboard_visibility(user=user)
+    assert exc.value.status_code == 403
+    assert isinstance(exc.value.detail, dict)
+    assert exc.value.detail["code"] == "leaderboard_hidden"
+
+
+async def test_leaderboard_visibility_admits_salesperson_when_on() -> None:
+    user = _build_user(UserRole.salesperson, show_leaderboard_to_salespeople=True)
+    assert await require_leaderboard_visibility(user=user) is user

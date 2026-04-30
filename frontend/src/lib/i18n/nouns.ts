@@ -7,6 +7,7 @@ export const NOUNS = {
   uzivatel: { one: "uživatel", few: "uživatelé", other: "uživatelů" },
   den: { one: "den", few: "dny", other: "dnů" },
   koruna: { one: "koruna", few: "koruny", other: "korun" },
+  člen: { one: "člen", few: "členové", other: "členů" },
 } as const;
 
 export type CzechNoun = keyof typeof NOUNS;

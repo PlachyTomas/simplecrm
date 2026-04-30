@@ -8,21 +8,25 @@ from collections import defaultdict
 from datetime import UTC, date, datetime, time
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, require_leaderboard_visibility
 from app.core.scoping import scope_by_owner
 from app.db import get_db
-from app.db.models import Deal, Organization, Stage, User
-from app.db.models.enums import StageType
+from app.db.models import Company, Deal, Organization, Stage, Team, User
+from app.db.models.enums import StageType, UserRole
 from app.schemas.reports import (
     KpiSummary,
     Leaderboard,
     LeaderboardRow,
     LossReasonRow,
     LossReasons,
+    MySummary,
+    TeamLeaderboard,
+    TeamLeaderboardRow,
+    TeamMetric,
     Velocity,
     VelocityByStage,
 )
@@ -93,17 +97,43 @@ async def kpi_summary(
     )
 
 
+async def _assert_team_visible(
+    *, session: AsyncSession, user: User, team_id: uuid.UUID
+) -> Team:
+    """Ensure the caller is allowed to drill into `team_id`.
+
+    Admins always pass. Managers pass only for teams they manage.
+    Salespeople would already be blocked by `require_leaderboard_visibility`
+    on the routes that accept this filter, but we still scope to "their own
+    team only" defensively in case the gate is opened.
+    """
+    team = await session.get(Team, team_id)
+    if team is None or team.organization_id != user.organization_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+    if user.role is UserRole.admin:
+        return team
+    if user.role is UserRole.manager and team.manager_user_id == user.id:
+        return team
+    if user.role is UserRole.salesperson and user.team_id == team_id:
+        return team
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+
+
 @router.get("/leaderboard", response_model=Leaderboard)
 async def leaderboard(
     from_date: date | None = Query(default=None, alias="from"),
     to_date: date | None = Query(default=None, alias="to"),
-    user: User = Depends(get_current_user),
+    team_id: uuid.UUID | None = Query(default=None),
+    user: User = Depends(require_leaderboard_visibility),
     session: AsyncSession = Depends(get_db),
 ) -> Leaderboard:
     org = await session.get(Organization, user.organization_id)
     if org is None:
         raise RuntimeError("current user points at a missing organization")
     resolved_from, resolved_to, start, end = _date_window(from_date, to_date)
+
+    if team_id is not None:
+        await _assert_team_visible(session=session, user=user, team_id=team_id)
 
     stmt = (
         select(Deal, Stage, User)
@@ -117,6 +147,8 @@ async def leaderboard(
             Stage.stage_type == StageType.won,
         )
     )
+    if team_id is not None:
+        stmt = stmt.where(User.team_id == team_id)
     scoped = await scope_by_owner(stmt, session=session, user=user, owner_col=Deal.owner_user_id)
 
     @dataclasses.dataclass
@@ -256,3 +288,261 @@ async def pipeline_velocity(
 # and is mounted on a separate router so the trial gate doesn't apply —
 # users must be able to walk away with their data even after their trial
 # ends. See the module docstring there.
+
+
+@router.get("/team-leaderboard", response_model=TeamLeaderboard)
+async def team_leaderboard(
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    metric: TeamMetric = Query(default=TeamMetric.won_value),
+    user: User = Depends(require_leaderboard_visibility),
+    session: AsyncSession = Depends(get_db),
+) -> TeamLeaderboard:
+    """Aggregate stats grouped by team for the date window.
+
+    Every metric is computed on every row so the frontend can switch the
+    chart's metric without re-fetching. `metric` only seeds the row sort.
+    """
+    org = await session.get(Organization, user.organization_id)
+    if org is None:
+        raise RuntimeError("current user points at a missing organization")
+    resolved_from, resolved_to, start, end = _date_window(from_date, to_date)
+
+    # Teams the caller may see. Admins see all teams in the org; managers
+    # see only the teams they manage. Salespeople reach this point only
+    # when the org has the leaderboard opened up — and even then we limit
+    # them to their own team for consistency with the user-leaderboard.
+    teams_stmt = select(Team).where(Team.organization_id == user.organization_id)
+    if user.role is UserRole.manager:
+        teams_stmt = teams_stmt.where(Team.manager_user_id == user.id)
+    elif user.role is UserRole.salesperson:
+        if user.team_id is None:
+            return TeamLeaderboard(
+                currency=org.currency,
+                from_date=resolved_from,
+                to_date=resolved_to,
+                metric=metric,
+                rows=[],
+            )
+        teams_stmt = teams_stmt.where(Team.id == user.team_id)
+    teams = (await session.execute(teams_stmt)).scalars().all()
+    team_ids = [t.id for t in teams]
+
+    # Manager-name lookup. We resolve it from the User table so we don't
+    # rely on a relationship being eagerly loaded.
+    manager_ids = [t.manager_user_id for t in teams if t.manager_user_id is not None]
+    manager_names: dict[uuid.UUID, str] = {}
+    if manager_ids:
+        rows = (
+            await session.execute(select(User.id, User.name).where(User.id.in_(manager_ids)))
+        ).all()
+        manager_names = {row[0]: row[1] for row in rows}
+
+    # Member counts per team.
+    member_counts: dict[uuid.UUID, int] = {tid: 0 for tid in team_ids}
+    if team_ids:
+        member_rows = (
+            await session.execute(
+                select(User.team_id).where(
+                    User.organization_id == user.organization_id,
+                    User.team_id.in_(team_ids),
+                )
+            )
+        ).all()
+        for (tid,) in member_rows:
+            if tid in member_counts:
+                member_counts[tid] += 1
+
+    @dataclasses.dataclass
+    class _TeamAgg:
+        won_count: int = 0
+        won_value: Decimal = Decimal("0")
+        open_value: Decimal = Decimal("0")
+        closed_count: int = 0  # won + lost (denominator for conversion_rate)
+        cycle_days_sum: float = 0.0
+        cycle_days_count: int = 0
+
+    aggs: dict[uuid.UUID, _TeamAgg] = {tid: _TeamAgg() for tid in team_ids}
+    if not team_ids:
+        return TeamLeaderboard(
+            currency=org.currency,
+            from_date=resolved_from,
+            to_date=resolved_to,
+            metric=metric,
+            rows=[],
+        )
+
+    # Closed deals in window — drives won_count/value, conversion, cycle.
+    closed_stmt = (
+        select(Deal, Stage, User.team_id)
+        .join(Stage, Stage.id == Deal.stage_id)
+        .join(User, User.id == Deal.owner_user_id)
+        .where(
+            Deal.organization_id == user.organization_id,
+            Deal.closed_at.is_not(None),
+            Deal.closed_at >= start,
+            Deal.closed_at <= end,
+            User.team_id.in_(team_ids),
+        )
+    )
+    closed_scoped = await scope_by_owner(
+        closed_stmt, session=session, user=user, owner_col=Deal.owner_user_id
+    )
+    for deal, stage, tid in (await session.execute(closed_scoped)).all():
+        bucket = aggs.get(tid)
+        if bucket is None:
+            continue
+        # Per the brief, a lost deal stays in its current (open-type) stage
+        # with `closed_at` and `lost_reason` set. So "closed in window" is
+        # the conversion-rate denominator; only `won`-type stages count as
+        # wins.
+        bucket.closed_count += 1
+        if stage.stage_type is StageType.won:
+            bucket.won_count += 1
+            if deal.currency == org.currency:
+                bucket.won_value += deal.value
+        days = (deal.closed_at - deal.created_at).total_seconds() / 86400.0
+        bucket.cycle_days_sum += days
+        bucket.cycle_days_count += 1
+
+    # Open pipeline value — deals not closed yet, owned by anyone in the team.
+    open_stmt = (
+        select(Deal, User.team_id)
+        .join(User, User.id == Deal.owner_user_id)
+        .where(
+            Deal.organization_id == user.organization_id,
+            Deal.closed_at.is_(None),
+            User.team_id.in_(team_ids),
+        )
+    )
+    open_scoped = await scope_by_owner(
+        open_stmt, session=session, user=user, owner_col=Deal.owner_user_id
+    )
+    for deal, tid in (await session.execute(open_scoped)).all():
+        bucket = aggs.get(tid)
+        if bucket is None:
+            continue
+        if deal.currency == org.currency:
+            bucket.open_value += deal.value
+
+    rows: list[TeamLeaderboardRow] = []
+    for team in teams:
+        agg = aggs[team.id]
+        rows.append(
+            TeamLeaderboardRow(
+                team_id=team.id,
+                team_name=team.name,
+                manager_user_id=team.manager_user_id,
+                manager_name=(
+                    manager_names.get(team.manager_user_id)
+                    if team.manager_user_id is not None
+                    else None
+                ),
+                member_count=member_counts.get(team.id, 0),
+                won_count=agg.won_count,
+                won_value=agg.won_value,
+                open_pipeline_value=agg.open_value,
+                conversion_rate=(
+                    agg.won_count / agg.closed_count if agg.closed_count else None
+                ),
+                avg_cycle_days=(
+                    agg.cycle_days_sum / agg.cycle_days_count if agg.cycle_days_count else None
+                ),
+            )
+        )
+
+    sort_key = {
+        TeamMetric.won_value: lambda r: (r.won_value, r.won_count),
+        TeamMetric.won_count: lambda r: (r.won_count, r.won_value),
+        TeamMetric.open_pipeline_value: lambda r: (r.open_pipeline_value, r.won_value),
+        TeamMetric.conversion_rate: lambda r: (
+            r.conversion_rate if r.conversion_rate is not None else -1.0,
+            r.won_value,
+        ),
+        # Faster cycle is better — sort ascending (so we negate for the
+        # `reverse=True` below). Teams with no data sort to the bottom.
+        TeamMetric.avg_cycle_days: lambda r: (
+            -r.avg_cycle_days if r.avg_cycle_days is not None else float("-inf"),
+            r.won_value,
+        ),
+    }[metric]
+    rows.sort(key=sort_key, reverse=True)
+    return TeamLeaderboard(
+        currency=org.currency,
+        from_date=resolved_from,
+        to_date=resolved_to,
+        metric=metric,
+        rows=rows,
+    )
+
+
+@router.get("/my-summary", response_model=MySummary)
+async def my_summary(
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> MySummary:
+    """Personal rollup for the caller across the date window.
+
+    `companies_added` is the count of `Company` rows the caller owns whose
+    `created_at` falls in the window — i.e. "leads I added to the pipeline".
+    """
+    org = await session.get(Organization, user.organization_id)
+    if org is None:
+        raise RuntimeError("current user points at a missing organization")
+    resolved_from, resolved_to, start, end = _date_window(from_date, to_date)
+
+    companies_added = (
+        await session.execute(
+            select(Company.id).where(
+                Company.organization_id == user.organization_id,
+                Company.owner_user_id == user.id,
+                Company.created_at >= start,
+                Company.created_at <= end,
+            )
+        )
+    ).all()
+
+    deals_rows = (
+        await session.execute(
+            select(Deal, Stage)
+            .join(Stage, Stage.id == Deal.stage_id)
+            .where(
+                Deal.organization_id == user.organization_id,
+                Deal.owner_user_id == user.id,
+                Deal.closed_at.is_not(None),
+                Deal.closed_at >= start,
+                Deal.closed_at <= end,
+            )
+        )
+    ).all()
+
+    won_count = 0
+    won_value = Decimal("0")
+    closed_count = 0
+    cycle_sum = 0.0
+    cycle_count = 0
+    for deal, stage in deals_rows:
+        # Already filtered to closed_at IN window; per the brief, lost deals
+        # stay in their current stage with closed_at + lost_reason set, so
+        # every row here counts toward conversion's denominator.
+        closed_count += 1
+        if stage.stage_type is StageType.won:
+            won_count += 1
+            if deal.currency == org.currency:
+                won_value += deal.value
+        if deal.closed_at is not None:
+            cycle_sum += (deal.closed_at - deal.created_at).total_seconds() / 86400.0
+            cycle_count += 1
+
+    return MySummary(
+        currency=org.currency,
+        from_date=resolved_from,
+        to_date=resolved_to,
+        companies_added=len(companies_added),
+        deals_won_count=won_count,
+        deals_won_value=won_value,
+        conversion_rate=(won_count / closed_count if closed_count else None),
+        avg_cycle_days=(cycle_sum / cycle_count if cycle_count else None),
+    )

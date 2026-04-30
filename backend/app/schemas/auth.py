@@ -17,6 +17,7 @@ class OrganizationSummary(BaseModel):
     locale: str
     currency: str
     trial_ends_at: datetime
+    show_leaderboard_to_salespeople: bool
 
 
 class CurrentUser(BaseModel):

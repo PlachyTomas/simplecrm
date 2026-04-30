@@ -21,6 +21,7 @@ class OrganizationUpdate(BaseModel):
     address_city: str | None = Field(default=None, max_length=120)
     address_zip: str | None = Field(default=None, max_length=12)
     legal_form: str | None = Field(default=None, max_length=120)
+    show_leaderboard_to_salespeople: bool | None = None
 
 
 class OrganizationOut(BaseModel):
@@ -38,3 +39,4 @@ class OrganizationOut(BaseModel):
     currency: str
     trial_ends_at: datetime
     stripe_customer_id: str | None = None
+    show_leaderboard_to_salespeople: bool

@@ -4,7 +4,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, Index, String, func
+from sqlalchemy import Boolean, DateTime, Enum, Index, String, func
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -55,6 +55,13 @@ class Organization(Base):
 
     trial_ends_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_default_trial_ends_at, nullable=False
+    )
+
+    # When False (the default for new orgs), salespeople do not see the
+    # team/user leaderboards in Reporty or on the dashboard. Admins/managers
+    # always see them. Admins flip this in Settings → Oprávnění.
+    show_leaderboard_to_salespeople: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
     )
 
     created_at: Mapped[datetime] = mapped_column(

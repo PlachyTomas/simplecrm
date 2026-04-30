@@ -1,3 +1,4 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 
@@ -11,11 +12,15 @@ import {
 } from "@/app/settings/usePipelineSettings";
 import { TeamsSection } from "@/app/settings/TeamsSection";
 import { UsersSection } from "@/app/settings/UsersSection";
+import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
-import { ApiError } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 import { ThemeToggle } from "@/lib/ThemeToggle";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
+import type { components } from "@/types/api.generated";
+
+type OrganizationOut = components["schemas"]["OrganizationOut"];
 
 type SettingsTab =
   | "pipeline"
@@ -479,6 +484,65 @@ function AppearanceSection() {
   );
 }
 
+function LeaderboardVisibilityToggle() {
+  const { data: user } = useCurrentUser();
+  const { accessToken } = useAuth();
+  const qc = useQueryClient();
+  const initial = !!user?.organization.show_leaderboard_to_salespeople;
+  const [checked, setChecked] = useState(initial);
+
+  // Keep local state in sync if /auth/me re-resolves with a different value
+  // (e.g. another admin flips it in another tab).
+  useEffect(() => {
+    setChecked(initial);
+  }, [initial]);
+
+  const mutation = useMutation<OrganizationOut, Error, boolean>({
+    mutationFn: (next) =>
+      apiFetch<OrganizationOut>("/api/v1/organizations/current", {
+        method: "PUT",
+        token: accessToken,
+        body: { show_leaderboard_to_salespeople: next },
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["auth", "me"] });
+    },
+  });
+
+  function onToggle(next: boolean) {
+    setChecked(next);
+    mutation.mutate(next, {
+      onError: () => setChecked(!next),
+    });
+  }
+
+  return (
+    <label className="flex items-start gap-3 rounded-md border border-border-subtle bg-surface-overlay p-4">
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={mutation.isPending}
+        onChange={(e) => onToggle(e.target.checked)}
+        className="mt-0.5 h-4 w-4 rounded border-border accent-accent"
+      />
+      <span>
+        <span className="block text-sm font-medium text-text-primary">
+          Zobrazit obchodníkům žebříček
+        </span>
+        <span className="mt-0.5 block text-xs text-text-tertiary">
+          Když je vypnuto, obchodníci v Reportech vidí pouze své vlastní výsledky.
+          Manažeři a administrátoři žebříček vidí vždy.
+        </span>
+        {mutation.isError ? (
+          <span className="mt-1 block text-xs text-danger" role="alert">
+            Uložení se nezdařilo.
+          </span>
+        ) : null}
+      </span>
+    </label>
+  );
+}
+
 function PermissionsSection() {
   const rows: { action: string; rep: string; manager: string; admin: string }[] = [
     { action: "Vidět všechny obchody v rámci pipeline", rep: "Jen vlastní", manager: "Tým", admin: "Vše" },
@@ -489,32 +553,43 @@ function PermissionsSection() {
     { action: "Exportovat reporty", rep: "—", manager: "Ano", admin: "Ano" },
   ];
   return (
-    <section className="rounded-lg border border-border bg-surface p-6">
-      <h2 className="text-lg font-semibold">Oprávnění</h2>
-      <p className="mt-1 text-sm text-text-tertiary">
-        Oprávnění jsou v této verzi pevně daná. Pokud potřebujete vlastní role, dejte nám vědět.
-      </p>
-      <div className="mt-4 overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs uppercase tracking-wider text-text-tertiary">
-              <th className="py-2 pr-4 font-medium">Akce</th>
-              <th className="py-2 pr-4 font-medium">Obchodník</th>
-              <th className="py-2 pr-4 font-medium">Manažer</th>
-              <th className="py-2 font-medium">Administrátor</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border-subtle">
-            {rows.map((r) => (
-              <tr key={r.action}>
-                <td className="py-2 pr-4 text-text-primary">{r.action}</td>
-                <td className="py-2 pr-4 text-text-secondary">{r.rep}</td>
-                <td className="py-2 pr-4 text-text-secondary">{r.manager}</td>
-                <td className="py-2 text-text-secondary">{r.admin}</td>
+    <section className="space-y-4">
+      <div className="rounded-lg border border-border bg-surface p-6">
+        <h2 className="text-lg font-semibold">Viditelnost</h2>
+        <p className="mt-1 text-sm text-text-tertiary">
+          Co vidí jednotlivé role v Reportech a na Přehledu.
+        </p>
+        <div className="mt-4">
+          <LeaderboardVisibilityToggle />
+        </div>
+      </div>
+      <div className="rounded-lg border border-border bg-surface p-6">
+        <h2 className="text-lg font-semibold">Oprávnění</h2>
+        <p className="mt-1 text-sm text-text-tertiary">
+          Oprávnění jsou v této verzi pevně daná. Pokud potřebujete vlastní role, dejte nám vědět.
+        </p>
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-wider text-text-tertiary">
+                <th className="py-2 pr-4 font-medium">Akce</th>
+                <th className="py-2 pr-4 font-medium">Obchodník</th>
+                <th className="py-2 pr-4 font-medium">Manažer</th>
+                <th className="py-2 font-medium">Administrátor</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-border-subtle">
+              {rows.map((r) => (
+                <tr key={r.action}>
+                  <td className="py-2 pr-4 text-text-primary">{r.action}</td>
+                  <td className="py-2 pr-4 text-text-secondary">{r.rep}</td>
+                  <td className="py-2 pr-4 text-text-secondary">{r.manager}</td>
+                  <td className="py-2 text-text-secondary">{r.admin}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   );

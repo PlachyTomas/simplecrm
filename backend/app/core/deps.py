@@ -87,6 +87,30 @@ def require_roles(allowed: Iterable[UserRole]) -> Callable[[User], Awaitable[Use
     return require_role(*allowed)
 
 
+async def require_leaderboard_visibility(
+    user: User = Depends(get_current_user),
+) -> User:
+    """Reject salespeople when their org has the leaderboard hidden.
+
+    Admins and managers always pass; for them the leaderboard is a core
+    management tool. Salespeople pass only when the admin has explicitly
+    opted the org into showing the leaderboard via Settings → Oprávnění
+    (`Organization.show_leaderboard_to_salespeople`). The default for new
+    orgs is False, so the gate is closed unless flipped on.
+    """
+    if user.role is not UserRole.salesperson:
+        return user
+    if user.organization.show_leaderboard_to_salespeople:
+        return user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail={
+            "detail": "Leaderboard hidden by organization policy",
+            "code": "leaderboard_hidden",
+        },
+    )
+
+
 async def require_active_trial_or_subscription(
     user: User = Depends(get_current_user),
 ) -> User:

@@ -79,7 +79,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Me */
+        /**
+         * Me
+         * @description Returns the current user. Gated by trial status — when the org's trial
+         *     has ended and no subscription is active, this 402s so the frontend's
+         *     `ProtectedRoute` can render `<TrialExpiredGate />`.
+         */
         get: operations["me_api_v1_auth_me_get"];
         put?: never;
         post?: never;
@@ -98,8 +103,48 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Logout */
+        /**
+         * Logout
+         * @description Clear the refresh cookie + revoke the server-side allowlist row.
+         *
+         *     Best-effort revoke: if the cookie's JWT is decodable and carries a `jti`,
+         *     we delete the matching row so the rotated-out token can't be replayed
+         *     even with a stolen pre-logout copy. A bad/missing cookie still 204s —
+         *     logout is idempotent from the client's perspective.
+         */
         post: operations["logout_api_v1_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh
+         * @description Exchange the httponly refresh cookie for a fresh access token + rotated refresh.
+         *
+         *     401 when the cookie is missing, expired, malformed, the user no longer
+         *     exists / is inactive, or the `jti` is not in the active allowlist (QA-024
+         *     Part B — covers the leaked-then-rotated case). Frontend treats any 401
+         *     here as "not logged in" and routes to /login. The trial gate is **not**
+         *     applied here on purpose — refreshing the session must work even with an
+         *     expired trial so the `<TrialExpiredGate />` can render after `/auth/me`
+         *     402s.
+         *
+         *     Rotation: on success, the incoming `jti` is deleted and a new row is
+         *     inserted, so the old refresh JWT is server-side invalid even though it
+         *     remains cryptographically valid until its `exp`.
+         */
+        post: operations["refresh_api_v1_auth_refresh_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -121,9 +166,33 @@ export interface paths {
          *
          *     Guarded by both `dev_auth_enabled=True` and `app_env=="dev"`. First
          *     call for an email provisions an Organization + admin User with the
-         *     default pipeline; subsequent calls are idempotent.
+         *     default pipeline; subsequent calls are idempotent. Also sets the
+         *     refresh cookie so the dev workflow benefits from /auth/refresh on
+         *     cold-load — exactly the same shape as the real OAuth callback.
          */
         post: operations["dev_login_api_v1_auth_dev_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/export-csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Deals Csv
+         * @description Deals CSV export matching the caller's visibility scope.
+         *
+         *     Available even when the org's trial has ended — see module docstring.
+         */
+        get: operations["export_deals_csv_api_v1_reports_export_csv_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -534,7 +603,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/reports/export-csv": {
+    "/api/v1/reports/team-leaderboard": {
         parameters: {
             query?: never;
             header?: never;
@@ -542,10 +611,36 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Export Deals Csv
-         * @description Deals CSV export matching the caller's visibility scope.
+         * Team Leaderboard
+         * @description Aggregate stats grouped by team for the date window.
+         *
+         *     Every metric is computed on every row so the frontend can switch the
+         *     chart's metric without re-fetching. `metric` only seeds the row sort.
          */
-        get: operations["export_deals_csv_api_v1_reports_export_csv_get"];
+        get: operations["team_leaderboard_api_v1_reports_team_leaderboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/my-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Summary
+         * @description Personal rollup for the caller across the date window.
+         *
+         *     `companies_added` is the count of `Company` rows the caller owns whose
+         *     `created_at` falls in the window — i.e. "leads I added to the pipeline".
+         */
+        get: operations["my_summary_api_v1_reports_my_summary_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1088,6 +1183,39 @@ export interface components {
             /** Rows */
             rows: components["schemas"]["LossReasonRow"][];
         };
+        /**
+         * MySummary
+         * @description Personal salesperson rollup for the date window.
+         *
+         *     `companies_added` counts `Company` rows the caller owns whose
+         *     `created_at` falls in the window — i.e. "leads I added to the
+         *     pipeline". `conversion_rate` is `null` when the user closed no
+         *     deals in the window (zero denominator).
+         */
+        MySummary: {
+            /** Currency */
+            currency: string;
+            /**
+             * From Date
+             * Format: date
+             */
+            from_date: string;
+            /**
+             * To Date
+             * Format: date
+             */
+            to_date: string;
+            /** Companies Added */
+            companies_added: number;
+            /** Deals Won Count */
+            deals_won_count: number;
+            /** Deals Won Value */
+            deals_won_value: string;
+            /** Conversion Rate */
+            conversion_rate: number | null;
+            /** Avg Cycle Days */
+            avg_cycle_days: number | null;
+        };
         /** OrganizationOut */
         OrganizationOut: {
             /**
@@ -1120,6 +1248,8 @@ export interface components {
             trial_ends_at: string;
             /** Stripe Customer Id */
             stripe_customer_id?: string | null;
+            /** Show Leaderboard To Salespeople */
+            show_leaderboard_to_salespeople: boolean;
         };
         /** OrganizationSummary */
         OrganizationSummary: {
@@ -1141,6 +1271,8 @@ export interface components {
              * Format: date-time
              */
             trial_ends_at: string;
+            /** Show Leaderboard To Salespeople */
+            show_leaderboard_to_salespeople: boolean;
         };
         /**
          * OrganizationUpdate
@@ -1165,6 +1297,8 @@ export interface components {
             address_zip?: string | null;
             /** Legal Form */
             legal_form?: string | null;
+            /** Show Leaderboard To Salespeople */
+            show_leaderboard_to_salespeople?: boolean | null;
         };
         /** Page[CompanyOut] */
         Page_CompanyOut_: {
@@ -1250,6 +1384,12 @@ export interface components {
             is_default: boolean;
             /** Stages */
             stages: components["schemas"]["StageOut"][];
+        };
+        /** RefreshResponse */
+        RefreshResponse: {
+            /** Access Token */
+            access_token: string;
+            user: components["schemas"]["CurrentUser"];
         };
         /**
          * RegistryLookupResult
@@ -1342,6 +1482,50 @@ export interface components {
             /** Manager User Id */
             manager_user_id?: string | null;
         };
+        /** TeamLeaderboard */
+        TeamLeaderboard: {
+            /** Currency */
+            currency: string;
+            /**
+             * From Date
+             * Format: date
+             */
+            from_date: string;
+            /**
+             * To Date
+             * Format: date
+             */
+            to_date: string;
+            metric: components["schemas"]["TeamMetric"];
+            /** Rows */
+            rows: components["schemas"]["TeamLeaderboardRow"][];
+        };
+        /** TeamLeaderboardRow */
+        TeamLeaderboardRow: {
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /** Team Name */
+            team_name: string;
+            /** Manager User Id */
+            manager_user_id: string | null;
+            /** Manager Name */
+            manager_name: string | null;
+            /** Member Count */
+            member_count: number;
+            /** Won Count */
+            won_count: number;
+            /** Won Value */
+            won_value: string;
+            /** Open Pipeline Value */
+            open_pipeline_value: string;
+            /** Conversion Rate */
+            conversion_rate: number | null;
+            /** Avg Cycle Days */
+            avg_cycle_days: number | null;
+        };
         /**
          * TeamMemberUpdate
          * @description Replace the team's member set in one call.
@@ -1350,6 +1534,15 @@ export interface components {
             /** Member Ids */
             member_ids: string[];
         };
+        /**
+         * TeamMetric
+         * @description Metric the manager can pick on the team-vs-team leaderboard.
+         *
+         *     Stored as a string enum so it round-trips cleanly through the
+         *     `?metric=` query parameter and the OpenAPI spec.
+         * @enum {string}
+         */
+        TeamMetric: "won_value" | "won_count" | "open_pipeline_value" | "conversion_rate" | "avg_cycle_days";
         /** TeamOut */
         TeamOut: {
             /**
@@ -1591,7 +1784,9 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
-            cookie?: never;
+            cookie?: {
+                simplecrm_refresh?: string | null;
+            };
         };
         requestBody?: never;
         responses: {
@@ -1601,6 +1796,46 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_api_v1_auth_refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                simplecrm_refresh?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefreshResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };
@@ -1624,6 +1859,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DevLoginResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_deals_csv_api_v1_reports_export_csv_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -2568,6 +2835,7 @@ export interface operations {
             query?: {
                 from?: string | null;
                 to?: string | null;
+                team_id?: string | null;
             };
             header?: never;
             path?: never;
@@ -2659,7 +2927,40 @@ export interface operations {
             };
         };
     };
-    export_deals_csv_api_v1_reports_export_csv_get: {
+    team_leaderboard_api_v1_reports_team_leaderboard_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                metric?: components["schemas"]["TeamMetric"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamLeaderboard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_summary_api_v1_reports_my_summary_get: {
         parameters: {
             query?: {
                 from?: string | null;
@@ -2677,7 +2978,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MySummary"];
                 };
             };
             /** @description Validation Error */
