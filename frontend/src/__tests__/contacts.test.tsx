@@ -133,11 +133,35 @@ describe("Contacts split-view", () => {
       first_name: "Petr",
       last_name: "Svoboda",
       email: "petr@example.cz",
+      company_id: "co-1",
+    };
+    const COMPANY = {
+      id: "co-1",
+      organization_id: ME.organization.id,
+      name: "Asseco Central Europe",
+      ico: "27074358",
+      dic: null,
+      address_street: null,
+      address_city: null,
+      address_zip: null,
+      legal_form: null,
+      website: null,
+      note: null,
+      owner_user_id: null,
+      ownership_expires_at: new Date().toISOString(),
+      ares_synced_at: null,
+      registered_on: null,
+      last_order_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
     fetchMock.mockImplementation(async (input, init) => {
       const url = typeof input === "string" ? input : (input as Request).url;
       const method = init?.method ?? "GET";
       if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
+      if (url.includes("/api/v1/companies?")) {
+        return jsonResponse({ items: [COMPANY], total: 1, limit: 25, offset: 0 });
+      }
       if (url.includes("/api/v1/contacts?")) {
         return jsonResponse({ items: CONTACTS, total: CONTACTS.length, limit: 50, offset: 0 });
       }
@@ -154,6 +178,9 @@ describe("Contacts split-view", () => {
 
     await user.type(screen.getByRole("textbox", { name: /jméno/i }), "Petr");
     await user.type(screen.getByRole("textbox", { name: /příjmení/i }), "Svoboda");
+    await user.type(screen.getByPlaceholderText(/začněte psát název firmy/i), "Asseco");
+    const companyOption = await screen.findByRole("button", { name: /Asseco Central Europe/i });
+    await user.click(companyOption);
     await user.click(screen.getByRole("button", { name: /uložit kontakt/i }));
 
     await waitFor(() =>

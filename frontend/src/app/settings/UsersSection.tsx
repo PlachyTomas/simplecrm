@@ -19,12 +19,14 @@ const ROLE_LABEL: Record<Role, string> = {
 function UserRow({
   u,
   teams,
+  managedTeams,
   onRoleChange,
   onTeamChange,
   onToggleActive,
 }: {
   u: UserOut;
   teams: { id: string; name: string }[];
+  managedTeams: { id: string; name: string }[];
   onRoleChange: (role: Role) => Promise<void>;
   onTeamChange: (teamId: string | null) => Promise<void>;
   onToggleActive: () => Promise<void>;
@@ -47,20 +49,29 @@ function UserRow({
         </select>
       </td>
       <td className="py-3">
-        <select
-          value={u.team_id ?? ""}
-          onChange={(e) =>
-            void onTeamChange(e.target.value === "" ? null : e.target.value)
-          }
-          className="rounded-md border border-border bg-surface px-2 py-1 text-sm"
-        >
-          <option value="">— bez týmu —</option>
-          {teams.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
+        {managedTeams.length > 0 ? (
+          <span
+            className="inline-flex items-center rounded-md border border-border-subtle bg-surface-overlay px-2 py-1 text-xs text-text-secondary"
+            title="Tento uživatel je manažerem těchto týmů. Pro změnu otevřete kartu Týmy."
+          >
+            Manažer týmu {managedTeams.map((t) => t.name).join(", ")}
+          </span>
+        ) : (
+          <select
+            value={u.team_id ?? ""}
+            onChange={(e) =>
+              void onTeamChange(e.target.value === "" ? null : e.target.value)
+            }
+            className="rounded-md border border-border bg-surface px-2 py-1 text-sm"
+          >
+            <option value="">— bez týmu —</option>
+            {teams.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        )}
       </td>
       <td className="py-3 text-right">
         <button
@@ -106,6 +117,13 @@ export function UsersSection() {
   }
 
   const teamOptions = (teams.data?.items ?? []).map((t) => ({ id: t.id, name: t.name }));
+  const managedTeamsByUserId = new Map<string, { id: string; name: string }[]>();
+  for (const t of teams.data?.items ?? []) {
+    if (!t.manager_user_id) continue;
+    const list = managedTeamsByUserId.get(t.manager_user_id) ?? [];
+    list.push({ id: t.id, name: t.name });
+    managedTeamsByUserId.set(t.manager_user_id, list);
+  }
 
   return (
     <section className="rounded-lg border border-border bg-surface p-6">
@@ -136,6 +154,7 @@ export function UsersSection() {
               key={u.id}
               u={u}
               teams={teamOptions}
+              managedTeams={managedTeamsByUserId.get(u.id) ?? []}
               onRoleChange={(role) => mutate(u.id, { role })}
               onTeamChange={(teamId) => mutate(u.id, { team_id: teamId })}
               onToggleActive={() => mutate(u.id, { is_active: !u.is_active })}

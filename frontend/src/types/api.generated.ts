@@ -2222,6 +2222,7 @@ export interface operations {
     list_contacts_api_v1_contacts_get: {
         parameters: {
             query?: {
+                company_id?: string | null;
                 limit?: number;
                 offset?: number;
             };

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,10 +54,13 @@ async def _validate_company_in_org(
 @router.get("", response_model=Page[ContactOut])
 async def list_contacts(
     pagination: PaginationParams = Depends(),
+    company_id: uuid.UUID | None = Query(default=None),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Page[ContactOut]:
     base = select(Contact).where(Contact.organization_id == user.organization_id)
+    if company_id is not None:
+        base = base.where(Contact.company_id == company_id)
     count_stmt = select(func.count()).select_from(base.subquery())
     total = (await session.execute(count_stmt)).scalar_one()
 

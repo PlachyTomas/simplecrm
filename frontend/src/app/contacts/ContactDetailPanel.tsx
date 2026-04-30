@@ -1,6 +1,10 @@
-import { Mail, Phone, Users } from "lucide-react";
+import { Building2, Mail, Phone, Users } from "lucide-react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 
-import { useContact } from "@/app/contacts/useContacts";
+import { useCompany } from "@/app/companies/useCompany";
+import { useContact, useUpdateContact } from "@/app/contacts/useContacts";
+import { CompanyCombobox } from "@/components/ui/CompanyCombobox";
 
 interface ContactDetailPanelProps {
   contactId: string | undefined;
@@ -8,6 +12,10 @@ interface ContactDetailPanelProps {
 
 export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
   const { data: contact, isPending, isError } = useContact(contactId);
+  const { data: company } = useCompany(contact?.company_id ?? undefined);
+  const updateContact = useUpdateContact(contactId);
+  const [editingCompany, setEditingCompany] = useState(false);
+  const [pendingCompanyId, setPendingCompanyId] = useState("");
 
   if (!contactId) {
     return (
@@ -41,6 +49,17 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
 
   const fullName = `${contact.first_name} ${contact.last_name}`.trim();
 
+  async function handleAssignCompany() {
+    if (!pendingCompanyId) return;
+    try {
+      await updateContact.mutateAsync({ company_id: pendingCompanyId });
+      setEditingCompany(false);
+      setPendingCompanyId("");
+    } catch {
+      /* updateContact.isError surfaces */
+    }
+  }
+
   return (
     <div className="flex h-full flex-col gap-6 p-6">
       <header className="flex items-center gap-4">
@@ -57,6 +76,63 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
           ) : null}
         </div>
       </header>
+
+      <section>
+        <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-text-tertiary">
+          Firma
+        </h3>
+        {contact.company_id && company ? (
+          <Link
+            to={`/app/companies/${contact.company_id}`}
+            className="flex items-center gap-3 rounded-md border border-border bg-surface px-4 py-3 text-sm text-text-primary transition-colors duration-fast hover:border-accent-border hover:text-accent"
+          >
+            <Building2 size={16} strokeWidth={1.75} className="text-text-tertiary" />
+            {company.name}
+          </Link>
+        ) : (
+          <div className="space-y-2 rounded-md border border-border bg-surface px-4 py-3">
+            <p className="text-sm text-text-tertiary">
+              Tento kontakt zatím nemá přiřazenou firmu.
+            </p>
+            {!editingCompany ? (
+              <button
+                type="button"
+                onClick={() => setEditingCompany(true)}
+                className="text-sm font-medium text-accent hover:text-accent-hover"
+              >
+                + Přiřadit firmu
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <CompanyCombobox
+                  value={pendingCompanyId}
+                  onChange={(id) => setPendingCompanyId(id)}
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAssignCompany}
+                    disabled={!pendingCompanyId || updateContact.isPending}
+                    className="inline-flex h-8 items-center justify-center rounded-md bg-accent px-3 text-xs font-medium text-text-on-accent disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {updateContact.isPending ? "Ukládám…" : "Uložit"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingCompany(false);
+                      setPendingCompanyId("");
+                    }}
+                    className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-surface-overlay px-3 text-xs font-medium text-text-secondary"
+                  >
+                    Zrušit
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       <section className="space-y-3">
         {contact.email ? (

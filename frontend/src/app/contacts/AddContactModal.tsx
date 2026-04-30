@@ -2,40 +2,61 @@ import { UserPlus } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { useCreateContact } from "@/app/contacts/useCreateContact";
+import { CompanyCombobox } from "@/components/ui/CompanyCombobox";
 
 interface AddContactModalProps {
   open: boolean;
   onClose: () => void;
   onCreated: (contactId: string) => void;
+  /** When opened from a Firma context (e.g. Company detail's Kontakty tab),
+   * pre-select that company and hide the picker. */
+  forCompanyId?: string;
 }
 
 interface Form {
   first_name: string;
   last_name: string;
+  company_id: string;
   email: string;
   phone: string;
   position: string;
 }
 
-const EMPTY: Form = { first_name: "", last_name: "", email: "", phone: "", position: "" };
+const EMPTY: Form = {
+  first_name: "",
+  last_name: "",
+  company_id: "",
+  email: "",
+  phone: "",
+  position: "",
+};
 
-export function AddContactModal({ open, onClose, onCreated }: AddContactModalProps) {
+export function AddContactModal({
+  open,
+  onClose,
+  onCreated,
+  forCompanyId,
+}: AddContactModalProps) {
   const [form, setForm] = useState<Form>(EMPTY);
   const mutation = useCreateContact();
 
   useEffect(() => {
-    if (open) setForm(EMPTY);
-  }, [open]);
+    if (open) setForm({ ...EMPTY, company_id: forCompanyId ?? "" });
+  }, [open, forCompanyId]);
 
   if (!open) return null;
 
+  const canSubmit =
+    !!form.first_name.trim() && !!form.last_name.trim() && !!form.company_id;
+
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!form.first_name.trim() || !form.last_name.trim()) return;
+    if (!canSubmit) return;
     try {
       const created = await mutation.mutateAsync({
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim(),
+        company_id: form.company_id,
         email: form.email.trim() || null,
         phone: form.phone.trim() || null,
         position: form.position.trim() || null,
@@ -97,6 +118,24 @@ export function AddContactModal({ open, onClose, onCreated }: AddContactModalPro
           </label>
         </div>
 
+        {!forCompanyId ? (
+          <div className="mt-4">
+            <label className="block">
+              <span className="text-xs font-medium text-text-secondary">Firma</span>
+              <div className="mt-2">
+                <CompanyCombobox
+                  value={form.company_id}
+                  onChange={(id) => setForm((p) => ({ ...p, company_id: id }))}
+                  required
+                />
+              </div>
+              <span className="mt-1 block text-xs text-text-tertiary">
+                Kontakty patří k firmě — uvidíte je v jejím detailu.
+              </span>
+            </label>
+          </div>
+        ) : null}
+
         <div className="mt-4 space-y-4">
           <label className="block">
             <span className="text-xs font-medium text-text-secondary">Pozice (volitelné)</span>
@@ -146,7 +185,7 @@ export function AddContactModal({ open, onClose, onCreated }: AddContactModalPro
           </button>
           <button
             type="submit"
-            disabled={mutation.isPending || !form.first_name.trim() || !form.last_name.trim()}
+            disabled={mutation.isPending || !canSubmit}
             className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {mutation.isPending ? "Ukládám…" : "Uložit kontakt"}
