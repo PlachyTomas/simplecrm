@@ -87,6 +87,42 @@ def require_roles(allowed: Iterable[UserRole]) -> Callable[[User], Awaitable[Use
     return require_role(*allowed)
 
 
+async def require_org_membership(
+    user: User = Depends(get_current_user),
+) -> User:
+    """403 when the user has no organization yet (post-signup, pre-create-org).
+
+    Used as a gate ahead of `require_active_trial_or_subscription` on every
+    org-scoped router so those endpoints don't have to scatter null-checks
+    against `user.organization_id`. The frontend `ProtectedRoute` reads
+    `user.organization_id == null` from `/auth/me` and redirects to the
+    create-org flow before any of these endpoints are called.
+    """
+    if user.organization_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"detail": "Organization setup required", "code": "needs_org_setup"},
+        )
+    return user
+
+
+async def require_can_invite(
+    user: User = Depends(get_current_user),
+) -> User:
+    """Admin or anyone with `can_invite=True` may issue/revoke invitations."""
+    if user.organization_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"detail": "Organization setup required", "code": "needs_org_setup"},
+        )
+    if user.role is UserRole.admin or user.can_invite:
+        return user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Insufficient permission",
+    )
+
+
 async def require_leaderboard_visibility(
     user: User = Depends(get_current_user),
 ) -> User:
@@ -100,7 +136,7 @@ async def require_leaderboard_visibility(
     """
     if user.role is not UserRole.salesperson:
         return user
-    if user.organization.show_leaderboard_to_salespeople:
+    if user.organization is not None and user.organization.show_leaderboard_to_salespeople:
         return user
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -119,7 +155,14 @@ async def require_active_trial_or_subscription(
     The "active subscription" signal for MVP is `Organization.stripe_customer_id`
     being non-null. Actual Stripe integration lands later; this gate exists
     from day one so the frontend can render its blocking state.
+
+    Users without an organization (post-signup, pre-create-org) bypass this
+    gate so `/auth/me` can return their record and the frontend can route
+    them to the create-org flow. The trial only starts to tick once an org
+    exists, so there's nothing to gate yet.
     """
+    if user.organization_id is None or user.organization is None:
+        return user
     org = user.organization
     if org.stripe_customer_id is not None:
         return user

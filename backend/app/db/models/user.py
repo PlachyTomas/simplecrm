@@ -29,8 +29,8 @@ class User(Base):
 
     # Global email uniqueness. A person signing in with Google always maps to
     # the same User record; cross-organization membership is intentionally not
-    # supported in MVP. If a user leaves one org and joins another, their
-    # User row is reassigned — history tables keep the old ownership.
+    # supported. If their email is already attached to org A, an invite from
+    # org B is rejected with 409 — see services/invitations.py.
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     avatar_url: Mapped[str | None] = mapped_column(String(500))
@@ -42,14 +42,21 @@ class User(Base):
         nullable=False,
     )
 
-    organization_id: Mapped[uuid.UUID] = mapped_column(
+    # Nullable: a Google-authenticated user with no pending invite lands
+    # without an org and gets routed to the create-org flow on the frontend.
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
-        nullable=False,
     )
     team_id: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True),
         ForeignKey("teams.id", ondelete="SET NULL"),
+    )
+
+    # Per-user permission, separate from `role`. Admins always implicitly can
+    # invite; managers/salespeople need this flag flipped on by an admin.
+    can_invite: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
     )
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
@@ -59,5 +66,5 @@ class User(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    organization: Mapped[Organization] = relationship(back_populates="users")
+    organization: Mapped[Organization | None] = relationship(back_populates="users")
     team: Mapped[Team | None] = relationship(back_populates="members", foreign_keys=[team_id])

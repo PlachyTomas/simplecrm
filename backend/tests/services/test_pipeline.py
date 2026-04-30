@@ -70,22 +70,29 @@ async def test_stage_probability_check_constraint(db_session: AsyncSession) -> N
         await db_session.flush()
 
 
-async def test_first_login_seeds_default_pipeline(db_session: AsyncSession) -> None:
-    """First-time Google login provisions the org + its default pipeline."""
-    from app.services.auth import upsert_user_from_google_profile
-    from app.services.google_oauth import GoogleProfile
+async def test_create_organization_seeds_default_pipeline(db_session: AsyncSession) -> None:
+    """`POST /onboarding/organization` (via `create_organization_with_admin`)
+    provisions the org + its default pipeline alongside the default team."""
+    from app.db.models import User, UserRole
+    from app.services.onboarding import create_organization_with_admin
 
-    profile = GoogleProfile(
-        google_id="g-pipeline-test",
+    founder = User(
         email="founder@pipetest.cz",
         name="Zakladatel",
-        picture=None,
+        role=UserRole.salesperson,
+        organization_id=None,
     )
-    user = await upsert_user_from_google_profile(db_session, profile)
+    db_session.add(founder)
+    await db_session.flush()
+
+    org = await create_organization_with_admin(
+        db_session, name="Pipe s.r.o.", founder=founder
+    )
+
     pipelines = (
         (
             await db_session.execute(
-                select(Pipeline).where(Pipeline.organization_id == user.organization_id)
+                select(Pipeline).where(Pipeline.organization_id == org.id)
             )
         )
         .scalars()
@@ -95,3 +102,5 @@ async def test_first_login_seeds_default_pipeline(db_session: AsyncSession) -> N
     assert pipelines[0].is_default is True
     await db_session.refresh(pipelines[0], attribute_names=["stages"])
     assert len(pipelines[0].stages) == 6
+    assert founder.role is UserRole.admin
+    assert founder.team_id is not None

@@ -28,7 +28,15 @@ from app.core.security import (
 from app.db import get_db
 from app.db.models import RefreshToken, User
 from app.schemas.auth import CurrentUser
-from app.services.auth import upsert_dev_user, upsert_user_from_google_profile
+from app.services.auth import (
+    InvitationAlreadyConsumedError,
+    InvitationEmailMismatchError,
+    InvitationExpiredError,
+    InvitationNotFoundError,
+    UserAlreadyInOrganizationError,
+    upsert_dev_user,
+    upsert_user_from_google_profile,
+)
 from app.services.google_oauth import GoogleOAuthClient, get_google_oauth_client
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -75,9 +83,16 @@ async def _issue_and_record_refresh(
 
 @router.get("/google/login")
 async def google_login(
+    invite: str | None = Query(default=None, max_length=2048),
     oauth: GoogleOAuthClient = Depends(get_google_oauth_client),
 ) -> RedirectResponse:
-    state_payload = {"nonce": secrets.token_urlsafe(16)}
+    """Kick off Google OAuth. An optional `invite` query carries a signed
+    invitation token — we tunnel it through the OAuth `state` so it
+    survives the round-trip back to `/google/callback`. Tokens are
+    transparent to Google; they're only meaningful to us."""
+    state_payload: dict[str, str] = {"nonce": secrets.token_urlsafe(16)}
+    if invite is not None:
+        state_payload["invite"] = invite
     signed_state = sign_oauth_state(state_payload)
     authorize_url = oauth.build_authorize_url(signed_state)
 
@@ -106,7 +121,8 @@ async def google_callback(
 
     if state_cookie is None or not secrets.compare_digest(state, state_cookie):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state")
-    if verify_oauth_state(state) is None:
+    state_payload = verify_oauth_state(state)
+    if state_payload is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Expired OAuth state")
 
     try:
@@ -117,7 +133,38 @@ async def google_callback(
             detail="Google authorization failed",
         ) from exc
 
-    user = await upsert_user_from_google_profile(session, profile)
+    invite_token = state_payload.get("invite") if isinstance(state_payload, dict) else None
+    error_code: str | None = None
+    try:
+        user = await upsert_user_from_google_profile(
+            session, profile, invite_token=invite_token if isinstance(invite_token, str) else None
+        )
+    except InvitationEmailMismatchError:
+        error_code = "invitation_email_mismatch"
+    except InvitationExpiredError:
+        error_code = "invitation_expired"
+    except InvitationAlreadyConsumedError:
+        error_code = "invitation_consumed"
+    except InvitationNotFoundError:
+        error_code = "invitation_not_found"
+    except UserAlreadyInOrganizationError:
+        error_code = "user_already_in_organization"
+
+    if error_code is not None:
+        # Bounce back to the AcceptInvitePage so the user sees a localized
+        # message — no token issued, no cookies set.
+        await session.rollback()
+        bounce_origin = _frontend_origin(settings.frontend_success_redirect)
+        invite_for_url = invite_token if isinstance(invite_token, str) else ""
+        redirect_url = (
+            f"{bounce_origin}/invite/{invite_for_url}?error={error_code}"
+            if invite_for_url
+            else f"{bounce_origin}/login?error={error_code}"
+        )
+        response = RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
+        response.delete_cookie(STATE_COOKIE_NAME, path="/api/v1/auth")
+        return response
+
     await session.commit()
     await session.refresh(user, attribute_names=["organization"])
 
@@ -130,6 +177,16 @@ async def google_callback(
     _set_refresh_cookie(response, issued.token)
     response.delete_cookie(STATE_COOKIE_NAME, path="/api/v1/auth")
     return response
+
+
+def _frontend_origin(success_redirect: str) -> str:
+    """Strip path off the configured frontend redirect so we can build
+    sibling URLs (/login, /invite/...). Falls back to the original value
+    if it isn't an absolute URL (test mode, custom configs)."""
+    if success_redirect.startswith(("http://", "https://")):
+        parts = success_redirect.split("/", 3)
+        return "/".join(parts[:3])
+    return success_redirect
 
 
 @router.get("/me", response_model=CurrentUser)

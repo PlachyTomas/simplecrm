@@ -10,9 +10,12 @@ from app.services.auth import upsert_user_from_google_profile
 from app.services.google_oauth import GoogleProfile
 
 
-async def test_first_login_provisions_org_and_admin_user(
+async def test_first_login_creates_user_without_org(
     db_session: AsyncSession,
 ) -> None:
+    """First Google login (no invite) lands the user without an org and
+    as a placeholder salesperson. The frontend then routes to the
+    create-org page; `POST /onboarding/organization` promotes them to admin."""
     profile = GoogleProfile(
         google_id="g-100",
         email="first@alfa.cz",
@@ -20,16 +23,11 @@ async def test_first_login_provisions_org_and_admin_user(
         picture="https://avatar.example/100",
     )
     user = await upsert_user_from_google_profile(db_session, profile)
-    assert user.role is UserRole.admin
+    assert user.role is UserRole.salesperson
+    assert user.organization_id is None
     assert user.email == "first@alfa.cz"
     assert user.avatar_url == "https://avatar.example/100"
     assert user.last_login_at is not None
-
-    org = await db_session.get(Organization, user.organization_id)
-    assert org is not None
-    # The placeholder name derives from the email domain.
-    assert org.name.lower().startswith("alfa")
-    assert org.trial_ends_at > org.created_at
 
 
 async def test_returning_user_is_reused_by_google_id(
@@ -57,7 +55,6 @@ async def test_returning_user_is_reused_by_google_id(
     assert second.name == "Opakující Nové Jméno"
     assert second.avatar_url == "https://avatar.example/200"
 
-    # Exactly one user/org was created across the two calls.
     users = (
         (await db_session.execute(select(User).where(User.email == "repeat@beta.cz")))
         .scalars()
@@ -69,8 +66,7 @@ async def test_returning_user_is_reused_by_google_id(
 async def test_invited_user_by_email_gets_google_id_attached(
     db_session: AsyncSession,
 ) -> None:
-    # Simulate an invite-flow that created the User + Org but hasn't seen a
-    # Google login yet.
+    # An invite-created User row that hasn't seen a Google login yet.
     org = Organization(name="Gamma")
     db_session.add(org)
     await db_session.flush()
@@ -92,5 +88,4 @@ async def test_invited_user_by_email_gets_google_id_attached(
     user = await upsert_user_from_google_profile(db_session, profile)
     assert user.id == existing.id
     assert user.google_id == "g-300"
-    # They stay a salesperson; their original role isn't promoted.
     assert user.role is UserRole.salesperson

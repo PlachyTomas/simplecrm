@@ -28,7 +28,11 @@ class CurrentUser(BaseModel):
     name: str
     avatar_url: str | None = None
     role: UserRole
-    organization: OrganizationSummary
+    can_invite: bool
+    # Nullable until the user finishes the create-org step on first login.
+    # Frontend `ProtectedRoute` reads this and routes to /onboarding/create-org
+    # when null instead of attempting any org-scoped queries.
+    organization: OrganizationSummary | None = None
 
 
 class AuthCallbackResult(BaseModel):

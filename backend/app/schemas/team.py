@@ -29,4 +29,5 @@ class TeamOut(BaseModel):
     organization_id: uuid.UUID
     name: str
     manager_user_id: uuid.UUID | None = None
+    is_default: bool
     created_at: datetime

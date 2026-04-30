@@ -17,6 +17,7 @@ class UserOut(BaseModel):
     avatar_url: str | None = None
     role: UserRole
     team_id: uuid.UUID | None = None
+    can_invite: bool
     is_active: bool
     last_login_at: datetime | None = None
     created_at: datetime
@@ -25,4 +26,5 @@ class UserOut(BaseModel):
 class UserUpdate(BaseModel):
     role: UserRole | None = None
     team_id: uuid.UUID | None = None
+    can_invite: bool | None = None
     is_active: bool | None = None

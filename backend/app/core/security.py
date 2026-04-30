@@ -22,18 +22,26 @@ from app.db.models.enums import UserRole
 ACCESS_TOKEN_TYPE = "access"  # noqa: S105 — JWT type claim, not a credential
 REFRESH_TOKEN_TYPE = "refresh"  # noqa: S105 — JWT type claim, not a credential
 STATE_COOKIE_SALT = "simplecrm.oauth.state"
+INVITE_TOKEN_SALT = "simplecrm.invitation"  # noqa: S105 — itsdangerous salt
+INVITE_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60  # 7 days
 
 
 def _now() -> datetime:
     return datetime.now(tz=UTC)
 
 
-def create_access_token(user_id: uuid.UUID, organization_id: uuid.UUID, role: UserRole) -> str:
+def create_access_token(
+    user_id: uuid.UUID, organization_id: uuid.UUID | None, role: UserRole
+) -> str:
+    """Mint a JWT access token. `organization_id` is None for users that
+    just signed in but haven't completed org setup yet — the claim is
+    cosmetic (auth uses `sub`/the DB row); the frontend routes them to
+    the create-org page based on `/auth/me`."""
     settings = get_settings()
     expire = _now() + timedelta(minutes=settings.access_token_ttl_minutes)
     payload: dict[str, Any] = {
         "sub": str(user_id),
-        "org": str(organization_id),
+        "org": str(organization_id) if organization_id is not None else None,
         "role": role.value,
         "type": ACCESS_TOKEN_TYPE,
         "exp": expire,
@@ -96,14 +104,59 @@ def verify_oauth_state(token: str, max_age_seconds: int = 600) -> dict[str, Any]
     return result if isinstance(result, dict) else None
 
 
+def _invite_serializer() -> URLSafeTimedSerializer:
+    return URLSafeTimedSerializer(get_settings().jwt_secret, salt=INVITE_TOKEN_SALT)
+
+
+class InviteTokenInvalidError(Exception):
+    """Raised when an invite token's signature is bad or it's been tampered with."""
+
+
+class InviteTokenExpiredError(Exception):
+    """Raised when an invite token's signed timestamp is older than the TTL."""
+
+
+def sign_invite_token(jti: uuid.UUID) -> str:
+    """Sign a self-contained URL-safe token carrying the invite's `jti`.
+
+    The token's lifetime is enforced both client-side (itsdangerous max_age
+    on verify) and server-side (`Invitation.expires_at` row-level check).
+    The DB column is the authoritative source — the signed timestamp just
+    short-circuits a blatantly stale link before we hit the DB.
+    """
+    return _invite_serializer().dumps({"jti": str(jti)})
+
+
+def verify_invite_token(token: str) -> uuid.UUID:
+    """Verify an invite token and return its `jti`. Raises on signature or
+    expiry failure so the caller can map each to a distinct HTTP status."""
+    try:
+        payload = _invite_serializer().loads(token, max_age=INVITE_TOKEN_TTL_SECONDS)
+    except SignatureExpired as exc:
+        raise InviteTokenExpiredError() from exc
+    except BadSignature as exc:
+        raise InviteTokenInvalidError() from exc
+    if not isinstance(payload, dict) or "jti" not in payload:
+        raise InviteTokenInvalidError()
+    try:
+        return uuid.UUID(str(payload["jti"]))
+    except ValueError as exc:
+        raise InviteTokenInvalidError() from exc
+
+
 __all__ = [
     "ACCESS_TOKEN_TYPE",
+    "INVITE_TOKEN_TTL_SECONDS",
     "REFRESH_TOKEN_TYPE",
+    "InviteTokenExpiredError",
+    "InviteTokenInvalidError",
     "IssuedRefreshToken",
     "JWTError",
     "create_access_token",
     "create_refresh_token",
     "decode_token",
+    "sign_invite_token",
     "sign_oauth_state",
+    "verify_invite_token",
     "verify_oauth_state",
 ]

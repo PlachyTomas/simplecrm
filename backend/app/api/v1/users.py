@@ -95,6 +95,8 @@ async def update_user(
         target.role = data["role"]
     if "team_id" in data:
         target.team_id = data["team_id"]
+    if "can_invite" in data and data["can_invite"] is not None:
+        target.can_invite = data["can_invite"]
     if "is_active" in data and data["is_active"] is not None:
         target.is_active = data["is_active"]
 

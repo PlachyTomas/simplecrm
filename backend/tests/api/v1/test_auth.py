@@ -127,10 +127,41 @@ async def test_google_callback_reports_failure_when_google_rejects(
     assert response.status_code == 400
 
 
-async def test_me_returns_user_profile(
-    client: AsyncClient, with_fake_google: FakeGoogleOAuthClient, db_session: AsyncSession
+@pytest.fixture
+async def with_isolated_google() -> AsyncIterator[FakeGoogleOAuthClient]:
+    """Like `with_fake_google` but uses a unique email/google_id so the
+    test doesn't share state with other tests in the module."""
+    profile = GoogleProfile(
+        google_id="g-isolated-onboarding",
+        email="onboarding@testorg.cz",
+        name="Onboarding User",
+        picture=None,
+    )
+    fake = FakeGoogleOAuthClient(profile=profile)
+    app.dependency_overrides[get_google_oauth_client] = lambda: fake
+    try:
+        yield fake
+    finally:
+        app.dependency_overrides.pop(get_google_oauth_client, None)
+        async with AsyncSessionLocal() as s:
+            user = (
+                await s.execute(select(User).where(User.email == profile.email))
+            ).scalar_one_or_none()
+            if user is not None:
+                org_id = user.organization_id
+                await s.execute(delete(User).where(User.id == user.id))
+                if org_id is not None:
+                    await s.execute(delete(Organization).where(Organization.id == org_id))
+                await s.commit()
+
+
+async def test_me_returns_user_profile_pre_org(
+    client: AsyncClient,
+    with_isolated_google: FakeGoogleOAuthClient,
+    db_session: AsyncSession,
 ) -> None:
-    # Log in to create a User + Organization.
+    """First Google login (no invite) lands the user without an org. The
+    frontend uses `organization == null` to route to the create-org page."""
     state = sign_oauth_state({"nonce": "n"})
     await client.get(
         "/api/v1/auth/google/callback",
@@ -139,23 +170,74 @@ async def test_me_returns_user_profile(
         follow_redirects=False,
     )
 
-    # Look up the freshly created user and issue a token directly.
-    from sqlalchemy import select
-
-    from app.db.models import User
-
     user = (
-        await db_session.execute(select(User).where(User.email == "hero@testorg.cz"))
+        await db_session.execute(
+            select(User).where(User.email == with_isolated_google.profile.email)
+        )
     ).scalar_one()
+    assert user.organization_id is None
+    assert user.role is UserRole.salesperson
     token = create_access_token(user.id, user.organization_id, user.role)
 
     response = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     body = response.json()
-    assert body["email"] == "hero@testorg.cz"
-    assert body["role"] == UserRole.admin.value
-    assert body["organization"]["name"]
-    assert body["organization"]["currency"] == "CZK"
+    assert body["email"] == with_isolated_google.profile.email
+    assert body["role"] == UserRole.salesperson.value
+    assert body["organization"] is None
+
+
+async def test_create_organization_promotes_to_admin_with_default_team(
+    client: AsyncClient,
+) -> None:
+    """`POST /onboarding/organization` provisions org + default team and
+    promotes the founder to admin in one shot."""
+    profile = GoogleProfile(
+        google_id="g-isolated-create",
+        email="create@testorg.cz",
+        name="Create User",
+        picture=None,
+    )
+    fake = FakeGoogleOAuthClient(profile=profile)
+    app.dependency_overrides[get_google_oauth_client] = lambda: fake
+    try:
+        state = sign_oauth_state({"nonce": "n"})
+        callback = await client.get(
+            "/api/v1/auth/google/callback",
+            params={"code": "test-auth-code", "state": state},
+            cookies={STATE_COOKIE_NAME: state},
+            follow_redirects=False,
+        )
+        access_token = callback.headers["location"].split("#access_token=", 1)[1]
+
+        create = await client.post(
+            "/api/v1/onboarding/organization",
+            json={"name": "Acme s.r.o."},
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        assert create.status_code == 201, create.text
+        body = create.json()
+        assert body["role"] == UserRole.admin.value
+        assert body["organization"]["name"] == "Acme s.r.o."
+
+        teams = await client.get(
+            "/api/v1/teams", headers={"Authorization": f"Bearer {access_token}"}
+        )
+        assert teams.status_code == 200
+        items = teams.json()["items"]
+        assert any(t["is_default"] and t["name"] == "Hlavní tým" for t in items)
+    finally:
+        app.dependency_overrides.pop(get_google_oauth_client, None)
+        async with AsyncSessionLocal() as s:
+            user = (
+                await s.execute(select(User).where(User.email == profile.email))
+            ).scalar_one_or_none()
+            if user is not None:
+                org_id = user.organization_id
+                await s.execute(delete(User).where(User.id == user.id))
+                if org_id is not None:
+                    await s.execute(delete(Organization).where(Organization.id == org_id))
+                await s.commit()
 
 
 async def test_me_rejects_missing_token(client: AsyncClient) -> None:
@@ -353,6 +435,16 @@ async def test_refresh_bypasses_trial_gate_for_expired_orgs(
         follow_redirects=False,
     )
     refresh_jwt = callback.cookies[REFRESH_COOKIE_NAME]
+    access_token = callback.headers["location"].split("#access_token=", 1)[1]
+    # Bootstrap an org so the trial gate has something to expire. A previous
+    # test in the same module may have already provisioned one — accept either
+    # 201 (just created) or 409 (already exists from a prior test run).
+    create_resp = await client.post(
+        "/api/v1/onboarding/organization",
+        json={"name": "Trial Test"},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert create_resp.status_code in (201, 409)
 
     # Roll the org's trial back via a fresh session, then refetch the user id.
     async with AsyncSessionLocal() as s:
@@ -361,6 +453,7 @@ async def test_refresh_bypasses_trial_gate_for_expired_orgs(
         ).scalar_one()
         user_id = user_row.id
         org_id = user_row.organization_id
+        assert org_id is not None
         org = await s.get(Organization, org_id)
         assert org is not None
         org.trial_ends_at = datetime.now(tz=UTC) - timedelta(days=7)

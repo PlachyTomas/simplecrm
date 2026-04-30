@@ -17,6 +17,7 @@ from app.db.models.enums import (
     StageType,
     UserRole,
 )
+from app.db.models.invitation import Invitation
 from app.db.models.organization import Organization
 from app.db.models.ownership_history import OwnershipHistory
 from app.db.models.pipeline import Pipeline
@@ -33,6 +34,7 @@ __all__ = [
     "Company",
     "Contact",
     "Deal",
+    "Invitation",
     "Organization",
     "OwnershipChangeReason",
     "OwnershipHistory",
