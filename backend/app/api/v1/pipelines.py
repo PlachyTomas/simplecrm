@@ -70,10 +70,14 @@ async def get_default_pipeline_board(
     if org is None:
         raise RuntimeError("current user points at a missing organization")
 
-    # Fetch every visible deal in one scoped query.
+    # Fetch every visible *open* deal in one scoped query. Lost deals stay in
+    # their original (open-type) stage with closed_at + lost_reason set per
+    # the brief — they must not appear on the kanban board, which represents
+    # the active funnel only. See QA-027.
     stmt = select(Deal).where(
         Deal.organization_id == user.organization_id,
         Deal.stage_id.in_([s.id for s in pipeline.stages]),
+        Deal.closed_at.is_(None),
     )
     scoped = await scope_by_owner(stmt, session=session, user=user, owner_col=Deal.owner_user_id)
     deals = (await session.execute(scoped)).scalars().all()

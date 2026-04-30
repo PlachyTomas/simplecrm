@@ -166,6 +166,52 @@ async def test_pipeline_board_rejects_missing_token(client: AsyncClient) -> None
     assert response.status_code == 401
 
 
+async def test_pipeline_board_excludes_closed_deals(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Closed-as-lost deals stay in their original (open-type) stage but must
+    not appear on the kanban board, which represents the active funnel only.
+    """
+    from datetime import UTC, datetime
+
+    org, user, stages = await _seed(db_session, owned_cleanup)
+    company = Company(organization_id=org.id, name="Co")
+    db_session.add(company)
+    await db_session.commit()
+
+    now = datetime.now(tz=UTC)
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=stages[0].id,
+                name="Open",
+                value=Decimal("100.00"),
+                currency="CZK",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=stages[0].id,
+                name="Closed-as-lost",
+                value=Decimal("999.00"),
+                currency="CZK",
+                closed_at=now,
+                lost_reason="Cena",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    response = await client.get("/api/v1/pipelines/default/board", headers=_auth(user))
+    assert response.status_code == 200
+    first = response.json()["stages"][0]
+    assert first["deal_count"] == 1
+    assert first["total_value"] == "100.00"
+    assert {d["name"] for d in first["deals"]} == {"Open"}
+
+
 async def test_pipeline_board_scoped_for_salesperson(
     client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
 ) -> None:
