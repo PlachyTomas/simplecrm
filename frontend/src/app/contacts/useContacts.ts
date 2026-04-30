@@ -45,7 +45,7 @@ export function useUpdateContact(contactId: string | undefined) {
   return useMutation<ContactOut, Error, ContactUpdate>({
     mutationFn: (patch) =>
       apiFetch<ContactOut>(`/api/v1/contacts/${contactId}`, {
-        method: "PATCH",
+        method: "PUT",
         token: accessToken,
         body: patch as unknown as Record<string, unknown>,
       }),

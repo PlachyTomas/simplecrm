@@ -1,8 +1,9 @@
-import { Building2, RefreshCcw } from "lucide-react";
+import { Building2, RefreshCcw, UserPlus } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { useCreateCompany } from "@/app/companies/useCreateCompany";
 import { useLookupRegistry } from "@/app/companies/useLookupRegistry";
+import { useCreateContact } from "@/app/contacts/useCreateContact";
 import { ApiError } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
@@ -23,6 +24,14 @@ interface FormState {
   legal_form: string;
 }
 
+interface ContactDraft {
+  first_name: string;
+  last_name: string;
+  position: string;
+  email: string;
+  phone: string;
+}
+
 const EMPTY_FORM: FormState = {
   name: "",
   ico: "",
@@ -31,6 +40,14 @@ const EMPTY_FORM: FormState = {
   address_city: "",
   address_zip: "",
   legal_form: "",
+};
+
+const EMPTY_CONTACT: ContactDraft = {
+  first_name: "",
+  last_name: "",
+  position: "",
+  email: "",
+  phone: "",
 };
 
 function describeLookupError(error: unknown, ico: string): string {
@@ -51,6 +68,8 @@ function describeLookupError(error: unknown, ico: string): string {
 
 export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalProps) {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [showContactDraft, setShowContactDraft] = useState(false);
+  const [contact, setContact] = useState<ContactDraft>(EMPTY_CONTACT);
   // Tracks the IČO whose ARES result currently fills the form. When the user
   // edits IČO away from this value (or wipes it), the auto-filled fields are
   // cleared so a subsequent failed lookup can't leave the previous record's
@@ -60,6 +79,8 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
   useEffect(() => {
     if (open) {
       setForm(EMPTY_FORM);
+      setContact(EMPTY_CONTACT);
+      setShowContactDraft(false);
       lastFilledIcoRef.current = null;
     }
   }, [open]);
@@ -71,6 +92,7 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
 
   const lookup = useLookupRegistry({ country: "CZ", number: icoQuery, enabled: !!icoQuery });
   const createMutation = useCreateCompany();
+  const createContactMutation = useCreateContact();
   const toast = useToast();
 
   useEffect(() => {
@@ -105,6 +127,8 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!form.name.trim()) return;
+    const wantsContact =
+      showContactDraft && !!contact.first_name.trim() && !!contact.last_name.trim();
     try {
       const created = await createMutation.mutateAsync({
         name: form.name.trim(),
@@ -115,7 +139,23 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
         address_zip: form.address_zip.trim() || null,
         legal_form: form.legal_form.trim() || null,
       });
-      toast.success("Firma uložena.");
+      if (wantsContact) {
+        try {
+          await createContactMutation.mutateAsync({
+            company_id: created.id,
+            first_name: contact.first_name.trim(),
+            last_name: contact.last_name.trim(),
+            position: contact.position.trim() || null,
+            email: contact.email.trim() || null,
+            phone: contact.phone.trim() || null,
+          });
+          toast.success("Firma a kontakt uloženy.");
+        } catch {
+          toast.error("Firma uložena, ale kontakt se nepodařilo přiřadit.");
+        }
+      } else {
+        toast.success("Firma uložena.");
+      }
       onCreated(created.id);
       onClose();
     } catch {
@@ -299,6 +339,106 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
                 className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 font-mono text-sm text-text-primary focus:border-accent focus:outline-none"
               />
             </label>
+          </div>
+
+          <div className="rounded-md border border-border-subtle bg-surface-overlay p-3">
+            {!showContactDraft ? (
+              <button
+                type="button"
+                onClick={() => setShowContactDraft(true)}
+                className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-accent-hover"
+              >
+                <UserPlus size={14} strokeWidth={1.75} />
+                Přidat kontakt zároveň (volitelné)
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
+                    Kontakt
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowContactDraft(false);
+                      setContact(EMPTY_CONTACT);
+                    }}
+                    className="text-xs text-text-secondary hover:text-text-primary"
+                  >
+                    Skrýt
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className="text-xs font-medium text-text-secondary">Jméno</span>
+                    <input
+                      type="text"
+                      value={contact.first_name}
+                      onChange={(e) =>
+                        setContact((p) => ({ ...p, first_name: e.target.value }))
+                      }
+                      className="mt-2 block h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-medium text-text-secondary">Příjmení</span>
+                    <input
+                      type="text"
+                      value={contact.last_name}
+                      onChange={(e) =>
+                        setContact((p) => ({ ...p, last_name: e.target.value }))
+                      }
+                      className="mt-2 block h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
+                    />
+                  </label>
+                </div>
+                <label className="block">
+                  <span className="text-xs font-medium text-text-secondary">
+                    Pozice (volitelné)
+                  </span>
+                  <input
+                    type="text"
+                    value={contact.position}
+                    onChange={(e) =>
+                      setContact((p) => ({ ...p, position: e.target.value }))
+                    }
+                    className="mt-2 block h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
+                  />
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className="text-xs font-medium text-text-secondary">
+                      E-mail (volitelné)
+                    </span>
+                    <input
+                      type="email"
+                      value={contact.email}
+                      onChange={(e) =>
+                        setContact((p) => ({ ...p, email: e.target.value }))
+                      }
+                      className="mt-2 block h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-medium text-text-secondary">
+                      Telefon (volitelné)
+                    </span>
+                    <input
+                      type="tel"
+                      value={contact.phone}
+                      onChange={(e) =>
+                        setContact((p) => ({ ...p, phone: e.target.value }))
+                      }
+                      className="mt-2 block h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
+                    />
+                  </label>
+                </div>
+                <p className="text-xs text-text-tertiary">
+                  Kontakt přiřadíme této firmě. Vyplňte alespoň jméno a příjmení nebo
+                  pole nechte prázdná, abyste přiřadili kontakt později.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

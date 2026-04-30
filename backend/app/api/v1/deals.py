@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -106,10 +106,13 @@ async def _assert_contact_in_org(
 @router.get("", response_model=Page[DealOut])
 async def list_deals(
     pagination: PaginationParams = Depends(),
+    company_id: uuid.UUID | None = Query(default=None),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Page[DealOut]:
     base = select(Deal).where(Deal.organization_id == user.organization_id)
+    if company_id is not None:
+        base = base.where(Deal.company_id == company_id)
     scoped = await scope_by_owner(base, session=session, user=user, owner_col=Deal.owner_user_id)
     count_stmt = select(func.count()).select_from(scoped.subquery())
     total = (await session.execute(count_stmt)).scalar_one()

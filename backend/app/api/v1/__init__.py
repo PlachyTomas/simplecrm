@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.api.v1 import (
+    activities,
     auth,
     companies,
     contacts,
@@ -37,3 +38,4 @@ api_router.include_router(pipelines.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(reports.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(teams.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(users.router, dependencies=PROTECTED_DEPS)
+api_router.include_router(activities.router, dependencies=PROTECTED_DEPS)
