@@ -51,7 +51,7 @@ function StatTile({
       <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">{label}</p>
       <p
         className={
-          "mt-2 text-xl font-semibold tabular-nums " +
+          "mt-2 break-words text-base font-semibold tabular-nums sm:text-xl " +
           (highlight ? "text-brand-accent" : "text-text-primary")
         }
       >
@@ -89,13 +89,13 @@ function DealCard({
     >
       <p className="pr-1 text-xs font-medium leading-snug text-text-primary">{deal.name}</p>
       <p className="truncate text-[11px] text-text-tertiary">{deal.company}</p>
-      <div className="mt-2 flex items-center justify-between gap-2">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <span className="font-mono text-[11px] tabular-nums text-text-secondary">
           {moneyFmt.format(deal.value)}
         </span>
         {team ? (
           <span
-            className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px]"
+            className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px]"
             style={{
               backgroundColor: `${team.color}1a`,
               color: team.color,
@@ -104,10 +104,10 @@ function DealCard({
           >
             <span
               aria-hidden
-              className="inline-block h-1.5 w-1.5 rounded-full"
+              className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
               style={{ backgroundColor: team.color }}
             />
-            {team.name}
+            <span className="truncate">{team.name}</span>
           </span>
         ) : null}
       </div>
@@ -187,6 +187,27 @@ export function InteractivePipeline() {
   }, [deals]);
 
   const maxTeamValue = Math.max(1, ...teamLeaderboard.map((r) => r.value));
+
+  const salesLeaderboard = useMemo(() => {
+    const wonBySales = new Map<string, { count: number; value: number }>();
+    for (const sales of DEMO_SALES) wonBySales.set(sales.id, { count: 0, value: 0 });
+    for (const deal of deals) {
+      const stage = DEMO_STAGES.find((s) => s.id === deal.stage_id);
+      if (stage?.type !== "won") continue;
+      const bucket = wonBySales.get(deal.owner_id);
+      if (!bucket) continue;
+      bucket.count += 1;
+      bucket.value += deal.value;
+    }
+    return DEMO_SALES.map((s) => {
+      const team = TEAM_BY_ID.get(s.team_id);
+      return { sales: s, team, ...wonBySales.get(s.id)! };
+    })
+      .filter((r) => r.count > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [deals]);
+
+  const maxSalesValue = Math.max(1, ...salesLeaderboard.map((r) => r.value));
 
   function moveDealToStage(dealId: string, stageId: string) {
     setDeals((prev) =>
@@ -324,13 +345,16 @@ export function InteractivePipeline() {
                   : "border-border-subtle")
               }
             >
-              <div className="flex items-center gap-2 border-b border-border-subtle pb-2">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border-subtle pb-2">
                 <span
-                  className="inline-block h-2 w-2 rounded-full"
+                  aria-hidden
+                  className="inline-block h-2 w-2 shrink-0 rounded-full"
                   style={{ backgroundColor: stage.color }}
                 />
-                <span className="text-xs font-semibold text-text-primary">{stage.name}</span>
-                <span className="ml-auto font-mono text-[10px] tabular-nums text-text-tertiary">
+                <span className="min-w-0 truncate text-xs font-semibold text-text-primary">
+                  {stage.name}
+                </span>
+                <span className="ml-auto whitespace-nowrap font-mono text-[10px] tabular-nums text-text-tertiary">
                   {stageDeals.length} · {moneyFmt.format(total)}
                 </span>
               </div>
@@ -360,51 +384,118 @@ export function InteractivePipeline() {
         })}
       </div>
 
-      <div className="mt-6 rounded-md border border-border-subtle bg-surface-overlay p-4">
-        <div className="mb-3 flex items-baseline gap-2">
-          <Trophy size={14} strokeWidth={1.75} className="text-brand-accent" />
-          <h4 className="text-sm font-semibold">Žebříček týmů</h4>
-          <span className="text-xs text-text-tertiary">podle hodnoty výhry</span>
-        </div>
-        <ol className="space-y-2">
-          {teamLeaderboard.map((row, idx) => {
-            const pct = Math.max(4, Math.round((row.value / maxTeamValue) * 100));
-            const leader = idx === 0 && row.value > 0;
-            return (
-              <li key={row.team.id} className="flex items-center gap-3">
-                {leader ? (
-                  <span
-                    aria-label="Vedoucí žebříčku"
-                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-accent text-text-on-brand-accent"
-                  >
-                    <Crown size={11} strokeWidth={2} aria-hidden />
-                  </span>
-                ) : (
-                  <span className="w-5 text-right text-xs font-medium text-text-tertiary tabular-nums">
-                    {idx + 1}.
-                  </span>
-                )}
-                <div className="flex-1">
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-xs font-medium text-text-primary">{row.team.name}</span>
-                    <span className="font-mono text-[11px] tabular-nums text-text-secondary">
-                      {row.count} · {moneyFmt.format(row.value)}
+      <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="rounded-md border border-border-subtle bg-surface-overlay p-4">
+          <div className="mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <Trophy size={14} strokeWidth={1.75} className="text-brand-accent" />
+            <h4 className="text-sm font-semibold">Žebříček týmů</h4>
+            <span className="text-xs text-text-tertiary">podle hodnoty výhry</span>
+          </div>
+          <ol className="space-y-2">
+            {teamLeaderboard.map((row, idx) => {
+              const pct = Math.max(4, Math.round((row.value / maxTeamValue) * 100));
+              const leader = idx === 0 && row.value > 0;
+              return (
+                <li key={row.team.id} className="flex items-center gap-3">
+                  {leader ? (
+                    <span
+                      aria-label="Vedoucí žebříčku"
+                      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-accent text-text-on-brand-accent"
+                    >
+                      <Crown size={11} strokeWidth={2} aria-hidden />
                     </span>
+                  ) : (
+                    <span className="w-5 shrink-0 text-right text-xs font-medium text-text-tertiary tabular-nums">
+                      {idx + 1}.
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="truncate text-xs font-medium text-text-primary">
+                        {row.team.name}
+                      </span>
+                      <span className="shrink-0 font-mono text-[11px] tabular-nums text-text-secondary">
+                        {row.count} · {moneyFmt.format(row.value)}
+                      </span>
+                    </div>
+                    <div className="mt-1 h-1.5 rounded-full bg-surface-elevated" aria-hidden>
+                      <div
+                        className="h-full rounded-full transition-all duration-200"
+                        style={{
+                          width: `${pct}%`,
+                          backgroundColor: leader ? "var(--color-brand-accent)" : row.team.color,
+                        }}
+                      />
+                    </div>
                   </div>
-                  <div className="mt-1 h-1.5 rounded-full bg-surface-elevated" aria-hidden>
-                    <div
-                      className="h-full rounded-full transition-all duration-200"
-                      style={{
-                        width: `${pct}%`,
-                        backgroundColor: leader ? "var(--color-brand-accent)" : row.team.color,
-                      }}
-                    />
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+
+        <div className="rounded-md border border-border-subtle bg-surface-overlay p-4">
+          <div className="mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <Trophy size={14} strokeWidth={1.75} className="text-brand-accent" />
+            <h4 className="text-sm font-semibold">Žebříček obchodníků</h4>
+            <span className="text-xs text-text-tertiary">podle hodnoty výhry</span>
+          </div>
+          {salesLeaderboard.length === 0 ? (
+            <p className="py-3 text-xs text-text-tertiary">
+              Zatím žádný obchodník nevyhrál obchod. Přesuňte kartu do sloupce <em>Vyhráno</em>.
+            </p>
+          ) : (
+            <ol className="space-y-2">
+              {salesLeaderboard.map((row, idx) => {
+                const pct = Math.max(4, Math.round((row.value / maxSalesValue) * 100));
+                const leader = idx === 0 && row.value > 0;
+                const teamColor = row.team?.color ?? "var(--color-accent)";
+                return (
+                  <li key={row.sales.id} className="flex items-center gap-3">
+                    {leader ? (
+                      <span
+                        aria-label="Vedoucí žebříčku"
+                        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-accent text-text-on-brand-accent"
+                      >
+                        <Crown size={11} strokeWidth={2} aria-hidden />
+                      </span>
+                    ) : (
+                      <span className="w-5 shrink-0 text-right text-xs font-medium text-text-tertiary tabular-nums">
+                        {idx + 1}.
+                      </span>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="flex min-w-0 items-baseline gap-1.5">
+                          <span className="truncate text-xs font-medium text-text-primary">
+                            {row.sales.name}
+                          </span>
+                          {row.team ? (
+                            <span className="hidden shrink-0 truncate text-[10px] text-text-tertiary sm:inline">
+                              · {row.team.name}
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="shrink-0 font-mono text-[11px] tabular-nums text-text-secondary">
+                          {row.count} · {moneyFmt.format(row.value)}
+                        </span>
+                      </div>
+                      <div className="mt-1 h-1.5 rounded-full bg-surface-elevated" aria-hidden>
+                        <div
+                          className="h-full rounded-full transition-all duration-200"
+                          style={{
+                            width: `${pct}%`,
+                            backgroundColor: leader ? "var(--color-brand-accent)" : teamColor,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </div>
       </div>
     </div>
   );

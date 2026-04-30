@@ -51,7 +51,7 @@ function Nav() {
 
   return (
     <header className="bg-bg/90 sticky top-0 z-30 border-b border-border-subtle backdrop-blur">
-      <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-4 px-4 py-4 md:gap-8 md:px-8">
+      <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-2 px-4 py-4 md:gap-8 md:px-8">
         <Link to="/" className="flex items-center gap-2" aria-label="SimpleCRM">
           <span
             aria-hidden
@@ -72,7 +72,7 @@ function Nav() {
             </a>
           ))}
         </nav>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <ThemeToggle variant="compact" className="hidden md:inline-flex" />
           <Link
             to="/login"
@@ -82,7 +82,7 @@ function Nav() {
           </Link>
           <a
             href={GOOGLE_LOGIN_URL}
-            className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover sm:px-5"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-3 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover sm:px-5"
           >
             Vyzkoušet zdarma
           </a>
