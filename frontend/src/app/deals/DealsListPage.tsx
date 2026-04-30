@@ -33,7 +33,7 @@ export function DealsListPage() {
   // N+1 fetch per row. Org's full company list usually fits in 200.
   const { data: companiesPage } = useCompanies({ limit: 200 });
 
-  const locale = user?.organization.locale ?? "cs-CZ";
+  const locale = user?.organization?.locale ?? "cs-CZ";
   const dateFmt = useMemo(() => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }), [locale]);
 
   const stageById = useMemo(() => {

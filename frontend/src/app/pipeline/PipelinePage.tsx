@@ -206,7 +206,7 @@ export function PipelinePage() {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
-  const locale = user?.organization.locale ?? "cs-CZ";
+  const locale = user?.organization?.locale ?? "cs-CZ";
 
   const moneyFmt = useMemo(
     () =>

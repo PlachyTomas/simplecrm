@@ -45,7 +45,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Google Login */
+        /**
+         * Google Login
+         * @description Kick off Google OAuth. An optional `invite` query carries a signed
+         *     invitation token — we tunnel it through the OAuth `state` so it
+         *     survives the round-trip back to `/google/callback`. Tokens are
+         *     transparent to Google; they're only meaningful to us.
+         */
         get: operations["google_login_api_v1_auth_google_login_get"];
         put?: never;
         post?: never;
@@ -171,6 +177,52 @@ export interface paths {
          *     cold-load — exactly the same shape as the real OAuth callback.
          */
         post: operations["dev_login_api_v1_auth_dev_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/organization": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Organization
+         * @description Provision a new Organization for the currently logged-in user.
+         *
+         *     Only callable by users who don't already belong to an org — calling
+         *     this from an existing-org user is a 409 (the create-org page is
+         *     front-end-gated, so this is just a defense-in-depth check).
+         */
+        post: operations["create_organization_api_v1_onboarding_organization_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/invite/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview Invitation
+         * @description Public preview for the AcceptInvitePage. Distinguishes signature
+         *     failure (404), expiry (410 Gone), and already-consumed (409) so the
+         *     UI can render a precise message.
+         */
+        get: operations["preview_invitation_api_v1_onboarding_invite__token__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -439,6 +491,46 @@ export interface paths {
          */
         post: operations["mark_deal_lost_api_v1_deals__deal_id__mark_lost_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Invitations
+         * @description List pending (unaccepted, unrevoked) invitations for the current org.
+         *     Acceptance and revocation history is implicit and not exposed here —
+         *     the create-form is the single source of truth for what's outstanding.
+         */
+        get: operations["list_invitations_api_v1_invitations_get"];
+        put?: never;
+        /** Create */
+        post: operations["create_api_v1_invitations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invitations/{invitation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke */
+        delete: operations["revoke_api_v1_invitations__invitation_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1005,6 +1097,15 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /**
+         * CreateOrganizationIn
+         * @description Body for `POST /onboarding/organization` — submitted by a freshly
+         *     signed-up user with no org yet.
+         */
+        CreateOrganizationIn: {
+            /** Name */
+            name: string;
+        };
         /** CurrentUser */
         CurrentUser: {
             /**
@@ -1022,7 +1123,9 @@ export interface components {
             /** Avatar Url */
             avatar_url?: string | null;
             role: components["schemas"]["UserRole"];
-            organization: components["schemas"]["OrganizationSummary"];
+            /** Can Invite */
+            can_invite: boolean;
+            organization?: components["schemas"]["OrganizationSummary"] | null;
         };
         /** DealCreate */
         DealCreate: {
@@ -1167,6 +1270,91 @@ export interface components {
         HealthResponse: {
             /** Status */
             status: string;
+        };
+        /** InvitationCreate */
+        InvitationCreate: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            role: components["schemas"]["UserRole"];
+            /** Team Id */
+            team_id?: string | null;
+            /**
+             * Can Invite
+             * @default false
+             */
+            can_invite: boolean;
+        };
+        /**
+         * InvitationCreated
+         * @description Response payload for `POST /invitations`. Includes the dev-only
+         *     `invite_url` for testability — once a real SMTP backend is wired in,
+         *     this field stays useful for admins who want to copy the link manually
+         *     (e.g. when the invitee never received the email).
+         */
+        InvitationCreated: {
+            invitation: components["schemas"]["InvitationOut"];
+            /** Invite Url */
+            invite_url: string;
+        };
+        /** InvitationOut */
+        InvitationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            role: components["schemas"]["UserRole"];
+            /** Team Id */
+            team_id?: string | null;
+            /** Can Invite */
+            can_invite: boolean;
+            /** Invited By User Id */
+            invited_by_user_id?: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Accepted At */
+            accepted_at?: string | null;
+            /** Revoked At */
+            revoked_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * InvitationPreview
+         * @description Public preview shown on the AcceptInvitePage before the invitee
+         *     signs in with Google. No tokens or org IDs are exposed beyond what's
+         *     strictly needed to render the page.
+         */
+        InvitationPreview: {
+            /** Organization Name */
+            organization_name: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            role: components["schemas"]["UserRole"];
+            /** Team Name */
+            team_name?: string | null;
         };
         /**
          * KpiSummary
@@ -1402,6 +1590,17 @@ export interface components {
             /** Offset */
             offset: number;
         };
+        /** Page[InvitationOut] */
+        Page_InvitationOut_: {
+            /** Items */
+            items: components["schemas"]["InvitationOut"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
         /** Page[TeamOut] */
         Page_TeamOut_: {
             /** Items */
@@ -1628,6 +1827,8 @@ export interface components {
             name: string;
             /** Manager User Id */
             manager_user_id?: string | null;
+            /** Is Default */
+            is_default: boolean;
             /**
              * Created At
              * Format: date-time
@@ -1660,6 +1861,8 @@ export interface components {
             role: components["schemas"]["UserRole"];
             /** Team Id */
             team_id?: string | null;
+            /** Can Invite */
+            can_invite: boolean;
             /** Is Active */
             is_active: boolean;
             /** Last Login At */
@@ -1680,6 +1883,8 @@ export interface components {
             role?: components["schemas"]["UserRole"] | null;
             /** Team Id */
             team_id?: string | null;
+            /** Can Invite */
+            can_invite?: boolean | null;
             /** Is Active */
             is_active?: boolean | null;
         };
@@ -1776,7 +1981,9 @@ export interface operations {
     };
     google_login_api_v1_auth_google_login_get: {
         parameters: {
-            query?: never;
+            query?: {
+                invite?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1790,6 +1997,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1928,6 +2144,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DevLoginResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_organization_api_v1_onboarding_organization_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOrganizationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentUser"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_invitation_api_v1_onboarding_invite__token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationPreview"];
                 };
             };
             /** @description Validation Error */
@@ -2699,6 +2979,100 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DealOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_invitations_api_v1_invitations_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_InvitationOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_api_v1_invitations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvitationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_api_v1_invitations__invitation_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

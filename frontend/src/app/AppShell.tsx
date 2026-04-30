@@ -3,7 +3,6 @@ import { Sparkles } from "lucide-react";
 import { Outlet } from "react-router-dom";
 
 import { MobileTabBar } from "@/app/MobileTabBar";
-import { OnboardingForm } from "@/app/OnboardingForm";
 import { Sidebar } from "@/app/Sidebar";
 import { TrialBanner } from "@/app/TrialBanner";
 import { useAuth } from "@/auth/useAuth";
@@ -28,7 +27,7 @@ export function AppShell() {
     },
   });
 
-  if (!user) return null;
+  if (!user || !user.organization) return null;
 
   const locale = user.organization.locale;
   const trialEndsAt = new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(
@@ -102,12 +101,6 @@ export function AppShell() {
             </div>
           </div>
         </header>
-
-        {user.organization.ico == null && user.role === "admin" ? (
-          <OnboardingForm
-            defaults={{ name: user.organization.name, ico: user.organization.ico ?? null }}
-          />
-        ) : null}
 
         <main
           id="main-content"

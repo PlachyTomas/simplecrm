@@ -10,6 +10,7 @@ import {
   useReorderStages,
   useUpdateStage,
 } from "@/app/settings/usePipelineSettings";
+import { InvitationsSection } from "@/app/settings/InvitationsSection";
 import { TeamsSection } from "@/app/settings/TeamsSection";
 import { UsersSection } from "@/app/settings/UsersSection";
 import { useAuth } from "@/auth/useAuth";
@@ -26,6 +27,7 @@ type SettingsTab =
   | "pipeline"
   | "teams"
   | "users"
+  | "invitations"
   | "appearance"
   | "permissions"
   | "billing"
@@ -46,6 +48,11 @@ const TABS: { key: SettingsTab; label: string; description: string }[] = [
     key: "users",
     label: "Uživatelé",
     description: "Spravujte role, týmovou příslušnost a aktivitu členů.",
+  },
+  {
+    key: "invitations",
+    label: "Pozvánky",
+    description: "Pozvěte nové členy a spravujte oprávnění.",
   },
   {
     key: "appearance",
@@ -287,6 +294,20 @@ export function SettingsPage() {
   const activeTabMeta = TABS.find((t) => t.key === activeTab) ?? TABS[0];
   usePageTitle(`Nastavení — ${activeTabMeta.label}`);
 
+  // Admins see the full Settings page. Non-admins with `can_invite=true`
+  // get a stripped-down view that only exposes the Invitations tab; that's
+  // the one privilege they own. Everyone else gets the admin-only message.
+  const canInviteOnly = !!user && user.role !== "admin" && user.can_invite;
+
+  // Force can_invite-only users onto the invitations tab if they land
+  // somewhere else (e.g. via deep-link). useEffect avoids a setState-in-render
+  // warning, and lives above the early returns so hook order stays stable.
+  useEffect(() => {
+    if (canInviteOnly && activeTab !== "invitations") {
+      setActiveTab("invitations");
+    }
+  }, [canInviteOnly, activeTab]);
+
   if (!user) {
     return (
       <div className="p-8 text-sm text-text-tertiary" role="status">
@@ -295,7 +316,7 @@ export function SettingsPage() {
     );
   }
 
-  if (user.role !== "admin") {
+  if (user.role !== "admin" && !canInviteOnly) {
     return (
       <div className="p-8">
         <h1 className="text-2xl font-semibold">Nastavení</h1>
@@ -305,6 +326,9 @@ export function SettingsPage() {
       </div>
     );
   }
+  const visibleTabs = canInviteOnly
+    ? TABS.filter((t) => t.key === "invitations")
+    : TABS;
 
   const stagesReady = !isPending && !isError && pipeline;
   const stages = stagesReady ? [...pipeline.stages].sort((a, b) => a.position - b.position) : [];
@@ -347,7 +371,7 @@ export function SettingsPage() {
 
       <nav aria-label="Karty nastavení" className="mb-6 border-b border-border-subtle">
         <ul role="tablist" className="-mb-px flex gap-1 overflow-x-auto">
-          {TABS.map((tab) => {
+          {visibleTabs.map((tab) => {
             const isActive = activeTab === tab.key;
             return (
               <li key={tab.key} role="presentation">
@@ -382,6 +406,7 @@ export function SettingsPage() {
 
       {activeTab === "teams" ? <TeamsSection /> : null}
       {activeTab === "users" ? <UsersSection /> : null}
+      {activeTab === "invitations" ? <InvitationsSection /> : null}
       {activeTab === "appearance" ? <AppearanceSection /> : null}
       {activeTab === "permissions" ? <PermissionsSection /> : null}
       {activeTab === "billing" ? <BillingSection /> : null}
@@ -488,7 +513,7 @@ function LeaderboardVisibilityToggle() {
   const { data: user } = useCurrentUser();
   const { accessToken } = useAuth();
   const qc = useQueryClient();
-  const initial = !!user?.organization.show_leaderboard_to_salespeople;
+  const initial = !!user?.organization?.show_leaderboard_to_salespeople;
   const [checked, setChecked] = useState(initial);
 
   // Keep local state in sync if /auth/me re-resolves with a different value

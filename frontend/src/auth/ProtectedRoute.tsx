@@ -18,6 +18,12 @@ function extractTrialPayload(err: unknown): TrialExpiredPayload | undefined {
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  /**
+   * When true (default), users without an `organization` are redirected
+   * to /onboarding/create-org. Set to false on the create-org page itself
+   * so we don't loop redirect.
+   */
+  requireOrg?: boolean;
 }
 
 /**
@@ -52,7 +58,7 @@ async function downloadDataExport(accessToken: string): Promise<void> {
   URL.revokeObjectURL(href);
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, requireOrg = true }: ProtectedRouteProps) {
   const { accessToken, refreshSettled } = useAuth();
   const query = useCurrentUser();
 
@@ -96,6 +102,11 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       );
     }
     return <Navigate to="/login" replace />;
+  }
+
+  // Logged in but no org yet → finish onboarding before entering the app.
+  if (requireOrg && query.data && !query.data.organization) {
+    return <Navigate to="/onboarding/create-org" replace />;
   }
 
   return <>{children}</>;

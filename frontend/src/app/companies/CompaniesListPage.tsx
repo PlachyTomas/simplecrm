@@ -58,7 +58,7 @@ export function CompaniesListPage() {
     search: debouncedSearch,
   });
 
-  const locale = user?.organization.locale;
+  const locale = user?.organization?.locale;
   const dateFmt = useMemo(
     () => (locale ? new Intl.DateTimeFormat(locale, { dateStyle: "medium" }) : null),
     [locale],

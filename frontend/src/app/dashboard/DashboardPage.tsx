@@ -149,7 +149,7 @@ export function DashboardPage() {
   const { data: user } = useCurrentUser();
   const { data: kpi, isPending, isError } = useKpiSummary();
 
-  const locale = user?.organization.locale ?? "cs-CZ";
+  const locale = user?.organization?.locale ?? "cs-CZ";
   const monthLabel = useMemo(() => {
     try {
       return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" })
@@ -221,7 +221,7 @@ export function DashboardPage() {
 
       {user.role === "admin" ||
       user.role === "manager" ||
-      user.organization.show_leaderboard_to_salespeople ? (
+      user.organization?.show_leaderboard_to_salespeople ? (
         <ManagerWidgets locale={locale} />
       ) : null}
     </div>

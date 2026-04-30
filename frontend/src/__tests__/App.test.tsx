@@ -188,23 +188,17 @@ describe("App routing", () => {
     );
   });
 
-  it("renders the onboarding modal when the org has no ico and the user is admin", async () => {
+  it("redirects to create-org page when /auth/me returns no organization", async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
           id: "00000000-0000-0000-0000-000000000001",
           email: "first@example.cz",
-          name: "První Admin",
+          name: "První Uživatel",
           avatar_url: null,
-          role: "admin",
-          organization: {
-            id: "00000000-0000-0000-0000-0000000000aa",
-            name: "Example",
-            ico: null,
-            locale: "cs-CZ",
-            currency: "CZK",
-            trial_ends_at: "2027-01-01T12:00:00+00:00",
-          },
+          role: "salesperson",
+          can_invite: false,
+          organization: null,
         }),
         { status: 200, headers: { "content-type": "application/json" } },
       ),
@@ -212,7 +206,7 @@ describe("App routing", () => {
     renderAt("/app", { token: "fake-token" });
     await waitFor(() =>
       expect(
-        screen.getByRole("heading", { name: /dokončete nastavení firmy/i }),
+        screen.getByRole("heading", { name: /vytvořte si organizaci/i }),
       ).toBeInTheDocument(),
     );
   });

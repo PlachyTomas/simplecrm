@@ -20,12 +20,23 @@ import { ThemeProvider } from "@/lib/theme";
 import { ToastProvider } from "@/lib/toast";
 import { LandingPage } from "@/marketing/LandingPage";
 import { NotFoundPage } from "@/marketing/NotFoundPage";
+import { AcceptInvitePage } from "@/onboarding/AcceptInvitePage";
+import { CreateOrgPage } from "@/onboarding/CreateOrgPage";
 
 export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/invite/:token" element={<AcceptInvitePage />} />
+      <Route
+        path="/onboarding/create-org"
+        element={
+          <ProtectedRoute requireOrg={false}>
+            <CreateOrgPage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/app"
         element={

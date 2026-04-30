@@ -22,6 +22,7 @@ function UserRow({
   managedTeams,
   onRoleChange,
   onTeamChange,
+  onCanInviteChange,
   onToggleActive,
 }: {
   u: UserOut;
@@ -29,8 +30,11 @@ function UserRow({
   managedTeams: { id: string; name: string }[];
   onRoleChange: (role: Role) => Promise<void>;
   onTeamChange: (teamId: string | null) => Promise<void>;
+  onCanInviteChange: (next: boolean) => Promise<void>;
   onToggleActive: () => Promise<void>;
 }) {
+  // Admins always implicitly can invite — show the box as locked-on for them.
+  const isAdmin = u.role === "admin";
   return (
     <tr className="border-b border-border-subtle last:border-0">
       <td className="py-3 text-sm text-text-primary">
@@ -72,6 +76,21 @@ function UserRow({
             ))}
           </select>
         )}
+      </td>
+      <td className="py-3 text-center">
+        <input
+          type="checkbox"
+          aria-label={`Smí zvát uživatele — ${u.email}`}
+          checked={isAdmin || u.can_invite}
+          disabled={isAdmin}
+          onChange={(e) => void onCanInviteChange(e.target.checked)}
+          className="h-4 w-4 rounded border-border accent-accent disabled:opacity-50"
+          title={
+            isAdmin
+              ? "Administrátor může zvát vždy."
+              : "Když je zaškrtnuto, smí tento uživatel posílat pozvánky."
+          }
+        />
       </td>
       <td className="py-3 text-right">
         <button
@@ -145,6 +164,7 @@ export function UsersSection() {
             <th className="py-2 font-medium">Jméno / email</th>
             <th className="py-2 font-medium">Role</th>
             <th className="py-2 font-medium">Tým</th>
+            <th className="py-2 text-center font-medium">Smí zvát</th>
             <th className="py-2 text-right font-medium">Aktivní</th>
           </tr>
         </thead>
@@ -157,6 +177,7 @@ export function UsersSection() {
               managedTeams={managedTeamsByUserId.get(u.id) ?? []}
               onRoleChange={(role) => mutate(u.id, { role })}
               onTeamChange={(teamId) => mutate(u.id, { team_id: teamId })}
+              onCanInviteChange={(can_invite) => mutate(u.id, { can_invite })}
               onToggleActive={() => mutate(u.id, { is_active: !u.is_active })}
             />
           ))}

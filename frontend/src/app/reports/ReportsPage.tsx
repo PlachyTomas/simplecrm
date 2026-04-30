@@ -462,7 +462,7 @@ export function ReportsPage() {
   usePageTitle("Reporty");
   const { data: user } = useCurrentUser();
   const { accessToken } = useAuth();
-  const locale = user?.organization.locale ?? "cs-CZ";
+  const locale = user?.organization?.locale ?? "cs-CZ";
   const initial = useMemo(defaultRange, []);
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
@@ -471,7 +471,7 @@ export function ReportsPage() {
 
   const role = user?.role;
   const showLeaderboardForRole =
-    role !== "salesperson" || !!user?.organization.show_leaderboard_to_salespeople;
+    role !== "salesperson" || !!user?.organization?.show_leaderboard_to_salespeople;
   const showTeamLeaderboard = role === "admin" || role === "manager";
   const showMySummary = role === "salesperson";
 

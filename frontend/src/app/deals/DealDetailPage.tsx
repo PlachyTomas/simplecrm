@@ -154,7 +154,7 @@ export function DealDetailPage() {
   const deleteDeal = useDeleteDeal(dealId);
   const toast = useToast();
 
-  const locale = user?.organization.locale ?? "cs-CZ";
+  const locale = user?.organization?.locale ?? "cs-CZ";
   const dateFmt = useMemo(() => new Intl.DateTimeFormat(locale, { dateStyle: "long" }), [locale]);
 
   if (isPending) {
