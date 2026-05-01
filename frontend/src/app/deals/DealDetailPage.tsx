@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { useCompany } from "@/app/companies/useCompany";
 import { useContact, useContacts } from "@/app/contacts/useContacts";
+import { MarkLostDialog } from "@/app/deals/MarkLostDialog";
 import { useMarkDealLost, useMarkDealWon } from "@/app/deals/useDealActions";
 import { useDeal, useDeleteDeal, useUpdateDeal } from "@/app/deals/useDeals";
 import { usePipelineBoard } from "@/app/pipeline/useBoard";
@@ -12,110 +13,11 @@ import { useCurrentUser } from "@/auth/useCurrentUser";
 import { useToast } from "@/lib/toast";
 import { usePageTitle } from "@/lib/usePageTitle";
 
-const LOST_REASONS = [
-  "Cena",
-  "Konkurence",
-  "Nevhodný čas",
-  "Rozpočet",
-  "Nedosaženo dohody",
-  "Jiný",
-];
-
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid grid-cols-3 gap-4 py-3">
       <dt className="text-sm text-text-tertiary">{label}</dt>
       <dd className="col-span-2 text-sm text-text-primary">{children}</dd>
-    </div>
-  );
-}
-
-function MarkLostDialog({
-  open,
-  onClose,
-  onConfirm,
-  pending,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: (reason: string) => void;
-  pending: boolean;
-}) {
-  const [reason, setReason] = useState(LOST_REASONS[0]);
-  const [custom, setCustom] = useState("");
-
-  if (!open) return null;
-
-  const finalReason = reason === "Jiný" ? custom.trim() : reason;
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="mark-lost-title"
-      className="bg-bg/80 fixed inset-0 z-50 flex items-center justify-center px-4 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (finalReason) onConfirm(finalReason);
-        }}
-        className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg"
-      >
-        <h2 id="mark-lost-title" className="text-xl font-semibold">
-          Označit jako prohraný
-        </h2>
-        <p className="mt-2 text-sm text-text-secondary">
-          Vyberte hlavní důvod, abychom mohli sestavit report ztracených obchodů.
-        </p>
-        <fieldset className="mt-4 space-y-2">
-          <legend className="sr-only">Důvod</legend>
-          {LOST_REASONS.map((opt) => (
-            <label key={opt} className="flex items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name="lost-reason"
-                value={opt}
-                checked={reason === opt}
-                onChange={() => setReason(opt)}
-              />
-              {opt}
-            </label>
-          ))}
-        </fieldset>
-        {reason === "Jiný" ? (
-          <label className="mt-3 block">
-            <span className="text-xs font-medium text-text-secondary">Vlastní důvod</span>
-            <input
-              type="text"
-              value={custom}
-              onChange={(e) => setCustom(e.target.value)}
-              required
-              maxLength={200}
-              className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
-            />
-          </label>
-        ) : null}
-        <div className="mt-6 flex items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
-          >
-            Zrušit
-          </button>
-          <button
-            type="submit"
-            disabled={pending || !finalReason}
-            className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-medium text-white transition-colors duration-fast hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {pending ? "Ukládám…" : "Uložit"}
-          </button>
-        </div>
-      </form>
     </div>
   );
 }
@@ -290,7 +192,7 @@ export function DealDetailPage() {
                 disabled={markLost.isPending}
                 className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
               >
-                <X size={16} strokeWidth={1.75} /> Označit jako prohráno
+                <X size={16} strokeWidth={1.75} /> Označit jako neúspěch
               </button>
             </>
           ) : (
@@ -332,7 +234,7 @@ export function DealDetailPage() {
             {deal.closed_at ? (
               deal.lost_reason ? (
                 <span className="inline-flex items-center rounded-full bg-danger-subtle px-3 py-1 text-xs font-medium text-danger">
-                  Prohráno · {deal.lost_reason}
+                  Neúspěch · {deal.lost_reason}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-success-subtle px-3 py-1 text-xs font-medium text-success">
@@ -513,6 +415,7 @@ export function DealDetailPage() {
         open={lostDialogOpen}
         onClose={() => setLostDialogOpen(false)}
         pending={markLost.isPending}
+        dealName={deal.name}
         onConfirm={(reason) => {
           markLost.mutate({ lost_reason: reason }, { onSuccess: () => setLostDialogOpen(false) });
         }}

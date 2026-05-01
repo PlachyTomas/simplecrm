@@ -70,3 +70,18 @@ export function useDeleteDeal(dealId: string | undefined) {
     },
   });
 }
+
+export function useDeleteAnyDeal() {
+  const { accessToken } = useAuth();
+  const qc = useQueryClient();
+  return useMutation<void, Error, { dealId: string }>({
+    mutationFn: ({ dealId }) =>
+      apiFetch<void>(`/api/v1/deals/${dealId}`, {
+        method: "DELETE",
+        token: accessToken,
+      }),
+    onSuccess: (_data, { dealId }) => {
+      invalidateDealReadModels(qc, dealId);
+    },
+  });
+}

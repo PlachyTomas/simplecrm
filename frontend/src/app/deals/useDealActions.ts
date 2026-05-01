@@ -58,3 +58,19 @@ export function useMarkDealLost(dealId: string | undefined) {
     },
   });
 }
+
+export function useMarkAnyDealLost() {
+  const { accessToken } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation<DealOut, Error, { dealId: string; lost_reason: string }>({
+    mutationFn: ({ dealId, lost_reason }) =>
+      apiFetch<DealOut>(`/api/v1/deals/${dealId}/mark-lost`, {
+        method: "POST",
+        token: accessToken,
+        body: { lost_reason },
+      }),
+    onSuccess: (_data, { dealId }) => {
+      invalidateDealReadModels(queryClient, dealId);
+    },
+  });
+}

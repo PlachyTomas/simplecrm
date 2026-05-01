@@ -8,11 +8,13 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { Check, Plus, Workflow } from "lucide-react";
+import { Check, Plus, Trash2, Workflow, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AddDealModal } from "@/app/deals/AddDealModal";
-import { useMarkAnyDealWon } from "@/app/deals/useDealActions";
+import { MarkLostDialog } from "@/app/deals/MarkLostDialog";
+import { useMarkAnyDealLost, useMarkAnyDealWon } from "@/app/deals/useDealActions";
+import { useDeleteAnyDeal } from "@/app/deals/useDeals";
 import { stageColor } from "@/app/pipeline/colors";
 import {
   type BoardDeal,
@@ -25,6 +27,7 @@ import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
 import { celebrateWin } from "@/lib/celebrate";
 import { csNoun } from "@/lib/i18n/nouns";
+import { useToast } from "@/lib/toast";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 
@@ -44,10 +47,12 @@ interface DealCardProps {
   dragging?: boolean;
   /** When this stage is "won" the win button hides — the deal is already there. */
   onWin?: (anchor: HTMLElement | null) => void;
+  onLose?: () => void;
   winning?: boolean;
+  losing?: boolean;
 }
 
-function DealCard({ deal, locale, dragging, onWin, winning }: DealCardProps) {
+function DealCard({ deal, locale, dragging, onWin, onLose, winning, losing }: DealCardProps) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: deal.id,
     data: { type: "deal", stageId: deal.stage_id },
@@ -76,23 +81,42 @@ function DealCard({ deal, locale, dragging, onWin, winning }: DealCardProps) {
       <p className="mt-1 font-mono text-xs tabular-nums text-text-secondary">
         {formatMoney(deal.value, deal.currency, locale)}
       </p>
-      {onWin ? (
-        <button
-          ref={winButtonRef}
-          type="button"
-          onClick={(e) => {
-            // Stop drag handlers — this is a click action, not a drag start.
-            e.stopPropagation();
-            e.preventDefault();
-            onWin(winButtonRef.current);
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          disabled={winning}
-          aria-label={`Označit obchod ${deal.name} jako vyhraný`}
-          className="mt-2 inline-flex h-7 items-center gap-1 rounded-md bg-brand-accent px-2 text-xs font-semibold text-text-on-brand-accent opacity-0 transition-opacity duration-fast hover:bg-brand-accent-hover focus-visible:opacity-100 group-hover/card:opacity-100 disabled:cursor-not-allowed disabled:opacity-50 max-md:opacity-100"
-        >
-          <Check size={12} strokeWidth={2} aria-hidden /> Vyhráno
-        </button>
+      {onWin || onLose ? (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 opacity-0 transition-opacity duration-fast focus-within:opacity-100 group-hover/card:opacity-100 max-md:opacity-100">
+          {onWin ? (
+            <button
+              ref={winButtonRef}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onWin(winButtonRef.current);
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              disabled={winning}
+              aria-label={`Označit obchod ${deal.name} jako vyhraný`}
+              className="inline-flex h-7 items-center gap-1 rounded-md bg-brand-accent px-2 text-xs font-semibold text-text-on-brand-accent transition-colors duration-fast hover:bg-brand-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Check size={12} strokeWidth={2} aria-hidden /> Vyhráno
+            </button>
+          ) : null}
+          {onLose ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onLose();
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              disabled={losing}
+              aria-label={`Označit obchod ${deal.name} jako neúspěch`}
+              className="inline-flex h-7 items-center gap-1 rounded-md border border-border bg-surface-overlay px-2 text-xs font-medium text-text-secondary transition-colors duration-fast hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <X size={12} strokeWidth={2} aria-hidden /> Neúspěch
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </article>
   );
@@ -105,7 +129,9 @@ interface StageColumnProps {
   draggingId: string | null;
   onAddDeal: (stageId: string) => void;
   onWinDeal: (deal: BoardDeal, anchor: HTMLElement | null) => void;
+  onLoseDeal: (deal: BoardDeal) => void;
   winningDealId: string | null;
+  losingDealId: string | null;
 }
 
 function StageColumn({
@@ -115,7 +141,9 @@ function StageColumn({
   draggingId,
   onAddDeal,
   onWinDeal,
+  onLoseDeal,
   winningDealId,
+  losingDealId,
 }: StageColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
@@ -173,14 +201,14 @@ function StageColumn({
               deal={deal}
               locale={locale}
               dragging={draggingId === deal.id}
-              // Hide the win button on cards already in the won column —
-              // there's nowhere to move them.
               onWin={
                 stage.stage_type === "won"
                   ? undefined
                   : (anchor) => onWinDeal(deal, anchor)
               }
+              onLose={stage.stage_type === "won" ? undefined : () => onLoseDeal(deal)}
               winning={winningDealId === deal.id}
+              losing={losingDealId === deal.id}
             />
           ))
         )}
@@ -196,6 +224,9 @@ export function PipelinePage() {
   const { data: usersPage } = useOrgUsers();
   const moveMutation = useMoveDealStage();
   const winMutation = useMarkAnyDealWon();
+  const loseMutation = useMarkAnyDealLost();
+  const deleteMutation = useDeleteAnyDeal();
+  const toast = useToast();
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
   const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | string>("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -203,6 +234,8 @@ export function PipelinePage() {
   const [addDealStageId, setAddDealStageId] = useState<string | undefined>(undefined);
   const [winningDealId, setWinningDealId] = useState<string | null>(null);
   const [winToast, setWinToast] = useState<string | null>(null);
+  const [losingDealTarget, setLosingDealTarget] = useState<BoardDeal | null>(null);
+  const [deletingDealTarget, setDeletingDealTarget] = useState<BoardDeal | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -238,6 +271,47 @@ export function PipelinePage() {
     },
     [winMutation, winningDealId, moneyFmt],
   );
+
+  const handleLoseDeal = useCallback((deal: BoardDeal) => {
+    setLosingDealTarget(deal);
+  }, []);
+
+  const handleConfirmLose = useCallback(
+    (reason: string) => {
+      if (!losingDealTarget) return;
+      const target = losingDealTarget;
+      loseMutation.mutate(
+        { dealId: target.id, lost_reason: reason },
+        {
+          onSuccess: () => {
+            toast.success(`Obchod ${target.name} označen jako neúspěch.`);
+            setLosingDealTarget(null);
+          },
+          onError: () => {
+            toast.error("Obchod se nepodařilo označit jako neúspěch.");
+          },
+        },
+      );
+    },
+    [loseMutation, losingDealTarget, toast],
+  );
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!deletingDealTarget) return;
+    const target = deletingDealTarget;
+    deleteMutation.mutate(
+      { dealId: target.id },
+      {
+        onSuccess: () => {
+          toast.success(`Obchod ${target.name} smazán.`);
+          setDeletingDealTarget(null);
+        },
+        onError: () => {
+          toast.error("Obchod se nepodařilo smazat.");
+        },
+      },
+    );
+  }, [deleteMutation, deletingDealTarget, toast]);
 
   const filteredStages = useMemo<BoardStage[]>(() => {
     if (!board) return [];
@@ -292,10 +366,15 @@ export function PipelinePage() {
     const { active, over } = event;
     if (!over) return;
     const dealId = String(active.id);
-    const stageId = String(over.id);
+    const overId = String(over.id);
+    if (overId === "trash") {
+      const dropped = board?.stages.flatMap((s) => s.deals).find((d) => d.id === dealId);
+      if (dropped) setDeletingDealTarget(dropped);
+      return;
+    }
     const fromStage = active.data.current?.stageId;
-    if (fromStage === stageId) return;
-    moveMutation.mutate({ dealId, stageId });
+    if (fromStage === overId) return;
+    moveMutation.mutate({ dealId, stageId: overId });
   };
 
   if (isPending) {
@@ -435,7 +514,9 @@ export function PipelinePage() {
                   setAddDealOpen(true);
                 }}
                 onWinDeal={handleWinDeal}
+                onLoseDeal={handleLoseDeal}
                 winningDealId={winningDealId}
+                losingDealId={losingDealTarget?.id ?? null}
               />
             ))}
           </div>
@@ -447,6 +528,8 @@ export function PipelinePage() {
               Žádné obchody neodpovídají filtru.
             </p>
           ) : null}
+
+          <TrashDropZone visible={activeDealId !== null} />
 
           <DragOverlay>
             {activeDeal ? <DealCard deal={activeDeal} locale={locale} /> : null}
@@ -480,6 +563,107 @@ export function PipelinePage() {
       {winToast ? (
         <WinToast message={winToast} onDismiss={() => setWinToast(null)} />
       ) : null}
+
+      <MarkLostDialog
+        open={losingDealTarget !== null}
+        onClose={() => setLosingDealTarget(null)}
+        pending={loseMutation.isPending}
+        dealName={losingDealTarget?.name}
+        onConfirm={handleConfirmLose}
+      />
+
+      <DeleteConfirmDialog
+        deal={deletingDealTarget}
+        pending={deleteMutation.isPending}
+        onCancel={() => setDeletingDealTarget(null)}
+        onConfirm={handleConfirmDelete}
+        moneyFmt={moneyFmt}
+      />
+    </div>
+  );
+}
+
+function TrashDropZone({ visible }: { visible: boolean }) {
+  const { setNodeRef, isOver } = useDroppable({ id: "trash", data: { type: "trash" } });
+  return (
+    <div
+      ref={setNodeRef}
+      role="region"
+      aria-label="Smazat obchod"
+      aria-hidden={!visible}
+      className={cn(
+        "pointer-events-none fixed inset-x-0 bottom-0 z-30 flex items-center justify-center px-4 pb-4 transition-opacity duration-fast",
+        visible ? "opacity-100" : "opacity-0",
+      )}
+    >
+      <div
+        className={cn(
+          "pointer-events-auto flex w-full max-w-md items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-3 text-sm font-medium shadow-lg transition-colors duration-fast",
+          isOver
+            ? "border-danger bg-danger text-white"
+            : "border-danger-subtle bg-surface text-danger",
+        )}
+      >
+        <Trash2 size={16} strokeWidth={1.75} aria-hidden />
+        <span>{isOver ? "Pustit pro smazání" : "Sem přetáhněte pro smazání"}</span>
+      </div>
+    </div>
+  );
+}
+
+function DeleteConfirmDialog({
+  deal,
+  pending,
+  onCancel,
+  onConfirm,
+  moneyFmt,
+}: {
+  deal: BoardDeal | null;
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+  moneyFmt: Intl.NumberFormat | null;
+}) {
+  if (!deal) return null;
+  const formattedValue = moneyFmt
+    ? moneyFmt.format(Number(deal.value))
+    : `${deal.value} ${deal.currency}`;
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-deal-title"
+      className="bg-bg/80 fixed inset-0 z-50 flex items-center justify-center px-4 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
+    >
+      <div className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg">
+        <h2 id="delete-deal-title" className="text-xl font-semibold">
+          Smazat obchod?
+        </h2>
+        <p className="mt-2 text-sm text-text-secondary">
+          Smaže obchod <strong className="text-text-primary">{deal.name}</strong> ({formattedValue}
+          ) natrvalo. Akci nelze vrátit zpět.
+        </p>
+        <div className="mt-6 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
+          >
+            Zrušit
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={pending}
+            className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-medium text-white transition-colors duration-fast hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {pending ? "Mažu…" : "Smazat"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
