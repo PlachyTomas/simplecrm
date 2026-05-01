@@ -212,6 +212,73 @@ async def test_pipeline_board_excludes_closed_deals(
     assert {d["name"] for d in first["deals"]} == {"Open"}
 
 
+async def test_pipeline_board_won_rolling_window(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """The won column shows wons within the rolling window only (default 30d).
+
+    Older wons can be surfaced by passing a wider window (or by omitting
+    the param to show all). Open deals are unaffected.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    org, user, stages = await _seed(db_session, owned_cleanup)
+    company = Company(organization_id=org.id, name="Co")
+    db_session.add(company)
+    await db_session.commit()
+
+    won_stage = next(s for s in stages if s.stage_type.value == "won")
+    now = datetime.now(tz=UTC)
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                name="Won-recent",
+                value=Decimal("100.00"),
+                currency="CZK",
+                closed_at=now - timedelta(days=10),
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                name="Won-old",
+                value=Decimal("999.00"),
+                currency="CZK",
+                closed_at=now - timedelta(days=120),
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=stages[0].id,
+                name="Open",
+                value=Decimal("50.00"),
+                currency="CZK",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    # Default URL (no win window) shows every won — the frontend chooses
+    # the rolling window default; the API treats absence as "show all".
+    r = await client.get("/api/v1/pipelines/default/board", headers=_auth(user))
+    assert r.status_code == 200
+    body = r.json()
+    won_col = next(s for s in body["stages"] if s["stage_type"] == "won")
+    assert {d["name"] for d in won_col["deals"]} == {"Won-recent", "Won-old"}
+    open_col = next(s for s in body["stages"] if s["id"] == str(stages[0].id))
+    assert {d["name"] for d in open_col["deals"]} == {"Open"}
+
+    # Explicit 30-day window hides the older win.
+    r = await client.get(
+        "/api/v1/pipelines/default/board?won_window_days=30", headers=_auth(user)
+    )
+    won_col = next(s for s in r.json()["stages"] if s["stage_type"] == "won")
+    assert {d["name"] for d in won_col["deals"]} == {"Won-recent"}
+
+
 async def test_pipeline_board_scoped_for_salesperson(
     client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
 ) -> None:

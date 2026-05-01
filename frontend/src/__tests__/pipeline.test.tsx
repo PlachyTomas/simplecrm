@@ -127,7 +127,7 @@ describe("Pipeline Kanban", () => {
     fetchMock.mockImplementation(async (input) => {
       const url = typeof input === "string" ? input : (input as Request).url;
       if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
-      if (url.endsWith("/api/v1/pipelines/default/board")) return jsonResponse(BOARD);
+      if (url.includes("/api/v1/pipelines/default/board")) return jsonResponse(BOARD);
       throw new Error(`Unexpected fetch: ${url}`);
     });
 
@@ -150,7 +150,7 @@ describe("Pipeline Kanban", () => {
     fetchMock.mockImplementation(async (input) => {
       const url = typeof input === "string" ? input : (input as Request).url;
       if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
-      if (url.endsWith("/api/v1/pipelines/default/board")) {
+      if (url.includes("/api/v1/pipelines/default/board")) {
         return jsonResponse({
           ...BOARD,
           stages: BOARD.stages.map((s) => ({

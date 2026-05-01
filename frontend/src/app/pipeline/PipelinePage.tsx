@@ -19,6 +19,7 @@ import { stageColor } from "@/app/pipeline/colors";
 import {
   type BoardDeal,
   type BoardStage,
+  type WonWindow,
   useMoveDealStage,
   usePipelineBoard,
 } from "@/app/pipeline/useBoard";
@@ -30,6 +31,22 @@ import { csNoun } from "@/lib/i18n/nouns";
 import { useToast } from "@/lib/toast";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
+
+const WON_WINDOW_STORAGE_KEY = "pipeline-won-window-days";
+const WON_WINDOW_OPTIONS: { value: WonWindow; label: string }[] = [
+  { value: 7, label: "7 dní" },
+  { value: 30, label: "30 dní" },
+  { value: 90, label: "90 dní" },
+  { value: "all", label: "Vše" },
+];
+
+function loadWonWindow(): WonWindow {
+  if (typeof window === "undefined") return 30;
+  const raw = window.localStorage.getItem(WON_WINDOW_STORAGE_KEY);
+  if (raw === "all") return "all";
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : 30;
+}
 
 function formatMoney(value: string, currency: string, locale: string): string {
   const numeric = Number(value);
@@ -219,7 +236,8 @@ function StageColumn({
 
 export function PipelinePage() {
   usePageTitle("Pipeline");
-  const { data: board, isPending, isError } = usePipelineBoard();
+  const [wonWindow, setWonWindow] = useState<WonWindow>(() => loadWonWindow());
+  const { data: board, isPending, isError } = usePipelineBoard(wonWindow);
   const { data: user } = useCurrentUser();
   const { data: usersPage } = useOrgUsers();
   const moveMutation = useMoveDealStage();
@@ -429,6 +447,27 @@ export function PipelinePage() {
               placeholder="Název obchodu…"
               className="mt-1 w-48 rounded-md border border-border bg-surface px-2 py-1.5 text-sm"
             />
+          </label>
+          <label className="flex flex-col text-xs font-medium text-text-tertiary">
+            Vyhrané za
+            <select
+              value={String(wonWindow)}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const next: WonWindow = raw === "all" ? "all" : Number(raw);
+                setWonWindow(next);
+                if (typeof window !== "undefined") {
+                  window.localStorage.setItem(WON_WINDOW_STORAGE_KEY, String(next));
+                }
+              }}
+              className="mt-1 rounded-md border border-border bg-surface px-2 py-1.5 text-sm"
+            >
+              {WON_WINDOW_OPTIONS.map((opt) => (
+                <option key={String(opt.value)} value={String(opt.value)}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </label>
           {canPickOwner ? (
             <label className="flex flex-col text-xs font-medium text-text-tertiary">

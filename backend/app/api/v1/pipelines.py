@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import uuid
 from collections import defaultdict
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -58,6 +60,15 @@ async def get_default_pipeline(
 
 @router.get("/default/board", response_model=PipelineBoard)
 async def get_default_pipeline_board(
+    won_window_days: int | None = Query(
+        default=None,
+        ge=1,
+        le=3650,
+        description=(
+            "Rolling window (in days) for deals shown in won stages. "
+            "Omit to show all wons; the frontend defaults to 30."
+        ),
+    ),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> PipelineBoard:
@@ -70,14 +81,25 @@ async def get_default_pipeline_board(
     if org is None:
         raise RuntimeError("current user points at a missing organization")
 
-    # Fetch every visible *open* deal in one scoped query. Lost deals stay in
-    # their original (open-type) stage with closed_at + lost_reason set per
-    # the brief — they must not appear on the kanban board, which represents
-    # the active funnel only. See QA-027.
+    # Open deals always show. Won-stage deals show within the rolling window
+    # (default 30 days) so the won column doesn't pile up indefinitely.
+    # Lost deals (open-type stage, closed_at + lost_reason set per the brief)
+    # are excluded — see QA-027.
+    won_stage_ids = [s.id for s in pipeline.stages if s.stage_type is StageType.won]
+    visibility: list[Any] = [Deal.closed_at.is_(None)]
+    if won_stage_ids:
+        if won_window_days is None:
+            visibility.append(Deal.stage_id.in_(won_stage_ids))
+        else:
+            cutoff = datetime.now(tz=UTC) - timedelta(days=won_window_days)
+            visibility.append(
+                and_(Deal.stage_id.in_(won_stage_ids), Deal.closed_at >= cutoff)
+            )
+
     stmt = select(Deal).where(
         Deal.organization_id == user.organization_id,
         Deal.stage_id.in_([s.id for s in pipeline.stages]),
-        Deal.closed_at.is_(None),
+        or_(*visibility),
     )
     scoped = await scope_by_owner(stmt, session=session, user=user, owner_col=Deal.owner_user_id)
     deals = (await session.execute(scoped)).scalars().all()

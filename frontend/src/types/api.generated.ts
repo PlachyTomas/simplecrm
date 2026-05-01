@@ -3107,7 +3107,10 @@ export interface operations {
     };
     get_default_pipeline_board_api_v1_pipelines_default_board_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Rolling window (in days) for deals shown in won stages. Omit to show all wons; the frontend defaults to 30. */
+                won_window_days?: number | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3121,6 +3124,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PipelineBoard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

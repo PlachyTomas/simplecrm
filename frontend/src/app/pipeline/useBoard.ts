@@ -11,13 +11,23 @@ export type BoardDeal = components["schemas"]["DealOut"];
 
 export const BOARD_QUERY_KEY = ["pipeline", "default", "board"] as const;
 
-export function usePipelineBoard() {
+/** "all" disables the rolling window; numbers are days. */
+export type WonWindow = number | "all";
+
+export function usePipelineBoard(wonWindow: WonWindow = 30) {
   const { accessToken } = useAuth();
   return useQuery<PipelineBoard>({
-    queryKey: BOARD_QUERY_KEY,
+    queryKey: [...BOARD_QUERY_KEY, { wonWindow }],
     enabled: !!accessToken,
-    queryFn: () =>
-      apiFetch<PipelineBoard>("/api/v1/pipelines/default/board", { token: accessToken }),
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (wonWindow !== "all") params.set("won_window_days", String(wonWindow));
+      const qs = params.toString();
+      return apiFetch<PipelineBoard>(
+        `/api/v1/pipelines/default/board${qs ? `?${qs}` : ""}`,
+        { token: accessToken },
+      );
+    },
     staleTime: 15_000,
   });
 }
@@ -34,40 +44,49 @@ export function useMoveDealStage() {
       }),
     onMutate: async ({ dealId, stageId }) => {
       await queryClient.cancelQueries({ queryKey: BOARD_QUERY_KEY });
-      const previous = queryClient.getQueryData<PipelineBoard>(BOARD_QUERY_KEY);
-      if (!previous) return { previous };
-
-      // Optimistically move the deal between stages without waiting.
-      let movedDeal: BoardDeal | undefined;
-      const afterRemoval = previous.stages.map((stage) => {
-        const removed = stage.deals.find((d) => d.id === dealId);
-        if (!removed) return stage;
-        movedDeal = { ...removed, stage_id: stageId };
-        const keep = stage.deals.filter((d) => d.id !== dealId);
-        return { ...stage, deals: keep, deal_count: keep.length };
+      // The board is keyed by wonWindow now, so multiple variants may be
+      // cached. Update every matching query so any other won-window the
+      // user toggles back to also reflects the optimistic move.
+      const snapshots = queryClient.getQueriesData<PipelineBoard>({
+        queryKey: BOARD_QUERY_KEY,
       });
-      const moved = movedDeal;
-      const nextStages = moved
-        ? afterRemoval.map((stage) =>
-            stage.id === stageId
-              ? {
-                  ...stage,
-                  deals: [moved, ...stage.deals],
-                  deal_count: stage.deal_count + 1,
-                }
-              : stage,
-          )
-        : afterRemoval;
-      queryClient.setQueryData<PipelineBoard>(BOARD_QUERY_KEY, {
-        ...previous,
-        stages: nextStages,
-      });
-      return { previous };
+      for (const [key, previous] of snapshots) {
+        if (!previous) continue;
+        let movedDeal: BoardDeal | undefined;
+        const afterRemoval = previous.stages.map((stage) => {
+          const removed = stage.deals.find((d) => d.id === dealId);
+          if (!removed) return stage;
+          movedDeal = { ...removed, stage_id: stageId };
+          const keep = stage.deals.filter((d) => d.id !== dealId);
+          return { ...stage, deals: keep, deal_count: keep.length };
+        });
+        const moved = movedDeal;
+        const nextStages = moved
+          ? afterRemoval.map((stage) =>
+              stage.id === stageId
+                ? {
+                    ...stage,
+                    deals: [moved, ...stage.deals],
+                    deal_count: stage.deal_count + 1,
+                  }
+                : stage,
+            )
+          : afterRemoval;
+        queryClient.setQueryData<PipelineBoard>(key, {
+          ...previous,
+          stages: nextStages,
+        });
+      }
+      return { snapshots };
     },
     onError: (_err, _vars, context) => {
-      const ctx = context as { previous?: PipelineBoard } | undefined;
-      if (ctx?.previous) {
-        queryClient.setQueryData(BOARD_QUERY_KEY, ctx.previous);
+      const ctx = context as
+        | { snapshots?: [readonly unknown[], PipelineBoard | undefined][] }
+        | undefined;
+      if (ctx?.snapshots) {
+        for (const [key, previous] of ctx.snapshots) {
+          if (previous) queryClient.setQueryData(key, previous);
+        }
       }
     },
     onSettled: (_data, _err, { dealId }) => {
