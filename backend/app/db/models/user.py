@@ -59,6 +59,14 @@ class User(Base):
         Boolean, default=False, server_default="false", nullable=False
     )
 
+    # Cross-organization super-admin. Operates the /admin/* surface (org list,
+    # subscription activation, comp/enterprise overrides, billing settings).
+    # Distinct from org-level `role='admin'`. Set manually via SQL after the
+    # founder's first login.
+    is_super_admin: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
+    )
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

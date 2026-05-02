@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import (
     Organization,
     Plan,
-    PlanInterval,
     Team,
     User,
     UserRole,
@@ -20,14 +19,20 @@ from app.db.models import (
 
 
 async def test_default_plans_are_seeded(db_session: AsyncSession) -> None:
-    result = await db_session.execute(select(Plan).order_by(Plan.name))
-    plans = {p.name: p for p in result.scalars()}
-    assert set(plans.keys()) == {"team", "trial"}
-    assert plans["trial"].price_minor_units == 0
-    assert plans["team"].price_minor_units == 9900
-    assert plans["team"].currency == "CZK"
-    assert plans["team"].interval is PlanInterval.monthly
-    assert plans["team"].is_active is True
+    result = await db_session.execute(select(Plan).order_by(Plan.sort_order))
+    plans = {p.code: p for p in result.scalars()}
+    assert set(plans.keys()) == {"trial", "monthly", "annual", "enterprise", "comp"}
+    assert plans["trial"].price_per_user_minor == 0
+    assert plans["trial"].is_public is False
+    assert plans["monthly"].price_per_user_minor == 9900
+    assert plans["monthly"].billing_interval == "monthly"
+    assert plans["monthly"].is_public is True
+    assert plans["annual"].price_per_user_minor == 99900
+    assert plans["annual"].is_public is True
+    assert plans["enterprise"].price_per_user_minor is None
+    assert plans["enterprise"].billing_interval == "custom"
+    assert plans["comp"].billing_interval == "free"
+    assert all(p.currency == "CZK" for p in plans.values())
 
 
 async def test_organization_has_default_trial_window(db_session: AsyncSession) -> None:

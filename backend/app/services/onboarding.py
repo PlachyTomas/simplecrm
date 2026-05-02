@@ -10,9 +10,10 @@ and dropped into that team.
 
 from __future__ import annotations
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Organization, Team, User, UserRole
+from app.db.models import Organization, Plan, Subscription, Team, User, UserRole
 from app.services.pipeline import create_default_pipeline
 
 DEFAULT_TEAM_NAME = "Hlavní tým"
@@ -30,6 +31,8 @@ async def create_organization_with_admin(
       - Insert `Organization(name=name)`.
       - Insert default `Team(name="Hlavní tým", is_default=True)`.
       - Provision the default pipeline (delegates to `pipeline.create_default_pipeline`).
+      - Insert a `Subscription(plan='trial', status='trialing')` whose
+        period ends at `organization.trial_ends_at`.
       - Set `founder.organization_id`, `founder.team_id`, `founder.role = admin`.
 
     The caller is expected to have already verified `founder.organization_id is None`.
@@ -47,6 +50,19 @@ async def create_organization_with_admin(
     await session.flush()
 
     await create_default_pipeline(session, organization.id)
+
+    trial_plan_id = (
+        await session.execute(select(Plan.id).where(Plan.code == "trial"))
+    ).scalar_one()
+    subscription = Subscription(
+        organization_id=organization.id,
+        plan_id=trial_plan_id,
+        status="trialing",
+        started_at=organization.created_at,
+        current_period_starts_at=organization.created_at,
+        current_period_ends_at=organization.trial_ends_at,
+    )
+    session.add(subscription)
 
     founder.organization_id = organization.id
     founder.team_id = default_team.id

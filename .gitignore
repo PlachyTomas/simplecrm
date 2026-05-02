@@ -47,6 +47,10 @@ Thumbs.db
 *.log
 npm-debug.log*
 pnpm-debug.log*
+logs/
+
+# claude-loop runtime artefacts (the wrapper writes its PID + log here)
+.claude-loop.pid
 
 # Playwright
 playwright-report/
