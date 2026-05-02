@@ -902,3 +902,57 @@ Claude Code session every 5h while `RESUME.md` is present.
 
 Next: B2 — `BillingService` with subscription lifecycle methods
 (see `.claude/tasks/PAYGATE-B1.md` and the prompt §5 B2).
+
+### B2 — BillingService (2f8b43a)
+
+- `app/services/billing.py` — `get_current_subscription`,
+  `get_effective_price_per_user_minor`, `compute_savings`,
+  `compute_with_vat`, `choose_plan` (idempotent, emits founder
+  email), `activate_subscription`, `set_comp`, `set_enterprise`,
+  `cancel`, `extend_trial`, `is_app_access_allowed`. Each mutating
+  method writes one Activity row with `action` + parameters.
+- Migration `a917e4d6f221` adds `organization` to
+  `activity_entity_type` and `subscription_change` to
+  `activity_type` via the COMMIT-then-ALTER-TYPE pattern.
+- 27 service tests cover every method + the eight access-truth-table
+  boundaries.
+
+### B3 — Subscription + admin billing endpoints (dded602)
+
+- `/plans/public` (no auth) — monthly + annual with derived savings.
+- `/organizations/current/subscription`, `/billing-summary`,
+  `/choose-plan`, `/contact-enterprise` — org-scoped reads + writes.
+- `/admin/organizations` (search + paginate), `/admin/organizations/:id`,
+  activate / set-comp / set-enterprise / extend-trial / cancel,
+  GET + PUT `/admin/billing-settings` — super-admin surface.
+- `require_super_admin` dependency. 19 endpoint tests; admin path
+  rejects non-super-admins with 403.
+
+### B4 — Pay-gate dependency (cdcb6de)
+
+- `require_active_trial_or_subscription` now drives off
+  `BillingService.is_app_access_allowed`. 402 payload reshaped to
+  `{code: 'subscription_required', current_status, is_comp,
+   can_choose_plan: true, ends_at}`.
+- New `app/api/v1/subscription.py` router holds the four
+  customer-facing subscription endpoints under
+  `require_org_membership` only — outside the trial gate so a gated
+  user can still escape via `choose-plan`.
+- Fallback for orgs without a Subscription row (legacy / test-only)
+  to `Organization.trial_ends_at`. Production orgs always have a
+  Subscription via the B1 backfill + onboarding.
+- test_permissions rewritten: dropped the `stripe_customer_id`
+  signal, added cases for fallback admit/deny, active-Subscription
+  admit, comp admit-always.
+
+### F1 — PriceDisplay + useBillingSettings (d948a27)
+
+- `frontend/src/components/billing/PriceDisplay.tsx` — single source
+  of truth for currency formatting + DPH copy.
+- `useBillingSettings()` reads
+  `GET /api/v1/plans/billing-settings/public` (no auth, 5-min cache,
+  falls back to `{is_vat_payer: false, 21 %}`).
+- Backend: new `BillingSettingsPublic` schema and the public read
+  endpoint live on the no-auth `plans` router.
+
+Next: F2 — public pricing page at `/cenik`.

@@ -1,4 +1,4 @@
-# RESUME — paygate build, after B1
+# RESUME — paygate build, after F1
 
 ## Where we are
 
@@ -7,63 +7,75 @@ Driving prompt: `docs/prompts/PAYGATE_TASK.md`. Auto-loop wrapper
 sessions every 5h until this file is **absent**. Do **not** start a
 second loop instance — check `.claude-loop.pid` first.
 
-Last completed commit: **`0cf89cc`** — `feat(billing): add Plan /
-Subscription / BillingSettings models and seed`. Migration
-`b3a5d27e1c84` is applied; the dev DB has 5 plans, 1 billing-settings
-row, and 164 backfilled trialing subscriptions.
+Backend is done. Last commits:
 
-Read in order before doing anything: `docs/work-log.md` (Session 5
-section is the latest), `.claude/tasks/PAYGATE-B1.md` (B1 spec —
-done), `docs/prompts/PAYGATE_TASK.md` §5 B2 onwards (everything still
-to do), `.claude/skills/ui-design.md` (before any UI work).
+- `0cf89cc` — B1: Plan/Subscription/BillingSettings + seed + backfill
+- `2f8b43a` — B2: BillingService + activity-enum migration
+- `dded602` — B3: subscription + admin billing endpoints
+- `cdcb6de` — B4: pay-gate dependency wired to BillingService
+- `d948a27` — F1: PriceDisplay + useBillingSettings hook + public
+  billing-settings read
 
-## Next task — B2: `BillingService`
+258 backend tests pass (1 pre-existing dev-login-config failure
+unchanged). Frontend lint/typecheck/test all green.
 
-Create `backend/app/services/billing.py` with the methods listed in
-the prompt §5 B2:
+Read in order before starting: `docs/work-log.md` (Session 5 covers
+B1–F1), `docs/prompts/PAYGATE_TASK.md` §6 onwards (frontend tasks),
+`.claude/skills/ui-design.md` (mandatory before any UI change),
+existing components for style match.
 
-- `get_current_subscription(org_id) -> Subscription`
-- `get_effective_price_per_user_minor(sub) -> int | None`
-- `compute_savings(user_count) -> dict`
-- `compute_with_vat(base_minor) -> dict`
-- `choose_plan(org_id, plan_code, requested_by_user_id) -> Subscription`
-- `activate_subscription(org_id, plan_code, override_price=None,
-  period_months=None, by_admin_id) -> Subscription`
-- `set_comp(org_id, reason, ends_at=None, by_admin_id) -> Subscription`
-- `set_enterprise(org_id, override_price_per_user_minor, period_months,
-  notes, by_admin_id) -> Subscription`
-- `cancel(org_id, by_admin_id, effective_at=None) -> Subscription`
-- `extend_trial(org_id, days, by_admin_id) -> Subscription`
-- `is_app_access_allowed(sub, now=None) -> bool`
+## Next task — F2: Public pricing page (`/cenik`)
 
-Notes:
+Three-card layout. Czech, vykání. Mobile-stacks vertically.
 
-- Every state transition writes an `Activity` record
-  (`entity_type='organization'`, actor `by_admin_id` /
-  `requested_by_user_id`). The `Activity` model already exists; check
-  its enum values in `app/db/models/enums.py` and pick the closest
-  match or extend the enum (separate migration if so — but try to
-  reuse).
-- `choose_plan` is idempotent — if a `pending_activation` already
-  exists for the same plan, return it. Email goes through
-  `app.services.email` (current stub logs to console).
-- `is_app_access_allowed` rules: `is_comp=True` → always allow;
-  `status in {trialing, active}` and `current_period_ends_at >= now`
-  → allow; `status == past_due` and grace window (7 days from
-  `current_period_ends_at`) → allow; otherwise deny.
-- Mock the email send in tests. There is **no** real Stripe / payment
-  integration in this scope (see prompt §9).
+- **Card 1 — Měsíční**: title `Měsíční`,
+  `<PriceDisplay baseMinor={9900} interval="monthly" size="xl" />`,
+  bullets ("Bez závazků", "Zrušení kdykoliv", "Plná funkcionalita"),
+  CTA `Vyzkoušet 30 dní zdarma` → `/login` (or `/onboarding`).
+- **Card 2 — Roční (highlighted)**: magenta `Doporučujeme · Ušetříte
+  16 %` badge top-right (the **one** magenta element on the screen,
+  light-mode only — re-read `.claude/skills/ui-design.md` §3),
+  `<PriceDisplay baseMinor={99900} interval="annual" size="xl" />`,
+  green-text savings line (`Ušetříte 189 Kč na uživatele · 2 měsíce
+  zdarma`), bullets, CTA `Vyzkoušet 30 dní zdarma`.
+- **Card 3 — Enterprise**: title `Enterprise`, instead of price the
+  string `Vlastní balíček` size-xl, bullets ("25+ uživatelů",
+  "Vlastní cena a podmínky", "Dedikovaná podpora", "Jednání o SLA"),
+  CTA `Domluvte se s námi` → contact modal that posts to
+  `POST /api/v1/organizations/current/subscription/contact-enterprise`
+  *if logged in*; for unauthenticated visitors send to
+  `mailto:podpora@simplecrm.cz` or to a separate
+  `POST /api/v1/contact/enterprise` (out of scope — link to email if
+  not authed).
 
-Spec the work first at `.claude/tasks/PAYGATE-B2.md` (mirror the B1
-spec format). Then implement, test, commit as
-`feat(billing): add BillingService with subscription lifecycle`.
+**Below the cards** (smaller helper section):
 
-## After B2
+- `is_vat_payer=false`: "Všechny ceny jsou bez DPH."
+- `is_vat_payer=true`: "Ceny bez DPH; konečné ceny zobrazujeme s 21%
+  DPH."
+- "Zkušební doba je 30 dní. Žádná kreditní karta při registraci."
 
-Continue down the §10 commit plan in `docs/prompts/PAYGATE_TASK.md`.
-Order: B3 (endpoints) → B4 (pay-gate dep) → F1 (PriceDisplay) → F2
-(/cenik) → F3 (trial countdown) → F4 (gate) → F5 (settings) → F6
-(/admin) → integration tests → final WORK_LOG/README polish.
+Read the plans + the public is_vat_payer via the existing
+`useBillingSettings()` hook + a new `useQuery` for
+`/api/v1/plans/public`. Bundle these into a tiny
+`useCenikData()` hook in the new page module.
+
+Mount the route. Look for the existing landing/marketing-page
+structure under `frontend/src/marketing/` — copy that pattern. Pages
+register in `frontend/src/App.tsx` (or wherever the router is).
+
+Spec the work first at `.claude/tasks/PAYGATE-F2.md` (mirror the B1/
+B2 spec format). Implement. Verify in browser via Playwright MCP per
+CLAUDE.md (screenshot, console clean, 390 / 768 / 1280 viewports).
+Commit as `feat(landing): pricing page with monthly/annual/enterprise
+tiers`.
+
+## After F2
+
+§10 commit plan in `docs/prompts/PAYGATE_TASK.md`:
+F3 trial countdown → F4 trial-expired pay gate → F5 in-app billing
+settings → F6 super-admin UI → integration tests → final WORK_LOG /
+README polish.
 
 ## When everything is done
 
@@ -79,3 +91,5 @@ Order: B3 (endpoints) → B4 (pay-gate dep) → F1 (PriceDisplay) → F2
 - The dev container is **not** running here; backend / frontend run
   on the host. Postgres is in `simplecrm-postgres-1`.
 - Push permissions are **not** granted; commits stay local.
+- The prompt's `PriceDisplay` is the **only** place
+  `Intl.NumberFormat` for currency is allowed — grep proves it.
