@@ -774,6 +774,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/widgets/pipeline-value": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Widget Pipeline Value */
+        get: operations["widget_pipeline_value_api_v1_reports_widgets_pipeline_value_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/widgets/deals-won": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Widget Deals Won */
+        get: operations["widget_deals_won_api_v1_reports_widgets_deals_won_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/widgets/win-rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Widget Win Rate */
+        get: operations["widget_win_rate_api_v1_reports_widgets_win_rate_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/widgets/avg-deal-size": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Widget Avg Deal Size */
+        get: operations["widget_avg_deal_size_api_v1_reports_widgets_avg_deal_size_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/teams": {
         parameters: {
             query?: never;
@@ -1391,6 +1459,19 @@ export interface components {
              */
             scope: "won" | "open";
         };
+        /**
+         * AvgDealSizeResponse
+         * @description Mean Deal.value across the configured scope.
+         */
+        AvgDealSizeResponse: {
+            /** Value */
+            value: string;
+            /** Currency */
+            currency: string;
+            /** Sample Count */
+            sample_count: number;
+            comparison: components["schemas"]["Comparison"] | null;
+        };
         /** BillingSettingsOut */
         BillingSettingsOut: {
             /** Is Vat Payer */
@@ -1634,6 +1715,23 @@ export interface components {
             note?: string | null;
             /** Owner User Id */
             owner_user_id?: string | null;
+        };
+        /** Comparison */
+        Comparison: {
+            /** Value */
+            value: string | number;
+            /** Delta Pct */
+            delta_pct: number | null;
+            /**
+             * Previous From
+             * Format: date
+             */
+            previous_from: string;
+            /**
+             * Previous To
+             * Format: date
+             */
+            previous_to: string;
         };
         /** ContactCreate */
         ContactCreate: {
@@ -1925,6 +2023,21 @@ export interface components {
              * @enum {string}
              */
             display: "count" | "value" | "both";
+        };
+        /**
+         * DealsWonResponse
+         * @description Count + total value of closed-won deals in range.
+         */
+        DealsWonResponse: {
+            /** Count */
+            count: number;
+            /** Value */
+            value: string;
+            /** Currency */
+            currency: string;
+            /** Sparkline */
+            sparkline: components["schemas"]["SparklineBucket"][];
+            comparison: components["schemas"]["Comparison"] | null;
         };
         /** DevLoginRequest */
         DevLoginRequest: {
@@ -2422,6 +2535,19 @@ export interface components {
              */
             group_by: "none" | "stage" | "owner";
         };
+        /**
+         * PipelineValueResponse
+         * @description Sum of open deals + comparison vs. previous period of equal length.
+         */
+        PipelineValueResponse: {
+            /** Value */
+            value: string;
+            /** Currency */
+            currency: string;
+            /** Sparkline */
+            sparkline: components["schemas"]["SparklineBucket"][];
+            comparison: components["schemas"]["Comparison"] | null;
+        };
         /** PlanOut */
         PlanOut: {
             /**
@@ -2582,6 +2708,16 @@ export interface components {
             period_months: number;
             /** Notes */
             notes?: string | null;
+        };
+        /** SparklineBucket */
+        SparklineBucket: {
+            /**
+             * Bucket Date
+             * Format: date
+             */
+            bucket_date: string;
+            /** Value */
+            value: string | number;
         };
         /** StageCreate */
         StageCreate: {
@@ -2947,6 +3083,19 @@ export interface components {
              * @enum {string}
              */
             type: "win_rate";
+        };
+        /**
+         * WinRateResponse
+         * @description won_count / (won_count + lost_count) × 100, or None when no closes.
+         */
+        WinRateResponse: {
+            /** Value */
+            value: number | null;
+            /** Won Count */
+            won_count: number;
+            /** Lost Count */
+            lost_count: number;
+            comparison: components["schemas"]["Comparison"] | null;
         };
     };
     responses: never;
@@ -4539,6 +4688,145 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    widget_pipeline_value_api_v1_reports_widgets_pipeline_value_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                team_id?: string | null;
+                owner_user_id?: string | null;
+                group_by?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineValueResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    widget_deals_won_api_v1_reports_widgets_deals_won_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                team_id?: string | null;
+                owner_user_id?: string | null;
+                display?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealsWonResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    widget_win_rate_api_v1_reports_widgets_win_rate_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                team_id?: string | null;
+                owner_user_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WinRateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    widget_avg_deal_size_api_v1_reports_widgets_avg_deal_size_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                team_id?: string | null;
+                owner_user_id?: string | null;
+                scope?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvgDealSizeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

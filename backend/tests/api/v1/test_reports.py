@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -885,3 +885,327 @@ async def test_dashboard_config_blocks_salesperson(
         json={"version": 1, "widgets": []},
     )
     assert put_resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Widget endpoints, batch 1 (R2): pipeline_value, deals_won, win_rate, avg_deal_size
+# ---------------------------------------------------------------------------
+
+
+async def _seed_widget_corpus(
+    session: AsyncSession,
+    *,
+    org: Organization,
+    user: User,
+    open_stage: Stage,
+    won_stage: Stage,
+    lost_stage: Stage,
+    company: Company,
+) -> None:
+    """Seed deals across the trailing 30 days + the previous 30-day window
+    so widget endpoints have non-trivial data to compute on. All values
+    are in `org.currency` so currency mismatches don't drop them.
+    """
+
+    now = datetime.now(tz=UTC)
+    cur_in = now - timedelta(days=10)
+    cur_in2 = now - timedelta(days=5)
+    prev_in = now - timedelta(days=40)
+    prev_in2 = now - timedelta(days=45)
+
+    session.add_all([
+        # Two open deals created in current window (count 2, sum 300).
+        Deal(
+            organization_id=org.id, company_id=company.id, stage_id=open_stage.id,
+            owner_user_id=user.id, name="O1", value=Decimal("100"),
+            currency=org.currency, created_at=cur_in,
+        ),
+        Deal(
+            organization_id=org.id, company_id=company.id, stage_id=open_stage.id,
+            owner_user_id=user.id, name="O2", value=Decimal("200"),
+            currency=org.currency, created_at=cur_in2,
+        ),
+        # One open deal created in the previous window (count 1, sum 80).
+        Deal(
+            organization_id=org.id, company_id=company.id, stage_id=open_stage.id,
+            owner_user_id=user.id, name="O0", value=Decimal("80"),
+            currency=org.currency, created_at=prev_in,
+        ),
+        # Two won deals closed in current window (count 2, sum 700).
+        Deal(
+            organization_id=org.id, company_id=company.id, stage_id=won_stage.id,
+            owner_user_id=user.id, name="W1", value=Decimal("300"),
+            currency=org.currency, closed_at=cur_in,
+        ),
+        Deal(
+            organization_id=org.id, company_id=company.id, stage_id=won_stage.id,
+            owner_user_id=user.id, name="W2", value=Decimal("400"),
+            currency=org.currency, closed_at=cur_in2,
+        ),
+        # One lost deal closed in current window. Win rate denom = 3.
+        Deal(
+            organization_id=org.id, company_id=company.id, stage_id=lost_stage.id,
+            owner_user_id=user.id, name="L1", value=Decimal("50"),
+            currency=org.currency, closed_at=cur_in,
+            lost_reason="cena",
+        ),
+        # One won deal closed in the previous window (count 1, sum 250).
+        Deal(
+            organization_id=org.id, company_id=company.id, stage_id=won_stage.id,
+            owner_user_id=user.id, name="W0", value=Decimal("250"),
+            currency=org.currency, closed_at=prev_in2,
+        ),
+    ])
+    await session.commit()
+
+
+async def _setup_with_lost_stage(
+    session: AsyncSession, owned_cleanup: dict[str, list]
+) -> tuple[Organization, User, Stage, Stage, Stage, Company]:
+    """Like _setup but also returns a lost stage so win_rate has a denom."""
+
+    org, user, open_stage, won_stage, company = await _setup(session, owned_cleanup)
+    # Find or create a lost stage. The default pipeline doesn't include
+    # one, so add it here.
+    pipeline_id = open_stage.pipeline_id
+    lost_stage = Stage(
+        pipeline_id=pipeline_id,
+        name="Prohráno",
+        default_probability=0,
+        color="#6B7280",
+        position=99,
+        stage_type=StageType.lost,
+    )
+    session.add(lost_stage)
+    await session.commit()
+    await session.refresh(lost_stage)
+    return org, user, open_stage, won_stage, lost_stage, company
+
+
+def _window_params() -> dict[str, str]:
+    """Last 30 days, formatted as ISO."""
+    today = datetime.now(tz=UTC).date()
+    thirty = today - timedelta(days=29)
+    return {"from": thirty.isoformat(), "to": today.isoformat()}
+
+
+async def test_widget_pipeline_value_happy(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, open_stage, won_stage, lost_stage, company = await _setup_with_lost_stage(
+        db_session, owned_cleanup
+    )
+    await _seed_widget_corpus(
+        db_session,
+        org=org, user=user, open_stage=open_stage, won_stage=won_stage,
+        lost_stage=lost_stage, company=company,
+    )
+    resp = await client.get(
+        "/api/v1/reports/widgets/pipeline-value",
+        headers=_auth(user),
+        params=_window_params(),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    # Two open deals (100 + 200) created in the current window.
+    assert Decimal(str(body["value"])) == Decimal("300")
+    assert body["currency"] == org.currency
+    assert body["comparison"] is not None
+    # Previous window contained 1 open deal (80).
+    assert Decimal(str(body["comparison"]["value"])) == Decimal("80")
+
+
+async def test_widget_pipeline_value_validates_window(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, user, *_ = await _setup(db_session, owned_cleanup)
+    today = datetime.now(tz=UTC).date()
+    yesterday = today - timedelta(days=1)
+    resp = await client.get(
+        "/api/v1/reports/widgets/pipeline-value",
+        headers=_auth(user),
+        params={"from": today.isoformat(), "to": yesterday.isoformat()},
+    )
+    assert resp.status_code == 422
+
+
+async def test_widget_pipeline_value_blocks_salesperson(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _admin, *_ = await _setup(db_session, owned_cleanup)
+    sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(sp_email)
+    sp = User(
+        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
+    )
+    db_session.add(sp)
+    await db_session.commit()
+    await db_session.refresh(sp)
+    resp = await client.get(
+        "/api/v1/reports/widgets/pipeline-value",
+        headers=_auth(sp),
+        params=_window_params(),
+    )
+    assert resp.status_code == 403
+
+
+async def test_widget_deals_won_happy_with_comparison(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, open_stage, won_stage, lost_stage, company = await _setup_with_lost_stage(
+        db_session, owned_cleanup
+    )
+    await _seed_widget_corpus(
+        db_session,
+        org=org, user=user, open_stage=open_stage, won_stage=won_stage,
+        lost_stage=lost_stage, company=company,
+    )
+    resp = await client.get(
+        "/api/v1/reports/widgets/deals-won",
+        headers=_auth(user),
+        params=_window_params(),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["count"] == 2
+    assert Decimal(str(body["value"])) == Decimal("700")
+    # Previous window: one won deal at 250.
+    assert Decimal(str(body["comparison"]["value"])) == Decimal("250")
+    # delta_pct = (700 - 250) / 250 * 100 = 180.0
+    assert abs(body["comparison"]["delta_pct"] - 180.0) < 0.01
+
+
+async def test_widget_deals_won_blocks_salesperson(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _admin, *_ = await _setup(db_session, owned_cleanup)
+    sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(sp_email)
+    sp = User(
+        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
+    )
+    db_session.add(sp)
+    await db_session.commit()
+    await db_session.refresh(sp)
+    resp = await client.get(
+        "/api/v1/reports/widgets/deals-won",
+        headers=_auth(sp),
+        params=_window_params(),
+    )
+    assert resp.status_code == 403
+
+
+async def test_widget_win_rate_with_denominator(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, open_stage, won_stage, lost_stage, company = await _setup_with_lost_stage(
+        db_session, owned_cleanup
+    )
+    await _seed_widget_corpus(
+        db_session,
+        org=org, user=user, open_stage=open_stage, won_stage=won_stage,
+        lost_stage=lost_stage, company=company,
+    )
+    resp = await client.get(
+        "/api/v1/reports/widgets/win-rate",
+        headers=_auth(user),
+        params=_window_params(),
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    # 2 won + 1 lost = 3 closed; 2/3 ≈ 66.7
+    assert body["won_count"] == 2
+    assert body["lost_count"] == 1
+    assert abs(body["value"] - 66.7) < 0.05
+
+
+async def test_widget_win_rate_returns_none_when_no_closes(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Empty denominator → value is None, not 0%."""
+    _, user, *_ = await _setup_with_lost_stage(db_session, owned_cleanup)
+    resp = await client.get(
+        "/api/v1/reports/widgets/win-rate",
+        headers=_auth(user),
+        params=_window_params(),
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["value"] is None
+    assert body["won_count"] == 0
+    assert body["lost_count"] == 0
+
+
+async def test_widget_win_rate_blocks_salesperson(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _admin, *_ = await _setup(db_session, owned_cleanup)
+    sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(sp_email)
+    sp = User(
+        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
+    )
+    db_session.add(sp)
+    await db_session.commit()
+    await db_session.refresh(sp)
+    resp = await client.get(
+        "/api/v1/reports/widgets/win-rate",
+        headers=_auth(sp),
+        params=_window_params(),
+    )
+    assert resp.status_code == 403
+
+
+async def test_widget_avg_deal_size_won(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, open_stage, won_stage, lost_stage, company = await _setup_with_lost_stage(
+        db_session, owned_cleanup
+    )
+    await _seed_widget_corpus(
+        db_session,
+        org=org, user=user, open_stage=open_stage, won_stage=won_stage,
+        lost_stage=lost_stage, company=company,
+    )
+    resp = await client.get(
+        "/api/v1/reports/widgets/avg-deal-size",
+        headers=_auth(user),
+        params={**_window_params(), "scope": "won"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    # Avg of 300 + 400 = 350 over 2 won deals.
+    assert Decimal(str(body["value"])) == Decimal("350")
+    assert body["sample_count"] == 2
+
+
+async def test_widget_avg_deal_size_validation(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, user, *_ = await _setup(db_session, owned_cleanup)
+    resp = await client.get(
+        "/api/v1/reports/widgets/avg-deal-size",
+        headers=_auth(user),
+        params={**_window_params(), "scope": "nonsense"},
+    )
+    assert resp.status_code == 422
+
+
+async def test_widget_avg_deal_size_blocks_salesperson(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _admin, *_ = await _setup(db_session, owned_cleanup)
+    sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(sp_email)
+    sp = User(
+        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
+    )
+    db_session.add(sp)
+    await db_session.commit()
+    await db_session.refresh(sp)
+    resp = await client.get(
+        "/api/v1/reports/widgets/avg-deal-size",
+        headers=_auth(sp),
+        params=_window_params(),
+    )
+    assert resp.status_code == 403

@@ -15,6 +15,7 @@ from app.api.v1 import (
     pipelines,
     plans,
     reports,
+    reports_widgets,
     subscription,
     teams,
     users,
@@ -51,6 +52,7 @@ api_router.include_router(deals.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(invitations.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(pipelines.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(reports.router, dependencies=PROTECTED_DEPS)
+api_router.include_router(reports_widgets.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(teams.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(users.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(activities.router, dependencies=PROTECTED_DEPS)
