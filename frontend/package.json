@@ -21,11 +21,13 @@
     "@dnd-kit/sortable": "^8.0.0",
     "@tanstack/react-query": "^5.62.0",
     "@tanstack/react-table": "^8.21.3",
+    "@types/react-grid-layout": "^2.1.0",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-grid-layout": "^2.2.3",
     "react-router-dom": "^6.28.0",
     "tailwind-merge": "^2.5.5"
   },
