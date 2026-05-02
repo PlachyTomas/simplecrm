@@ -1,20 +1,14 @@
 /**
  * Single dispatcher: maps a `WidgetEntry` to its concrete component.
  *
- * R6.1 covers the seven KPI tiles. R6.2 (`sales_leaderboard`,
- * `rep_activity`, `lost_reasons_breakdown`) and R6.3 (`stale_deals`,
- * `companies_at_risk`) plug in by adding cases here — no change
- * needed in `ReportsPage` or `WidgetGrid`.
+ * R6.1 covers the seven KPI tiles, R6.2 the three bar charts, R6.3
+ * the two list widgets. New widget types plug in by adding a case
+ * here — no change needed in `ReportsPage` or `WidgetGrid`.
  */
 
 import {
-  WidgetEmpty,
-  WidgetFrame,
-} from "@/app/reports/dashboard/WidgetFrame";
-import {
   type GlobalFilters,
   type WidgetEntry,
-  WIDGET_LABEL,
   type WidgetType,
 } from "@/app/reports/dashboard/types";
 import {
@@ -31,6 +25,10 @@ import {
   SalesCycleLengthWidget,
   WinRateWidget,
 } from "@/app/reports/dashboard/widgets/kpi-widgets";
+import {
+  CompaniesAtRiskWidget,
+  StaleDealsWidget,
+} from "@/app/reports/dashboard/widgets/list-widgets";
 
 interface Props {
   entry: WidgetEntry;
@@ -63,15 +61,8 @@ export function WidgetByType(props: Props) {
     case "lost_reasons_breakdown":
       return <LostReasonsBreakdownWidget {...props} />;
     case "stale_deals":
+      return <StaleDealsWidget {...props} />;
     case "companies_at_risk":
-      return (
-        <WidgetFrame
-          label={WIDGET_LABEL[type]}
-          isEditMode={props.isEditMode}
-          onRemove={props.onRemove}
-        >
-          <WidgetEmpty message="Připravujeme — widget se zobrazí v R6.3." />
-        </WidgetFrame>
-      );
+      return <CompaniesAtRiskWidget {...props} />;
   }
 }
