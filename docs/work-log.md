@@ -869,3 +869,36 @@ pausing ("dont stop at every section", "implement all unfinished phases").
 - All deferred tasks from Session 3 are now closed. No known TODOs
   against the MANAGER_TASK.md brief remain.
 - `master` at 29b9196.
+
+## Session 5 — 2026-05-01 → 2026-05-02 (paygate kickoff)
+
+Driving prompt: `docs/prompts/PAYGATE_TASK.md`. Loop wrapper
+`scripts/claude-loop.sh` runs in the background and spawns a fresh
+Claude Code session every 5h while `RESUME.md` is present.
+
+### Bootstrap (21d66f7)
+
+- `scripts/claude-loop.sh` + `docs/prompts/PAYGATE_TASK.md` committed.
+- Loop launched detached; PID written to `.claude-loop.pid`
+  (gitignored). Sleeps 5h, exits when `RESUME.md` is absent.
+
+### B1 — Plan / Subscription / BillingSettings models & seed (0cf89cc)
+
+- Reworked the Phase-1 Plan stub into five-plan model
+  (trial / monthly / annual / enterprise / comp), keyed by `code`.
+  Old `team` → new `monthly`; legacy `plan_interval` enum dropped.
+- New `subscriptions` table (one row per org) with status, period
+  dates, override price, `is_comp` flag.
+- New `billing_settings` singleton (`is_vat_payer`, vat rate, IBAN,
+  IČO, support email).
+- `users.is_super_admin` boolean.
+- Migration `b3a5d27e1c84` seeds plans + the singleton row + back-
+  fills a `trialing` Subscription for every existing org (164 orgs
+  in the dev DB). Round-trips cleanly via downgrade then upgrade.
+- Onboarding now creates the trialing Subscription alongside the
+  org/team/pipeline triple.
+- 210 backend tests pass; only the pre-existing dev-login-config
+  failure remains.
+
+Next: B2 — `BillingService` with subscription lifecycle methods
+(see `.claude/tasks/PAYGATE-B1.md` and the prompt §5 B2).
