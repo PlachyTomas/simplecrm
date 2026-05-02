@@ -1,26 +1,21 @@
 import { Download, Pencil, RotateCcw, Save, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 
 import { GlobalFilterBar } from "@/app/reports/dashboard/GlobalFilterBar";
-import {
-  WidgetEmpty,
-  WidgetFrame,
-  WidgetSkeleton,
-} from "@/app/reports/dashboard/WidgetFrame";
+import { WidgetSkeleton } from "@/app/reports/dashboard/WidgetFrame";
 import { WidgetGrid } from "@/app/reports/dashboard/WidgetGrid";
 import {
   type DashboardConfig,
   type GlobalFilters,
   type WidgetEntry,
-  type WidgetType,
-  WIDGET_LABEL,
 } from "@/app/reports/dashboard/types";
 import {
   useDashboardConfig,
   useResetDashboardConfig,
   useSaveDashboardConfig,
 } from "@/app/reports/dashboard/useDashboardConfig";
+import { WidgetByType } from "@/app/reports/dashboard/widgets/WidgetByType";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
@@ -200,8 +195,9 @@ export function ReportsPage() {
             isEditMode={editMode}
             onLayoutChange={handleLayoutChange}
             renderWidget={(entry) => (
-              <PlaceholderWidget
+              <WidgetByType
                 entry={entry}
+                globalFilters={filters}
                 isEditMode={editMode}
                 onRemove={() => handleRemoveWidget(entry.id)}
               />
@@ -246,29 +242,3 @@ function EmptyDashboard({ onEdit }: { onEdit: () => void }) {
   );
 }
 
-/**
- * Stand-in body until R6 ships the real widgets. Each widget type
- * gets its own component there; this placeholder simply renders the
- * label and a "Připravujeme" hint inside the shared frame so layout
- * persistence, edit mode, and the grid can be exercised end-to-end
- * before the data widgets land.
- */
-function PlaceholderWidget({
-  entry,
-  isEditMode,
-  onRemove,
-}: {
-  entry: WidgetEntry;
-  isEditMode: boolean;
-  onRemove: () => void;
-}) {
-  const label = useMemo(() => {
-    const t = (entry.config as { type: string }).type as WidgetType;
-    return WIDGET_LABEL[t] ?? t;
-  }, [entry.config]);
-  return (
-    <WidgetFrame label={label} isEditMode={isEditMode} onRemove={onRemove}>
-      <WidgetEmpty message="Připravujeme — widget se zobrazí v R6." />
-    </WidgetFrame>
-  );
-}
