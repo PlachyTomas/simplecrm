@@ -301,11 +301,15 @@ async def mark_deal_won(
     deal.closed_at = now
     deal.lost_reason = None
 
-    # Refresh the owning company's last_order_at + ownership_expires_at.
+    # Refresh the owning company's last_order_at + ownership_expires_at
+    # using the org's configured release window.
     company = await session.get(Company, deal.company_id)
     if company is not None:
         company.last_order_at = now
-        company.ownership_expires_at = now + timedelta(days=365)
+        window_days = (
+            user.organization.ownership_window_days if user.organization else 365
+        )
+        company.ownership_expires_at = now + timedelta(days=window_days)
 
     session.add(
         Activity(

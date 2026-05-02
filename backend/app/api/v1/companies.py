@@ -168,9 +168,19 @@ async def create_company(
             detail="Cannot assign ownership outside your visibility scope",
         )
 
+    # Compute the ownership-release window from the org's setting. Falls
+    # back to the model's column default (365) when the org row is missing
+    # — only ever the case for legacy fixtures the test layer seeds
+    # directly.
+    from datetime import UTC, datetime as _dt, timedelta as _td
+
+    window_days = (
+        user.organization.ownership_window_days if user.organization else 365
+    )
     company = Company(
         organization_id=user.organization_id,
         owner_user_id=owner_id,
+        ownership_expires_at=_dt.now(tz=UTC) + _td(days=window_days),
         **payload.model_dump(exclude={"owner_user_id"}, exclude_unset=True),
     )
     session.add(company)

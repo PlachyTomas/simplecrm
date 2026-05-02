@@ -22,6 +22,10 @@ class OrganizationUpdate(BaseModel):
     address_zip: str | None = Field(default=None, max_length=12)
     legal_form: str | None = Field(default=None, max_length=120)
     show_leaderboard_to_salespeople: bool | None = None
+    # Auto-release window for companies. Bounded to 1..3650 (one day to ten
+    # years) — anything wider than ten years would render the auto-release
+    # functionally useless.
+    ownership_window_days: int | None = Field(default=None, ge=1, le=3650)
 
 
 class OrganizationOut(BaseModel):
@@ -40,3 +44,4 @@ class OrganizationOut(BaseModel):
     trial_ends_at: datetime
     stripe_customer_id: str | None = None
     show_leaderboard_to_salespeople: bool
+    ownership_window_days: int

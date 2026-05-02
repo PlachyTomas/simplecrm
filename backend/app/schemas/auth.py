@@ -18,6 +18,7 @@ class OrganizationSummary(BaseModel):
     currency: str
     trial_ends_at: datetime
     show_leaderboard_to_salespeople: bool
+    ownership_window_days: int
 
 
 class CurrentUser(BaseModel):

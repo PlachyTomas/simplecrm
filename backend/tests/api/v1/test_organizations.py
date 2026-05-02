@@ -138,3 +138,88 @@ async def test_update_current_organization_isolates_by_user(
     )
     assert response.status_code == 200
     assert response.json()["id"] == str(second.organization_id)
+
+
+# ---------------------------------------------------------------------------
+# Configurable ownership-release window
+# ---------------------------------------------------------------------------
+
+
+async def test_get_current_org_returns_default_ownership_window(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    user = await _seed_user(db_session, owned_emails)
+    token = create_access_token(user.id, user.organization_id, user.role)
+    response = await client.get(
+        "/api/v1/organizations/current",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["ownership_window_days"] == 365
+
+
+async def test_update_ownership_window_persists(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    user = await _seed_user(db_session, owned_emails)
+    token = create_access_token(user.id, user.organization_id, user.role)
+    response = await client.put(
+        "/api/v1/organizations/current",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"ownership_window_days": 180},
+    )
+    assert response.status_code == 200
+    assert response.json()["ownership_window_days"] == 180
+
+
+async def test_update_ownership_window_rejects_out_of_bounds(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    user = await _seed_user(db_session, owned_emails)
+    token = create_access_token(user.id, user.organization_id, user.role)
+    too_low = await client.put(
+        "/api/v1/organizations/current",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"ownership_window_days": 0},
+    )
+    assert too_low.status_code == 422
+    too_high = await client.put(
+        "/api/v1/organizations/current",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"ownership_window_days": 4000},
+    )
+    assert too_high.status_code == 422
+
+
+async def test_create_company_uses_configured_window(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """Org with a 60-day window → new companies get +60d expiry, not +365d."""
+    from datetime import UTC, datetime, timedelta
+
+    user = await _seed_user(db_session, owned_emails)
+    token = create_access_token(user.id, user.organization_id, user.role)
+
+    # Lower the org's window to 60 days.
+    put_resp = await client.put(
+        "/api/v1/organizations/current",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"ownership_window_days": 60},
+    )
+    assert put_resp.status_code == 200
+
+    before = datetime.now(tz=UTC)
+    create_resp = await client.post(
+        "/api/v1/companies",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"name": "Test Window s.r.o.", "ico": "12345678"},
+    )
+    after = datetime.now(tz=UTC)
+    assert create_resp.status_code == 201
+    expires_at = datetime.fromisoformat(create_resp.json()["ownership_expires_at"])
+    # Expect ownership_expires_at ≈ now + 60d, not now + 365d.
+    expected_low = before + timedelta(days=60) - timedelta(seconds=5)
+    expected_high = after + timedelta(days=60) + timedelta(seconds=5)
+    assert expected_low <= expires_at <= expected_high, (
+        f"expected ~+60d window, got {expires_at!s}"
+    )

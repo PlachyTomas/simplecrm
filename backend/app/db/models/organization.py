@@ -4,7 +4,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Enum, Index, String, func
+from sqlalchemy import Boolean, DateTime, Enum, Index, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -62,6 +62,14 @@ class Organization(Base):
     # always see them. Admins flip this in Settings → Oprávnění.
     show_leaderboard_to_salespeople: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default="false", nullable=False
+    )
+
+    # Auto-release window (days). When a Company has had no won-deal activity
+    # for this many days, the freeing job releases its ownership back to the
+    # pool so a manager can reassign. Default 365; bounded 1..3650 at the API
+    # edge. Org admins flip this in Settings → Oprávnění.
+    ownership_window_days: Mapped[int] = mapped_column(
+        Integer, default=365, server_default="365", nullable=False
     )
 
     created_at: Mapped[datetime] = mapped_column(

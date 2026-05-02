@@ -1109,9 +1109,11 @@ export interface paths {
          * Get Org Subscription Activity
          * @description Subscription-scoped activity rows for the admin detail drawer.
          *
-         *     Filters to `entity_type='subscription'` so the timeline only shows
-         *     payment/plan history even when other entity types start writing to
-         *     the same org's row.
+         *     Subscription mutations write Activity rows with
+         *     `entity_type=organization` + `activity_type=subscription_change`
+         *     (see `BillingService._audit`). Filter on both so unrelated org-scoped
+         *     activity (e.g. team events that may write to the same org row in the
+         *     future) doesn't leak into the timeline.
          */
         get: operations["get_org_subscription_activity_api_v1_admin_organizations__org_id__activity_get"];
         put?: never;
@@ -1982,6 +1984,8 @@ export interface components {
             stripe_customer_id?: string | null;
             /** Show Leaderboard To Salespeople */
             show_leaderboard_to_salespeople: boolean;
+            /** Ownership Window Days */
+            ownership_window_days: number;
         };
         /** OrganizationSummary */
         OrganizationSummary: {
@@ -2005,6 +2009,8 @@ export interface components {
             trial_ends_at: string;
             /** Show Leaderboard To Salespeople */
             show_leaderboard_to_salespeople: boolean;
+            /** Ownership Window Days */
+            ownership_window_days: number;
         };
         /**
          * OrganizationUpdate
@@ -2031,6 +2037,8 @@ export interface components {
             legal_form?: string | null;
             /** Show Leaderboard To Salespeople */
             show_leaderboard_to_salespeople?: boolean | null;
+            /** Ownership Window Days */
+            ownership_window_days?: number | null;
         };
         /** Page[ActivityOut] */
         Page_ActivityOut_: {
