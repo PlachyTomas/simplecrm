@@ -20,17 +20,15 @@ class StageSeed:
 
 DEFAULT_PIPELINE_NAME = "Výchozí"
 
-# 5 open stages + 1 won. Lost deals keep their current stage but set
-# `closed_at` + `lost_reason`; admins who want a visible lost column can add
-# one later via the pipeline editor (Phase 10).
+# 3 open stages + 1 won. Tuned to match the marketing demo and to avoid
+# overwhelming new orgs with stages they'd just rename anyway. Admins can
+# always add Schůzka / Nabídka / Lost via Settings → Pipeline.
 DEFAULT_STAGES: tuple[StageSeed, ...] = (
     StageSeed("Nový lead", 10, "#3D5AFE", StageType.open),
-    StageSeed("Kontaktováno", 25, "#5470FF", StageType.open),
-    StageSeed("Schůzka", 45, "#F59E0B", StageType.open),
-    StageSeed("Nabídka", 65, "#A8D03A", StageType.open),
-    StageSeed("Jednání", 85, "#10B981", StageType.open),
+    StageSeed("Osloveno", 30, "#5470FF", StageType.open),
+    StageSeed("Jednání", 70, "#10B981", StageType.open),
     # Vyhráno stage seed is the canonical magenta brand-accent. The brief
-    # retires lime entirely; the full progressive stage palette lands in B5.
+    # retires lime entirely.
     StageSeed("Vyhráno", 100, "#EC4899", StageType.won),
 )
 

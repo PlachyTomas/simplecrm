@@ -318,7 +318,7 @@ export function InteractivePipeline() {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {DEMO_STAGES.map((stage) => {
           const stageDeals = dealsByStage.get(stage.id) ?? [];
           const total = stageDeals.reduce((sum, d) => sum + d.value, 0);

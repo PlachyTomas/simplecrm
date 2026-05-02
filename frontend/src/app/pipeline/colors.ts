@@ -13,13 +13,18 @@
  * Falls back to the stage's own configured color when the index is out
  * of range (large pipelines, or admin-added stages beyond seed).
  */
+// Indices map to position in the pipeline. The default seed uses 4 stages
+// (Nový lead → Osloveno → Jednání → Vyhráno), but admins can add more —
+// keep a longer palette so extra columns still get a stable color from
+// the same scheme. Last entry is reserved for the won stage (magenta
+// brand-accent).
 const STAGE_PALETTE = [
-  "#A1A1AA", // zinc-400 — Stage 1 (Nový lead / cold intake)
-  "#0EA5E9", // sky-500 — Stage 2 (Kontaktováno)
-  "#6366F1", // indigo-500 — Stage 3 (Schůzka)
-  "#8B5CF6", // violet-500 — Stage 4 (Nabídka)
-  "#F59E0B", // amber-500 — Stage 5 (Jednání / hot)
-  "#EC4899", // brand magenta — Stage 6 (Vyhráno)
+  "#A1A1AA", // zinc-400 — Stage 1 (cold intake)
+  "#0EA5E9", // sky-500 — Stage 2
+  "#6366F1", // indigo-500 — Stage 3
+  "#8B5CF6", // violet-500 — Stage 4
+  "#F59E0B", // amber-500 — Stage 5 (hot)
+  "#EC4899", // brand magenta — won
 ];
 
 export function stageColor(orderIndex: number, fallback?: string | null): string {

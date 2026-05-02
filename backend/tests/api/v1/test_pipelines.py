@@ -69,7 +69,7 @@ async def test_default_pipeline_returns_stages(
     assert response.status_code == 200
     body = response.json()
     assert body["is_default"] is True
-    assert len(body["stages"]) == len(stages) == 6
+    assert len(body["stages"]) == len(stages) == 4
 
 
 async def test_pipeline_board_groups_deals_by_stage(
@@ -114,7 +114,7 @@ async def test_pipeline_board_groups_deals_by_stage(
     assert response.status_code == 200
     body = response.json()
     assert body["currency"] == "CZK"
-    assert len(body["stages"]) == 6
+    assert len(body["stages"]) == 4
     first = body["stages"][0]
     assert first["deal_count"] == 2
     assert first["total_value"] == "350.00"

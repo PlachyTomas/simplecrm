@@ -11,7 +11,7 @@ from app.db.models import Organization, Pipeline, Stage, StageType
 from app.services.pipeline import DEFAULT_STAGES, create_default_pipeline
 
 
-async def test_create_default_pipeline_inserts_six_stages(
+async def test_create_default_pipeline_inserts_four_stages(
     db_session: AsyncSession,
 ) -> None:
     org = Organization(name="Test s.r.o.")
@@ -22,7 +22,14 @@ async def test_create_default_pipeline_inserts_six_stages(
     await db_session.refresh(pipeline, attribute_names=["stages"])
 
     assert pipeline.is_default is True
-    assert len(pipeline.stages) == len(DEFAULT_STAGES) == 6
+    assert len(pipeline.stages) == len(DEFAULT_STAGES) == 4
+    # Sanity-check the seeded names match the brief: 3 open + 1 won.
+    assert [s.name for s in pipeline.stages] == [
+        "Nový lead",
+        "Osloveno",
+        "Jednání",
+        "Vyhráno",
+    ]
 
     for idx, stage in enumerate(pipeline.stages):
         seed = DEFAULT_STAGES[idx]
@@ -101,6 +108,6 @@ async def test_create_organization_seeds_default_pipeline(db_session: AsyncSessi
     assert len(pipelines) == 1
     assert pipelines[0].is_default is True
     await db_session.refresh(pipelines[0], attribute_names=["stages"])
-    assert len(pipelines[0].stages) == 6
+    assert len(pipelines[0].stages) == 4
     assert founder.role is UserRole.admin
     assert founder.team_id is not None

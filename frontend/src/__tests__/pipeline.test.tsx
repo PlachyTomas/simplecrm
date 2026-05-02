@@ -84,7 +84,7 @@ const BOARD = {
     },
     {
       id: "s2",
-      name: "Kontaktováno",
+      name: "Osloveno",
       color: "#5470FF",
       position: 1,
       stage_type: "open",
@@ -142,7 +142,7 @@ describe("Pipeline Kanban", () => {
     expect(within(firstColumn).getByText(/První obchod/)).toBeInTheDocument();
     expect(within(firstColumn).getByText(/Druhý obchod/)).toBeInTheDocument();
 
-    const secondColumn = screen.getByRole("region", { name: /Fáze Kontaktováno/ });
+    const secondColumn = screen.getByRole("region", { name: /Fáze Osloveno/ });
     expect(within(secondColumn).getByText(/Zatím žádné obchody/)).toBeInTheDocument();
   });
 
