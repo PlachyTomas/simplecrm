@@ -19,7 +19,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -31,7 +31,7 @@ from app.core.security import (
     sign_invite_token,
     verify_invite_token,
 )
-from app.db.models import Invitation, Team, User, UserRole
+from app.db.models import Invitation, Subscription, Team, User, UserRole
 from app.services.email import Email, send_email
 from app.services.google_oauth import GoogleProfile
 
@@ -61,6 +61,13 @@ class UserAlreadyInOrganizationError(InvitationError):
 
     Cross-org membership is intentionally not supported (see
     `db/models/user.py`). The API returns 409 with `code="user_already_in_organization"`.
+    """
+
+
+class SeatLimitReachedError(InvitationError):
+    """The org is at its contracted seat count (active users + open
+    invitations). Admin must increase `Subscription.seat_count` (or
+    revoke an open invitation) before issuing more invites.
     """
 
 
@@ -142,6 +149,36 @@ async def create_invitation(
     )
     if (await session.execute(open_invite_stmt)).scalar_one_or_none() is not None:
         raise ValueError("An open invitation for this email already exists")
+
+    # Enforce the contracted seat count: active users + still-open invitations
+    # must stay ≤ Subscription.seat_count. The admin needs to bump seats in
+    # Settings → Organizace before issuing more invites.
+    sub = (
+        await session.execute(
+            select(Subscription).where(Subscription.organization_id == organization_id)
+        )
+    ).scalar_one_or_none()
+    if sub is not None:
+        active_count = (
+            await session.execute(
+                select(func.count(User.id))
+                .where(User.organization_id == organization_id)
+                .where(User.is_active.is_(True))
+            )
+        ).scalar_one()
+        open_invite_count = (
+            await session.execute(
+                select(func.count(Invitation.id))
+                .where(Invitation.organization_id == organization_id)
+                .where(Invitation.accepted_at.is_(None))
+                .where(Invitation.revoked_at.is_(None))
+            )
+        ).scalar_one()
+        if active_count + open_invite_count >= sub.seat_count:
+            raise SeatLimitReachedError(
+                f"Seat limit reached: {sub.seat_count} contracted, "
+                f"{active_count} active + {open_invite_count} pending invitations."
+            )
 
     jti = uuid.uuid4()
     invitation = Invitation(

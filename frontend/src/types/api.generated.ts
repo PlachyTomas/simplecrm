@@ -927,6 +927,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/current/subscription/seat-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Seat Count
+         * @description Org admin tunes the contracted seat count.
+         *
+         *     Increases take effect immediately (the cap relaxes; new invitations
+         *     fit). Decreases below the current active-user count require the admin
+         *     to pick exactly `(active − new)` users to deactivate; their access is
+         *     revoked in this transaction. The next billing period bills against
+         *     the new seat_count.
+         */
+        put: operations["update_seat_count_api_v1_organizations_current_subscription_seat_count_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/current/subscription/change-interval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Billing Interval
+         * @description Queue a monthly ↔ annual switch for the next period.
+         *
+         *     Mid-period plan changes that require pro-rating are out of scope
+         *     (PAYGATE §9). We store the chosen plan in `pending_plan_id`; the
+         *     super-admin Aktivovat path applies it on the next activation, and a
+         *     future scheduled-rollover job will apply it at period end.
+         */
+        post: operations["change_billing_interval_api_v1_organizations_current_subscription_change_interval_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/plans/public": {
         parameters: {
             query?: never;
@@ -1379,6 +1430,19 @@ export interface components {
             /** Effective At */
             effective_at?: string | null;
         };
+        /**
+         * ChangeIntervalIn
+         * @description Body for `POST /subscription/change-interval`. Stored as
+         *     `Subscription.pending_plan_id`; the existing super-admin Aktivovat
+         *     path applies it on period rollover.
+         */
+        ChangeIntervalIn: {
+            /**
+             * Plan Code
+             * @enum {string}
+             */
+            plan_code: "monthly" | "annual";
+        };
         /** ChoosePlanIn */
         ChoosePlanIn: {
             /**
@@ -1583,6 +1647,13 @@ export interface components {
         CreateOrganizationIn: {
             /** Name */
             name: string;
+            /**
+             * Seat Count
+             * @default 1
+             */
+            seat_count: number;
+            /** Intended Plan Code */
+            intended_plan_code?: string | null;
         };
         /** CurrentUser */
         CurrentUser: {
@@ -2356,6 +2427,14 @@ export interface components {
             comp_reason: string | null;
             /** Notes */
             notes: string | null;
+            /**
+             * Seat Count
+             * @default 1
+             */
+            seat_count: number;
+            pending_plan?: components["schemas"]["PlanOut"] | null;
+            /** Pending Seat Count */
+            pending_seat_count?: number | null;
             /** Effective Price Per User Minor */
             effective_price_per_user_minor?: number | null;
             /** Access Status */
@@ -2459,6 +2538,19 @@ export interface components {
             name?: string | null;
             /** Manager User Id */
             manager_user_id?: string | null;
+        };
+        /**
+         * UpdateSeatCountIn
+         * @description Body for `PUT /subscription/seat-count`. The admin sends a target
+         *     seat count and, when reducing below the current active-user count, a
+         *     list of users to deactivate. The list length must be exactly
+         *     `(current_active − new_seat_count)`.
+         */
+        UpdateSeatCountIn: {
+            /** Seat Count */
+            seat_count: number;
+            /** Deactivate User Ids */
+            deactivate_user_ids?: string[];
         };
         /** UserOut */
         UserOut: {
@@ -4458,6 +4550,72 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_seat_count_api_v1_organizations_current_subscription_seat_count_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSeatCountIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_billing_interval_api_v1_organizations_current_subscription_change_interval_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeIntervalIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
                 };
             };
             /** @description Validation Error */

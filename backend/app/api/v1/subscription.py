@@ -25,9 +25,11 @@ from app.db import get_db
 from app.db.models import BillingSettings, Subscription, User, UserRole
 from app.schemas.billing import (
     BillingSummary,
+    ChangeIntervalIn,
     ChoosePlanIn,
     ContactEnterpriseIn,
     SubscriptionOut,
+    UpdateSeatCountIn,
 )
 from app.services import billing
 from app.services.email import Email, send_email
@@ -63,6 +65,9 @@ def _subscription_payload(sub: Subscription) -> SubscriptionOut:
             "is_comp": sub.is_comp,
             "comp_reason": sub.comp_reason,
             "notes": sub.notes,
+            "seat_count": sub.seat_count,
+            "pending_plan": sub.pending_plan,
+            "pending_seat_count": sub.pending_seat_count,
             "effective_price_per_user_minor": billing.get_effective_price_per_user_minor(sub),
             "access_status": _access_status(sub),
         }
@@ -196,3 +201,133 @@ async def contact_enterprise(
         )
     )
     return {"status": "queued", "received_at": datetime.now(tz=UTC).isoformat()}
+
+
+@router.put(
+    "/current/subscription/seat-count",
+    response_model=SubscriptionOut,
+)
+async def update_seat_count(
+    payload: UpdateSeatCountIn,
+    user: User = Depends(require_role(UserRole.admin)),
+    session: AsyncSession = Depends(get_db),
+) -> SubscriptionOut:
+    """Org admin tunes the contracted seat count.
+
+    Increases take effect immediately (the cap relaxes; new invitations
+    fit). Decreases below the current active-user count require the admin
+    to pick exactly `(active − new)` users to deactivate; their access is
+    revoked in this transaction. The next billing period bills against
+    the new seat_count.
+    """
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    org_id = user.organization_id
+
+    sub = (
+        await session.execute(
+            select(Subscription).where(Subscription.organization_id == org_id)
+        )
+    ).scalar_one_or_none()
+    if sub is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    active_users = (
+        (
+            await session.execute(
+                select(User)
+                .where(User.organization_id == org_id)
+                .where(User.is_active.is_(True))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    active_count = len(active_users)
+    new_count = payload.seat_count
+
+    if new_count < active_count:
+        needed = active_count - new_count
+        if len(payload.deactivate_user_ids) != needed:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "code": "deactivation_count_mismatch",
+                    "detail": (
+                        f"Snížením na {new_count} ztratí přístup {needed} uživatelů — "
+                        f"vyberte přesně {needed}."
+                    ),
+                    "needed": needed,
+                },
+            )
+        # Refuse to deactivate the founding admin or anyone outside the org.
+        ids_in_org = {u.id for u in active_users}
+        for victim_id in payload.deactivate_user_ids:
+            if victim_id not in ids_in_org:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="User is not in your organization or already inactive.",
+                )
+            if victim_id == user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="You cannot deactivate yourself.",
+                )
+
+        for victim in active_users:
+            if victim.id in payload.deactivate_user_ids:
+                victim.is_active = False
+
+    sub.seat_count = new_count
+    # Clear any queued downsize that's now obsolete.
+    sub.pending_seat_count = None
+    await session.commit()
+    await session.refresh(sub, attribute_names=["plan", "pending_plan"])
+    return _subscription_payload(sub)
+
+
+@router.post(
+    "/current/subscription/change-interval",
+    response_model=SubscriptionOut,
+)
+async def change_billing_interval(
+    payload: ChangeIntervalIn,
+    user: User = Depends(require_role(UserRole.admin)),
+    session: AsyncSession = Depends(get_db),
+) -> SubscriptionOut:
+    """Queue a monthly ↔ annual switch for the next period.
+
+    Mid-period plan changes that require pro-rating are out of scope
+    (PAYGATE §9). We store the chosen plan in `pending_plan_id`; the
+    super-admin Aktivovat path applies it on the next activation, and a
+    future scheduled-rollover job will apply it at period end.
+    """
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    org_id = user.organization_id
+
+    sub = (
+        await session.execute(
+            select(Subscription).where(Subscription.organization_id == org_id)
+        )
+    ).scalar_one_or_none()
+    if sub is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    from sqlalchemy import select as _select
+
+    from app.db.models import Plan
+
+    plan = (
+        await session.execute(_select(Plan).where(Plan.code == payload.plan_code))
+    ).scalar_one_or_none()
+    if plan is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unknown plan code: {payload.plan_code}",
+        )
+
+    sub.pending_plan_id = plan.id
+    await session.commit()
+    await session.refresh(sub, attribute_names=["plan", "pending_plan"])
+    return _subscription_payload(sub)

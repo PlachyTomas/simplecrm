@@ -19,6 +19,7 @@ from app.schemas.invitation import (
 from app.schemas.pagination import Page, PaginationParams
 from app.services.invitations import (
     InvitationNotFoundError,
+    SeatLimitReachedError,
     UserAlreadyInOrganizationError,
     build_invite_link,
     create_invitation,
@@ -80,6 +81,17 @@ async def create(
             detail={
                 "detail": "Tento e-mail už patří k jiné organizaci.",
                 "code": "user_already_in_organization",
+            },
+        ) from exc
+    except SeatLimitReachedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "detail": (
+                    "Dosáhli jste smluvního počtu uživatelů. "
+                    "Navyšte počet v Nastavení → Organizace, nebo zrušte čekající pozvánku."
+                ),
+                "code": "seat_limit_reached",
             },
         ) from exc
     except ValueError as exc:

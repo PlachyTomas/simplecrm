@@ -57,3 +57,12 @@ class CreateOrganizationIn(BaseModel):
     signed-up user with no org yet."""
 
     name: str = Field(min_length=1, max_length=200)
+    # Number of salesmen the admin is provisioning seats for. Drives the
+    # bill total + acts as a hard cap on user creation. Bounded loosely;
+    # tighter UX guidance is on the wizard step.
+    seat_count: int = Field(default=1, ge=1, le=500)
+    # Which paid plan the admin intends to land on after the trial.
+    # Stored as Subscription.pending_plan_id so the existing super-admin
+    # Aktivovat path can apply it on payment receipt without further
+    # admin input.
+    intended_plan_code: str | None = Field(default=None, pattern="^(monthly|annual)$")

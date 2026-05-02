@@ -65,6 +65,11 @@ class SubscriptionOut(BaseModel):
     is_comp: bool
     comp_reason: str | None
     notes: str | None
+    # Contracted seats and any queued change applied at the next period
+    # rollover (or trial expiry).
+    seat_count: int = 1
+    pending_plan: PlanOut | None = None
+    pending_seat_count: int | None = None
     # Computed at the API edge:
     effective_price_per_user_minor: int | None = None
     access_status: str
@@ -72,6 +77,26 @@ class SubscriptionOut(BaseModel):
 
 
 class ChoosePlanIn(BaseModel):
+    plan_code: Literal["monthly", "annual"]
+
+
+class UpdateSeatCountIn(BaseModel):
+    """Body for `PUT /subscription/seat-count`. The admin sends a target
+    seat count and, when reducing below the current active-user count, a
+    list of users to deactivate. The list length must be exactly
+    `(current_active − new_seat_count)`.
+    """
+
+    seat_count: int = Field(ge=1, le=500)
+    deactivate_user_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+class ChangeIntervalIn(BaseModel):
+    """Body for `POST /subscription/change-interval`. Stored as
+    `Subscription.pending_plan_id`; the existing super-admin Aktivovat
+    path applies it on period rollover.
+    """
+
     plan_code: Literal["monthly", "annual"]
 
 

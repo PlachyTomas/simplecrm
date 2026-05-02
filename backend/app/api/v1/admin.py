@@ -173,6 +173,9 @@ def _subscription_payload(sub: Subscription) -> SubscriptionOut:
             "is_comp": sub.is_comp,
             "comp_reason": sub.comp_reason,
             "notes": sub.notes,
+            "seat_count": sub.seat_count,
+            "pending_plan": sub.pending_plan,
+            "pending_seat_count": sub.pending_seat_count,
             "effective_price_per_user_minor": billing.get_effective_price_per_user_minor(sub),
             "access_status": _access_status(sub),
         }

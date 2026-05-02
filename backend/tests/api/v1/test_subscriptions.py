@@ -206,3 +206,106 @@ async def test_contact_enterprise_returns_queued(
     )
     assert response.status_code == 202
     assert response.json()["status"] == "queued"
+
+
+# ---------------------------------------------------------------------------
+# Seat count + change-interval (added with the billing-management work)
+# ---------------------------------------------------------------------------
+
+
+async def test_seat_count_increase_persists(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    org, admin = await _seed_org_with_admin(db_session, owned_emails)
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    response = await client.put(
+        "/api/v1/organizations/current/subscription/seat-count",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"seat_count": 25},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["seat_count"] == 25
+
+
+async def test_seat_count_decrease_below_active_requires_deactivations(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """3 active users → request seat_count=2 with no deactivate_user_ids → 422."""
+    from app.db.models import User as _User
+
+    org, admin = await _seed_org_with_admin(db_session, owned_emails)
+    second_email = f"b-{uuid.uuid4().hex[:8]}@ex.cz"
+    third_email = f"c-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_emails.extend([second_email, third_email])
+    db_session.add_all(
+        [
+            _User(email=second_email, name="Second", role=UserRole.salesperson, organization_id=org.id),
+            _User(email=third_email, name="Third", role=UserRole.salesperson, organization_id=org.id),
+        ]
+    )
+    await db_session.commit()
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+
+    # First bump seats to 3 so the org isn't already over-cap.
+    bump = await client.put(
+        "/api/v1/organizations/current/subscription/seat-count",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"seat_count": 3},
+    )
+    assert bump.status_code == 200
+
+    # Now try to drop to 2 without picking who loses access → 422.
+    no_picks = await client.put(
+        "/api/v1/organizations/current/subscription/seat-count",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"seat_count": 2},
+    )
+    assert no_picks.status_code == 422
+    assert no_picks.json()["detail"]["code"] == "deactivation_count_mismatch"
+
+    # Pick one user to deactivate → 200; their is_active flips to false.
+    second_id = (
+        await db_session.execute(select(_User.id).where(_User.email == second_email))
+    ).scalar_one()
+    ok = await client.put(
+        "/api/v1/organizations/current/subscription/seat-count",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"seat_count": 2, "deactivate_user_ids": [str(second_id)]},
+    )
+    assert ok.status_code == 200, ok.text
+    db_session.expire_all()
+    second = (
+        await db_session.execute(select(_User).where(_User.id == second_id))
+    ).scalar_one()
+    assert second.is_active is False
+
+
+async def test_change_interval_queues_pending_plan(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    org, admin = await _seed_org_with_admin(db_session, owned_emails)
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    response = await client.post(
+        "/api/v1/organizations/current/subscription/change-interval",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"plan_code": "annual"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["pending_plan"]["code"] == "annual"
+    # Current plan untouched — only the queued one changes.
+    assert body["plan"]["code"] == "trial"
+
+
+async def test_seat_count_rejects_self_deactivation(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    org, admin = await _seed_org_with_admin(db_session, owned_emails)
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    response = await client.put(
+        "/api/v1/organizations/current/subscription/seat-count",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"seat_count": 0, "deactivate_user_ids": [str(admin.id)]},
+    )
+    # seat_count=0 is below ge=1; pydantic rejects with 422 before our checks.
+    assert response.status_code == 422

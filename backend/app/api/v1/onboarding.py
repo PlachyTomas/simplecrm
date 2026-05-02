@@ -43,7 +43,13 @@ async def create_organization(
             status_code=status.HTTP_409_CONFLICT,
             detail="Already a member of an organization",
         )
-    await create_organization_with_admin(session, name=payload.name.strip(), founder=user)
+    await create_organization_with_admin(
+        session,
+        name=payload.name.strip(),
+        founder=user,
+        seat_count=payload.seat_count,
+        intended_plan_code=payload.intended_plan_code,
+    )
     await session.commit()
     await session.refresh(user, attribute_names=["organization"])
     return user

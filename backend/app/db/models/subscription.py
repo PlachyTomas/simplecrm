@@ -57,6 +57,24 @@ class Subscription(Base):
     # NULL plan price).
     override_price_per_user_minor: Mapped[int | None] = mapped_column(Integer)
 
+    # Contracted seat count = hard limit on the number of active users in
+    # the org. Drives the bill total (seat_count × effective_price_per_user)
+    # rather than the live headcount, so a queued downsize that takes effect
+    # next period still bills the contracted amount this period.
+    seat_count: Mapped[int] = mapped_column(
+        Integer, default=1, server_default="1", nullable=False
+    )
+
+    # Queued change applied at the next period rollover (or trial expiry).
+    # `pending_plan_id` swaps monthly ↔ annual without disturbing the current
+    # period; `pending_seat_count` lets the admin pre-commit a seat reduction
+    # that lands at the next billing cycle.
+    pending_plan_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("plans.id", ondelete="RESTRICT"),
+    )
+    pending_seat_count: Mapped[int | None] = mapped_column(Integer)
+
     # Comp = bartered for exposure. The pay-gate never fires for these orgs.
     is_comp: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     comp_reason: Mapped[str | None] = mapped_column(Text)
@@ -73,4 +91,5 @@ class Subscription(Base):
     )
 
     organization: Mapped[Organization] = relationship()
-    plan: Mapped[Plan] = relationship()
+    plan: Mapped[Plan] = relationship(foreign_keys=[plan_id])
+    pending_plan: Mapped[Plan | None] = relationship(foreign_keys=[pending_plan_id])

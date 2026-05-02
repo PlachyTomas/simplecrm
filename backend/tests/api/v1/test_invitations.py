@@ -42,9 +42,11 @@ async def _signup_and_create_org(
             follow_redirects=False,
         )
         access = callback.headers["location"].split("#access_token=", 1)[1]
+        # Provision more than one seat so the invitation tests aren't
+        # capped by the founding admin's slot.
         create = await client.post(
             "/api/v1/onboarding/organization",
-            json={"name": org_name},
+            json={"name": org_name, "seat_count": 25},
             headers={"Authorization": f"Bearer {access}"},
         )
         if create.status_code not in (201, 409):
@@ -245,3 +247,61 @@ async def test_create_invite_requires_admin_or_can_invite(
         async with AsyncSessionLocal() as s:
             await s.execute(delete(User).where(User.id == worker_id))
             await s.commit()
+
+
+async def test_invite_returns_422_when_seat_limit_reached(
+    client: AsyncClient,
+) -> None:
+    """A separate org with seat_count=1 (just the founding admin) can't
+    issue any invites — the cap is reached."""
+    profile = GoogleProfile(
+        google_id="g-cap-admin",
+        email="cap-admin@cap-test.cz",
+        name="Cap Admin",
+        picture=None,
+    )
+    async with AsyncClient(
+        transport=__import__("httpx").ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        app.dependency_overrides[get_google_oauth_client] = lambda: FakeGoogle(profile)
+        try:
+            state = sign_oauth_state({"nonce": "n"})
+            callback = await ac.get(
+                "/api/v1/auth/google/callback",
+                params={"code": "test-auth-code", "state": state},
+                cookies={STATE_COOKIE_NAME: state},
+                follow_redirects=False,
+            )
+            access = callback.headers["location"].split("#access_token=", 1)[1]
+            await ac.post(
+                "/api/v1/onboarding/organization",
+                json={"name": "Cap Org", "seat_count": 1},
+                headers={"Authorization": f"Bearer {access}"},
+            )
+        finally:
+            app.dependency_overrides.pop(get_google_oauth_client, None)
+
+    try:
+        resp = await client.post(
+            "/api/v1/invitations",
+            json={
+                "email": "second@cap-test.cz",
+                "role": "salesperson",
+                "team_id": None,
+                "can_invite": False,
+            },
+            headers={"Authorization": f"Bearer {access}"},
+        )
+        assert resp.status_code == 422
+        assert resp.json()["detail"]["code"] == "seat_limit_reached"
+    finally:
+        async with AsyncSessionLocal() as s:
+            user = (
+                await s.execute(select(User).where(User.email == profile.email))
+            ).scalar_one_or_none()
+            if user is not None:
+                org_id = user.organization_id
+                await s.execute(delete(User).where(User.id == user.id))
+                if org_id is not None:
+                    await s.execute(delete(Organization).where(Organization.id == org_id))
+                await s.commit()
