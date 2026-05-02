@@ -263,7 +263,8 @@ async def test_seat_count_decrease_below_active_requires_deactivations(
     assert no_picks.status_code == 422
     assert no_picks.json()["detail"]["code"] == "deactivation_count_mismatch"
 
-    # Pick one user to deactivate → 200; their is_active flips to false.
+    # Pick one user to deactivate → 200; the deactivation is QUEUED.
+    # is_active stays True until the rollover service applies the queue.
     second_id = (
         await db_session.execute(select(_User.id).where(_User.email == second_email))
     ).scalar_one()
@@ -273,11 +274,102 @@ async def test_seat_count_decrease_below_active_requires_deactivations(
         json={"seat_count": 2, "deactivate_user_ids": [str(second_id)]},
     )
     assert ok.status_code == 200, ok.text
+    body = ok.json()
+    # The contracted seat_count stays at 3 this period; the queue carries
+    # the target (2) and the picked victim (second).
+    assert body["seat_count"] == 3
+    assert body["pending_seat_count"] == 2
+    assert body["pending_user_deactivations"] == [str(second_id)]
     db_session.expire_all()
     second = (
         await db_session.execute(select(_User).where(_User.id == second_id))
     ).scalar_one()
-    assert second.is_active is False
+    assert second.is_active is True
+
+
+async def test_seat_count_cancel_clears_pending_queue(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """Re-PUT with target == current seat_count clears pending fields."""
+    from app.db.models import User as _User
+
+    org, admin = await _seed_org_with_admin(db_session, owned_emails)
+    other_email = f"b-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_emails.append(other_email)
+    db_session.add(
+        _User(email=other_email, name="Other", role=UserRole.salesperson, organization_id=org.id)
+    )
+    await db_session.commit()
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+
+    # Bump to 2, then queue a downsize back to 1.
+    await client.put(
+        "/api/v1/organizations/current/subscription/seat-count",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"seat_count": 2},
+    )
+    other_id = (
+        await db_session.execute(select(_User.id).where(_User.email == other_email))
+    ).scalar_one()
+    await client.put(
+        "/api/v1/organizations/current/subscription/seat-count",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"seat_count": 1, "deactivate_user_ids": [str(other_id)]},
+    )
+
+    # Cancel: target == current seat_count (2). Should clear pending fields.
+    cancel = await client.put(
+        "/api/v1/organizations/current/subscription/seat-count",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"seat_count": 2},
+    )
+    assert cancel.status_code == 200, cancel.text
+    body = cancel.json()
+    assert body["seat_count"] == 2
+    assert body["pending_seat_count"] is None
+    assert body["pending_user_deactivations"] is None
+
+
+async def test_seat_count_increase_clears_pending_queue(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """Raising seats above the queued target drops the queue."""
+    from app.db.models import User as _User
+
+    org, admin = await _seed_org_with_admin(db_session, owned_emails)
+    other_email = f"b-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_emails.append(other_email)
+    db_session.add(
+        _User(email=other_email, name="Other", role=UserRole.salesperson, organization_id=org.id)
+    )
+    await db_session.commit()
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+
+    await client.put(
+        "/api/v1/organizations/current/subscription/seat-count",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"seat_count": 2},
+    )
+    other_id = (
+        await db_session.execute(select(_User.id).where(_User.email == other_email))
+    ).scalar_one()
+    await client.put(
+        "/api/v1/organizations/current/subscription/seat-count",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"seat_count": 1, "deactivate_user_ids": [str(other_id)]},
+    )
+
+    # Now raise to 5 → seat_count immediately becomes 5; queue clears.
+    raise_resp = await client.put(
+        "/api/v1/organizations/current/subscription/seat-count",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"seat_count": 5},
+    )
+    assert raise_resp.status_code == 200
+    body = raise_resp.json()
+    assert body["seat_count"] == 5
+    assert body["pending_seat_count"] is None
+    assert body["pending_user_deactivations"] is None
 
 
 async def test_change_interval_queues_pending_plan(

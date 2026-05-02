@@ -1262,6 +1262,7 @@ interface SubscriptionLite {
   plan: { code: string; display_name_cs: string };
   pending_plan: { code: string; display_name_cs: string } | null;
   pending_seat_count: number | null;
+  pending_user_deactivations: string[] | null;
   effective_price_per_user_minor: number | null;
 }
 
@@ -1384,6 +1385,32 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
   // Anyone who's still active and isn't the founding admin themself.
   const eligibleVictims = activeUsers.filter((u) => u.id !== me?.id);
 
+  // Resolve the queued user names so the banner can spell them out instead
+  // of just dropping IDs on the screen.
+  const queuedIds = new Set(sub.pending_user_deactivations ?? []);
+  const queuedUsers = activeUsers.filter((u) => queuedIds.has(u.id));
+  const periodEndsAt = sub.current_period_ends_at
+    ? new Intl.DateTimeFormat("cs-CZ", { dateStyle: "long" }).format(
+        new Date(sub.current_period_ends_at),
+      )
+    : null;
+
+  function cancelQueue() {
+    setError(null);
+    // PUT seat-count with target == current is the documented cancel signal.
+    apiFetch("/api/v1/organizations/current/subscription/seat-count", {
+      method: "PUT",
+      token: accessToken,
+      body: { seat_count: sub.seat_count, deactivate_user_ids: [] },
+    })
+      .then(() => {
+        void qc.invalidateQueries({ queryKey: ["subscription", "current"] });
+        void qc.invalidateQueries({ queryKey: ["billing-summary", "current"] });
+        void qc.invalidateQueries({ queryKey: ["users", "org"] });
+      })
+      .catch(() => setError("Zrušení naplánované změny se nezdařilo."));
+  }
+
   return (
     <form
       onSubmit={onSubmit}
@@ -1397,6 +1424,30 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
           fakturované ceně.
         </p>
       </header>
+
+      {sub.pending_seat_count != null && queuedUsers.length > 0 ? (
+        <div
+          data-testid="seat-count-pending-banner"
+          className="mt-4 rounded-md border border-info/40 bg-info-subtle p-4"
+        >
+          <p className="text-sm font-medium text-text-primary">
+            Naplánovaná změna: počet klesne na {sub.pending_seat_count}
+            {periodEndsAt ? ` ke dni ${periodEndsAt}` : ""}.
+          </p>
+          <p className="mt-1 text-xs text-text-secondary">
+            Přístup ztratí:{" "}
+            {queuedUsers.map((u) => u.name).join(", ")}. Do té doby si plně
+            užijí placené sloty.
+          </p>
+          <button
+            type="button"
+            onClick={cancelQueue}
+            className="mt-3 inline-flex h-9 items-center justify-center rounded-md border border-border bg-surface px-3 text-xs font-medium text-text-primary transition-colors duration-fast hover:bg-surface-overlay"
+          >
+            Zrušit naplánovanou změnu
+          </button>
+        </div>
+      ) : null}
 
       <label className="mt-4 block text-sm font-medium text-text-primary">
         Cílový počet uživatelů
@@ -1413,13 +1464,16 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
       {needsToDeactivate ? (
         <div className="mt-4 rounded-md border border-warning/40 bg-warning-subtle p-4">
           <p className="text-sm font-medium text-text-primary">
-            Snížením na {target} ztratí přístup {requiredCount}{" "}
+            {periodEndsAt
+              ? `Po skončení současného období (${periodEndsAt}) ztratí přístup ${requiredCount} `
+              : `Po skončení současného období ztratí přístup ${requiredCount} `}
             {requiredCount === 1 ? "uživatel" : "uživatelů"}.
           </p>
           <p className="mt-1 text-xs text-text-secondary">
-            Vyberte koho chcete deaktivovat. Sami sebe odstranit nemůžete.
-            Účet uživatele zůstane v databázi (pro historii dat), ale ztratí
-            přihlášení.
+            Vyberte koho. Sami sebe odstranit nemůžete. Do konce období mají
+            vybraní lidé plný přístup; deaktivace proběhne při dalším
+            zúčtování. Účet zůstane v databázi (pro historii dat), ale
+            přihlášení skončí.
           </p>
           <ul className="mt-3 space-y-1.5">
             {eligibleVictims.map((u) => {

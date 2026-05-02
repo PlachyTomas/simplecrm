@@ -70,6 +70,10 @@ class SubscriptionOut(BaseModel):
     seat_count: int = 1
     pending_plan: PlanOut | None = None
     pending_seat_count: int | None = None
+    # User IDs queued to lose access at next period rollover. Drives the
+    # "Deaktivace naplánovaná na DD.MM.RR" pill in Settings → Uživatelé
+    # and the "Naplánovaná změna" banner in Settings → Organizace.
+    pending_user_deactivations: list[uuid.UUID] | None = None
     # Computed at the API edge:
     effective_price_per_user_minor: int | None = None
     access_status: str

@@ -176,6 +176,7 @@ def _subscription_payload(sub: Subscription) -> SubscriptionOut:
             "seat_count": sub.seat_count,
             "pending_plan": sub.pending_plan,
             "pending_seat_count": sub.pending_seat_count,
+            "pending_user_deactivations": sub.pending_user_deactivations,
             "effective_price_per_user_minor": billing.get_effective_price_per_user_minor(sub),
             "access_status": _access_status(sub),
         }

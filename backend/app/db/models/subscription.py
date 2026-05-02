@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -74,6 +75,13 @@ class Subscription(Base):
         ForeignKey("plans.id", ondelete="RESTRICT"),
     )
     pending_seat_count: Mapped[int | None] = mapped_column(Integer)
+    # User IDs queued to lose access at next period rollover. Populated when
+    # admin reduces seat_count below the live active-user count via Settings →
+    # Organizace; cleared either by an explicit cancel (PUT seat-count == current)
+    # or by the rollover service after applying.
+    pending_user_deactivations: Mapped[list[uuid.UUID] | None] = mapped_column(
+        JSONB, nullable=True
+    )
 
     # Comp = bartered for exposure. The pay-gate never fires for these orgs.
     is_comp: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

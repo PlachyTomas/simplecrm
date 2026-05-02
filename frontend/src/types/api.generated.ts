@@ -939,11 +939,24 @@ export interface paths {
          * Update Seat Count
          * @description Org admin tunes the contracted seat count.
          *
-         *     Increases take effect immediately (the cap relaxes; new invitations
-         *     fit). Decreases below the current active-user count require the admin
-         *     to pick exactly `(active − new)` users to deactivate; their access is
-         *     revoked in this transaction. The next billing period bills against
-         *     the new seat_count.
+         *     Three shapes:
+         *
+         *     - **Increase** (target ≥ active): apply immediately; the cap relaxes
+         *       and new invitations fit. Any previously-queued downsize is cleared.
+         *     - **Decrease** (target < active): queue the change. `seat_count`
+         *       stays at the current contracted value through this period;
+         *       `pending_seat_count` and `pending_user_deactivations` carry the
+         *       target + the picked victims. The rollover service
+         *       (`billing.activate_subscription`, eventual scheduled job) applies
+         *       the queue at the next period boundary.
+         *     - **Cancel** (target == current `seat_count`): clear both pending
+         *       fields without changing anything else. Used by the
+         *       "Zrušit naplánovanou změnu" button in Organizace + the per-row
+         *       pill cancel in Uživatelé.
+         *
+         *     The user-creation cap (`Subscription.seat_count`) is unchanged for
+         *     queued downsizes — customers keep the seats they paid for through
+         *     the current period.
          */
         put: operations["update_seat_count_api_v1_organizations_current_subscription_seat_count_put"];
         post?: never;
@@ -2435,6 +2448,8 @@ export interface components {
             pending_plan?: components["schemas"]["PlanOut"] | null;
             /** Pending Seat Count */
             pending_seat_count?: number | null;
+            /** Pending User Deactivations */
+            pending_user_deactivations?: string[] | null;
             /** Effective Price Per User Minor */
             effective_price_per_user_minor?: number | null;
             /** Access Status */

@@ -68,6 +68,7 @@ def _subscription_payload(sub: Subscription) -> SubscriptionOut:
             "seat_count": sub.seat_count,
             "pending_plan": sub.pending_plan,
             "pending_seat_count": sub.pending_seat_count,
+            "pending_user_deactivations": sub.pending_user_deactivations,
             "effective_price_per_user_minor": billing.get_effective_price_per_user_minor(sub),
             "access_status": _access_status(sub),
         }
@@ -214,11 +215,24 @@ async def update_seat_count(
 ) -> SubscriptionOut:
     """Org admin tunes the contracted seat count.
 
-    Increases take effect immediately (the cap relaxes; new invitations
-    fit). Decreases below the current active-user count require the admin
-    to pick exactly `(active − new)` users to deactivate; their access is
-    revoked in this transaction. The next billing period bills against
-    the new seat_count.
+    Three shapes:
+
+    - **Increase** (target ≥ active): apply immediately; the cap relaxes
+      and new invitations fit. Any previously-queued downsize is cleared.
+    - **Decrease** (target < active): queue the change. `seat_count`
+      stays at the current contracted value through this period;
+      `pending_seat_count` and `pending_user_deactivations` carry the
+      target + the picked victims. The rollover service
+      (`billing.activate_subscription`, eventual scheduled job) applies
+      the queue at the next period boundary.
+    - **Cancel** (target == current `seat_count`): clear both pending
+      fields without changing anything else. Used by the
+      "Zrušit naplánovanou změnu" button in Organizace + the per-row
+      pill cancel in Uživatelé.
+
+    The user-creation cap (`Subscription.seat_count`) is unchanged for
+    queued downsizes — customers keep the seats they paid for through
+    the current period.
     """
     if user.organization_id is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
@@ -246,41 +260,58 @@ async def update_seat_count(
     active_count = len(active_users)
     new_count = payload.seat_count
 
-    if new_count < active_count:
-        needed = active_count - new_count
-        if len(payload.deactivate_user_ids) != needed:
+    # Cancel signal: target equals current seat_count → clear any queued
+    # downsize and return.
+    if new_count == sub.seat_count:
+        sub.pending_seat_count = None
+        sub.pending_user_deactivations = None
+        await session.commit()
+        await session.refresh(sub, attribute_names=["plan", "pending_plan"])
+        return _subscription_payload(sub)
+
+    # Increase: relax the cap immediately, drop any queued downsize.
+    if new_count >= active_count:
+        sub.seat_count = new_count
+        sub.pending_seat_count = None
+        sub.pending_user_deactivations = None
+        await session.commit()
+        await session.refresh(sub, attribute_names=["plan", "pending_plan"])
+        return _subscription_payload(sub)
+
+    # Decrease: validate the deactivation list, then QUEUE — do not
+    # touch User.is_active or sub.seat_count.
+    needed = active_count - new_count
+    if len(payload.deactivate_user_ids) != needed:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "code": "deactivation_count_mismatch",
+                "detail": (
+                    f"Snížením na {new_count} ztratí přístup {needed} uživatelů — "
+                    f"vyberte přesně {needed}."
+                ),
+                "needed": needed,
+            },
+        )
+    ids_in_org = {u.id for u in active_users}
+    for victim_id in payload.deactivate_user_ids:
+        if victim_id not in ids_in_org:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail={
-                    "code": "deactivation_count_mismatch",
-                    "detail": (
-                        f"Snížením na {new_count} ztratí přístup {needed} uživatelů — "
-                        f"vyberte přesně {needed}."
-                    ),
-                    "needed": needed,
-                },
+                detail="User is not in your organization or already inactive.",
             )
-        # Refuse to deactivate the founding admin or anyone outside the org.
-        ids_in_org = {u.id for u in active_users}
-        for victim_id in payload.deactivate_user_ids:
-            if victim_id not in ids_in_org:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="User is not in your organization or already inactive.",
-                )
-            if victim_id == user.id:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="You cannot deactivate yourself.",
-                )
+        if victim_id == user.id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="You cannot deactivate yourself.",
+            )
 
-        for victim in active_users:
-            if victim.id in payload.deactivate_user_ids:
-                victim.is_active = False
-
-    sub.seat_count = new_count
-    # Clear any queued downsize that's now obsolete.
-    sub.pending_seat_count = None
+    sub.pending_seat_count = new_count
+    # JSONB column expects a JSON-serializable list; UUIDs need str-cast
+    # so postgres stores them as plain strings rather than relying on
+    # asyncpg's binary UUID encoding (which would round-trip but reads
+    # back as `UUID` objects awkwardly in mixed code paths).
+    sub.pending_user_deactivations = [str(v) for v in payload.deactivate_user_ids]
     await session.commit()
     await session.refresh(sub, attribute_names=["plan", "pending_plan"])
     return _subscription_payload(sub)

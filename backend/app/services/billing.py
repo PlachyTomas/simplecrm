@@ -34,6 +34,7 @@ from app.db.models import (
     Organization,
     Plan,
     Subscription,
+    User,
 )
 from app.services.email import build_subscription_pending_email, send_email
 
@@ -302,6 +303,40 @@ async def activate_subscription(
     sub.current_period_starts_at = now
     sub.current_period_ends_at = _add_months(now, months) if months else None
 
+    # Apply any queued downsize: flip the queued users to is_active=False,
+    # drop seat_count to pending_seat_count, and clear both pending fields.
+    # IDs that point to users already inactive or deleted (e.g. the admin
+    # cancelled the user manually mid-period) are skipped silently.
+    queued_ids = sub.pending_user_deactivations or []
+    deactivated_ids: list[str] = []
+    if queued_ids:
+        # JSONB stores them as strings; re-parse to UUIDs for the query.
+        parsed_ids = [uuid.UUID(str(i)) for i in queued_ids]
+        victims = (
+            (
+                await session.execute(
+                    select(User)
+                    .where(User.organization_id == org_id)
+                    .where(User.id.in_(parsed_ids))
+                    .where(User.is_active.is_(True))
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for victim in victims:
+            victim.is_active = False
+            deactivated_ids.append(str(victim.id))
+    if sub.pending_seat_count is not None:
+        sub.seat_count = sub.pending_seat_count
+    sub.pending_seat_count = None
+    sub.pending_user_deactivations = None
+    # Note: pending_plan_id is intentionally left untouched here. The admin
+    # passes plan_code explicitly to this endpoint; the queued plan is the
+    # admin's hint of intent, not a hard contract — the activating party
+    # still chooses what they're committing to. A future scheduled rollover
+    # job will read pending_plan_id directly.
+
     await _audit(
         session,
         organization_id=org_id,
@@ -311,6 +346,7 @@ async def activate_subscription(
             "plan_code": plan_code,
             "override_price_minor": override_price_minor,
             "period_months": months,
+            "deactivated_user_ids": deactivated_ids,
         },
     )
     return sub

@@ -344,3 +344,82 @@ async def test_org_activity_respects_pagination(
     body = response.json()
     assert body["total"] >= 2
     assert len(body["items"]) == 1
+
+
+async def test_activate_applies_queued_user_deactivations(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """Queued downsize from PUT /seat-count gets applied at activation:
+    queued users flip is_active=False, seat_count drops to pending_seat_count,
+    pending fields clear."""
+    from sqlalchemy import select as _select
+
+    from app.db.models import Subscription, User as _User
+
+    org, admin = await _seed_org_with_super_admin(db_session, owned_emails)
+    # Capture ids before any expire_all() calls; accessing org.id from a
+    # sync context after expiration triggers a MissingGreenlet.
+    org_id = org.id
+    extra_email = f"x-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_emails.append(extra_email)
+    db_session.add(
+        _User(
+            email=extra_email,
+            name="Extra",
+            role=UserRole.salesperson,
+            organization_id=org_id,
+        )
+    )
+    await db_session.commit()
+    extra_id = (
+        await db_session.execute(_select(_User.id).where(_User.email == extra_email))
+    ).scalar_one()
+
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+
+    # Bump to 2 then queue a downsize back to 1 with extra as the victim.
+    await client.put(
+        "/api/v1/organizations/current/subscription/seat-count",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"seat_count": 2},
+    )
+    await client.put(
+        "/api/v1/organizations/current/subscription/seat-count",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"seat_count": 1, "deactivate_user_ids": [str(extra_id)]},
+    )
+
+    # Sanity: extra is still active, queue is set.
+    db_session.expire_all()
+    extra = (
+        await db_session.execute(_select(_User).where(_User.id == extra_id))
+    ).scalar_one()
+    assert extra.is_active is True
+
+    # Activate the subscription (super-admin path).
+    activate = await client.post(
+        f"/api/v1/admin/organizations/{org_id}/subscription/activate",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"plan_code": "monthly"},
+    )
+    assert activate.status_code == 200, activate.text
+    body = activate.json()
+    assert body["seat_count"] == 1
+    assert body["pending_seat_count"] is None
+    assert body["pending_user_deactivations"] is None
+
+    db_session.expire_all()
+    extra_after = (
+        await db_session.execute(_select(_User).where(_User.id == extra_id))
+    ).scalar_one()
+    assert extra_after.is_active is False
+
+    # Sanity check the Subscription row itself reflects the same.
+    sub = (
+        await db_session.execute(
+            _select(Subscription).where(Subscription.organization_id == org_id)
+        )
+    ).scalar_one()
+    assert sub.seat_count == 1
+    assert sub.pending_seat_count is None
+    assert sub.pending_user_deactivations is None
