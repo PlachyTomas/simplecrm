@@ -15,7 +15,13 @@ import { TeamsSection } from "@/app/settings/TeamsSection";
 import { UsersSection } from "@/app/settings/UsersSection";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { formatCzkMinor } from "@/components/billing/format";
+import { PriceDisplay } from "@/components/billing/PriceDisplay";
+import { useBillingSummary } from "@/components/billing/useBillingSummary";
+import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
+import { usePublicPlans } from "@/components/billing/usePublicPlans";
 import { ApiError, apiFetch } from "@/lib/api";
+import { csNoun } from "@/lib/i18n/nouns";
 import { ThemeToggle } from "@/lib/ThemeToggle";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
@@ -278,7 +284,13 @@ function StageRow({
   );
 }
 
-export function SettingsPage() {
+interface SettingsPageProps {
+  /** Pre-selects a tab on mount. Used by `/app/nastaveni/predplatne`
+   *  to land directly on the billing tab. */
+  initialTab?: SettingsTab;
+}
+
+export function SettingsPage({ initialTab = "pipeline" }: SettingsPageProps = {}) {
   const { data: user } = useCurrentUser();
   const { data: pipeline, isPending, isError } = usePipeline();
   const createStage = useCreateStage();
@@ -289,7 +301,7 @@ export function SettingsPage() {
   const [addingOpen, setAddingOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [globalError, setGlobalError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<SettingsTab>("pipeline");
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
 
   const activeTabMeta = TABS.find((t) => t.key === activeTab) ?? TABS[0];
   usePageTitle(`Nastavení — ${activeTabMeta.label}`);
@@ -620,38 +632,506 @@ function PermissionsSection() {
   );
 }
 
-const PRICE_PER_USER_CZK = 99;
-const priceFormatter = new Intl.NumberFormat("cs-CZ", {
-  style: "currency",
-  currency: "CZK",
-  maximumFractionDigits: 0,
-});
+type SubscriptionOut = components["schemas"]["SubscriptionOut"];
+type PlanCode = "monthly" | "annual";
+
+const SUPPORT_MAILTO = "mailto:podpora@simplecrm.cz";
+const ENTERPRISE_MAILTO =
+  "mailto:podpora@simplecrm.cz?subject=" +
+  encodeURIComponent("SimpleCRM enterprise — dotaz");
+
+const csDate = new Intl.DateTimeFormat("cs-CZ", { dateStyle: "long" });
+function formatCsDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  return csDate.format(new Date(iso));
+}
+
+interface StatusPillSpec {
+  label: string;
+  className: string;
+}
+
+function getStatusPill(sub: SubscriptionOut | null | undefined): StatusPillSpec {
+  if (!sub) return { label: "Načítání…", className: "bg-surface-overlay text-text-tertiary" };
+  if (sub.is_comp) return { label: "Komplementární", className: "bg-info-subtle text-info" };
+  if (sub.plan?.code === "enterprise" && sub.status === "active") {
+    return { label: "Aktivní · Enterprise", className: "bg-info-subtle text-info" };
+  }
+  switch (sub.status) {
+    case "trialing":
+      return { label: "Zkušební verze", className: "bg-info-subtle text-info" };
+    case "pending_activation":
+      return { label: "Čeká na platbu", className: "bg-warning-subtle text-warning" };
+    case "active":
+      return { label: "Aktivní", className: "bg-success-subtle text-success" };
+    case "past_due":
+      return { label: "Po splatnosti", className: "bg-warning-subtle text-warning" };
+    case "canceled":
+      return { label: "Zrušeno", className: "bg-danger-subtle text-danger" };
+    default:
+      return { label: sub.status, className: "bg-surface-overlay text-text-tertiary" };
+  }
+}
+
+function planDisplayName(sub: SubscriptionOut | null | undefined): string {
+  if (!sub?.plan) return "—";
+  if (sub.is_comp) return "Komplementární";
+  if (sub.plan.code === "enterprise") return "Vlastní balíček";
+  return sub.plan.display_name_cs;
+}
+
+function planInterval(sub: SubscriptionOut | null | undefined): "monthly" | "annual" | "custom" {
+  const interval = sub?.plan?.billing_interval;
+  if (interval === "monthly" || interval === "annual") return interval;
+  return "custom";
+}
 
 function BillingSection() {
+  const subQuery = useCurrentSubscription();
+  const summaryQuery = useBillingSummary();
+  const sub = subQuery.data;
+  const summary = summaryQuery.data;
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalPreselect, setModalPreselect] = useState<PlanCode | null>(null);
+
+  function openModal(preselect: PlanCode | null = null) {
+    setModalPreselect(preselect);
+    setModalOpen(true);
+  }
+  function closeModal() {
+    setModalOpen(false);
+    setModalPreselect(null);
+  }
+
+  if (subQuery.isPending) {
+    return (
+      <section className="rounded-lg border border-border bg-surface p-6 text-sm text-text-tertiary">
+        Načítání…
+      </section>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <CurrentPlanCard sub={sub} onChangePlan={() => openModal(null)} />
+      <BillingDetailsCard
+        sub={sub}
+        summary={summary}
+        onSwitchToAnnual={() => openModal("annual")}
+      />
+      <InvoicesPlaceholderCard />
+      {modalOpen ? (
+        <ChoosePlanModal preselect={modalPreselect} onClose={closeModal} />
+      ) : null}
+    </div>
+  );
+}
+
+interface CurrentPlanCardProps {
+  sub: SubscriptionOut | null | undefined;
+  onChangePlan: () => void;
+}
+
+function CurrentPlanCard({ sub, onChangePlan }: CurrentPlanCardProps) {
+  const pill = getStatusPill(sub);
+  const planName = planDisplayName(sub);
+  const isComp = !!sub?.is_comp;
+  const isEnterprise = sub?.plan?.code === "enterprise";
+  const showChangePlan =
+    !isComp && !isEnterprise && (sub?.status === "trialing" || sub?.status === "past_due");
+  const showContactSupport =
+    !isComp && !isEnterprise && (sub?.status === "active" || sub?.status === "canceled");
+  const effective = sub?.effective_price_per_user_minor ?? null;
+  // Show the per-user price for standard paid plans only. Skip trial
+  // (price=0 there is a placeholder, not a real bill), pending_activation
+  // (showing the chosen price before activation is misleading), comp (no
+  // bill), and enterprise (the override price is already rendered inline
+  // in the enterprise block — avoid the duplicate).
+  const showPrice =
+    !isComp &&
+    !isEnterprise &&
+    sub?.status !== "pending_activation" &&
+    sub?.status !== "trialing" &&
+    effective !== null &&
+    effective > 0;
+
   return (
     <section className="rounded-lg border border-border bg-surface p-6">
-      <h2 className="text-lg font-semibold">Fakturace</h2>
-      <p className="mt-1 text-sm text-text-tertiary">
-        Detaily plánu, faktur a způsobu platby.
-      </p>
-      <div className="mt-4 rounded-md border border-border-subtle bg-surface-overlay p-4">
-        <p className="text-sm text-text-primary">
-          Zkušební verze · {priceFormatter.format(PRICE_PER_USER_CZK)} / uživatel / měsíc po
-          skončení.
+      <h2 className="text-lg font-semibold">Aktuální plán</h2>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <span className="text-base font-medium text-text-primary">{planName}</span>
+        <span
+          className={cn(
+            "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+            pill.className,
+          )}
+        >
+          {pill.label}
+        </span>
+      </div>
+
+      {showPrice && effective !== null ? (
+        <div className="mt-4">
+          <PriceDisplay baseMinor={effective} interval={planInterval(sub)} size="md" hideVatLine />
+        </div>
+      ) : null}
+
+      {sub?.status === "pending_activation" ? (
+        <p className="mt-4 text-sm text-text-secondary">
+          Vybrali jste plán <span className="font-medium">{planName}</span>. Po
+          připsání platby vás aktivujeme do 24 hodin.
         </p>
-        <p className="mt-1 text-xs text-text-tertiary">
-          Spravování plateb a fakturace připravujeme.
+      ) : null}
+
+      {isComp ? (
+        <p className="mt-4 text-sm text-text-secondary">
+          Vaše organizace má speciální podmínky. Pro detaily kontaktujte podporu.
         </p>
+      ) : null}
+
+      {isEnterprise ? (
+        <div className="mt-4 space-y-3">
+          {effective !== null ? (
+            <p className="text-sm text-text-secondary">
+              Vlastní balíček ·{" "}
+              <span className="font-medium text-text-primary">
+                {formatCzkMinor(effective)}
+              </span>{" "}
+              / uživatel / měsíc
+            </p>
+          ) : null}
+          <a
+            href={ENTERPRISE_MAILTO}
+            className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-4 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
+          >
+            Kontaktovat obchod
+          </a>
+        </div>
+      ) : null}
+
+      {showChangePlan ? (
         <button
           type="button"
-          disabled
-          title="Brzy"
-          className="mt-3 inline-flex h-9 items-center justify-center rounded-md border border-border bg-surface px-3 text-sm font-medium text-text-tertiary"
+          onClick={onChangePlan}
+          className="mt-5 inline-flex h-10 items-center justify-center rounded-md bg-accent px-4 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
         >
-          Spravovat platbu
+          Změnit plán
         </button>
-      </div>
+      ) : null}
+
+      {showContactSupport ? (
+        <a
+          href={SUPPORT_MAILTO}
+          className="mt-5 inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface px-4 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-overlay"
+        >
+          Kontaktujte podporu
+        </a>
+      ) : null}
     </section>
+  );
+}
+
+interface BillingDetailsCardProps {
+  sub: SubscriptionOut | null | undefined;
+  summary: components["schemas"]["BillingSummary"] | null | undefined;
+  onSwitchToAnnual: () => void;
+}
+
+function BillingDetailsCard({ sub, summary, onSwitchToAnnual }: BillingDetailsCardProps) {
+  if (!sub) return null;
+  if (sub.is_comp) return null;
+  if (sub.plan?.code === "enterprise") return null;
+  // Only show real billing math when there's an actual bill to discuss —
+  // trialing/pending/canceled have no current charge.
+  if (sub.status !== "active" && sub.status !== "past_due") return null;
+  if (!summary) return null;
+  if (
+    summary.effective_price_per_user_minor == null ||
+    summary.monthly_total_minor == null
+  ) {
+    return null;
+  }
+
+  const interval = planInterval(sub);
+  const isAnnual = interval === "annual";
+  const periodLabel = isAnnual ? "rok" : "měsíc";
+  const totalMinor = isAnnual
+    ? (summary.annual_total_minor ?? 0)
+    : summary.monthly_total_minor;
+  const renewalDate = formatCsDate(sub.current_period_ends_at);
+
+  return (
+    <section className="rounded-lg border border-border bg-surface p-6">
+      <h2 className="text-lg font-semibold">Účtování</h2>
+
+      <p className="mt-4 text-sm text-text-secondary">
+        {summary.user_count} {csNoun(summary.user_count, "uzivatel")} ×{" "}
+        <span className="font-medium text-text-primary">
+          {formatCzkMinor(summary.effective_price_per_user_minor)}
+        </span>{" "}
+        ={" "}
+        <span className="font-semibold text-text-primary">
+          {formatCzkMinor(totalMinor)}
+        </span>{" "}
+        / {periodLabel}
+      </p>
+
+      {!isAnnual && summary.savings_minor != null && summary.savings_minor > 0 ? (
+        <p className="mt-3 text-sm text-text-secondary">
+          Pokud byste platili ročně, ušetříte{" "}
+          <span className="font-semibold text-text-primary">
+            {formatCzkMinor(summary.savings_minor)}
+          </span>{" "}
+          ročně.{" "}
+          <button
+            type="button"
+            onClick={onSwitchToAnnual}
+            className="text-accent underline-offset-2 hover:underline"
+          >
+            Přejít na roční
+          </button>
+        </p>
+      ) : null}
+
+      {isAnnual && summary.savings_minor != null && summary.savings_minor > 0 ? (
+        <p className="mt-3 text-sm text-text-secondary">
+          Šetříte{" "}
+          <span className="font-semibold text-text-primary">
+            {formatCzkMinor(summary.savings_minor)}
+          </span>{" "}
+          oproti měsíčnímu plánu.
+        </p>
+      ) : null}
+
+      {renewalDate && (sub.status === "active" || sub.status === "past_due") ? (
+        <p className="mt-3 text-sm text-text-tertiary">
+          Další obnova: <span className="text-text-primary">{renewalDate}</span>
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+function InvoicesPlaceholderCard() {
+  return (
+    <section className="rounded-lg border border-border bg-surface p-6">
+      <h2 className="text-lg font-semibold">Faktury</h2>
+      <p className="mt-3 text-sm text-text-secondary">
+        Faktury budou dostupné po první platbě.
+      </p>
+    </section>
+  );
+}
+
+interface ChoosePlanModalProps {
+  preselect: PlanCode | null;
+  onClose: () => void;
+}
+
+function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
+  const { accessToken } = useAuth();
+  const queryClient = useQueryClient();
+  const plans = usePublicPlans();
+  const summary = useBillingSummary();
+  const [selected, setSelected] = useState<PlanCode | null>(preselect);
+  const [error, setError] = useState<string | null>(null);
+
+  const monthlyPlan = plans.data?.find((p) => p.code === "monthly");
+  const annualPlan = plans.data?.find((p) => p.code === "annual");
+
+  const mutation = useMutation({
+    mutationFn: async (planCode: PlanCode) => {
+      return apiFetch(
+        "/api/v1/organizations/current/subscription/choose-plan",
+        {
+          method: "POST",
+          token: accessToken,
+          body: { plan_code: planCode },
+        },
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscription", "current"] });
+      queryClient.invalidateQueries({ queryKey: ["billing-summary", "current"] });
+      onClose();
+    },
+    onError: (err) => {
+      setError(
+        err instanceof ApiError
+          ? "Nepodařilo se odeslat výběr plánu. Zkuste to prosím znovu."
+          : "Něco se pokazilo. Zkontrolujte připojení a zkuste to znovu.",
+      );
+    },
+  });
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!selected || mutation.isPending) return;
+    setError(null);
+    mutation.mutate(selected);
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="choose-plan-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 py-8 backdrop-blur-md"
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-2xl rounded-xl border border-border bg-surface p-6 shadow-lg sm:p-8"
+      >
+        <h2 id="choose-plan-title" className="text-xl font-semibold text-text-primary">
+          Vyberte plán
+        </h2>
+        <p className="mt-2 text-sm text-text-secondary">
+          Po výběru vám pošleme platební instrukce na e-mail. Po připsání platby
+          vás aktivujeme do 24 hodin.
+        </p>
+
+        <div
+          role="radiogroup"
+          aria-label="Plán"
+          className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2"
+        >
+          <PlanModalCard
+            code="monthly"
+            title="Měsíční"
+            priceMinor={monthlyPlan?.price_per_user_minor ?? null}
+            priceInterval="monthly"
+            selected={selected === "monthly"}
+            disabled={mutation.isPending}
+            onSelect={() => setSelected("monthly")}
+          />
+          <PlanModalCard
+            code="annual"
+            title="Roční"
+            priceMinor={annualPlan?.price_per_user_minor ?? null}
+            priceInterval="annual"
+            selected={selected === "annual"}
+            disabled={mutation.isPending}
+            onSelect={() => setSelected("annual")}
+            badge="Ušetříte 16 %"
+            caption={
+              summary.data && summary.data.savings_minor != null ? (
+                <p className="text-sm text-text-secondary">
+                  {summary.data.user_count === 1
+                    ? "S Vaším 1 uživatelem"
+                    : `S Vašimi ${summary.data.user_count} uživateli`}{" "}
+                  ušetříte{" "}
+                  <span className="font-semibold text-text-primary">
+                    {formatCzkMinor(summary.data.savings_minor)}
+                  </span>{" "}
+                  ročně.
+                </p>
+              ) : null
+            }
+          />
+        </div>
+
+        {error ? (
+          <p
+            role="alert"
+            className="mt-4 rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
+          >
+            {error}
+          </p>
+        ) : null}
+
+        <div className="mt-6 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={mutation.isPending}
+            className="inline-flex h-10 items-center justify-center rounded-md bg-transparent px-4 text-sm font-medium text-text-secondary hover:text-text-primary disabled:opacity-50"
+          >
+            Zrušit
+          </button>
+          <button
+            type="submit"
+            disabled={!selected || mutation.isPending}
+            className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {mutation.isPending ? "Odesíláme…" : "Vybrat plán"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+interface PlanModalCardProps {
+  code: PlanCode;
+  title: string;
+  priceMinor: number | null;
+  priceInterval: "monthly" | "annual";
+  selected: boolean;
+  disabled: boolean;
+  onSelect: () => void;
+  badge?: string;
+  caption?: React.ReactNode;
+}
+
+function PlanModalCard({
+  code,
+  title,
+  priceMinor,
+  priceInterval,
+  selected,
+  disabled,
+  onSelect,
+  badge,
+  caption,
+}: PlanModalCardProps) {
+  return (
+    <div
+      role="radio"
+      aria-checked={selected}
+      tabIndex={disabled ? -1 : 0}
+      data-plan-code={code}
+      onClick={() => !disabled && onSelect()}
+      onKeyDown={(e) => {
+        if (disabled) return;
+        if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      className={cn(
+        "relative flex cursor-pointer flex-col rounded-lg border-2 bg-surface p-5 transition-colors",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg",
+        selected
+          ? "border-accent shadow-md"
+          : "border-border hover:border-text-tertiary",
+        disabled && "cursor-not-allowed opacity-60",
+      )}
+    >
+      {badge ? (
+        <span className="absolute -top-3 right-4 rounded-full bg-brand-accent px-3 py-1 text-xs font-semibold text-text-on-brand-accent">
+          {badge}
+        </span>
+      ) : null}
+      <h3 className="text-base font-semibold text-text-primary">{title}</h3>
+      <div className="mt-3">
+        {priceMinor != null ? (
+          <PriceDisplay
+            baseMinor={priceMinor}
+            interval={priceInterval}
+            size="lg"
+            hideVatLine
+          />
+        ) : (
+          <div
+            aria-hidden
+            className="h-9 w-32 animate-pulse rounded bg-surface-overlay"
+          />
+        )}
+      </div>
+      {caption ? <div className="mt-3">{caption}</div> : null}
+    </div>
   );
 }
 

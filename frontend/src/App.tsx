@@ -57,6 +57,10 @@ export function AppRoutes() {
         <Route path="deals/:dealId" element={<DealDetailPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route
+          path="nastaveni/predplatne"
+          element={<SettingsPage initialTab="billing" />}
+        />
         <Route path="more" element={<MorePage />} />
       </Route>
       <Route path="*" element={<NotFoundPage />} />

@@ -132,11 +132,11 @@ describe("Trial countdown badge (F3)", () => {
     expect(screen.queryByRole("link", { name: /Vybrat plán/i })).toBeNull();
   });
 
-  it("≤7 days: warning color + Vybrat plán link to /app/settings", async () => {
+  it("≤7 days: warning color + Vybrat plán link to /app/nastaveni/predplatne", async () => {
     const endsAt = new Date(Date.now() + 5 * 86400 * 1000).toISOString();
     renderShell(5, trialingSubscription(endsAt));
     const cta = await screen.findByRole("link", { name: /Vybrat plán/i });
-    expect(cta).toHaveAttribute("href", "/app/settings");
+    expect(cta).toHaveAttribute("href", "/app/nastaveni/predplatne");
     expect(cta).toHaveClass("font-medium");
     const badge = screen.getByTestId("trial-badge");
     expect(badge).toHaveClass("text-warning");

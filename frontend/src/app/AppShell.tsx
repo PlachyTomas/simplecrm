@@ -91,7 +91,7 @@ export function AppShell() {
                     </span>
                     {showUpgradeCta ? (
                       <Link
-                        to="/app/settings"
+                        to="/app/nastaveni/predplatne"
                         className={`underline-offset-2 hover:underline ${
                           daysRemaining <= 3 ? "font-semibold" : "font-medium"
                         }`}

@@ -1114,3 +1114,75 @@ Next: F4 — trial-expired pay gate (full-screen takeover).
   dev-login-config failure unchanged); typecheck + lint green.
 
 Next: F5 — `/app/nastaveni/predplatne` in-app billing settings page.
+
+### F5 — In-app billing settings page
+
+- `frontend/src/App.tsx` — registered the literal route the brief
+  calls out: `<Route path="nastaveni/predplatne" element={<SettingsPage initialTab="billing" />} />`
+  under the `/app` parent. Real route, not a `<Navigate>` — the URL
+  stays put.
+- `frontend/src/app/settings/SettingsPage.tsx`
+  - Accepts an `initialTab?: SettingsTab` prop (default `pipeline`)
+    so the new route can land directly on the billing tab.
+  - Replaced the placeholder `BillingSection` (which had a hardcoded
+    `99` and a local `Intl.NumberFormat`, both AC6 violations) with
+    the F5 build: three sibling cards.
+- `Aktuální plán` card — plan name + status pill. Variants:
+  trialing → blue `Zkušební verze`; pending_activation → amber
+  `Čeká na platbu` + activation copy; active (standard) → green
+  `Aktivní` + `Kontaktujte podporu` mailto (NOT self-service —
+  `BillingService.choose_plan` always flips orgs to
+  `pending_activation`, which would re-gate an active org; §9 puts
+  mid-period self-service plan changes out of scope); active comp →
+  blue `Komplementární` + speciální podmínky line, no actions;
+  active enterprise → blue `Aktivní · Enterprise` + `Vlastní balíček
+  · {override}` line + `Kontaktovat obchod` mailto; past_due → amber
+  `Po splatnosti` + `Změnit plán` (same flow as trialing); canceled
+  → red `Zrušeno` + `Kontaktujte podporu` (defensive — these orgs
+  hit the F4 gate first).
+- `Účtování` card — only renders for `active` / `past_due`
+  (trialing/pending/canceled have no real bill yet). Body:
+  `{N} {csNoun} × {price} = {total} / {period}`. Monthly orgs see a
+  projection caption with `Přejít na roční` button that opens the
+  modal pre-selected to annual; annual orgs see `Šetříte X oproti
+  měsíčnímu plánu.` (no CTA — they're already on the optimal plan).
+  Renewal date via `Intl.DateTimeFormat('cs-CZ')` for active /
+  past_due (date Intl is fine — AC6 only constrains *currency*).
+- `Faktury` card — placeholder `Faktury budou dostupné po první
+  platbě.` per the brief.
+- `Změnit plán` modal — inline in the file (not extracted; F4 just
+  shipped, F6 hasn't told us what shape it needs — wait for the
+  third caller). Two `<PriceDisplay>` cards with the F4 magenta
+  badge + savings caption. POST `/choose-plan` via TanStack
+  `useMutation` with `onSuccess` invalidating `["subscription",
+  "current"]` and `["billing-summary", "current"]` so the page
+  re-renders into the `Čeká na platbu` state without a full reload.
+  Pre-selectable via `Přejít na roční`.
+- `frontend/src/app/AppShell.tsx` — F3's `Vybrat plán →` CTA target
+  flipped from `/app/settings` to the new
+  `/app/nastaveni/predplatne` route per the F3 RESUME TODO.
+- `frontend/src/__tests__/billingSettings.test.tsx` — 10 tests
+  covering each variant: trialing pill+button (no Účtování card),
+  pending activation copy, active monthly + projection caption,
+  active annual + savings caption, comp speciální podmínky, active
+  enterprise CTA, past_due variant, Faktury placeholder always,
+  modal POST round-trip, modal pre-select via Přejít na roční.
+- `frontend/src/__tests__/trialCountdown.test.tsx` — updated the F3
+  CTA assertion to the new path.
+- Czech grammar fix: the modal's per-user savings caption used
+  nominative `csNoun` after `S`, which produces `S 1 uživatel` —
+  ungrammatical. Replaced with the F4 inline-ternary pattern
+  (instrumental: `S Vaším 1 uživatelem` / `S Vašimi N uživateli`).
+- Playwright verification (dev-login → flip subscription state via
+  psql for each variant): trialing 1280 dark, modal opens cleanly,
+  active monthly with projection, active annual with savings,
+  comp speciální podmínky line, enterprise with override, past_due
+  full layout, 390 mobile stack, end-to-end POST → automatic
+  re-render to `Čeká na platbu` (DB confirmed
+  `status='pending_activation', plan='annual'`). The F3 trial-badge
+  CTA navigates to the new route. DB reset to trialing/30 days.
+- 64 frontend tests pass; 257 backend tests pass (one pre-existing
+  dev-login-config failure unchanged); typecheck + lint green.
+
+Next: F6 — super-admin UI (`/admin` route, gated by
+`User.is_super_admin`).
