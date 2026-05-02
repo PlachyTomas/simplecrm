@@ -457,6 +457,20 @@ async def test_refresh_bypasses_trial_gate_for_expired_orgs(
         org = await s.get(Organization, org_id)
         assert org is not None
         org.trial_ends_at = datetime.now(tz=UTC) - timedelta(days=7)
+        # Also expire the Subscription's current_period_ends_at — onboarding
+        # seeded one with status=trialing pointing at trial_ends_at; the new
+        # pay-gate reads from the Subscription, not the Organization row.
+        from app.db.models import Subscription as _Sub
+
+        sub_row = (
+            await s.execute(_Sub.__table__.select().where(_Sub.organization_id == org_id))
+        ).first()
+        if sub_row is not None:
+            await s.execute(
+                _Sub.__table__.update()
+                .where(_Sub.organization_id == org_id)
+                .values(current_period_ends_at=datetime.now(tz=UTC) - timedelta(days=7))
+            )
         await s.commit()
 
     try:

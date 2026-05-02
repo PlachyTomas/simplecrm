@@ -11,6 +11,8 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi import HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import (
     require_active_trial_or_subscription,
@@ -18,14 +20,13 @@ from app.core.deps import (
     require_role,
     require_roles,
 )
-from app.db.models import Organization, User, UserRole
+from app.db.models import Organization, Plan, Subscription, User, UserRole
 
 
 def _build_user(
     role: UserRole,
     *,
     trial_delta: timedelta = timedelta(days=5),
-    stripe_customer_id: str | None = None,
     show_leaderboard_to_salespeople: bool = False,
 ) -> User:
     org = Organization(
@@ -35,7 +36,6 @@ def _build_user(
         currency="CZK",
         region="eu-cz",  # type: ignore[arg-type]
         trial_ends_at=datetime.now(tz=UTC) + trial_delta,
-        stripe_customer_id=stripe_customer_id,
         show_leaderboard_to_salespeople=show_leaderboard_to_salespeople,
     )
     user = User(
@@ -78,28 +78,102 @@ def test_require_role_with_empty_set_raises_value_error() -> None:
         require_role()
 
 
-async def test_trial_gate_admits_users_inside_trial() -> None:
+async def test_trial_gate_admits_users_inside_trial(db_session: AsyncSession) -> None:
+    """Fallback path: org without a Subscription row, still in trial."""
     user = _build_user(UserRole.salesperson, trial_delta=timedelta(days=5))
-    assert await require_active_trial_or_subscription(user=user) is user
+    assert (
+        await require_active_trial_or_subscription(user=user, session=db_session)
+    ) is user
 
 
-async def test_trial_gate_rejects_expired_trial_without_subscription() -> None:
+async def test_trial_gate_rejects_expired_trial_without_subscription(
+    db_session: AsyncSession,
+) -> None:
     user = _build_user(UserRole.salesperson, trial_delta=timedelta(days=-1))
     with pytest.raises(HTTPException) as exc:
-        await require_active_trial_or_subscription(user=user)
+        await require_active_trial_or_subscription(user=user, session=db_session)
     assert exc.value.status_code == 402
     assert isinstance(exc.value.detail, dict)
-    assert exc.value.detail["detail"] == "Trial expired"
-    assert "trial_ends_at" in exc.value.detail
+    assert exc.value.detail["code"] == "subscription_required"
+    assert exc.value.detail["can_choose_plan"] is True
+    assert "ends_at" in exc.value.detail
 
 
-async def test_trial_gate_admits_expired_trial_with_subscription() -> None:
-    user = _build_user(
-        UserRole.salesperson,
-        trial_delta=timedelta(days=-1),
-        stripe_customer_id="cus_test",
+async def test_trial_gate_admits_active_subscription(db_session: AsyncSession) -> None:
+    """Active Subscription with a future period_ends_at admits even after the
+    org's `trial_ends_at` has passed.
+    """
+    org = Organization(
+        name="Active Sub Org",
+        trial_ends_at=datetime.now(tz=UTC) - timedelta(days=10),
     )
-    assert await require_active_trial_or_subscription(user=user) is user
+    db_session.add(org)
+    await db_session.flush()
+    monthly_plan_id = (
+        await db_session.execute(select(Plan.id).where(Plan.code == "monthly"))
+    ).scalar_one()
+    db_session.add(
+        Subscription(
+            organization_id=org.id,
+            plan_id=monthly_plan_id,
+            status="active",
+            started_at=datetime.now(tz=UTC) - timedelta(days=5),
+            current_period_starts_at=datetime.now(tz=UTC) - timedelta(days=5),
+            current_period_ends_at=datetime.now(tz=UTC) + timedelta(days=25),
+        )
+    )
+    await db_session.flush()
+
+    user = User(
+        id=uuid.uuid4(),
+        email=f"u-{uuid.uuid4().hex[:8]}@ex.cz",
+        name="Active",
+        role=UserRole.admin,
+        organization_id=org.id,
+        is_active=True,
+    )
+    user.organization = org
+
+    assert (
+        await require_active_trial_or_subscription(user=user, session=db_session)
+    ) is user
+
+
+async def test_trial_gate_admits_comp_org(db_session: AsyncSession) -> None:
+    """Comp orgs are never gated, regardless of period or status."""
+    org = Organization(
+        name="Comp Org",
+        trial_ends_at=datetime.now(tz=UTC) - timedelta(days=100),
+    )
+    db_session.add(org)
+    await db_session.flush()
+    comp_plan_id = (
+        await db_session.execute(select(Plan.id).where(Plan.code == "comp"))
+    ).scalar_one()
+    db_session.add(
+        Subscription(
+            organization_id=org.id,
+            plan_id=comp_plan_id,
+            status="active",
+            is_comp=True,
+            comp_reason="podcast",
+            started_at=datetime.now(tz=UTC) - timedelta(days=200),
+        )
+    )
+    await db_session.flush()
+
+    user = User(
+        id=uuid.uuid4(),
+        email=f"u-{uuid.uuid4().hex[:8]}@ex.cz",
+        name="Comp",
+        role=UserRole.admin,
+        organization_id=org.id,
+        is_active=True,
+    )
+    user.organization = org
+    assert (
+        await require_active_trial_or_subscription(user=user, session=db_session)
+    ) is user
 
 
 async def test_leaderboard_visibility_admits_admin_and_manager() -> None:

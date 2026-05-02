@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Awaitable, Callable, Iterable
-from datetime import UTC, datetime
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -166,30 +165,73 @@ async def require_super_admin(
 
 async def require_active_trial_or_subscription(
     user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> User:
-    """Reject access when the org's trial has expired and no paid plan is active.
+    """Reject access when the org's subscription doesn't allow it.
 
-    The "active subscription" signal for MVP is `Organization.stripe_customer_id`
-    being non-null. Actual Stripe integration lands later; this gate exists
-    from day one so the frontend can render its blocking state.
+    Source of truth: `BillingService.is_app_access_allowed` — comp orgs
+    always pass; trialing/active orgs pass while their period is open;
+    past-due orgs get a 7-day grace; pending_activation and canceled
+    deny.
 
-    Users without an organization (post-signup, pre-create-org) bypass this
-    gate so `/auth/me` can return their record and the frontend can route
-    them to the create-org flow. The trial only starts to tick once an org
-    exists, so there's nothing to gate yet.
+    Users without an organization (post-signup, pre-create-org) bypass
+    this gate so `/auth/me` can return their record and the frontend
+    can route them to the create-org flow.
+
+    Fallback: orgs that somehow lack a Subscription row (the migration
+    backfilled every existing org and onboarding seeds one for new
+    orgs, so this only happens to test fixtures that seed orgs
+    directly) fall back to an `Organization.trial_ends_at` check so
+    the legacy contract still holds.
     """
     if user.organization_id is None or user.organization is None:
         return user
-    org = user.organization
-    if org.stripe_customer_id is not None:
+
+    # Lazy import to dodge any import cycle through app.services.billing.
+    from datetime import UTC, datetime
+
+    from sqlalchemy import select
+
+    from app.db.models import Subscription
+    from app.services import billing
+
+    sub = (
+        await session.execute(
+            select(Subscription).where(
+                Subscription.organization_id == user.organization_id
+            )
+        )
+    ).scalar_one_or_none()
+
+    if sub is None:
+        # Legacy fallback for orgs without a Subscription row.
+        if user.organization.trial_ends_at > datetime.now(tz=UTC):
+            return user
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail={
+                "code": "subscription_required",
+                "current_status": "trialing",
+                "is_comp": False,
+                "can_choose_plan": True,
+                "ends_at": user.organization.trial_ends_at.isoformat(),
+            },
+        )
+
+    if billing.is_app_access_allowed(sub):
         return user
-    if org.trial_ends_at > datetime.now(tz=UTC):
-        return user
+
     raise HTTPException(
         status_code=status.HTTP_402_PAYMENT_REQUIRED,
         detail={
-            "detail": "Trial expired",
-            "trial_ends_at": org.trial_ends_at.isoformat(),
-            "organization_id": str(org.id),
+            "code": "subscription_required",
+            "current_status": sub.status,
+            "is_comp": sub.is_comp,
+            "can_choose_plan": True,
+            "ends_at": (
+                sub.current_period_ends_at.isoformat()
+                if sub.current_period_ends_at
+                else None
+            ),
         },
     )

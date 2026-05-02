@@ -15,6 +15,7 @@ from app.api.v1 import (
     pipelines,
     plans,
     reports,
+    subscription,
     teams,
     users,
 )
@@ -53,6 +54,10 @@ api_router.include_router(reports.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(teams.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(users.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(activities.router, dependencies=PROTECTED_DEPS)
+# Subscription read + choose-plan + contact-enterprise — auth + org-membership
+# only, intentionally NOT trial-gated so a gated user can still escape the
+# gate by picking a plan.
+api_router.include_router(subscription.router, dependencies=[Depends(require_org_membership)])
 # Public pricing catalog — no auth, no trial gate.
 api_router.include_router(plans.router)
 # Super-admin surface — gated per-route by `require_super_admin`. Not under
