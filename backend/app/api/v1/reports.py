@@ -12,12 +12,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user, require_leaderboard_visibility
+from pydantic import ValidationError
+
+from app.core.deps import get_current_user, require_leaderboard_visibility, require_role
 from app.core.scoping import scope_by_owner
 from app.db import get_db
 from app.db.models import Company, Deal, Organization, Stage, Team, User
 from app.db.models.enums import StageType, UserRole
 from app.schemas.reports import (
+    DashboardConfig,
     KpiSummary,
     Leaderboard,
     LeaderboardRow,
@@ -30,6 +33,7 @@ from app.schemas.reports import (
     Velocity,
     VelocityByStage,
 )
+from app.services.reports import default_dashboard_config
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -554,3 +558,69 @@ async def my_summary(
         conversion_rate=(won_count / closed_count if closed_count else None),
         avg_cycle_days=(cycle_sum / cycle_count if cycle_count else None),
     )
+
+
+# ---------------------------------------------------------------------------
+# Configurable widget dashboard — layout persistence (R1)
+# ---------------------------------------------------------------------------
+
+
+def _serialize_dashboard_config(cfg: DashboardConfig) -> dict[str, object]:
+    """Return the wire-format dict (camelCase aliases) the frontend expects.
+
+    DashboardConfig uses Field aliases (`from`, `dateRange`, `teamId`,
+    `ownerUserId`, `globalFilters`) so we always dump with by_alias=True.
+    """
+
+    return cfg.model_dump(by_alias=True, mode="json")
+
+
+@router.get("/dashboard-config")
+async def get_dashboard_config(
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, object]:
+    """Return the user's persisted layout, or the 8-widget default.
+
+    Empty `{}` (column-default for new rows) means "first visit — give
+    them the starter set." We don't persist on first read; the frontend
+    PUTs once the user makes a modification.
+    """
+
+    raw = user.reports_dashboard_config or {}
+    if not raw:
+        return _serialize_dashboard_config(default_dashboard_config())
+    # Re-validate persisted JSON on read so a deploy that tightens a
+    # widget config doesn't return stale-shaped data to the client.
+    try:
+        cfg = DashboardConfig.model_validate(raw)
+    except ValidationError:
+        # Fall back to defaults rather than blowing up the page. The
+        # next PUT will overwrite the bad row.
+        cfg = default_dashboard_config()
+    return _serialize_dashboard_config(cfg)
+
+
+@router.put("/dashboard-config")
+async def put_dashboard_config(
+    payload: DashboardConfig,
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, object]:
+    """Validate and persist the user's layout. Returns the round-tripped value."""
+
+    user.reports_dashboard_config = payload.model_dump(by_alias=True, mode="json")
+    await session.commit()
+    return _serialize_dashboard_config(payload)
+
+
+@router.delete("/dashboard-config", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_dashboard_config(
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    """Reset the user's layout to the default. The empty `{}` triggers the
+    GET endpoint's default-layout fallback on the next read."""
+
+    user.reports_dashboard_config = {}
+    await session.commit()

@@ -702,3 +702,186 @@ async def test_export_csv_rate_limit_returns_429(
         app.dependency_overrides.pop(get_export_rate_limiter, None)
     assert first.status_code == 200
     assert second.status_code == 429
+
+
+# ---------------------------------------------------------------------------
+# Configurable widget dashboard — layout endpoints (R1)
+# ---------------------------------------------------------------------------
+
+
+async def test_dashboard_config_returns_default_for_first_visit(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Empty `{}` (column-default) → API returns the 8-widget starter set."""
+    _, user, *_ = await _setup(db_session, owned_cleanup)
+    resp = await client.get("/api/v1/reports/dashboard-config", headers=_auth(user))
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["version"] == 1
+    assert len(body["widgets"]) == 8
+    types = [w["config"]["type"] for w in body["widgets"]]
+    # Sanity-check the order from REPORTS_TASK §6.3.
+    assert types[:4] == ["pipeline_value", "deals_won", "win_rate", "avg_deal_size"]
+
+
+async def test_dashboard_config_put_persists_then_get_returns_persisted(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """PUT a custom layout, then GET returns exactly what was saved."""
+    _, user, *_ = await _setup(db_session, owned_cleanup)
+    payload = {
+        "version": 1,
+        "widgets": [
+            {
+                "id": "wid_01HXYZ",
+                "position": {"x": 0, "y": 0, "w": 6, "h": 2},
+                "config": {"type": "win_rate"},
+            }
+        ],
+        "globalFilters": {
+            "dateRange": {"preset": "last_7_days", "from": None, "to": None},
+            "teamId": None,
+            "ownerUserId": None,
+        },
+    }
+    put_resp = await client.put(
+        "/api/v1/reports/dashboard-config",
+        headers=_auth(user),
+        json=payload,
+    )
+    assert put_resp.status_code == 200, put_resp.text
+    get_resp = await client.get("/api/v1/reports/dashboard-config", headers=_auth(user))
+    assert get_resp.status_code == 200
+    body = get_resp.json()
+    assert len(body["widgets"]) == 1
+    assert body["widgets"][0]["config"]["type"] == "win_rate"
+    assert body["globalFilters"]["dateRange"]["preset"] == "last_7_days"
+
+
+async def test_dashboard_config_delete_resets_to_default(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, user, *_ = await _setup(db_session, owned_cleanup)
+    # Persist a 1-widget layout, then DELETE, then GET should return defaults.
+    await client.put(
+        "/api/v1/reports/dashboard-config",
+        headers=_auth(user),
+        json={
+            "version": 1,
+            "widgets": [
+                {
+                    "id": "wid_only",
+                    "position": {"x": 0, "y": 0, "w": 3, "h": 2},
+                    "config": {"type": "win_rate"},
+                }
+            ],
+        },
+    )
+    del_resp = await client.delete(
+        "/api/v1/reports/dashboard-config", headers=_auth(user)
+    )
+    assert del_resp.status_code == 204
+    get_resp = await client.get("/api/v1/reports/dashboard-config", headers=_auth(user))
+    assert get_resp.status_code == 200
+    assert len(get_resp.json()["widgets"]) == 8
+
+
+async def test_dashboard_config_rejects_unknown_widget_type(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, user, *_ = await _setup(db_session, owned_cleanup)
+    resp = await client.put(
+        "/api/v1/reports/dashboard-config",
+        headers=_auth(user),
+        json={
+            "version": 1,
+            "widgets": [
+                {
+                    "id": "x",
+                    "position": {"x": 0, "y": 0, "w": 3, "h": 2},
+                    "config": {"type": "nonsense"},
+                }
+            ],
+        },
+    )
+    assert resp.status_code == 422
+
+
+async def test_dashboard_config_rejects_overlapping_widgets(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, user, *_ = await _setup(db_session, owned_cleanup)
+    resp = await client.put(
+        "/api/v1/reports/dashboard-config",
+        headers=_auth(user),
+        json={
+            "version": 1,
+            "widgets": [
+                {
+                    "id": "a",
+                    "position": {"x": 0, "y": 0, "w": 6, "h": 2},
+                    "config": {"type": "win_rate"},
+                },
+                {
+                    "id": "b",
+                    "position": {"x": 3, "y": 0, "w": 6, "h": 2},
+                    "config": {"type": "deals_won"},
+                },
+            ],
+        },
+    )
+    assert resp.status_code == 422
+    assert "overlapping" in resp.text.lower()
+
+
+async def test_dashboard_config_rejects_too_many_widgets(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, user, *_ = await _setup(db_session, owned_cleanup)
+    # 21 1×1 widgets stacked vertically — overlap-free, but over the cap.
+    widgets = [
+        {
+            "id": f"w{i}",
+            "position": {"x": 0, "y": i, "w": 1, "h": 1},
+            "config": {"type": "win_rate"},
+        }
+        for i in range(21)
+    ]
+    resp = await client.put(
+        "/api/v1/reports/dashboard-config",
+        headers=_auth(user),
+        json={"version": 1, "widgets": widgets},
+    )
+    assert resp.status_code == 422
+
+
+async def test_dashboard_config_blocks_salesperson(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Salespeople hit 403 on GET, PUT, and DELETE."""
+    org, _admin, *_ = await _setup(db_session, owned_cleanup)
+    salesperson_email = f"s-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(salesperson_email)
+    salesperson = User(
+        email=salesperson_email,
+        name="Sales",
+        role=UserRole.salesperson,
+        organization_id=org.id,
+    )
+    db_session.add(salesperson)
+    await db_session.commit()
+    await db_session.refresh(salesperson)
+    headers = _auth(salesperson)
+
+    for verb, fn in (
+        ("get", client.get),
+        ("delete", client.delete),
+    ):
+        resp = await fn("/api/v1/reports/dashboard-config", headers=headers)
+        assert resp.status_code == 403, f"{verb}: {resp.text}"
+    put_resp = await client.put(
+        "/api/v1/reports/dashboard-config",
+        headers=headers,
+        json={"version": 1, "widgets": []},
+    )
+    assert put_resp.status_code == 403
