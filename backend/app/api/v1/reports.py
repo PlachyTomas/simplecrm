@@ -9,10 +9,11 @@ from datetime import UTC, date, datetime, time
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.core.deps import get_current_user, require_leaderboard_visibility, require_role
 from app.core.scoping import scope_by_owner
@@ -34,6 +35,7 @@ from app.schemas.reports import (
     VelocityByStage,
 )
 from app.services.reports import default_dashboard_config
+from app.services.reports.csv_export import render_widget_csv
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -624,3 +626,66 @@ async def delete_dashboard_config(
 
     user.reports_dashboard_config = {}
     await session.commit()
+
+
+class _ExportWidgetItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    type: str
+    config: dict[str, object] = Field(default_factory=dict)
+
+
+class _ExportCsvRequest(BaseModel):
+    """Multi-widget CSV export body. Frontend sends the resolved
+    `from`/`to` ISO date pair (it already does the preset → range
+    resolution per widget request) plus the widget set + scope.
+    """
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    widgets: list[_ExportWidgetItem]
+    from_: date = Field(alias="from")
+    to: date
+    team_id: uuid.UUID | None = Field(default=None, alias="teamId")
+    owner_user_id: uuid.UUID | None = Field(default=None, alias="ownerUserId")
+
+
+@router.post("/export-csv")
+async def export_widgets_csv(
+    payload: _ExportCsvRequest,
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """Render the visible widget set + filters as a single CSV.
+
+    REPORTS_TASK §R7: one section per widget separated by a blank
+    line and a header row, UTF-8 with BOM so Excel renders Czech
+    diacritics. The legacy `GET /reports/export-csv` (deals data
+    export, mounted in `data_export.py`) is intentionally a different
+    endpoint — same path, distinct method.
+    """
+
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    if payload.to < payload.from_:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="`to` must be on or after `from`",
+        )
+
+    body = await render_widget_csv(
+        session,
+        organization_id=user.organization_id,
+        widgets=[w.model_dump() for w in payload.widgets],
+        from_=payload.from_,
+        to=payload.to,
+        team_id=payload.team_id,
+        owner_user_id=payload.owner_user_id,
+    )
+
+    today = datetime.now(tz=UTC).date().isoformat()
+    filename = f"reporty-{today}.csv"
+    return StreamingResponse(
+        iter([body]),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

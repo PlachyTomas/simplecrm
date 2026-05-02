@@ -15,6 +15,7 @@ import {
   useResetDashboardConfig,
   useSaveDashboardConfig,
 } from "@/app/reports/dashboard/useDashboardConfig";
+import { useExportCsv } from "@/app/reports/dashboard/useExportCsv";
 import { WidgetByType } from "@/app/reports/dashboard/widgets/WidgetByType";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { usePageTitle } from "@/lib/usePageTitle";
@@ -43,6 +44,7 @@ export function ReportsPage() {
   const config = useDashboardConfig();
   const save = useSaveDashboardConfig();
   const reset = useResetDashboardConfig();
+  const exportCsv = useExportCsv();
 
   const [editMode, setEditMode] = useState(false);
   const [draft, setDraft] = useState<DashboardConfig | null>(null);
@@ -162,11 +164,18 @@ export function ReportsPage() {
             <>
               <button
                 type="button"
-                disabled
-                title="Příprava — bude doplněno v R7"
-                className="inline-flex h-9 cursor-not-allowed items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium text-text-tertiary opacity-60"
+                onClick={() => {
+                  if (!working) return;
+                  void exportCsv.mutateAsync({
+                    config: working,
+                    globalFilters: filters,
+                  });
+                }}
+                disabled={!working || exportCsv.isPending}
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium text-text-secondary hover:border-accent hover:text-accent disabled:opacity-50"
               >
-                <Download size={14} strokeWidth={1.75} aria-hidden /> Stáhnout CSV
+                <Download size={14} strokeWidth={1.75} aria-hidden />
+                {exportCsv.isPending ? "Stahování…" : "Stáhnout CSV"}
               </button>
               <button
                 type="button"

@@ -1803,3 +1803,90 @@ async def test_widget_companies_at_risk_blocks_salesperson(
         params=_window_params(),
     )
     assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Multi-widget CSV export (R7)
+# ---------------------------------------------------------------------------
+
+
+async def test_widgets_export_csv_renders_sections(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """POST /reports/export-csv returns BOM-prefixed UTF-8 with a section
+    per requested widget separated by blank rows. The KPI tile widgets
+    surface single-row summaries; the leaderboard surfaces one row per
+    user."""
+    org, user, _open_stage, won_stage, company = await _setup(db_session, owned_cleanup)
+    now = datetime.now(tz=UTC)
+    db_session.add(
+        Deal(
+            organization_id=org.id,
+            company_id=company.id,
+            stage_id=won_stage.id,
+            owner_user_id=user.id,
+            name="Won",
+            value=Decimal("12345"),
+            currency="CZK",
+            closed_at=now,
+        )
+    )
+    await db_session.commit()
+
+    body = {
+        "from": "2024-01-01",
+        "to": "2026-12-31",
+        "widgets": [
+            {"type": "deals_won", "config": {"type": "deals_won", "display": "both"}},
+            {
+                "type": "sales_leaderboard",
+                "config": {"type": "sales_leaderboard", "metric": "won_value"},
+            },
+        ],
+    }
+    resp = await client.post(
+        "/api/v1/reports/export-csv", headers=_auth(user), json=body
+    )
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    text = resp.content.decode("utf-8")
+    assert text.startswith("﻿"), "expected UTF-8 BOM for Excel"
+    assert "# Vyhrané obchody" in text
+    assert "# Žebříček obchodníků" in text
+    # KPI tile section: header + one data row.
+    assert "počet,hodnota,měna,delta_pct" in text
+    assert "12345.00" in text
+    # Leaderboard section: rank/user/value header + the won deal.
+    assert "pořadí,obchodník,hodnota_won_value" in text
+
+
+async def test_widgets_export_csv_blocks_salesperson(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _admin, *_ = await _setup(db_session, owned_cleanup)
+    sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(sp_email)
+    sp = User(
+        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
+    )
+    db_session.add(sp)
+    await db_session.commit()
+    await db_session.refresh(sp)
+    resp = await client.post(
+        "/api/v1/reports/export-csv",
+        headers=_auth(sp),
+        json={"from": "2024-01-01", "to": "2026-12-31", "widgets": []},
+    )
+    assert resp.status_code == 403
+
+
+async def test_widgets_export_csv_rejects_inverted_window(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, user, *_ = await _setup(db_session, owned_cleanup)
+    resp = await client.post(
+        "/api/v1/reports/export-csv",
+        headers=_auth(user),
+        json={"from": "2026-12-31", "to": "2024-01-01", "widgets": []},
+    )
+    assert resp.status_code == 422
