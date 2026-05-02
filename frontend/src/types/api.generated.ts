@@ -893,6 +893,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/widgets/lost-reasons-breakdown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Widget Lost Reasons Breakdown */
+        get: operations["widget_lost_reasons_breakdown_api_v1_reports_widgets_lost_reasons_breakdown_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/widgets/sales-leaderboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Widget Sales Leaderboard */
+        get: operations["widget_sales_leaderboard_api_v1_reports_widgets_sales_leaderboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/widgets/rep-activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Widget Rep Activity */
+        get: operations["widget_rep_activity_api_v1_reports_widgets_rep_activity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/widgets/stale-deals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Widget Stale Deals */
+        get: operations["widget_stale_deals_api_v1_reports_widgets_stale_deals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/widgets/companies-at-risk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Widget Companies At Risk */
+        get: operations["widget_companies_at_risk_api_v1_reports_widgets_companies_at_risk_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/teams": {
         parameters: {
             query?: never;
@@ -1663,6 +1748,31 @@ export interface components {
              */
             threshold: 30 | 14 | 7;
         };
+        /** CompaniesAtRiskResponse */
+        CompaniesAtRiskResponse: {
+            /** Items */
+            items: components["schemas"]["CompanyAtRiskItem"][];
+            /** Threshold Days */
+            threshold_days: number;
+        };
+        /** CompanyAtRiskItem */
+        CompanyAtRiskItem: {
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Company Name */
+            company_name: string;
+            /** Owner User Id */
+            owner_user_id: string | null;
+            /** Owner Name */
+            owner_name: string;
+            /** Days Until Freeing */
+            days_until_freeing: number;
+            /** Last Activity At */
+            last_activity_at: string | null;
+        };
         /** CompanyCreate */
         CompanyCreate: {
             /** Name */
@@ -2328,6 +2438,15 @@ export interface components {
             /** Rows */
             rows: components["schemas"]["LossReasonRow"][];
         };
+        /** LostReasonItem */
+        LostReasonItem: {
+            /** Reason */
+            reason: string;
+            /** Count */
+            count: number;
+            /** Value */
+            value: string;
+        };
         /**
          * LostReasonsBreakdownConfig
          * @description Horizontal bar chart of lost-deal reasons. Long tail collapses to Ostatní.
@@ -2344,6 +2463,17 @@ export interface components {
              * @enum {string}
              */
             display: "count" | "value";
+        };
+        /** LostReasonsBreakdownResponse */
+        LostReasonsBreakdownResponse: {
+            /** Items */
+            items: components["schemas"]["LostReasonItem"][];
+            /** Total Count */
+            total_count: number;
+            /** Total Value */
+            total_value: string;
+            /** Currency */
+            currency: string;
         };
         /**
          * MySummary
@@ -2752,6 +2882,20 @@ export interface components {
              */
             type: "rep_activity";
         };
+        /** RepActivityItem */
+        RepActivityItem: {
+            /** User Id */
+            user_id: string | null;
+            /** Name */
+            name: string;
+            /** Deals Added */
+            deals_added: number;
+        };
+        /** RepActivityResponse */
+        RepActivityResponse: {
+            /** Items */
+            items: components["schemas"]["RepActivityItem"][];
+        };
         /**
          * SalesCycleLengthConfig
          * @description Days between Company.created_at and Deal.closed_at for won deals.
@@ -2802,6 +2946,22 @@ export interface components {
              * @enum {string}
              */
             metric: "won_count" | "won_value" | "win_rate" | "deals_added";
+        };
+        /** SalesLeaderboardItem */
+        SalesLeaderboardItem: {
+            /** User Id */
+            user_id: string | null;
+            /** Name */
+            name: string;
+            /** Metric Value */
+            metric_value: string | number;
+        };
+        /** SalesLeaderboardResponse */
+        SalesLeaderboardResponse: {
+            /** Items */
+            items: components["schemas"]["SalesLeaderboardItem"][];
+            /** Metric */
+            metric: string;
         };
         /** SetCompIn */
         SetCompIn: {
@@ -2888,6 +3048,35 @@ export interface components {
             color?: string | null;
             stage_type?: components["schemas"]["StageType"] | null;
         };
+        /** StaleDealItem */
+        StaleDealItem: {
+            /**
+             * Deal Id
+             * Format: uuid
+             */
+            deal_id: string;
+            /** Deal Name */
+            deal_name: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Company Name */
+            company_name: string;
+            /** Stage Name */
+            stage_name: string;
+            /** Value */
+            value: string;
+            /** Currency */
+            currency: string;
+            /** Owner User Id */
+            owner_user_id: string | null;
+            /** Owner Name */
+            owner_name: string;
+            /** Days Since Change */
+            days_since_change: number;
+        };
         /**
          * StaleDealsConfig
          * @description Open deals whose stage hasn't moved for at least `threshold` days.
@@ -2904,6 +3093,13 @@ export interface components {
              * @enum {integer}
              */
             threshold: 30 | 60 | 90;
+        };
+        /** StaleDealsResponse */
+        StaleDealsResponse: {
+            /** Items */
+            items: components["schemas"]["StaleDealItem"][];
+            /** Threshold Days */
+            threshold_days: number;
         };
         /** SubscriptionOut */
         SubscriptionOut: {
@@ -5032,6 +5228,180 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LeadToDealConversionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    widget_lost_reasons_breakdown_api_v1_reports_widgets_lost_reasons_breakdown_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                team_id?: string | null;
+                owner_user_id?: string | null;
+                display?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LostReasonsBreakdownResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    widget_sales_leaderboard_api_v1_reports_widgets_sales_leaderboard_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                team_id?: string | null;
+                owner_user_id?: string | null;
+                metric?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesLeaderboardResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    widget_rep_activity_api_v1_reports_widgets_rep_activity_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                team_id?: string | null;
+                owner_user_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepActivityResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    widget_stale_deals_api_v1_reports_widgets_stale_deals_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                team_id?: string | null;
+                owner_user_id?: string | null;
+                threshold?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaleDealsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    widget_companies_at_risk_api_v1_reports_widgets_companies_at_risk_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                team_id?: string | null;
+                owner_user_id?: string | null;
+                threshold?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompaniesAtRiskResponse"];
                 };
             };
             /** @description Validation Error */

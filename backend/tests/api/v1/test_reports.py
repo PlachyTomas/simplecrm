@@ -1453,3 +1453,353 @@ async def test_widget_lead_to_deal_conversion_blocks_salesperson(
         params=_window_params(),
     )
     assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Widget endpoints, batch 3 (R4): lost_reasons_breakdown, sales_leaderboard,
+# rep_activity, stale_deals, companies_at_risk
+# ---------------------------------------------------------------------------
+
+
+async def test_widget_lost_reasons_breakdown_groups_and_sorts(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, _open, _won, lost_stage, company = await _setup_with_lost_stage(
+        db_session, owned_cleanup
+    )
+    now = datetime.now(tz=UTC)
+    cur = now - timedelta(days=5)
+    db_session.add_all([
+        Deal(
+            organization_id=org.id, company_id=company.id, stage_id=lost_stage.id,
+            owner_user_id=user.id, name="L1", value=Decimal("100"),
+            currency=org.currency, closed_at=cur, lost_reason="cena",
+        ),
+        Deal(
+            organization_id=org.id, company_id=company.id, stage_id=lost_stage.id,
+            owner_user_id=user.id, name="L2", value=Decimal("200"),
+            currency=org.currency, closed_at=cur, lost_reason="cena",
+        ),
+        Deal(
+            organization_id=org.id, company_id=company.id, stage_id=lost_stage.id,
+            owner_user_id=user.id, name="L3", value=Decimal("50"),
+            currency=org.currency, closed_at=cur, lost_reason="konkurence",
+        ),
+    ])
+    await db_session.commit()
+    resp = await client.get(
+        "/api/v1/reports/widgets/lost-reasons-breakdown",
+        headers=_auth(user),
+        params=_window_params(),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert len(body["items"]) == 2
+    # Default display is "count" — cena has 2 deals, konkurence has 1.
+    assert body["items"][0]["reason"] == "cena"
+    assert body["items"][0]["count"] == 2
+    assert body["items"][1]["reason"] == "konkurence"
+    assert body["total_count"] == 3
+
+
+async def test_widget_lost_reasons_blocks_salesperson(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _admin, *_ = await _setup(db_session, owned_cleanup)
+    sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(sp_email)
+    sp = User(
+        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
+    )
+    db_session.add(sp)
+    await db_session.commit()
+    await db_session.refresh(sp)
+    resp = await client.get(
+        "/api/v1/reports/widgets/lost-reasons-breakdown",
+        headers=_auth(sp),
+        params=_window_params(),
+    )
+    assert resp.status_code == 403
+
+
+async def test_widget_lost_reasons_validates(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, user, *_ = await _setup(db_session, owned_cleanup)
+    resp = await client.get(
+        "/api/v1/reports/widgets/lost-reasons-breakdown",
+        headers=_auth(user),
+        params={**_window_params(), "display": "garbage"},
+    )
+    assert resp.status_code == 422
+
+
+async def test_widget_sales_leaderboard_won_value(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, _open, won_stage, _co = await _setup(db_session, owned_cleanup)
+    # Add a second user; both close deals so leaderboard has two rows.
+    second_email = f"u2-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(second_email)
+    second = User(
+        email=second_email, name="Second", role=UserRole.salesperson, organization_id=org.id
+    )
+    db_session.add(second)
+    await db_session.commit()
+    await db_session.refresh(second)
+
+    company_for_second = Company(organization_id=org.id, name="C2")
+    db_session.add(company_for_second)
+    await db_session.commit()
+    await db_session.refresh(company_for_second)
+
+    now = datetime.now(tz=UTC)
+    cur = now - timedelta(days=5)
+    db_session.add_all([
+        Deal(
+            organization_id=org.id, company_id=company_for_second.id,
+            stage_id=won_stage.id, owner_user_id=user.id, name="W-admin",
+            value=Decimal("500"), currency=org.currency, closed_at=cur,
+        ),
+        Deal(
+            organization_id=org.id, company_id=company_for_second.id,
+            stage_id=won_stage.id, owner_user_id=second.id, name="W-second",
+            value=Decimal("200"), currency=org.currency, closed_at=cur,
+        ),
+    ])
+    await db_session.commit()
+    resp = await client.get(
+        "/api/v1/reports/widgets/sales-leaderboard",
+        headers=_auth(user),
+        params=_window_params(),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["metric"] == "won_value"
+    assert len(body["items"]) == 2
+    # Sorted descending by value — admin (500) first, second (200) second.
+    assert Decimal(str(body["items"][0]["metric_value"])) == Decimal("500")
+    assert Decimal(str(body["items"][1]["metric_value"])) == Decimal("200")
+
+
+async def test_widget_sales_leaderboard_blocks_salesperson(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _admin, *_ = await _setup(db_session, owned_cleanup)
+    sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(sp_email)
+    sp = User(
+        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
+    )
+    db_session.add(sp)
+    await db_session.commit()
+    await db_session.refresh(sp)
+    resp = await client.get(
+        "/api/v1/reports/widgets/sales-leaderboard",
+        headers=_auth(sp),
+        params=_window_params(),
+    )
+    assert resp.status_code == 403
+
+
+async def test_widget_sales_leaderboard_validates_metric(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, user, *_ = await _setup(db_session, owned_cleanup)
+    resp = await client.get(
+        "/api/v1/reports/widgets/sales-leaderboard",
+        headers=_auth(user),
+        params={**_window_params(), "metric": "nonsense"},
+    )
+    assert resp.status_code == 422
+
+
+async def test_widget_rep_activity_counts_deals_per_rep(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, open_stage, _won, company = await _setup(db_session, owned_cleanup)
+    now = datetime.now(tz=UTC)
+    cur = now - timedelta(days=5)
+    db_session.add_all([
+        Deal(
+            organization_id=org.id, company_id=company.id, stage_id=open_stage.id,
+            owner_user_id=user.id, name="A", value=Decimal("100"),
+            currency=org.currency, created_at=cur,
+        ),
+        Deal(
+            organization_id=org.id, company_id=company.id, stage_id=open_stage.id,
+            owner_user_id=user.id, name="B", value=Decimal("100"),
+            currency=org.currency, created_at=cur,
+        ),
+    ])
+    await db_session.commit()
+    resp = await client.get(
+        "/api/v1/reports/widgets/rep-activity",
+        headers=_auth(user),
+        params=_window_params(),
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["items"]) == 1
+    assert body["items"][0]["deals_added"] == 2
+
+
+async def test_widget_rep_activity_blocks_salesperson(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _admin, *_ = await _setup(db_session, owned_cleanup)
+    sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(sp_email)
+    sp = User(
+        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
+    )
+    db_session.add(sp)
+    await db_session.commit()
+    await db_session.refresh(sp)
+    resp = await client.get(
+        "/api/v1/reports/widgets/rep-activity",
+        headers=_auth(sp),
+        params=_window_params(),
+    )
+    assert resp.status_code == 403
+
+
+async def test_widget_rep_activity_validates_window(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, user, *_ = await _setup(db_session, owned_cleanup)
+    today = datetime.now(tz=UTC).date()
+    yesterday = today - timedelta(days=1)
+    resp = await client.get(
+        "/api/v1/reports/widgets/rep-activity",
+        headers=_auth(user),
+        params={"from": today.isoformat(), "to": yesterday.isoformat()},
+    )
+    assert resp.status_code == 422
+
+
+async def test_widget_stale_deals_returns_old_open_deals(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Open deal whose updated_at is 100 days old + no stage_change activity
+    → appears in the stale list."""
+    org, user, open_stage, _won, company = await _setup(db_session, owned_cleanup)
+    now = datetime.now(tz=UTC)
+    very_old = now - timedelta(days=100)
+    deal = Deal(
+        organization_id=org.id, company_id=company.id, stage_id=open_stage.id,
+        owner_user_id=user.id, name="Stale", value=Decimal("100"),
+        currency=org.currency, created_at=very_old,
+    )
+    db_session.add(deal)
+    await db_session.commit()
+    # Force updated_at older than the cutoff (default threshold 60d).
+    await db_session.execute(
+        Deal.__table__.update().where(Deal.id == deal.id).values(updated_at=very_old)  # type: ignore[attr-defined]
+    )
+    await db_session.commit()
+    resp = await client.get(
+        "/api/v1/reports/widgets/stale-deals",
+        headers=_auth(user),
+        params=_window_params(),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["threshold_days"] == 60
+    assert len(body["items"]) == 1
+    assert body["items"][0]["deal_name"] == "Stale"
+    assert body["items"][0]["days_since_change"] >= 60
+
+
+async def test_widget_stale_deals_validates_threshold(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, user, *_ = await _setup(db_session, owned_cleanup)
+    resp = await client.get(
+        "/api/v1/reports/widgets/stale-deals",
+        headers=_auth(user),
+        params={**_window_params(), "threshold": 45},
+    )
+    assert resp.status_code == 422
+
+
+async def test_widget_stale_deals_blocks_salesperson(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _admin, *_ = await _setup(db_session, owned_cleanup)
+    sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(sp_email)
+    sp = User(
+        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
+    )
+    db_session.add(sp)
+    await db_session.commit()
+    await db_session.refresh(sp)
+    resp = await client.get(
+        "/api/v1/reports/widgets/stale-deals",
+        headers=_auth(sp),
+        params=_window_params(),
+    )
+    assert resp.status_code == 403
+
+
+async def test_widget_companies_at_risk_returns_soon_freed(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, *_ = await _setup(db_session, owned_cleanup)
+    soon = datetime.now(tz=UTC) + timedelta(days=15)
+    far = datetime.now(tz=UTC) + timedelta(days=200)
+    db_session.add_all([
+        Company(
+            organization_id=org.id, name="At Risk", owner_user_id=user.id,
+            ownership_expires_at=soon,
+        ),
+        Company(
+            organization_id=org.id, name="Safe", owner_user_id=user.id,
+            ownership_expires_at=far,
+        ),
+    ])
+    await db_session.commit()
+    resp = await client.get(
+        "/api/v1/reports/widgets/companies-at-risk",
+        headers=_auth(user),
+        params={**_window_params(), "threshold": 30},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["threshold_days"] == 30
+    names = [item["company_name"] for item in body["items"]]
+    assert "At Risk" in names
+    assert "Safe" not in names
+
+
+async def test_widget_companies_at_risk_validates_threshold(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, user, *_ = await _setup(db_session, owned_cleanup)
+    resp = await client.get(
+        "/api/v1/reports/widgets/companies-at-risk",
+        headers=_auth(user),
+        params={**_window_params(), "threshold": 21},
+    )
+    assert resp.status_code == 422
+
+
+async def test_widget_companies_at_risk_blocks_salesperson(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _admin, *_ = await _setup(db_session, owned_cleanup)
+    sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(sp_email)
+    sp = User(
+        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
+    )
+    db_session.add(sp)
+    await db_session.commit()
+    await db_session.refresh(sp)
+    resp = await client.get(
+        "/api/v1/reports/widgets/companies-at-risk",
+        headers=_auth(sp),
+        params=_window_params(),
+    )
+    assert resp.status_code == 403

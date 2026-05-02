@@ -30,30 +30,47 @@ from app.db.models import User
 from app.db.models.enums import UserRole
 from app.schemas.reports import (
     AvgDealSizeResponse,
+    CompaniesAtRiskResponse,
     DealsWonResponse,
     LeadToDealConversionResponse,
+    LostReasonsBreakdownResponse,
     NewCompaniesResponse,
     PipelineValueResponse,
+    RepActivityResponse,
     SalesCycleLengthResponse,
+    SalesLeaderboardResponse,
+    StaleDealsResponse,
     WinRateResponse,
 )
 from app.schemas.reports.widgets import (
     AvgDealSizeConfig,
+    CompaniesAtRiskConfig,
     DealsWonConfig,
     LeadToDealConversionConfig,
+    LostReasonsBreakdownConfig,
     NewCompaniesConfig,
     PipelineValueConfig,
+    RepActivityConfig,
     SalesCycleLengthConfig,
+    SalesLeaderboardConfig,
+    StaleDealsConfig,
     WinRateConfig,
 )
 from app.services.reports.avg_deal_size import compute_avg_deal_size
+from app.services.reports.companies_at_risk import compute_companies_at_risk
 from app.services.reports.deals_won import compute_deals_won
 from app.services.reports.lead_to_deal_conversion import (
     compute_lead_to_deal_conversion,
 )
+from app.services.reports.lost_reasons_breakdown import (
+    compute_lost_reasons_breakdown,
+)
 from app.services.reports.new_companies import compute_new_companies
 from app.services.reports.pipeline_value import compute_pipeline_value
+from app.services.reports.rep_activity import compute_rep_activity
 from app.services.reports.sales_cycle_length import compute_sales_cycle_length
+from app.services.reports.sales_leaderboard import compute_sales_leaderboard
+from app.services.reports.stale_deals import compute_stale_deals
 from app.services.reports.win_rate import compute_win_rate
 
 # Mounted under /reports in routes.py — leading slash here makes the
@@ -236,4 +253,139 @@ async def widget_lead_to_deal_conversion(
         team_id=team_id,
         owner_user_id=owner_user_id,
         config=LeadToDealConversionConfig(breakdown=breakdown),  # type: ignore[arg-type]
+    )
+
+
+@router.get(
+    "/lost-reasons-breakdown",
+    response_model=LostReasonsBreakdownResponse,
+)
+async def widget_lost_reasons_breakdown(
+    from_: date = Query(alias="from"),
+    to: date = Query(),
+    team_id: UUID | None = Query(default=None),
+    owner_user_id: UUID | None = Query(default=None),
+    display: str = Query(default="count", pattern="^(count|value)$"),
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> LostReasonsBreakdownResponse:
+    _validate_window(from_, to)
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return await compute_lost_reasons_breakdown(
+        session,
+        organization_id=user.organization_id,
+        from_=from_,
+        to=to,
+        team_id=team_id,
+        owner_user_id=owner_user_id,
+        config=LostReasonsBreakdownConfig(display=display),  # type: ignore[arg-type]
+    )
+
+
+@router.get("/sales-leaderboard", response_model=SalesLeaderboardResponse)
+async def widget_sales_leaderboard(
+    from_: date = Query(alias="from"),
+    to: date = Query(),
+    team_id: UUID | None = Query(default=None),
+    owner_user_id: UUID | None = Query(default=None),
+    metric: str = Query(
+        default="won_value",
+        pattern="^(won_count|won_value|win_rate|deals_added)$",
+    ),
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> SalesLeaderboardResponse:
+    _validate_window(from_, to)
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return await compute_sales_leaderboard(
+        session,
+        organization_id=user.organization_id,
+        from_=from_,
+        to=to,
+        team_id=team_id,
+        owner_user_id=owner_user_id,
+        config=SalesLeaderboardConfig(metric=metric),  # type: ignore[arg-type]
+    )
+
+
+@router.get("/rep-activity", response_model=RepActivityResponse)
+async def widget_rep_activity(
+    from_: date = Query(alias="from"),
+    to: date = Query(),
+    team_id: UUID | None = Query(default=None),
+    owner_user_id: UUID | None = Query(default=None),
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> RepActivityResponse:
+    _validate_window(from_, to)
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return await compute_rep_activity(
+        session,
+        organization_id=user.organization_id,
+        from_=from_,
+        to=to,
+        team_id=team_id,
+        owner_user_id=owner_user_id,
+        config=RepActivityConfig(),
+    )
+
+
+@router.get("/stale-deals", response_model=StaleDealsResponse)
+async def widget_stale_deals(
+    from_: date = Query(alias="from"),
+    to: date = Query(),
+    team_id: UUID | None = Query(default=None),
+    owner_user_id: UUID | None = Query(default=None),
+    threshold: int = Query(default=60),
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> StaleDealsResponse:
+    _validate_window(from_, to)
+    if threshold not in (30, 60, 90):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="threshold must be one of 30, 60, 90",
+        )
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return await compute_stale_deals(
+        session,
+        organization_id=user.organization_id,
+        from_=from_,
+        to=to,
+        team_id=team_id,
+        owner_user_id=owner_user_id,
+        config=StaleDealsConfig(threshold=threshold),  # type: ignore[arg-type]
+    )
+
+
+@router.get("/companies-at-risk", response_model=CompaniesAtRiskResponse)
+async def widget_companies_at_risk(
+    from_: date = Query(alias="from"),
+    to: date = Query(),
+    team_id: UUID | None = Query(default=None),
+    owner_user_id: UUID | None = Query(default=None),
+    threshold: int = Query(default=30),
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> CompaniesAtRiskResponse:
+    _validate_window(from_, to)
+    if threshold not in (30, 14, 7):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="threshold must be one of 7, 14, 30",
+        )
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return await compute_companies_at_risk(
+        session,
+        organization_id=user.organization_id,
+        from_=from_,
+        to=to,
+        team_id=team_id,
+        owner_user_id=owner_user_id,
+        config=CompaniesAtRiskConfig(threshold=threshold),  # type: ignore[arg-type]
     )
