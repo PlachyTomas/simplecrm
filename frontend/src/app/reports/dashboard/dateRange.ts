@@ -27,7 +27,15 @@ export const VISIBLE_PRESETS: RangePreset[] = [
 ];
 
 function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  // We can't go through `toISOString()` here — it converts to UTC, and
+  // a Prague-midnight Date renders as the previous day's date string
+  // any time after the local timezone's UTC offset is positive (CET/CEST
+  // year-round). Backend `from` / `to` are calendar dates in the user's
+  // locale, so format from local components instead.
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 /**

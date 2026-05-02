@@ -18,6 +18,11 @@ import {
   type WidgetType,
 } from "@/app/reports/dashboard/types";
 import {
+  LostReasonsBreakdownWidget,
+  RepActivityWidget,
+  SalesLeaderboardWidget,
+} from "@/app/reports/dashboard/widgets/chart-widgets";
+import {
   AvgDealSizeWidget,
   DealsWonWidget,
   LeadToDealConversionWidget,
@@ -52,8 +57,11 @@ export function WidgetByType(props: Props) {
     case "new_companies":
       return <NewCompaniesWidget {...props} />;
     case "sales_leaderboard":
+      return <SalesLeaderboardWidget {...props} />;
     case "rep_activity":
+      return <RepActivityWidget {...props} />;
     case "lost_reasons_breakdown":
+      return <LostReasonsBreakdownWidget {...props} />;
     case "stale_deals":
     case "companies_at_risk":
       return (
@@ -62,7 +70,7 @@ export function WidgetByType(props: Props) {
           isEditMode={props.isEditMode}
           onRemove={props.onRemove}
         >
-          <WidgetEmpty message="Připravujeme — widget se zobrazí v R6.2 / R6.3." />
+          <WidgetEmpty message="Připravujeme — widget se zobrazí v R6.3." />
         </WidgetFrame>
       );
   }
