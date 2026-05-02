@@ -134,6 +134,18 @@ class BillingSummary(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class BillingSettingsPublic(BaseModel):
+    """Public-readable subset — backs the marketing pricing page's PriceDisplay
+    so unauthenticated visitors see correct DPH copy without exposing IBAN/IČO.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    is_vat_payer: bool
+    vat_rate_percent: Decimal
+    contact_email: str
+
+
 class BillingSettingsOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

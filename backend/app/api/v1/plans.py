@@ -7,8 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
-from app.db.models import Plan
-from app.schemas.billing import PublicPlanOut
+from app.db.models import BillingSettings, Plan
+from app.schemas.billing import BillingSettingsPublic, PublicPlanOut
 
 router = APIRouter(prefix="/plans", tags=["plans"])
 
@@ -50,3 +50,18 @@ async def list_public_plans(
             )
         out.append(item)
     return out
+
+
+# Note: this lives under /plans because the router has no auth deps. It
+# could equally live under /billing-settings/public — keeping it here
+# avoids a second public router for one endpoint.
+@router.get("/billing-settings/public", response_model=BillingSettingsPublic)
+async def get_public_billing_settings(
+    session: AsyncSession = Depends(get_db),
+) -> BillingSettings:
+    """Read-only public subset of billing_settings — `is_vat_payer`,
+    `vat_rate_percent`, support email. Powers `<PriceDisplay>` on the
+    marketing pricing page so unauthenticated visitors see correct DPH
+    copy.
+    """
+    return (await session.execute(select(BillingSettings))).scalar_one()

@@ -846,15 +846,297 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/current/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Current Subscription */
+        get: operations["get_current_subscription_api_v1_organizations_current_subscription_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/current/billing-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Current Billing Summary
+         * @description Numbers the in-app pricing/settings surface needs in one round-trip.
+         */
+        get: operations["get_current_billing_summary_api_v1_organizations_current_billing_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/current/subscription/choose-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Choose Plan
+         * @description Customer (org admin) chooses a plan from the pay-gate.
+         *
+         *     Records intent — the founder activates manually after payment.
+         *     Idempotent: re-picking the same plan returns the existing pending
+         *     subscription without a second email.
+         */
+        post: operations["choose_plan_api_v1_organizations_current_subscription_choose_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/current/subscription/contact-enterprise": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Contact Enterprise
+         * @description Send an internal email to the founder requesting an enterprise quote.
+         */
+        post: operations["contact_enterprise_api_v1_organizations_current_subscription_contact_enterprise_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/public": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Public Plans
+         * @description Plans where `is_public=True`, ordered by `sort_order`.
+         *
+         *     Annual plans get derived `monthly_equivalent_minor` (12 * monthly
+         *     price) and `savings_minor` so the frontend can render the savings
+         *     line without a second round-trip.
+         */
+        get: operations["list_public_plans_api_v1_plans_public_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/billing-settings/public": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Public Billing Settings
+         * @description Read-only public subset of billing_settings — `is_vat_payer`,
+         *     `vat_rate_percent`, support email. Powers `<PriceDisplay>` on the
+         *     marketing pricing page so unauthenticated visitors see correct DPH
+         *     copy.
+         */
+        get: operations["get_public_billing_settings_api_v1_plans_billing_settings_public_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/organizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Organizations */
+        get: operations["list_organizations_api_v1_admin_organizations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/organizations/{org_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Organization Subscription
+         * @description Org detail, returned as a Subscription view (org metadata is on the
+         *     Plan object inside it; the frontend already has the org row from the
+         *     list).
+         */
+        get: operations["get_organization_subscription_api_v1_admin_organizations__org_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/organizations/{org_id}/subscription/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Activate Subscription */
+        post: operations["activate_subscription_api_v1_admin_organizations__org_id__subscription_activate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/organizations/{org_id}/subscription/set-comp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Comp */
+        post: operations["set_comp_api_v1_admin_organizations__org_id__subscription_set_comp_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/organizations/{org_id}/subscription/set-enterprise": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Enterprise */
+        post: operations["set_enterprise_api_v1_admin_organizations__org_id__subscription_set_enterprise_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/organizations/{org_id}/subscription/extend-trial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Extend Trial */
+        post: operations["extend_trial_api_v1_admin_organizations__org_id__subscription_extend_trial_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/organizations/{org_id}/subscription/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Subscription */
+        post: operations["cancel_subscription_api_v1_admin_organizations__org_id__subscription_cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Billing Settings */
+        get: operations["get_billing_settings_api_v1_admin_billing_settings_get"];
+        /** Update Billing Settings */
+        put: operations["update_billing_settings_api_v1_admin_billing_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActivateSubscriptionIn */
+        ActivateSubscriptionIn: {
+            /**
+             * Plan Code
+             * @enum {string}
+             */
+            plan_code: "monthly" | "annual" | "enterprise";
+            /** Override Price Per User Minor */
+            override_price_per_user_minor?: number | null;
+            /** Period Months */
+            period_months?: number | null;
+        };
         /**
          * ActivityEntityType
          * @enum {string}
          */
-        ActivityEntityType: "company" | "contact" | "deal";
+        ActivityEntityType: "company" | "contact" | "deal" | "organization";
         /** ActivityOut */
         ActivityOut: {
             /**
@@ -890,7 +1172,118 @@ export interface components {
          * ActivityType
          * @enum {string}
          */
-        ActivityType: "note" | "stage_change" | "owner_change" | "deal_won" | "deal_lost" | "company_freed" | "ownership_reassigned";
+        ActivityType: "note" | "stage_change" | "owner_change" | "deal_won" | "deal_lost" | "company_freed" | "ownership_reassigned" | "subscription_change";
+        /** AdminOrgList */
+        AdminOrgList: {
+            /** Items */
+            items: components["schemas"]["AdminOrgRow"][];
+            /** Total */
+            total: number;
+        };
+        /** AdminOrgRow */
+        AdminOrgRow: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Plan Code */
+            plan_code: string;
+            /** Plan Display */
+            plan_display: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "trialing" | "pending_activation" | "active" | "past_due" | "canceled";
+            /** Is Comp */
+            is_comp: boolean;
+            /** User Count */
+            user_count: number;
+            /**
+             * Trial Ends At
+             * Format: date-time
+             */
+            trial_ends_at: string;
+            /** Current Period Ends At */
+            current_period_ends_at: string | null;
+            /** Last Activity At */
+            last_activity_at: string | null;
+        };
+        /** BillingSettingsOut */
+        BillingSettingsOut: {
+            /** Is Vat Payer */
+            is_vat_payer: boolean;
+            /** Vat Rate Percent */
+            vat_rate_percent: string;
+            /** Seller Iban */
+            seller_iban: string | null;
+            /** Seller Ico */
+            seller_ico: string | null;
+            /** Contact Email */
+            contact_email: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * BillingSettingsPublic
+         * @description Public-readable subset — backs the marketing pricing page's PriceDisplay
+         *     so unauthenticated visitors see correct DPH copy without exposing IBAN/IČO.
+         */
+        BillingSettingsPublic: {
+            /** Is Vat Payer */
+            is_vat_payer: boolean;
+            /** Vat Rate Percent */
+            vat_rate_percent: string;
+            /** Contact Email */
+            contact_email: string;
+        };
+        /** BillingSettingsUpdate */
+        BillingSettingsUpdate: {
+            /** Is Vat Payer */
+            is_vat_payer?: boolean | null;
+            /** Vat Rate Percent */
+            vat_rate_percent?: number | string | null;
+            /** Seller Iban */
+            seller_iban?: string | null;
+            /** Seller Ico */
+            seller_ico?: string | null;
+            /** Contact Email */
+            contact_email?: string | null;
+        };
+        /** BillingSummary */
+        BillingSummary: {
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /** User Count */
+            user_count: number;
+            /** Effective Price Per User Minor */
+            effective_price_per_user_minor: number | null;
+            /** Monthly Total Minor */
+            monthly_total_minor: number | null;
+            /** Monthly Total With Vat Minor */
+            monthly_total_with_vat_minor: number | null;
+            /** Annual Total Minor */
+            annual_total_minor: number | null;
+            /** Annual Total With Vat Minor */
+            annual_total_with_vat_minor: number | null;
+            /** Savings Minor */
+            savings_minor: number | null;
+            /** Savings Percent */
+            savings_percent: number | null;
+            /** Is Vat Payer */
+            is_vat_payer: boolean;
+            /** Vat Rate Percent */
+            vat_rate_percent: string;
+        };
         /** BoardStage */
         BoardStage: {
             /**
@@ -915,6 +1308,19 @@ export interface components {
             currency: string;
             /** Deals */
             deals: components["schemas"]["DealOut"][];
+        };
+        /** CancelSubscriptionIn */
+        CancelSubscriptionIn: {
+            /** Effective At */
+            effective_at?: string | null;
+        };
+        /** ChoosePlanIn */
+        ChoosePlanIn: {
+            /**
+             * Plan Code
+             * @enum {string}
+             */
+            plan_code: "monthly" | "annual";
         };
         /** CompanyCreate */
         CompanyCreate: {
@@ -1038,6 +1444,13 @@ export interface components {
             linkedin_url?: string | null;
             /** Note */
             note?: string | null;
+        };
+        /** ContactEnterpriseIn */
+        ContactEnterpriseIn: {
+            /** Message */
+            message: string;
+            /** Expected Users */
+            expected_users: number;
         };
         /** ContactOut */
         ContactOut: {
@@ -1260,6 +1673,11 @@ export interface components {
             /** Access Token */
             access_token: string;
             user: components["schemas"]["CurrentUser"];
+        };
+        /** ExtendTrialIn */
+        ExtendTrialIn: {
+            /** Days */
+            days: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1653,6 +2071,72 @@ export interface components {
             /** Stages */
             stages: components["schemas"]["StageOut"][];
         };
+        /** PlanOut */
+        PlanOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Code */
+            code: string;
+            /** Display Name Cs */
+            display_name_cs: string;
+            /** Description Cs */
+            description_cs?: string | null;
+            /** Billing Interval */
+            billing_interval: string;
+            /** Price Per User Minor */
+            price_per_user_minor: number | null;
+            /** Currency */
+            currency: string;
+            /** Is Public */
+            is_public: boolean;
+            /** Is Active */
+            is_active: boolean;
+            /** Sort Order */
+            sort_order: number;
+            /** Trial Days */
+            trial_days?: number | null;
+        };
+        /**
+         * PublicPlanOut
+         * @description A public-pricing-page entry. Includes derived savings vs monthly so the
+         *     frontend doesn't recompute the math.
+         */
+        PublicPlanOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Code */
+            code: string;
+            /** Display Name Cs */
+            display_name_cs: string;
+            /** Description Cs */
+            description_cs?: string | null;
+            /** Billing Interval */
+            billing_interval: string;
+            /** Price Per User Minor */
+            price_per_user_minor: number | null;
+            /** Currency */
+            currency: string;
+            /** Is Public */
+            is_public: boolean;
+            /** Is Active */
+            is_active: boolean;
+            /** Sort Order */
+            sort_order: number;
+            /** Trial Days */
+            trial_days?: number | null;
+            /** Monthly Equivalent Minor */
+            monthly_equivalent_minor?: number | null;
+            /** Savings Minor */
+            savings_minor?: number | null;
+            /** Savings Percent */
+            savings_percent?: number | null;
+        };
         /** RefreshResponse */
         RefreshResponse: {
             /** Access Token */
@@ -1683,6 +2167,22 @@ export interface components {
             legal_form?: string | null;
             /** Registered On */
             registered_on?: string | null;
+        };
+        /** SetCompIn */
+        SetCompIn: {
+            /** Reason */
+            reason: string;
+            /** Ends At */
+            ends_at?: string | null;
+        };
+        /** SetEnterpriseIn */
+        SetEnterpriseIn: {
+            /** Override Price Per User Minor */
+            override_price_per_user_minor: number;
+            /** Period Months */
+            period_months: number;
+            /** Notes */
+            notes?: string | null;
         };
         /** StageCreate */
         StageCreate: {
@@ -1742,6 +2242,48 @@ export interface components {
             /** Color */
             color?: string | null;
             stage_type?: components["schemas"]["StageType"] | null;
+        };
+        /** SubscriptionOut */
+        SubscriptionOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            plan: components["schemas"]["PlanOut"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "trialing" | "pending_activation" | "active" | "past_due" | "canceled";
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Current Period Starts At */
+            current_period_starts_at: string | null;
+            /** Current Period Ends At */
+            current_period_ends_at: string | null;
+            /** Canceled At */
+            canceled_at: string | null;
+            /** Override Price Per User Minor */
+            override_price_per_user_minor: number | null;
+            /** Is Comp */
+            is_comp: boolean;
+            /** Comp Reason */
+            comp_reason: string | null;
+            /** Notes */
+            notes: string | null;
+            /** Effective Price Per User Minor */
+            effective_price_per_user_minor?: number | null;
+            /** Access Status */
+            access_status: string;
         };
         /** TeamCreate */
         TeamCreate: {
@@ -3732,6 +4274,447 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Page_ActivityOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_current_subscription_api_v1_organizations_current_subscription_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+        };
+    };
+    get_current_billing_summary_api_v1_organizations_current_billing_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingSummary"];
+                };
+            };
+        };
+    };
+    choose_plan_api_v1_organizations_current_subscription_choose_plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChoosePlanIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    contact_enterprise_api_v1_organizations_current_subscription_contact_enterprise_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactEnterpriseIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_public_plans_api_v1_plans_public_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicPlanOut"][];
+                };
+            };
+        };
+    };
+    get_public_billing_settings_api_v1_plans_billing_settings_public_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingSettingsPublic"];
+                };
+            };
+        };
+    };
+    list_organizations_api_v1_admin_organizations_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                /** @description Substring match on org name */
+                q?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminOrgList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_organization_subscription_api_v1_admin_organizations__org_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activate_subscription_api_v1_admin_organizations__org_id__subscription_activate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivateSubscriptionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_comp_api_v1_admin_organizations__org_id__subscription_set_comp_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetCompIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_enterprise_api_v1_admin_organizations__org_id__subscription_set_enterprise_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetEnterpriseIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    extend_trial_api_v1_admin_organizations__org_id__subscription_extend_trial_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExtendTrialIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_subscription_api_v1_admin_organizations__org_id__subscription_cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelSubscriptionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_billing_settings_api_v1_admin_billing_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingSettingsOut"];
+                };
+            };
+        };
+    };
+    update_billing_settings_api_v1_admin_billing_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingSettingsOut"];
                 };
             };
             /** @description Validation Error */
