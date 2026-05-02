@@ -1,13 +1,15 @@
-# RESUME — paygate build, after F1
+# RESUME — paygate build, after F2
 
 ## Where we are
 
 Driving prompt: `docs/prompts/PAYGATE_TASK.md`. Auto-loop wrapper
-(`scripts/claude-loop.sh`) is running and will keep relaunching Claude
-sessions every 5h until this file is **absent**. Do **not** start a
-second loop instance — check `.claude-loop.pid` first.
+(`scripts/claude-loop.sh`) was started in Session 5 but is **not
+currently running** (`.claude-loop.pid` is absent and no `claude-loop`
+process exists). This session was opened interactively. If you want
+the autonomous cadence back, restart it per §0.3 of the prompt — but
+do **not** start a second instance; check `.claude-loop.pid` first.
 
-Backend is done. Last commits:
+Backend done (B1–B4), F1 + F2 done. Last commits:
 
 - `0cf89cc` — B1: Plan/Subscription/BillingSettings + seed + backfill
 - `2f8b43a` — B2: BillingService + activity-enum migration
@@ -15,67 +17,55 @@ Backend is done. Last commits:
 - `cdcb6de` — B4: pay-gate dependency wired to BillingService
 - `d948a27` — F1: PriceDisplay + useBillingSettings hook + public
   billing-settings read
+- *(latest)* — F2: pricing page with monthly/annual/enterprise tiers
 
 258 backend tests pass (1 pre-existing dev-login-config failure
-unchanged). Frontend lint/typecheck/test all green.
+unchanged). 40 frontend tests pass. `pnpm typecheck` + `pnpm lint`
+green. `pnpm build` has pre-existing strict-index-access errors in
+`SettingsPage.tsx`, `DealDetailPage.tsx`, `pipeline/colors.ts`,
+`companies.test.tsx`, `LandingPage.tsx` focus-trap — none introduced
+by F2. Address as a separate cleanup pass if desired.
 
-Read in order before starting: `docs/work-log.md` (Session 5 covers
-B1–F1), `docs/prompts/PAYGATE_TASK.md` §6 onwards (frontend tasks),
-`.claude/skills/ui-design.md` (mandatory before any UI change),
-existing components for style match.
+Read in order before starting: `docs/work-log.md` Session 5
+(latest entry covers F2), `docs/prompts/PAYGATE_TASK.md` §6 F3
+onwards, `.claude/skills/ui-design.md` (mandatory before any UI
+change), existing components for style match.
 
-## Next task — F2: Public pricing page (`/cenik`)
+## Next task — F3: Trial countdown UI updates
 
-Three-card layout. Czech, vykání. Mobile-stacks vertically.
+Per §6 F3 of the prompt:
 
-- **Card 1 — Měsíční**: title `Měsíční`,
-  `<PriceDisplay baseMinor={9900} interval="monthly" size="xl" />`,
-  bullets ("Bez závazků", "Zrušení kdykoliv", "Plná funkcionalita"),
-  CTA `Vyzkoušet 30 dní zdarma` → `/login` (or `/onboarding`).
-- **Card 2 — Roční (highlighted)**: magenta `Doporučujeme · Ušetříte
-  16 %` badge top-right (the **one** magenta element on the screen,
-  light-mode only — re-read `.claude/skills/ui-design.md` §3),
-  `<PriceDisplay baseMinor={99900} interval="annual" size="xl" />`,
-  green-text savings line (`Ušetříte 189 Kč na uživatele · 2 měsíce
-  zdarma`), bullets, CTA `Vyzkoušet 30 dní zdarma`.
-- **Card 3 — Enterprise**: title `Enterprise`, instead of price the
-  string `Vlastní balíček` size-xl, bullets ("25+ uživatelů",
-  "Vlastní cena a podmínky", "Dedikovaná podpora", "Jednání o SLA"),
-  CTA `Domluvte se s námi` → contact modal that posts to
-  `POST /api/v1/organizations/current/subscription/contact-enterprise`
-  *if logged in*; for unauthenticated visitors send to
-  `mailto:podpora@simplecrm.cz` or to a separate
-  `POST /api/v1/contact/enterprise` (out of scope — link to email if
-  not authed).
+- More than 7 days left: tertiary text `Zkušební verze · {days} dní
+  zbývá`
+- ≤ 7 days: warning + small CTA `Vybrat plán →` →
+  `/app/nastaveni/predplatne` (route doesn't exist yet — F5 builds
+  it; for F3, link can land on `/app/settings` and we wire the deep
+  link in F5)
+- ≤ 3 days: danger color, same CTA bolder
 
-**Below the cards** (smaller helper section):
+Where to render: the `AppShell` sidebar footer (or topbar, whichever
+the existing trial badge currently lives in — grep
+`Zkušební verze`). The current badge logic is somewhere in
+`frontend/src/app/AppShell.tsx` or `MorePage.tsx`; it pre-dates the
+paygate work, so locate and extend rather than rebuild.
 
-- `is_vat_payer=false`: "Všechny ceny jsou bez DPH."
-- `is_vat_payer=true`: "Ceny bez DPH; konečné ceny zobrazujeme s 21%
-  DPH."
-- "Zkušební doba je 30 dní. Žádná kreditní karta při registraci."
+Subscription read: `GET /api/v1/organizations/current/subscription`
+returns `current_period_ends_at`. Compute `days_remaining` client-side
+from `Date.now()` — don't trust a server-side count that can drift
+across the user's timezone.
 
-Read the plans + the public is_vat_payer via the existing
-`useBillingSettings()` hook + a new `useQuery` for
-`/api/v1/plans/public`. Bundle these into a tiny
-`useCenikData()` hook in the new page module.
+Spec the work first at `.claude/tasks/PAYGATE-F3.md` (mirror the F2
+spec format). Implement. Verify in browser via Playwright MCP per
+CLAUDE.md (screenshot, console clean, three test orgs at >7d / ≤7d /
+≤3d remaining — easiest to seed via psql against
+`simplecrm-postgres-1`). Commit as
+`feat(billing): trial countdown with upgrade CTA`.
 
-Mount the route. Look for the existing landing/marketing-page
-structure under `frontend/src/marketing/` — copy that pattern. Pages
-register in `frontend/src/App.tsx` (or wherever the router is).
-
-Spec the work first at `.claude/tasks/PAYGATE-F2.md` (mirror the B1/
-B2 spec format). Implement. Verify in browser via Playwright MCP per
-CLAUDE.md (screenshot, console clean, 390 / 768 / 1280 viewports).
-Commit as `feat(landing): pricing page with monthly/annual/enterprise
-tiers`.
-
-## After F2
+## After F3
 
 §10 commit plan in `docs/prompts/PAYGATE_TASK.md`:
-F3 trial countdown → F4 trial-expired pay gate → F5 in-app billing
-settings → F6 super-admin UI → integration tests → final WORK_LOG /
-README polish.
+F4 trial-expired pay gate → F5 in-app billing settings → F6
+super-admin UI → integration tests → final WORK_LOG / README polish.
 
 ## When everything is done
 
@@ -89,7 +79,8 @@ README polish.
 - Never go more than 30 minutes between commits.
 - Update `docs/work-log.md` after each commit.
 - The dev container is **not** running here; backend / frontend run
-  on the host. Postgres is in `simplecrm-postgres-1`.
+  on the host. Postgres is in `simplecrm-postgres-1` — start it with
+  `docker start simplecrm-postgres-1` if it's stopped (this happens).
 - Push permissions are **not** granted; commits stay local.
 - The prompt's `PriceDisplay` is the **only** place
   `Intl.NumberFormat` for currency is allowed — grep proves it.

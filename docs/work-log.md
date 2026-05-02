@@ -956,3 +956,48 @@ Next: B2 — `BillingService` with subscription lifecycle methods
   endpoint live on the no-auth `plans` router.
 
 Next: F2 — public pricing page at `/cenik`.
+
+### F2 — Public pricing page `/cenik`
+
+- `frontend/src/marketing/CenikPage.tsx` — three-card layout (Měsíční,
+  Roční highlighted, Enterprise). Reuses the landing-page `Nav` and
+  `Footer` (now exported from `LandingPage.tsx`) instead of extracting
+  a `SiteChrome` module — keeps the diff small, premature abstraction
+  avoided per advisor.
+- `frontend/src/marketing/cenikData.ts` — `useCenikData()` bundles
+  `useBillingSettings()` and a `GET /api/v1/plans/public` query. The
+  page does **not** gate layout on the fetch — prices are static per
+  the brief; the fetch only powers the helper-section's DPH copy
+  (which has a `is_vat_payer=false` fallback).
+- Annual card carries the magenta `Doporučujeme · Ušetříte 16 %`
+  badge as the only `bg-brand-accent` element on the page (verified
+  via DOM scan in Playwright).
+- Enterprise CTA opens a prefilled `mailto:podpora@simplecrm.cz`
+  rather than a form modal — `POST /contact/enterprise` requires
+  auth, and the modal-that-builds-a-mailto pattern is theatre. F4/F5
+  add the authenticated POST flow.
+- `PriceDisplay` got a small visual fix: at `xl` size the suffix
+  (`/uživatel/měsíc`) was inheriting `text-5xl` and overflowing
+  narrow card columns. Suffix now scales independently
+  (`text-base font-normal` at xl) so the price number stays the
+  visual anchor. No API change.
+- `frontend/src/App.tsx` — registered `<Route path="/cenik" />`.
+- `frontend/src/marketing/LandingPage.tsx` — flipped the nav `Ceník`
+  and footer `Ceník` links from the in-page `#cenik` anchor to the
+  new `/cenik` route. The in-page Pricing teaser section stays as a
+  one-screen scroller's quick view.
+- Tests: `frontend/src/__tests__/cenik.test.tsx` covers card
+  headings, prices, savings caption, the single magenta badge, and
+  the CTA hrefs (`/login` for monthly+annual, `mailto:` for
+  enterprise). 40 frontend tests pass.
+- Verification: Playwright at 1280 (light + dark), 768, 390 — cards
+  render cleanly, no console errors. Postgres container
+  `simplecrm-postgres-1` had to be restarted for the backend's
+  `is_vat_payer` read to succeed; the page itself doesn't depend on
+  it (fallback covers offline).
+- Note on the "light-mode only" magenta line in PAYGATE_TASK §8.7:
+  that's stale guidance from the lime-era. tokens.css now allows
+  magenta in both modes (≤1/screen). Render the badge in both. If a
+  reviewer disagrees, `dark:hidden` flips it back trivially.
+
+Next: F3 — trial countdown UI updates.

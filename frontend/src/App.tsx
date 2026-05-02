@@ -18,6 +18,7 @@ import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { queryClient } from "@/lib/queryClient";
 import { ThemeProvider } from "@/lib/theme";
 import { ToastProvider } from "@/lib/toast";
+import { CenikPage } from "@/marketing/CenikPage";
 import { LandingPage } from "@/marketing/LandingPage";
 import { NotFoundPage } from "@/marketing/NotFoundPage";
 import { AcceptInvitePage } from "@/onboarding/AcceptInvitePage";
@@ -27,6 +28,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/cenik" element={<CenikPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/invite/:token" element={<AcceptInvitePage />} />
       <Route

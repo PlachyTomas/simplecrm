@@ -29,6 +29,16 @@ const SUB_CLASSES: Record<Size, string> = {
   xl: "text-sm",
 };
 
+// The suffix (`/uživatel/měsíc`) is part of the headline line but reads as
+// secondary; at the larger sizes we down-rank it so the price number stays
+// the visual anchor and the line fits inside narrow card columns.
+const SUFFIX_CLASSES: Record<Size, string> = {
+  sm: "text-xs font-normal",
+  md: "text-sm font-normal",
+  lg: "text-base font-normal",
+  xl: "text-base font-normal",
+};
+
 const SUFFIX: Record<Interval, string> = {
   monthly: "/uživatel/měsíc",
   annual: "/uživatel/rok",
@@ -83,15 +93,15 @@ export function PriceDisplay({
 
   return (
     <div className={cn("flex flex-col gap-1 tabular-nums", className)}>
-      <div className={HEADLINE_CLASSES[size]}>
-        {headline}
+      <div className={cn("flex flex-wrap items-baseline gap-x-1", HEADLINE_CLASSES[size])}>
+        <span>{headline}</span>
         {suffix ? (
-          <>
-            <span className="text-text-secondary">{suffix}</span>
+          <span className={cn("text-text-secondary", SUFFIX_CLASSES[size])}>
+            {suffix}
             {isVatPayer ? (
-              <span className="text-text-tertiary text-sm font-normal"> bez DPH</span>
+              <span className="text-text-tertiary"> bez DPH</span>
             ) : null}
-          </>
+          </span>
         ) : null}
       </div>
       {hideVatLine ? null : (

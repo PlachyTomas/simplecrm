@@ -24,13 +24,17 @@ import { InteractivePipeline } from "@/marketing/InteractivePipeline";
 const GOOGLE_LOGIN_URL = `${API_BASE_URL}/api/v1/auth/google/login`;
 const PRICE_PER_USER_CZK = 99;
 
-const NAV_LINKS: { href: string; label: string }[] = [
-  { href: "#funkce", label: "Funkce" },
-  { href: "#cenik", label: "Ceník" },
-  { href: "#faq", label: "FAQ" },
+type NavLink =
+  | { kind: "anchor"; href: string; label: string }
+  | { kind: "route"; to: string; label: string };
+
+const NAV_LINKS: NavLink[] = [
+  { kind: "anchor", href: "#funkce", label: "Funkce" },
+  { kind: "route", to: "/cenik", label: "Ceník" },
+  { kind: "anchor", href: "#faq", label: "FAQ" },
 ];
 
-function Nav() {
+export function Nav() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -62,15 +66,25 @@ function Nav() {
           <span className="text-lg font-semibold">SimpleCRM</span>
         </Link>
         <nav aria-label="Hlavní" className="hidden items-center gap-6 md:flex">
-          {NAV_LINKS.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-sm text-text-secondary hover:text-text-primary"
-            >
-              {link.label}
-            </a>
-          ))}
+          {NAV_LINKS.map((link) =>
+            link.kind === "route" ? (
+              <Link
+                key={link.to}
+                to={link.to}
+                className="text-sm text-text-secondary hover:text-text-primary"
+              >
+                {link.label}
+              </Link>
+            ) : (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-sm text-text-secondary hover:text-text-primary"
+              >
+                {link.label}
+              </a>
+            ),
+          )}
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">
           <ThemeToggle variant="compact" className="hidden md:inline-flex" />
@@ -182,16 +196,27 @@ function MobileDrawer({
         </button>
       </div>
       <nav aria-label="Hlavní mobilní" className="flex flex-1 flex-col gap-1 p-4">
-        {NAV_LINKS.map((link) => (
-          <a
-            key={link.href}
-            href={link.href}
-            onClick={onClose}
-            className="rounded-md px-3 py-3 text-base font-medium text-text-primary transition-colors duration-fast hover:bg-surface-overlay"
-          >
-            {link.label}
-          </a>
-        ))}
+        {NAV_LINKS.map((link) =>
+          link.kind === "route" ? (
+            <Link
+              key={link.to}
+              to={link.to}
+              onClick={onClose}
+              className="rounded-md px-3 py-3 text-base font-medium text-text-primary transition-colors duration-fast hover:bg-surface-overlay"
+            >
+              {link.label}
+            </Link>
+          ) : (
+            <a
+              key={link.href}
+              href={link.href}
+              onClick={onClose}
+              className="rounded-md px-3 py-3 text-base font-medium text-text-primary transition-colors duration-fast hover:bg-surface-overlay"
+            >
+              {link.label}
+            </a>
+          ),
+        )}
         <Link
           to="/login"
           onClick={onClose}
@@ -540,7 +565,7 @@ function Faq() {
   );
 }
 
-function Footer() {
+export function Footer() {
   return (
     <footer className="border-t border-border-subtle">
       <div className="mx-auto max-w-[1200px] px-4 py-10 md:px-8">
@@ -558,9 +583,9 @@ function Footer() {
             <a href="#funkce" className="text-text-secondary hover:text-text-primary">
               Funkce
             </a>
-            <a href="#cenik" className="text-text-secondary hover:text-text-primary">
+            <Link to="/cenik" className="text-text-secondary hover:text-text-primary">
               Ceník
-            </a>
+            </Link>
             <a href="#faq" className="text-text-secondary hover:text-text-primary">
               FAQ
             </a>
