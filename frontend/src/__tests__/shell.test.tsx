@@ -86,6 +86,36 @@ describe("Responsive app shell", () => {
           won_this_month_value: "0.00",
         });
       }
+      if (url.endsWith("/api/v1/organizations/current/subscription")) {
+        return jsonResponse({
+          id: "00000000-0000-0000-0000-0000000000bb",
+          organization_id: "00000000-0000-0000-0000-0000000000aa",
+          plan: {
+            id: "00000000-0000-0000-0000-0000000000c1",
+            code: "trial",
+            display_name_cs: "Zkušební verze (30 dní)",
+            description_cs: null,
+            billing_interval: "trial",
+            price_per_user_minor: 0,
+            currency: "CZK",
+            is_public: false,
+            is_active: true,
+            sort_order: 0,
+            trial_days: 30,
+          },
+          status: "trialing",
+          started_at: new Date().toISOString(),
+          current_period_starts_at: null,
+          current_period_ends_at: ME_RESPONSE.organization.trial_ends_at,
+          canceled_at: null,
+          override_price_per_user_minor: null,
+          is_comp: false,
+          comp_reason: null,
+          notes: null,
+          effective_price_per_user_minor: 9900,
+          access_status: "trialing",
+        });
+      }
       throw new Error(`Unexpected fetch: ${url}`);
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;

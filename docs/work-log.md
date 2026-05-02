@@ -1001,3 +1001,38 @@ Next: F2 — public pricing page at `/cenik`.
   reviewer disagrees, `dark:hidden` flips it back trivially.
 
 Next: F3 — trial countdown UI updates.
+
+### F3 — Trial countdown CTA + active-org gate
+
+- `frontend/src/components/billing/useCurrentSubscription.ts` — new
+  TanStack Query hook reading `GET /api/v1/organizations/current/subscription`
+  (60s cache). ApiError → `undefined` so callers fall back to default
+  behavior; we never gate UI on a guess.
+- `frontend/src/app/AppShell.tsx` — extended the existing trial badge:
+  - Adds a small `Vybrat plán →` link at ≤7 days (warning),
+    `font-semibold` at ≤3 days (danger). Lands on `/app/settings`
+    until F5 builds the proper `/app/nastaveni/predplatne` deep link.
+  - Hides the badge entirely once `subscription.access_status !==
+    'trialing'` resolves (paid / comp / canceled). Today every org is
+    `trialing` per B1 backfill, so this is forward-looking — F4/F5
+    flip orgs to `pending_activation`/`active`.
+  - Added a `data-testid="trial-badge"` so tests can target the
+    multi-text-node badge cleanly.
+- `frontend/src/__tests__/shell.test.tsx` — extended the mock so the
+  new `/subscription` fetch returns a valid `trialing` payload, not a
+  throw-on-unexpected.
+- `frontend/src/__tests__/trialCountdown.test.tsx` — new. Covers the
+  four states (>7d / ≤7d / ≤3d / non-trialing). Mock includes
+  `pipeline-velocity` and `leaderboard` shapes the dashboard widget
+  reads — fallback `{}` would crash on `.stages.length`.
+- TrialBanner.tsx left alone — it's a separate ≤3-day ribbon with
+  its own magenta CTA; aligning copy across both is churn. F4/F5
+  re-touch it as part of the broader payments flow.
+- Verified in browser via Playwright dev-login at four states by
+  manipulating `organizations.trial_ends_at` and
+  `subscriptions.status` via psql. Screenshots captured: 30d
+  tertiary (no CTA), 5d warning + CTA, 2d danger + bolder CTA, paid
+  (badge hidden, only org name shows). Console clean.
+- 44 frontend tests pass; lint + typecheck clean.
+
+Next: F4 — trial-expired pay gate (full-screen takeover).

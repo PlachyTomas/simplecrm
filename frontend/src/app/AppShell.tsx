@@ -1,18 +1,20 @@
 import { useMutation } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
-import { Outlet } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 
 import { MobileTabBar } from "@/app/MobileTabBar";
 import { Sidebar } from "@/app/Sidebar";
 import { TrialBanner } from "@/app/TrialBanner";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
 import { apiFetch } from "@/lib/api";
 import { csNoun } from "@/lib/i18n/nouns";
 import { queryClient } from "@/lib/queryClient";
 
 export function AppShell() {
   const { data: user } = useCurrentUser();
+  const { data: subscription } = useCurrentSubscription();
   const { accessToken, clearAuth } = useAuth();
 
   const logout = useMutation({
@@ -42,6 +44,12 @@ export function AppShell() {
   );
   const trialBadgeClass =
     daysRemaining <= 3 ? "text-danger" : daysRemaining <= 7 ? "text-warning" : "text-text-tertiary";
+  // Hide the trial badge entirely for orgs we positively know are not in
+  // trial (paid / comp / canceled). Loading or unknown → keep showing —
+  // we never gate UI on a guess.
+  const showTrialBadge =
+    !subscription || subscription.access_status === "trialing";
+  const showUpgradeCta = showTrialBadge && daysRemaining <= 7;
 
   return (
     <div className="flex min-h-screen bg-bg text-text-primary">
@@ -68,14 +76,31 @@ export function AppShell() {
                 <p className="truncate text-sm font-medium text-text-primary">
                   {user.organization.name}
                 </p>
-                <p className={`text-xs ${trialBadgeClass}`}>
-                  <span className="hidden sm:inline">
-                    Zkušební doba do <time>{trialEndsAt}</time> ·{" "}
-                  </span>
-                  {daysRemaining}{" "}
-                  {csNoun(daysRemaining, "den")}{" "}
-                  {daysRemaining >= 2 && daysRemaining <= 4 ? "zbývají" : "zbývá"}
-                </p>
+                {showTrialBadge ? (
+                  <p
+                    data-testid="trial-badge"
+                    className={`flex flex-wrap items-baseline gap-x-2 text-xs ${trialBadgeClass}`}
+                  >
+                    <span>
+                      <span className="hidden sm:inline">
+                        Zkušební doba do <time>{trialEndsAt}</time> ·{" "}
+                      </span>
+                      {daysRemaining}{" "}
+                      {csNoun(daysRemaining, "den")}{" "}
+                      {daysRemaining >= 2 && daysRemaining <= 4 ? "zbývají" : "zbývá"}
+                    </span>
+                    {showUpgradeCta ? (
+                      <Link
+                        to="/app/settings"
+                        className={`underline-offset-2 hover:underline ${
+                          daysRemaining <= 3 ? "font-semibold" : "font-medium"
+                        }`}
+                      >
+                        Vybrat plán →
+                      </Link>
+                    ) : null}
+                  </p>
+                ) : null}
               </div>
             </div>
 
