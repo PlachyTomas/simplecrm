@@ -20,6 +20,7 @@ import { API_BASE_URL } from "@/lib/api";
 import { ThemeToggle } from "@/lib/ThemeToggle";
 import { cn } from "@/lib/utils";
 import { InteractivePipeline } from "@/marketing/InteractivePipeline";
+import { ReportsDemoSection } from "@/marketing/ReportsDemoSection";
 
 const GOOGLE_LOGIN_URL = `${API_BASE_URL}/api/v1/auth/google/login`;
 const PRICE_PER_USER_CZK = 99;
@@ -613,6 +614,7 @@ export function LandingPage() {
         <Hero />
         <Differentiators />
         <HowItWorks />
+        <ReportsDemoSection />
         <Pricing />
         <Faq />
       </main>
