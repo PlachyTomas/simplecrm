@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.v1 import (
     activities,
+    admin,
     auth,
     companies,
     contacts,
@@ -12,6 +13,7 @@ from app.api.v1 import (
     onboarding,
     organizations,
     pipelines,
+    plans,
     reports,
     teams,
     users,
@@ -51,3 +53,9 @@ api_router.include_router(reports.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(teams.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(users.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(activities.router, dependencies=PROTECTED_DEPS)
+# Public pricing catalog — no auth, no trial gate.
+api_router.include_router(plans.router)
+# Super-admin surface — gated per-route by `require_super_admin`. Not under
+# PROTECTED_DEPS because the trial gate is per-org and super-admins operate
+# across orgs (and may themselves belong to a freshly-trialing test org).
+api_router.include_router(admin.router)

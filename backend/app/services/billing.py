@@ -243,6 +243,8 @@ async def choose_plan(
         return sub  # idempotent — same intent, same plan
 
     sub.plan_id = plan.id
+    sub.plan = plan
+    sub.plan = plan
     sub.status = "pending_activation"
     await session.flush()
 
@@ -288,6 +290,7 @@ async def activate_subscription(
 
     now = datetime.now(tz=UTC)
     sub.plan_id = plan.id
+    sub.plan = plan
     sub.status = "active"
     sub.is_comp = False
     sub.override_price_per_user_minor = override_price_minor
@@ -324,6 +327,7 @@ async def set_comp(
     plan = await _load_plan_by_code(session, "comp")
 
     sub.plan_id = plan.id
+    sub.plan = plan
     sub.status = "active"
     sub.is_comp = True
     sub.comp_reason = reason.strip()
@@ -361,6 +365,7 @@ async def set_enterprise(
 
     now = datetime.now(tz=UTC)
     sub.plan_id = plan.id
+    sub.plan = plan
     sub.status = "active"
     sub.is_comp = False
     sub.comp_reason = None

@@ -147,6 +147,23 @@ async def require_leaderboard_visibility(
     )
 
 
+async def require_super_admin(
+    user: User = Depends(get_current_user),
+) -> User:
+    """403 unless the user has `is_super_admin=True`. Cross-organization scope.
+
+    Distinct from org-level `role='admin'`: super-admins operate the
+    /admin/* surface across every organization. Set the flag manually
+    via SQL on the founder's user row.
+    """
+    if not user.is_super_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Super-admin access required",
+        )
+    return user
+
+
 async def require_active_trial_or_subscription(
     user: User = Depends(get_current_user),
 ) -> User:
