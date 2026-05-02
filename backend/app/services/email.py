@@ -47,6 +47,28 @@ def build_freed_company_email(
     return Email(to=owner_email, subject=subject, body=body)
 
 
+def build_subscription_pending_email(
+    *, org_name: str, plan_display: str, founder_email: str = "podpora@simplecrm.cz"
+) -> Email:
+    """Founder-facing notification: an org just chose a plan.
+
+    Sent from `BillingService.choose_plan`. The body intentionally tells
+    the founder which org+plan to look up so they can match the bank-
+    transfer payment when it lands and activate the subscription via the
+    super-admin UI.
+    """
+    subject = f"SimpleCRM: {org_name} si vybral plán {plan_display}"
+    body = (
+        f"Dobrý den,\n\n"
+        f"organizace {org_name} si vybrala plán {plan_display} a čeká "
+        "na aktivaci po obdržení platby.\n\n"
+        "Po připsání platby aktivujte předplatné v super-admin "
+        "rozhraní (/admin → detail organizace → Aktivovat předplatné).\n\n"
+        "Detaily najdete v audit logu organizace.\n"
+    )
+    return Email(to=founder_email, subject=subject, body=body)
+
+
 async def send_email(message: Email) -> None:
     """Dispatch an email. Stub: logs structured fields at INFO level."""
     logger.info(

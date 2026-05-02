@@ -28,6 +28,7 @@ class ActivityEntityType(StrEnum):
     company = "company"
     contact = "contact"
     deal = "deal"
+    organization = "organization"
 
 
 class ActivityType(StrEnum):
@@ -38,3 +39,4 @@ class ActivityType(StrEnum):
     deal_lost = "deal_lost"
     company_freed = "company_freed"
     ownership_reassigned = "ownership_reassigned"
+    subscription_change = "subscription_change"
