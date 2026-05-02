@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 
 interface OrgListProps {
   selectedOrgId: string | null;
-  onSelect: (orgId: string) => void;
+  onSelect: (orgId: string, userCount: number) => void;
 }
 
 const dateFmt = new Intl.DateTimeFormat("cs-CZ", { dateStyle: "short" });
@@ -192,7 +192,7 @@ export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
                 <tr
                   key={row.id}
                   data-org-id={row.original.id}
-                  onClick={() => onSelect(row.original.id)}
+                  onClick={() => onSelect(row.original.id, row.original.user_count)}
                   className={cn(
                     "cursor-pointer border-b border-border-subtle/40 transition-colors",
                     selectedOrgId === row.original.id

@@ -289,6 +289,28 @@ describe("Admin surface", () => {
     );
   });
 
+  it("Nastavit Enterprise cenu → live `users × override` preview updates on price change", async () => {
+    setupFetch();
+    renderAt("/admin");
+    fireEvent.click(await screen.findByText(/^Example s\.r\.o\.$/));
+    await screen.findByRole("button", { name: /^Nastavit Enterprise cenu$/ });
+    fireEvent.click(screen.getByRole("button", { name: /^Nastavit Enterprise cenu$/ }));
+    const dialog = await screen.findByRole("dialog", {
+      name: /^Nastavit Enterprise cenu$/,
+    });
+    const priceInput = within(dialog).getByLabelText(/Cena za uživatele/i);
+    fireEvent.change(priceInput, { target: { value: "199" } });
+    // The org list seeded user_count=8; preview should be 8 × 199 = 1 592 Kč.
+    const preview = await within(dialog).findByTestId("enterprise-preview");
+    expect(preview.textContent).toMatch(/1\s*592\s*Kč/);
+    fireEvent.change(priceInput, { target: { value: "299" } });
+    await waitFor(() => {
+      expect(within(dialog).getByTestId("enterprise-preview").textContent).toMatch(
+        /2\s*392\s*Kč/,
+      );
+    });
+  });
+
   it("Prodloužit zkušební dobu → preview ends_at updates as days change", async () => {
     setupFetch();
     renderAt("/admin");

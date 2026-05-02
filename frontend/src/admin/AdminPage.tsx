@@ -20,6 +20,10 @@ export function AdminPage() {
   usePageTitle("Admin");
   const [activeTab, setActiveTab] = useState<AdminTab>("organizations");
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  // Carry the user_count alongside the selected id so the drawer's
+  // Enterprise-price modal can render the live `users × override`
+  // preview without a second fetch — the list row already has it.
+  const [selectedUserCount, setSelectedUserCount] = useState<number | null>(null);
 
   return (
     <div className="min-h-screen bg-bg text-text-primary">
@@ -75,10 +79,16 @@ export function AdminPage() {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-[2fr_3fr]">
             <OrgList
               selectedOrgId={selectedOrgId}
-              onSelect={setSelectedOrgId}
+              onSelect={(id, userCount) => {
+                setSelectedOrgId(id);
+                setSelectedUserCount(userCount);
+              }}
             />
             {selectedOrgId ? (
-              <OrgDetailDrawer orgId={selectedOrgId} />
+              <OrgDetailDrawer
+                orgId={selectedOrgId}
+                userCount={selectedUserCount}
+              />
             ) : (
               <div className="hidden rounded-lg border border-dashed border-border bg-surface p-8 text-center text-sm text-text-tertiary md:block">
                 Vyberte organizaci ze seznamu pro zobrazení detailu.

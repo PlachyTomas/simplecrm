@@ -46,6 +46,9 @@ function statusPillSpec(sub: AdminSubscriptionOut): { label: string; className: 
 
 interface OrgDetailDrawerProps {
   orgId: string;
+  /** User count carried over from the list row so the Enterprise-price
+   *  modal can render `users × override` without a second fetch. */
+  userCount: number | null;
 }
 
 type ActiveModal =
@@ -56,9 +59,8 @@ type ActiveModal =
   | "cancel"
   | null;
 
-export function OrgDetailDrawer({ orgId }: OrgDetailDrawerProps) {
+export function OrgDetailDrawer({ orgId, userCount }: OrgDetailDrawerProps) {
   const subQuery = useAdminOrgSubscription(orgId);
-  const activityQuery = useAdminOrgActivity(orgId);
   const sub = subQuery.data;
 
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
@@ -180,7 +182,7 @@ export function OrgDetailDrawer({ orgId }: OrgDetailDrawerProps) {
       {activeModal === "set-enterprise" ? (
         <SetEnterpriseModal
           orgId={orgId}
-          userCount={activityQuery.data?.items?.length ? undefined : undefined}
+          userCount={userCount ?? undefined}
           onClose={() => setActiveModal(null)}
         />
       ) : null}
