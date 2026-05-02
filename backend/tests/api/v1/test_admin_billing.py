@@ -273,3 +273,74 @@ async def test_put_billing_settings_rejects_non_super_admin(
         json={"is_vat_payer": True},
     )
     assert response.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# /admin/organizations/:id/activity
+# ---------------------------------------------------------------------------
+
+
+async def test_org_activity_super_admin_returns_subscription_rows(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    org, admin = await _seed_org_with_super_admin(db_session, owned_emails)
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    # Generate at least one subscription Activity row by exercising a
+    # mutation. set-comp writes an Activity row per BillingService.
+    set_comp = await client.post(
+        f"/api/v1/admin/organizations/{org.id}/subscription/set-comp",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"reason": "free for the test"},
+    )
+    assert set_comp.status_code == 200
+
+    response = await client.get(
+        f"/api/v1/admin/organizations/{org.id}/activity",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] >= 1
+    assert len(body["items"]) >= 1
+    row = body["items"][0]
+    assert "activity_type" in row
+    assert "payload" in row
+    assert "created_at" in row
+    assert row["actor"] is not None
+    assert row["actor"]["id"] == str(admin.id)
+
+
+async def test_org_activity_rejects_non_super_admin(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    org, user = await _seed_org_with_super_admin(
+        db_session, owned_emails, super_admin=False
+    )
+    token = create_access_token(user.id, user.organization_id, user.role)
+    response = await client.get(
+        f"/api/v1/admin/organizations/{org.id}/activity",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 403
+
+
+async def test_org_activity_respects_pagination(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    org, admin = await _seed_org_with_super_admin(db_session, owned_emails)
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    # Two writes → two activity rows.
+    for days in (10, 20):
+        await client.post(
+            f"/api/v1/admin/organizations/{org.id}/subscription/extend-trial",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"days": days},
+        )
+    response = await client.get(
+        f"/api/v1/admin/organizations/{org.id}/activity?limit=1&offset=0",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] >= 2
+    assert len(body["items"]) == 1

@@ -23,6 +23,8 @@ import { LandingPage } from "@/marketing/LandingPage";
 import { NotFoundPage } from "@/marketing/NotFoundPage";
 import { AcceptInvitePage } from "@/onboarding/AcceptInvitePage";
 import { CreateOrgPage } from "@/onboarding/CreateOrgPage";
+import { AdminPage } from "@/admin/AdminPage";
+import { RequireSuperAdmin } from "@/auth/RequireSuperAdmin";
 
 export function AppRoutes() {
   return (
@@ -63,6 +65,14 @@ export function AppRoutes() {
         />
         <Route path="more" element={<MorePage />} />
       </Route>
+      <Route
+        path="/admin"
+        element={
+          <RequireSuperAdmin>
+            <AdminPage />
+          </RequireSuperAdmin>
+        }
+      />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

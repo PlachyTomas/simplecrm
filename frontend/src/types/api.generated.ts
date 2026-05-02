@@ -1098,6 +1098,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/organizations/{org_id}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Org Subscription Activity
+         * @description Subscription-scoped activity rows for the admin detail drawer.
+         *
+         *     Filters to `entity_type='subscription'` so the timeline only shows
+         *     payment/plan history even when other entity types start writing to
+         *     the same org's row.
+         */
+        get: operations["get_org_subscription_activity_api_v1_admin_organizations__org_id__activity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/billing-settings": {
         parameters: {
             query?: never;
@@ -1173,6 +1197,45 @@ export interface components {
          * @enum {string}
          */
         ActivityType: "note" | "stage_change" | "owner_change" | "deal_won" | "deal_lost" | "company_freed" | "ownership_reassigned" | "subscription_change";
+        /** AdminActivityActor */
+        AdminActivityActor: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+        };
+        /** AdminActivityList */
+        AdminActivityList: {
+            /** Items */
+            items: components["schemas"]["AdminActivityRow"][];
+            /** Total */
+            total: number;
+        };
+        /** AdminActivityRow */
+        AdminActivityRow: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Activity Type */
+            activity_type: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            actor?: components["schemas"]["AdminActivityActor"] | null;
+        };
         /** AdminOrgList */
         AdminOrgList: {
             /** Items */
@@ -1538,6 +1601,11 @@ export interface components {
             role: components["schemas"]["UserRole"];
             /** Can Invite */
             can_invite: boolean;
+            /**
+             * Is Super Admin
+             * @default false
+             */
+            is_super_admin: boolean;
             organization?: components["schemas"]["OrganizationSummary"] | null;
         };
         /** DealCreate */
@@ -4662,6 +4730,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_org_subscription_activity_api_v1_admin_organizations__org_id__activity_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminActivityList"];
                 };
             };
             /** @description Validation Error */

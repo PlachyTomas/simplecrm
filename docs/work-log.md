@@ -1186,3 +1186,88 @@ Next: F5 — `/app/nastaveni/predplatne` in-app billing settings page.
 
 Next: F6 — super-admin UI (`/admin` route, gated by
 `User.is_super_admin`).
+
+### F6 — Super-admin UI
+
+Backend additions (B3 had every mutation but two small gaps):
+
+- `backend/app/schemas/auth.py` — added `is_super_admin: bool` to
+  `CurrentUser`. Without this the frontend can't gate `/admin` without
+  an extra fetch. Default `False` so existing API consumers keep
+  working.
+- `backend/app/api/v1/admin.py` — added
+  `GET /admin/organizations/{org_id}/activity` returning paginated
+  Activity rows scoped to subscription mutations
+  (`entity_type=organization` AND `activity_type=subscription_change`,
+  matching `BillingService._audit`'s write convention). Returns
+  actor user id/name/email or null when the FK was set to NULL on
+  user delete.
+- `backend/app/schemas/billing.py` — new `AdminActivityRow`,
+  `AdminActivityActor`, `AdminActivityList` Pydantic models.
+- `backend/tests/api/v1/test_admin_billing.py` — three new tests
+  covering super-admin access, the 403 path, and pagination.
+- Frontend OpenAPI types regenerated via `pnpm types:generate`.
+
+Frontend (admin surface lives at top-level, NOT under `/app`):
+
+- `frontend/src/auth/RequireSuperAdmin.tsx` — mirrors
+  `ProtectedRoute`'s shape but bounces non-super-admins to `/app` and
+  unauthenticated visitors to `/login`. Settles on the cold-load
+  refresh attempt before deciding so a typed-URL nav doesn't bounce
+  to login mid-refresh.
+- `frontend/src/admin/hooks.ts` — TanStack hooks
+  (`useAdminOrgList(q, offset)`, `useAdminOrgSubscription(orgId)`,
+  `useAdminOrgActivity(orgId)`, `useAdminBillingSettings()`). All
+  swallow errors to `null` per F4/F5 convention (React Query
+  disallows undefined returns).
+- `frontend/src/admin/AdminPage.tsx` — top-level surface with two
+  sub-tabs: Organizace (the two-pane layout) and Nastavení (the
+  billing-settings form). No AppShell wrapping.
+- `frontend/src/admin/OrgList.tsx` — TanStack Table with debounced
+  search (300 ms), columns Název / Plán / Stav / Uživatelé / Končí /
+  Poslední aktivita, and offset+limit pagination. Status pill helper
+  duplicated locally (didn't extract — F5's helper is in the settings
+  page, F6's needs the same shape but extracting now is premature
+  for a third caller that may diverge in F7+).
+- `frontend/src/admin/OrgDetailDrawer.tsx` — subscription detail
+  card + five inline modals (Aktivovat, Nastavit komp, Nastavit
+  Enterprise, Prodloužit zkušební, Zrušit) + activity timeline.
+  Modals stay inline rather than extracted into a shared
+  `<AdminActionModal>` because the forms differ enough that a
+  generic wrapper becomes a switch-on-type prop. Specific behaviors:
+  - Set-enterprise has a live `Měsíční účet: {users × override}` Kč
+    preview.
+  - Extend-trial shows the projected new `current_period_ends_at`.
+  - Cancel requires a typed-name match (uses the plan display name
+    as the typed token — strict by design).
+  - Each successful POST invalidates `["admin", "org-subscription",
+    orgId]`, `["admin", "org-activity", orgId]`, and
+    `["admin", "org-list"]` so the drawer + table re-render without
+    a hard reload.
+- `frontend/src/admin/AdminBillingSettings.tsx` — singleton settings
+  form (DPH toggle, sazba, IBAN, IČO, kontaktní e-mail). PUT on
+  submit; toast-style "Uloženo" flash; invalidates both the admin
+  query and the public `["billing-settings", "public"]` query so
+  the marketing /cenik footer picks up DPH changes.
+- `frontend/src/app/AppShell.tsx` — gear icon link to `/admin` in
+  the user-menu area for super-admins only (`data-testid="admin-gear"`
+  for tests).
+- `frontend/src/App.tsx` — registered top-level `/admin` route
+  wrapped in `<RequireSuperAdmin>`.
+- `frontend/src/__tests__/admin.test.tsx` — 10 tests covering: gate
+  redirects non-super-admins, list renders, search debounce, drawer
+  opens on row click, Aktivovat POST, Zrušit typed-name confirmation,
+  Prodloužit live preview, Nastavení PUT, gear-icon visible for
+  super-admins, gear-icon hidden for regular admins.
+- Playwright verification: super-admin gear → /admin → search filters
+  → click row → drawer renders subscription card + five actions +
+  activity timeline. Prodloužit zkušební submitted (DB confirmed
+  +30 days; activity row appeared with payload `days=30,
+  trial_ends_at=…`). Nastavení tab → DPH toggle → Uložit → DB
+  confirmed `is_vat_payer=true`. Flagged `is_super_admin=false` →
+  typing /admin redirected to /app, gear icon gone.
+- 74 frontend tests pass; 260 backend tests pass (one pre-existing
+  dev-login-config failure unchanged); typecheck + lint green.
+
+This commit ships the final §6 piece. Acceptance criteria from §8
+are all met. Deleting RESUME.md to mark the loop complete.

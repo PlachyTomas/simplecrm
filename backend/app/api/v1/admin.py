@@ -29,6 +29,9 @@ from app.db.models import (
 )
 from app.schemas.billing import (
     ActivateSubscriptionIn,
+    AdminActivityActor,
+    AdminActivityList,
+    AdminActivityRow,
     AdminOrgList,
     AdminOrgRow,
     BillingSettingsOut,
@@ -328,6 +331,69 @@ async def cancel_subscription(
     await session.commit()
     sub = await billing.get_current_subscription(session, org_id)
     return _subscription_payload(sub)
+
+
+# ---------------------------------------------------------------------------
+# Subscription activity timeline
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/organizations/{org_id}/activity",
+    response_model=AdminActivityList,
+)
+async def get_org_subscription_activity(
+    org_id: uuid.UUID,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    _admin: User = Depends(require_super_admin),
+    session: AsyncSession = Depends(get_db),
+) -> AdminActivityList:
+    """Subscription-scoped activity rows for the admin detail drawer.
+
+    Subscription mutations write Activity rows with
+    `entity_type=organization` + `activity_type=subscription_change`
+    (see `BillingService._audit`). Filter on both so unrelated org-scoped
+    activity (e.g. team events that may write to the same org row in the
+    future) doesn't leak into the timeline.
+    """
+    from app.db.models.enums import ActivityEntityType, ActivityType
+
+    base = (
+        select(Activity)
+        .options(selectinload(Activity.user))
+        .where(Activity.organization_id == org_id)
+        .where(Activity.entity_type == ActivityEntityType.organization)
+        .where(Activity.activity_type == ActivityType.subscription_change)
+    )
+
+    total = (
+        await session.execute(select(func.count()).select_from(base.subquery()))
+    ).scalar_one()
+
+    rows = (
+        await session.execute(
+            base.order_by(Activity.created_at.desc()).limit(limit).offset(offset)
+        )
+    ).scalars().all()
+
+    items = [
+        AdminActivityRow(
+            id=a.id,
+            activity_type=a.activity_type.value
+            if hasattr(a.activity_type, "value")
+            else str(a.activity_type),
+            payload=a.payload or {},
+            created_at=a.created_at,
+            actor=(
+                AdminActivityActor(id=a.user.id, name=a.user.name, email=a.user.email)
+                if a.user is not None
+                else None
+            ),
+        )
+        for a in rows
+    ]
+    return AdminActivityList(items=items, total=total)
 
 
 # ---------------------------------------------------------------------------

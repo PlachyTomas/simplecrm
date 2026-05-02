@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { Sparkles } from "lucide-react";
+import { Settings, Sparkles } from "lucide-react";
 import { Link, Outlet } from "react-router-dom";
 
 import { MobileTabBar } from "@/app/MobileTabBar";
@@ -105,6 +105,17 @@ export function AppShell() {
             </div>
 
             <div className="flex items-center gap-3">
+              {user.is_super_admin ? (
+                <Link
+                  to="/admin"
+                  aria-label="Admin"
+                  title="Admin"
+                  data-testid="admin-gear"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary"
+                >
+                  <Settings size={16} strokeWidth={1.75} aria-hidden />
+                </Link>
+              ) : null}
               {user.avatar_url ? (
                 <img
                   src={user.avatar_url}

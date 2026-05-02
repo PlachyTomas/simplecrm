@@ -188,3 +188,32 @@ class AdminOrgRow(BaseModel):
 class AdminOrgList(BaseModel):
     items: list[AdminOrgRow]
     total: int
+
+
+# ---------------------------------------------------------------------------
+# Admin activity timeline (subscription history for the detail drawer)
+# ---------------------------------------------------------------------------
+
+
+class AdminActivityActor(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    email: str
+
+
+class AdminActivityRow(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    activity_type: str
+    payload: dict
+    created_at: datetime
+    # Null when the actor user was deleted (the FK is ON DELETE SET NULL).
+    actor: AdminActivityActor | None = None
+
+
+class AdminActivityList(BaseModel):
+    items: list[AdminActivityRow]
+    total: int
