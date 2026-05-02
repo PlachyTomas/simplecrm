@@ -31,18 +31,29 @@ from app.db.models.enums import UserRole
 from app.schemas.reports import (
     AvgDealSizeResponse,
     DealsWonResponse,
+    LeadToDealConversionResponse,
+    NewCompaniesResponse,
     PipelineValueResponse,
+    SalesCycleLengthResponse,
     WinRateResponse,
 )
 from app.schemas.reports.widgets import (
     AvgDealSizeConfig,
     DealsWonConfig,
+    LeadToDealConversionConfig,
+    NewCompaniesConfig,
     PipelineValueConfig,
+    SalesCycleLengthConfig,
     WinRateConfig,
 )
 from app.services.reports.avg_deal_size import compute_avg_deal_size
 from app.services.reports.deals_won import compute_deals_won
+from app.services.reports.lead_to_deal_conversion import (
+    compute_lead_to_deal_conversion,
+)
+from app.services.reports.new_companies import compute_new_companies
 from app.services.reports.pipeline_value import compute_pipeline_value
+from app.services.reports.sales_cycle_length import compute_sales_cycle_length
 from app.services.reports.win_rate import compute_win_rate
 
 # Mounted under /reports in routes.py — leading slash here makes the
@@ -150,4 +161,79 @@ async def widget_avg_deal_size(
         team_id=team_id,
         owner_user_id=owner_user_id,
         config=AvgDealSizeConfig(scope=scope),  # type: ignore[arg-type]
+    )
+
+
+@router.get("/new-companies", response_model=NewCompaniesResponse)
+async def widget_new_companies(
+    from_: date = Query(alias="from"),
+    to: date = Query(),
+    team_id: UUID | None = Query(default=None),
+    owner_user_id: UUID | None = Query(default=None),
+    breakdown: str = Query(default="none", pattern="^(none|by_owner)$"),
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> NewCompaniesResponse:
+    _validate_window(from_, to)
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return await compute_new_companies(
+        session,
+        organization_id=user.organization_id,
+        from_=from_,
+        to=to,
+        team_id=team_id,
+        owner_user_id=owner_user_id,
+        config=NewCompaniesConfig(breakdown=breakdown),  # type: ignore[arg-type]
+    )
+
+
+@router.get("/sales-cycle-length", response_model=SalesCycleLengthResponse)
+async def widget_sales_cycle_length(
+    from_: date = Query(alias="from"),
+    to: date = Query(),
+    team_id: UUID | None = Query(default=None),
+    owner_user_id: UUID | None = Query(default=None),
+    metric: str = Query(default="median", pattern="^(mean|median)$"),
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> SalesCycleLengthResponse:
+    _validate_window(from_, to)
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return await compute_sales_cycle_length(
+        session,
+        organization_id=user.organization_id,
+        from_=from_,
+        to=to,
+        team_id=team_id,
+        owner_user_id=owner_user_id,
+        config=SalesCycleLengthConfig(metric=metric),  # type: ignore[arg-type]
+    )
+
+
+@router.get(
+    "/lead-to-deal-conversion",
+    response_model=LeadToDealConversionResponse,
+)
+async def widget_lead_to_deal_conversion(
+    from_: date = Query(alias="from"),
+    to: date = Query(),
+    team_id: UUID | None = Query(default=None),
+    owner_user_id: UUID | None = Query(default=None),
+    breakdown: str = Query(default="none", pattern="^(none|by_owner)$"),
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> LeadToDealConversionResponse:
+    _validate_window(from_, to)
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return await compute_lead_to_deal_conversion(
+        session,
+        organization_id=user.organization_id,
+        from_=from_,
+        to=to,
+        team_id=team_id,
+        owner_user_id=owner_user_id,
+        config=LeadToDealConversionConfig(breakdown=breakdown),  # type: ignore[arg-type]
     )

@@ -1209,3 +1209,247 @@ async def test_widget_avg_deal_size_blocks_salesperson(
         params=_window_params(),
     )
     assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Widget endpoints, batch 2 (R3): new_companies, sales_cycle_length, lead_to_deal_conversion
+# ---------------------------------------------------------------------------
+
+
+async def test_widget_new_companies_happy(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, *_ = await _setup(db_session, owned_cleanup)
+    now = datetime.now(tz=UTC)
+    # Two companies created in the current window, one in the previous.
+    db_session.add_all([
+        Company(
+            organization_id=org.id, name="C1", owner_user_id=user.id,
+            created_at=now - timedelta(days=5),
+        ),
+        Company(
+            organization_id=org.id, name="C2", owner_user_id=user.id,
+            created_at=now - timedelta(days=10),
+        ),
+        Company(
+            organization_id=org.id, name="C0", owner_user_id=user.id,
+            created_at=now - timedelta(days=40),
+        ),
+    ])
+    await db_session.commit()
+    resp = await client.get(
+        "/api/v1/reports/widgets/new-companies",
+        headers=_auth(user),
+        params=_window_params(),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    # Note: _setup() also creates one company "Co" with owner_user_id=None,
+    # which still counts under the org.
+    assert body["value"] >= 2
+    # The previous-period count: 1 (the "C0" we just seeded). _setup()'s
+    # "Co" was also created at "now" so it sits in the current window.
+    assert body["comparison"]["value"] == 1
+
+
+async def test_widget_new_companies_blocks_salesperson(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _admin, *_ = await _setup(db_session, owned_cleanup)
+    sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(sp_email)
+    sp = User(
+        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
+    )
+    db_session.add(sp)
+    await db_session.commit()
+    await db_session.refresh(sp)
+    resp = await client.get(
+        "/api/v1/reports/widgets/new-companies",
+        headers=_auth(sp),
+        params=_window_params(),
+    )
+    assert resp.status_code == 403
+
+
+async def test_widget_new_companies_validates(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, user, *_ = await _setup(db_session, owned_cleanup)
+    resp = await client.get(
+        "/api/v1/reports/widgets/new-companies",
+        headers=_auth(user),
+        params={**_window_params(), "breakdown": "nonsense"},
+    )
+    assert resp.status_code == 422
+
+
+async def test_widget_sales_cycle_length_returns_median_and_mean(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, _open, won_stage, _ = await _setup(db_session, owned_cleanup)
+    now = datetime.now(tz=UTC)
+    today = now.date()
+    # Three won deals with different cycle lengths so median ≠ mean.
+    company_a = Company(organization_id=org.id, name="A", created_at=now - timedelta(days=20))
+    company_b = Company(organization_id=org.id, name="B", created_at=now - timedelta(days=30))
+    company_c = Company(organization_id=org.id, name="C", created_at=now - timedelta(days=100))
+    db_session.add_all([company_a, company_b, company_c])
+    await db_session.commit()
+    db_session.add_all([
+        Deal(
+            organization_id=org.id, company_id=company_a.id, stage_id=won_stage.id,
+            owner_user_id=user.id, name="D-A", value=Decimal("100"),
+            currency=org.currency, closed_at=now - timedelta(days=5),
+        ),
+        Deal(
+            organization_id=org.id, company_id=company_b.id, stage_id=won_stage.id,
+            owner_user_id=user.id, name="D-B", value=Decimal("100"),
+            currency=org.currency, closed_at=now - timedelta(days=5),
+        ),
+        Deal(
+            organization_id=org.id, company_id=company_c.id, stage_id=won_stage.id,
+            owner_user_id=user.id, name="D-C", value=Decimal("100"),
+            currency=org.currency, closed_at=now - timedelta(days=5),
+        ),
+    ])
+    await db_session.commit()
+    resp = await client.get(
+        "/api/v1/reports/widgets/sales-cycle-length",
+        headers=_auth(user),
+        params=_window_params(),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["sample_count"] == 3
+    # Cycle days: 15, 25, 95 → median 25, mean ≈ 45
+    assert body["median_days"] == 25.0
+    assert body["mean_days"] == 45.0
+    # Default config metric is median.
+    assert body["value"] == 25.0
+
+
+async def test_widget_sales_cycle_length_returns_none_with_no_won_deals(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, user, *_ = await _setup(db_session, owned_cleanup)
+    resp = await client.get(
+        "/api/v1/reports/widgets/sales-cycle-length",
+        headers=_auth(user),
+        params=_window_params(),
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["value"] is None
+    assert body["sample_count"] == 0
+
+
+async def test_widget_sales_cycle_length_blocks_salesperson(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _admin, *_ = await _setup(db_session, owned_cleanup)
+    sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(sp_email)
+    sp = User(
+        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
+    )
+    db_session.add(sp)
+    await db_session.commit()
+    await db_session.refresh(sp)
+    resp = await client.get(
+        "/api/v1/reports/widgets/sales-cycle-length",
+        headers=_auth(sp),
+        params=_window_params(),
+    )
+    assert resp.status_code == 403
+
+
+async def test_widget_lead_to_deal_conversion_happy(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """3 companies created in window; 1 of them has a deal → 33.3%."""
+    org, user, open_stage, _won, _co = await _setup(db_session, owned_cleanup)
+    now = datetime.now(tz=UTC)
+    cur = now - timedelta(days=10)
+    # _setup() already added "Co"; add two more without deals + one with.
+    company_with_deal = Company(
+        organization_id=org.id, name="CWD", owner_user_id=user.id, created_at=cur,
+    )
+    company_no_deal_1 = Company(
+        organization_id=org.id, name="CND1", owner_user_id=user.id, created_at=cur,
+    )
+    company_no_deal_2 = Company(
+        organization_id=org.id, name="CND2", owner_user_id=user.id, created_at=cur,
+    )
+    db_session.add_all([company_with_deal, company_no_deal_1, company_no_deal_2])
+    await db_session.commit()
+    db_session.add(
+        Deal(
+            organization_id=org.id,
+            company_id=company_with_deal.id,
+            stage_id=open_stage.id,
+            owner_user_id=user.id,
+            name="D",
+            value=Decimal("100"),
+            currency=org.currency,
+            created_at=cur,
+        )
+    )
+    await db_session.commit()
+    resp = await client.get(
+        "/api/v1/reports/widgets/lead-to-deal-conversion",
+        headers=_auth(user),
+        params=_window_params(),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    # _setup creates "Co" too — so total = 4 companies, 1 converted → 25%.
+    # That's still a meaningful test of the math.
+    assert body["total_count"] == 4
+    assert body["converted_count"] == 1
+    assert body["value"] == 25.0
+
+
+async def test_widget_lead_to_deal_conversion_returns_none_with_no_companies(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Window with no companies → value is None, total/converted = 0."""
+    org, user, *_ = await _setup(db_session, owned_cleanup)
+    # Push the existing _setup company out of the window: shift its
+    # created_at far back.
+    await db_session.execute(
+        Company.__table__.update()  # type: ignore[attr-defined]
+        .where(Company.organization_id == org.id)
+        .values(created_at=datetime.now(tz=UTC) - timedelta(days=200))
+    )
+    await db_session.commit()
+    resp = await client.get(
+        "/api/v1/reports/widgets/lead-to-deal-conversion",
+        headers=_auth(user),
+        params=_window_params(),
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total_count"] == 0
+    assert body["converted_count"] == 0
+    assert body["value"] is None
+
+
+async def test_widget_lead_to_deal_conversion_blocks_salesperson(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _admin, *_ = await _setup(db_session, owned_cleanup)
+    sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(sp_email)
+    sp = User(
+        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
+    )
+    db_session.add(sp)
+    await db_session.commit()
+    await db_session.refresh(sp)
+    resp = await client.get(
+        "/api/v1/reports/widgets/lead-to-deal-conversion",
+        headers=_auth(sp),
+        params=_window_params(),
+    )
+    assert resp.status_code == 403

@@ -842,6 +842,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/widgets/new-companies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Widget New Companies */
+        get: operations["widget_new_companies_api_v1_reports_widgets_new_companies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/widgets/sales-cycle-length": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Widget Sales Cycle Length */
+        get: operations["widget_sales_cycle_length_api_v1_reports_widgets_sales_cycle_length_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/widgets/lead-to-deal-conversion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Widget Lead To Deal Conversion */
+        get: operations["widget_lead_to_deal_conversion_api_v1_reports_widgets_lead_to_deal_conversion_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/teams": {
         parameters: {
             query?: never;
@@ -2180,6 +2231,17 @@ export interface components {
             /** Won This Month Value */
             won_this_month_value: string;
         };
+        /** LeadConversionBreakdownItem */
+        LeadConversionBreakdownItem: {
+            /** Owner User Id */
+            owner_user_id: string | null;
+            /** Owner Name */
+            owner_name: string;
+            /** Converted */
+            converted: number;
+            /** Total */
+            total: number;
+        };
         /**
          * LeadToDealConversionConfig
          * @description % of companies created in the range that got at least one deal.
@@ -2196,6 +2258,18 @@ export interface components {
              * @enum {string}
              */
             breakdown: "none" | "by_owner";
+        };
+        /** LeadToDealConversionResponse */
+        LeadToDealConversionResponse: {
+            /** Value */
+            value: number | null;
+            /** Converted Count */
+            converted_count: number;
+            /** Total Count */
+            total_count: number;
+            comparison: components["schemas"]["Comparison"] | null;
+            /** Breakdown */
+            breakdown: components["schemas"]["LeadConversionBreakdownItem"][];
         };
         /** Leaderboard */
         Leaderboard: {
@@ -2304,6 +2378,15 @@ export interface components {
             /** Avg Cycle Days */
             avg_cycle_days: number | null;
         };
+        /** NewCompaniesBreakdownItem */
+        NewCompaniesBreakdownItem: {
+            /** Owner User Id */
+            owner_user_id: string | null;
+            /** Owner Name */
+            owner_name: string;
+            /** Count */
+            count: number;
+        };
         /**
          * NewCompaniesConfig
          * @description Count of `Company` rows created in the date range.
@@ -2320,6 +2403,19 @@ export interface components {
              * @enum {string}
              */
             breakdown: "none" | "by_owner";
+        };
+        /**
+         * NewCompaniesResponse
+         * @description Count of `Company` rows created in range.
+         */
+        NewCompaniesResponse: {
+            /** Value */
+            value: number;
+            /** Sparkline */
+            sparkline: components["schemas"]["SparklineBucket"][];
+            comparison: components["schemas"]["Comparison"] | null;
+            /** Breakdown */
+            breakdown: components["schemas"]["NewCompaniesBreakdownItem"][];
         };
         /** OrganizationOut */
         OrganizationOut: {
@@ -2675,6 +2771,20 @@ export interface components {
              * @enum {string}
              */
             metric: "mean" | "median";
+        };
+        /**
+         * SalesCycleLengthResponse
+         * @description Days between Company.created_at and Deal.closed_at for won deals.
+         */
+        SalesCycleLengthResponse: {
+            /** Value */
+            value: number | null;
+            /** Median Days */
+            median_days: number | null;
+            /** Mean Days */
+            mean_days: number | null;
+            /** Sample Count */
+            sample_count: number;
         };
         /**
          * SalesLeaderboardConfig
@@ -4817,6 +4927,111 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AvgDealSizeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    widget_new_companies_api_v1_reports_widgets_new_companies_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                team_id?: string | null;
+                owner_user_id?: string | null;
+                breakdown?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewCompaniesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    widget_sales_cycle_length_api_v1_reports_widgets_sales_cycle_length_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                team_id?: string | null;
+                owner_user_id?: string | null;
+                metric?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesCycleLengthResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    widget_lead_to_deal_conversion_api_v1_reports_widgets_lead_to_deal_conversion_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                team_id?: string | null;
+                owner_user_id?: string | null;
+                breakdown?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadToDealConversionResponse"];
                 };
             };
             /** @description Validation Error */
