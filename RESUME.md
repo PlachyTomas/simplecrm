@@ -1,4 +1,4 @@
-# RESUME — paygate build, after F3
+# RESUME — paygate build, after F4
 
 ## Where we are
 
@@ -7,7 +7,7 @@ Driving prompt: `docs/prompts/PAYGATE_TASK.md`. Auto-loop wrapper
 interactively. Restart per §0.3 if you want autonomous cadence back;
 check `.claude-loop.pid` first.
 
-Backend done (B1–B4); F1, F2, F3 done. Last commits:
+Backend done (B1–B4); F1, F2, F3, F4 done. Last commits:
 
 - `0cf89cc` — B1: Plan/Subscription/BillingSettings + seed + backfill
 - `2f8b43a` — B2: BillingService + activity-enum migration
@@ -15,71 +15,61 @@ Backend done (B1–B4); F1, F2, F3 done. Last commits:
 - `cdcb6de` — B4: pay-gate dependency wired to BillingService
 - `d948a27` — F1: PriceDisplay + useBillingSettings
 - `966d382` — F2: pricing page with monthly/annual/enterprise tiers
-- *(latest)* — F3: trial countdown CTA + active-org gate
+- `15c4154` — F3: trial countdown CTA + active-org gate
+- *(latest)* — F4: trial-expired pay gate with monthly/annual choice
 
-258 backend tests pass (1 pre-existing dev-login-config failure
-unchanged). 44 frontend tests pass. `pnpm typecheck` + `pnpm lint`
-green. `pnpm build` has pre-existing strict-index-access errors in
-`SettingsPage.tsx`, `DealDetailPage.tsx`, `pipeline/colors.ts`,
-`companies.test.tsx`, `LandingPage.tsx` focus-trap — none introduced
-by F3.
+54 frontend tests pass. 257 backend tests pass (1 pre-existing
+dev-login-config failure unchanged from before F4). `pnpm typecheck`
+and `pnpm lint` green.
 
 Read in order before starting: `docs/work-log.md` Session 5 (latest
-entry covers F3), `docs/prompts/PAYGATE_TASK.md` §6 F4 onwards,
+entry covers F4), `docs/prompts/PAYGATE_TASK.md` §6 F5 onwards,
 `.claude/skills/ui-design.md` (mandatory before any UI change).
 
-## Next task — F4: Trial-expired pay gate
+## Next task — F5: In-app billing settings page
 
-Per §6 F4 of the prompt:
+Per §6 F5 of the prompt — new tab in the Settings layout at
+`/app/nastaveni/predplatne` (org admins only):
 
-- Triggered when API returns 402 `subscription_required` (B4 wires
-  this — `app/core/deps.require_active_trial_or_subscription`).
-- Centered card on blurred app-shell background — one-screen
-  exception to the no-glassmorphism rule (`backdrop-filter: blur(8px)`).
-- Headline: `Vaše zkušební doba skončila.`
-- Two-card mini pricing (monthly + annual; mobile stacks). Annual
-  carries the magenta `Ušetříte 16 %` badge. Each shows dynamic
-  `S Vašimi {N} uživateli ušetříte {N × 18900 minor → formatted}` on
-  the annual card.
-- Below: link `Potřebujete víc? Domluvte se na enterprise balíčku.`
-  → contact modal (or mailto fallback for unauthenticated, but here
-  the user IS authenticated since the gate fires after login).
-- Footer: `Vybrat plán` (primary, disabled until card selected) and
-  `Exportovat data` (ghost).
-- Tertiary: `Máte otázky? Napište nám na podpora@simplecrm.cz`
-- On `Vybrat plán` click after selecting:
-  - `POST /api/v1/organizations/current/subscription/choose-plan`
-  - 200 → confirmation card: `Děkujeme. Pošleme vám platební instrukce.`
-  - Org stays gated until founder activates via super-admin UI.
-- For `is_comp=true` orgs the gate is **never** shown (B2's
-  `is_app_access_allowed` returns true unconditionally).
-- For enterprise orgs whose `current_period_ends_at` has passed,
-  CTA changes to `Kontaktovat obchod` only (no monthly/annual cards).
+- **Aktuální plán** card — plan name + status pill (`Zkušební
+  verze` / `Aktivní` / `Čeká na platbu` / `Komplementární` /
+  `Po splatnosti` / `Zrušeno`). Comp orgs get an extra line and
+  hidden actions; enterprise orgs show `Vlastní balíček · …` plus a
+  contact CTA; standard trial/active/past_due orgs show a `Změnit
+  plán` button → modal with monthly/annual mini cards.
+- **Účtování** card (only non-comp/non-enterprise active subs):
+  users × effective price = total per period. Monthly orgs see a
+  projection `Pokud byste platili ročně, ušetříte {dynamic_savings}
+  ročně. [Přejít na roční]`. Annual orgs see `Šetříte {savings}
+  oproti měsíčnímu plánu.` Next renewal date via
+  `Intl.DateTimeFormat('cs-CZ')` (the date helper, not the currency
+  one — currency stays in `format.ts` per AC6).
+- **Faktury** card: placeholder `Faktury budou dostupné po první
+  platbě.` (real list when invoicing module ships).
+- All prices via `<PriceDisplay>`. No hardcoded `Kč`.
 
-Existing `frontend/src/auth/TrialExpiredGate.tsx` is a Phase-1
-placeholder — F4 replaces or substantially extends it. Read it
-first, decide whether to extend or rewrite.
+Reuse F4's `usePublicPlans`, `useBillingSummary`,
+`useCurrentSubscription`, plus the existing `useBillingSettings`.
+The "Změnit plán" modal can reuse `formatCzkMinor` from `format.ts`.
 
-For `S Vašimi {N} uživateli` — read the user count from
-`GET /api/v1/organizations/current/billing-summary`
-(`user_count` field). The endpoint already exists (B3).
+Spec the work first at `.claude/tasks/PAYGATE-F5.md` (mirror F4
+format). Implement. Verify in browser via Playwright by checking
+each variant (trial / active / comp / enterprise / past_due) by
+flipping `subscriptions.status` + `plan.code` via psql on the dev
+user's latest org. Commit as `feat(billing): in-app subscription
+settings page`.
 
-Reuse `<PriceDisplay>` for the two cards. Reuse the F2 pattern for
-the magenta badge (one element on the screen, top-right of the
-annual card).
+Optional polish during F5: extend the 402 payload to include `email`
+so F4's confirmation card can echo `Na e-mail {…} jsme odeslali
+fakturu…` per the brief. Right now it uses generic copy because the
+gate cannot fetch `/auth/me` (the gated endpoint). Tracked as a
+divergence in `.claude/tasks/PAYGATE-F4.md`.
 
-Spec the work first at `.claude/tasks/PAYGATE-F4.md` (mirror F2/F3
-spec format). Implement. Verify in browser via Playwright by
-flipping the test org's `trial_ends_at` to the past + status to
-`canceled` (the only status that always returns false from
-`is_app_access_allowed` once the date is past). Commit as
-`feat(billing): trial-expired pay gate with monthly/annual choice`.
-
-## After F4
+## After F5
 
 §10 commit plan in `docs/prompts/PAYGATE_TASK.md`:
-F5 in-app billing settings → F6 super-admin UI → integration tests
-→ final WORK_LOG / README polish.
+F6 super-admin UI → integration tests → final WORK_LOG / README
+polish.
 
 ## When everything is done
 
@@ -96,8 +86,9 @@ F5 in-app billing settings → F6 super-admin UI → integration tests
   on the host. Postgres is in `simplecrm-postgres-1` — start it with
   `docker start simplecrm-postgres-1` if it's stopped.
 - Push permissions are **not** granted; commits stay local.
-- The prompt's `PriceDisplay` is the **only** place
-  `Intl.NumberFormat` for currency is allowed — grep proves it.
+- Currency `Intl.NumberFormat` lives only in
+  `frontend/src/components/billing/format.ts` (AC6) — do not
+  re-instantiate in new files; import from there.
 - Dev-login via the LoginPage form **creates a fresh org each time**
   the user's old org disappears (per `upsert_dev_user` +
   `create_organization_with_admin`). When seeding test states via

@@ -105,25 +105,39 @@ describe("App routing", () => {
   });
 
   it("renders the trial gate when /auth/me returns 402", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          detail: {
-            detail: "Trial expired",
-            trial_ends_at: "2026-03-17T00:00:00+00:00",
-            organization_id: "00000000-0000-0000-0000-0000000000aa",
-          },
-        }),
-        { status: 402, headers: { "content-type": "application/json" } },
-      ),
-    );
+    fetchMock.mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            detail: {
+              code: "subscription_required",
+              current_status: "canceled",
+              is_comp: false,
+              can_choose_plan: true,
+              ends_at: "2026-03-17T00:00:00+00:00",
+            },
+          }),
+          { status: 402, headers: { "content-type": "application/json" } },
+        );
+      }
+      // The gate fetches plans / billing-summary / subscription internally.
+      // Stub them as empty/missing so the gate renders the chooser shell.
+      if (url.endsWith("/api/v1/plans/public")) {
+        return new Response("[]", {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return new Response("{}", { status: 404 });
+    });
     renderAt("/app", { token: "fake-token" });
     await waitFor(() =>
       expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
         /Vaše zkušební doba skončila/i,
       ),
     );
-    expect(screen.getByRole("button", { name: /přejít na předplatné/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Vybrat plán$/i })).toBeInTheDocument();
   });
 
   it("hydrates the session via /auth/refresh on cold-load (no in-memory token)", async () => {

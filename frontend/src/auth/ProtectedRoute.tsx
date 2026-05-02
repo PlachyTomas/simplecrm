@@ -92,12 +92,6 @@ export function ProtectedRoute({ children, requireOrg = true }: ProtectedRoutePr
         <TrialExpiredGate
           payload={trial}
           onExport={accessToken ? () => void downloadDataExport(accessToken) : undefined}
-          onSubscribe={() => {
-            // Subscription flow doesn't exist yet (Stripe lands later). Until
-            // it does, route the user to support so they can move forward
-            // without hitting a dead button.
-            window.location.href = "mailto:podpora@simplecrm.cz?subject=Předplatné%20SimpleCRM";
-          }}
         />
       );
     }

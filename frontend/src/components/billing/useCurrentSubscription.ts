@@ -11,13 +11,14 @@ export type SubscriptionOut = components["schemas"]["SubscriptionOut"];
  * (to hide the badge for paid orgs), the pay-gate (F4), and the
  * in-app billing settings (F5).
  *
- * Errors and 401/404/5xx swallow to `undefined` so callers can fall
- * back to default behavior — we only positively act when we *know*
- * the subscription state, never when we're guessing.
+ * 401/404/5xx swallow to `null` (React Query disallows undefined
+ * return values) so callers can fall back to default behavior — we
+ * only positively act when we *know* the subscription state, never
+ * when we're guessing.
  */
 export function useCurrentSubscription() {
   const { accessToken } = useAuth();
-  return useQuery<SubscriptionOut | undefined>({
+  return useQuery<SubscriptionOut | null>({
     queryKey: ["subscription", "current"],
     enabled: !!accessToken,
     staleTime: 60 * 1000,
@@ -29,7 +30,7 @@ export function useCurrentSubscription() {
           { token: accessToken },
         );
       } catch (err) {
-        if (err instanceof ApiError) return undefined;
+        if (err instanceof ApiError) return null;
         throw err;
       }
     },

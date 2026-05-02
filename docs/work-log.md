@@ -1036,3 +1036,81 @@ Next: F3 — trial countdown UI updates.
 - 44 frontend tests pass; lint + typecheck clean.
 
 Next: F4 — trial-expired pay gate (full-screen takeover).
+
+### F4 — Trial-expired pay gate
+
+- `frontend/src/lib/api.ts` — `TrialExpiredPayload` and `isTrialExpired`
+  were stale, still expecting the pre-B4 `{detail: "Trial expired", …}`
+  shape. B4 reshaped the 402 to `{code: 'subscription_required',
+  current_status, is_comp, can_choose_plan, ends_at}` but the frontend
+  guard hadn't been updated, so the gate would never fire on a real
+  expired trial. Refreshed both.
+- `frontend/src/auth/ProtectedRoute.tsx` — `extractTrialPayload` works
+  with the new shape unchanged; dropped the `onSubscribe` mailto
+  fallback (the gate runs its own POST now).
+- `frontend/src/components/billing/format.ts` — **new**, single home
+  for `Intl.NumberFormat` for currency. Exports `formatCzk`,
+  `formatCzkMinor`, `formatCzkMinorWithFraction`. AC6 ("PriceDisplay
+  is the only place currency is formatted") is preserved by having
+  PriceDisplay import from this helper rather than re-instantiating.
+  Same module is now reusable from the gate's inline savings caption.
+- `frontend/src/components/billing/PriceDisplay.tsx` — switched to
+  `format.ts` helpers; behavior unchanged.
+- `frontend/src/components/billing/useBillingSummary.ts` — **new**.
+  TanStack hook for `GET /organizations/current/billing-summary`.
+  60s cache. Errors swallow to `null` (React Query disallows
+  `undefined` returns from queryFn — F3's `useCurrentSubscription`
+  had the same latent bug; both hooks fixed in this commit).
+- `frontend/src/components/billing/usePublicPlans.ts` — **new**;
+  extracted from `marketing/cenikData.ts` so the gate, F5, and F6 can
+  reuse it. `cenikData.ts` now re-exports through the shared module.
+- `frontend/src/auth/TrialExpiredGate.tsx` — substantially rewritten.
+  Two-card mini chooser (monthly + annual) as native radio cards with
+  `role="radio"`, keyboard select on Enter/Space, `border-accent`
+  highlight on selection. Annual card carries the magenta `Ušetříte
+  16 %` badge — single magenta element on the screen. Dynamic savings
+  caption reads `BillingSummary.savings_minor` and renders
+  `S Vaším 1 uživatelem ušetříte X Kč ročně.` (singular instrumental
+  for N=1; plural for N≥2 — inline in the gate, not added to
+  `csNoun` since this is the only place that needs the instrumental
+  case). Primary `Vybrat plán` button is disabled until selection;
+  click fires `POST /subscription/choose-plan` and renders the
+  confirmation card on 200, an inline error otherwise. Ghost
+  `Exportovat data` reuses `ProtectedRoute.downloadDataExport` (the
+  reports endpoint deliberately bypasses the trial gate). Tertiary
+  `Máte otázky? Napište nám na podpora@simplecrm.cz`. Native
+  `<dialog>` for the contact-enterprise modal (`expected_users` +
+  `message` form, POSTs to `/contact-enterprise`). Enterprise variant
+  fires when `useCurrentSubscription().data.plan.code === "enterprise"`
+  — single `Kontaktovat obchod` CTA, no plan cards. Comp orgs render
+  nothing (defensive — they should never reach the gate; failing
+  closed beats accidentally collecting payment intent).
+- **Brief divergence:** §6 F4 calls for echoing `Na e-mail
+  {billingEmail} jsme odeslali fakturu…` in the confirmation card.
+  Can't fetch — `/auth/me` is exactly the gated endpoint. Generic
+  copy used instead (`Na váš e-mail odešleme fakturu a platební
+  údaje.`). F5 can revisit by adding `email` to the 402 payload.
+- `frontend/src/auth/useCurrentUser.ts` — left untouched after a
+  brief detour; the gate no longer calls it (it's the gated endpoint
+  itself, calling it from inside the gate would loop).
+- `frontend/src/__tests__/trialExpiredGate.test.tsx` — **new**, 10
+  tests: chooser render, primary disabled-until-selected, annual +
+  savings caption (N=8), singular instrumental (N=1), POST round-trip
+  + confirmation, error keeps chooser, enterprise variant hides
+  cards, single magenta-badge invariant, comp-payload renders
+  nothing, `onExport` callback, keyboard `Space` selection.
+- `frontend/src/__tests__/App.test.tsx` — refreshed the trial-gate
+  mock to the B4 payload shape and stubbed the gate's internal
+  fetches.
+- Playwright verification (dev-login, then psql to flip
+  `subscription.status='canceled', current_period_ends_at` past for
+  the latest org per `created_at`): 1280 dark with chooser, annual
+  selected with indigo border, confirmation after POST (DB confirmed
+  `status='pending_activation', plan='annual'`), 390 mobile stack,
+  enterprise expired variant (no cards, `Kontaktovat obchod`),
+  contact-enterprise modal opens cleanly. Console only the expected
+  402 from `/auth/me`. DB reset back to trialing/30 days.
+- 54 frontend tests pass; 257 backend tests pass (one pre-existing
+  dev-login-config failure unchanged); typecheck + lint green.
+
+Next: F5 — `/app/nastaveni/predplatne` in-app billing settings page.

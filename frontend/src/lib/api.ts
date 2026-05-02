@@ -19,12 +19,14 @@ export class ApiError extends Error {
 }
 
 export interface TrialExpiredPayload {
-  detail: "Trial expired";
-  trial_ends_at: string;
-  organization_id: string;
+  code: "subscription_required";
+  current_status: string;
+  is_comp: boolean;
+  can_choose_plan: boolean;
+  ends_at: string | null;
 }
 
-export function isTrialExpired(err: unknown): err is ApiError & { body: TrialExpiredPayload } {
+export function isTrialExpired(err: unknown): err is ApiError & { body: unknown } {
   if (!(err instanceof ApiError) || err.status !== 402) return false;
   const body = err.body as { detail?: unknown } | undefined;
   const wrapped =
@@ -34,7 +36,7 @@ export function isTrialExpired(err: unknown): err is ApiError & { body: TrialExp
   return (
     !!wrapped &&
     typeof wrapped === "object" &&
-    (wrapped as { detail?: string }).detail === "Trial expired"
+    (wrapped as { code?: string }).code === "subscription_required"
   );
 }
 

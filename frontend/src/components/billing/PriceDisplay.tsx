@@ -1,3 +1,7 @@
+import {
+  formatCzk,
+  formatCzkMinorWithFraction,
+} from "@/components/billing/format";
 import { useBillingSettings } from "@/components/billing/useBillingSettings";
 import { cn } from "@/lib/utils";
 
@@ -45,17 +49,6 @@ const SUFFIX: Record<Interval, string> = {
   custom: "",
 };
 
-const cs = new Intl.NumberFormat("cs-CZ", {
-  style: "currency",
-  currency: "CZK",
-  maximumFractionDigits: 0,
-});
-
-const csWithFraction = new Intl.NumberFormat("cs-CZ", {
-  style: "currency",
-  currency: "CZK",
-  maximumFractionDigits: 2,
-});
 
 /**
  * The single place currency formatting + DPH copy lives. Imported by every
@@ -82,14 +75,13 @@ export function PriceDisplay({
   const rate = Number(settings?.vat_rate_percent ?? "21.00");
 
   const baseKc = baseMinor / 100;
-  const headline = cs.format(baseKc);
+  const headline = formatCzk(baseKc);
   const suffix = SUFFIX[interval];
 
   // Compute "with DPH" by raw multiplication; matches the backend's
   // Decimal.to_integral_value() for whole-haléře results, with safe rounding
   // at the haléře level.
   const withVatMinor = isVatPayer ? Math.round(baseMinor * (1 + rate / 100)) : baseMinor;
-  const withVatKc = withVatMinor / 100;
 
   return (
     <div className={cn("flex flex-col gap-1 tabular-nums", className)}>
@@ -107,7 +99,7 @@ export function PriceDisplay({
       {hideVatLine ? null : (
         <p className={cn("text-text-tertiary", SUB_CLASSES[size])}>
           {isVatPayer
-            ? `(${csWithFraction.format(withVatKc)} s DPH)`
+            ? `(${formatCzkMinorWithFraction(withVatMinor)} s DPH)`
             : "Nejsem plátce DPH"}
         </p>
       )}
