@@ -64,6 +64,21 @@ export function ReportsPage() {
     }
   }, [editMode, config.data, draft]);
 
+  // Escape exits edit mode without saving — keyboard parity with the
+  // "Zrušit" button. react-grid-layout's drag is mouse-only, so this
+  // is the only keyboard escape hatch we promise.
+  useEffect(() => {
+    if (!editMode) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setDraft(null);
+        setEditMode(false);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [editMode]);
+
   if (meLoading) {
     return (
       <div className="px-4 py-6 md:px-8 md:py-8">

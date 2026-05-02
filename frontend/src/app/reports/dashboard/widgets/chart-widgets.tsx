@@ -117,7 +117,12 @@ export function SalesLeaderboardWidget(props: BaseWidgetProps) {
     q.data?.items.map((item, i) => ({
       label: item.name,
       value: Number(item.metric_value),
-      display: formatLeaderboardValue(item.metric_value, config.metric, locale),
+      display: formatLeaderboardValue(
+        item.metric_value,
+        config.metric,
+        q.data!.currency,
+        locale,
+      ),
       rank: i + 1,
     })) ?? [];
 
@@ -150,16 +155,14 @@ export function SalesLeaderboardWidget(props: BaseWidgetProps) {
 function formatLeaderboardValue(
   raw: string | number,
   metric: string,
+  currency: string,
   locale: string,
 ): string {
   const n = Number(raw);
   if (Number.isNaN(n)) return String(raw);
   switch (metric) {
     case "won_value":
-      // The backend already filters to org currency, but the leader
-      // response doesn't echo it — fall back to a generic number when
-      // we don't know it. This is the only widget that hits this gap.
-      return formatNumber(n, locale);
+      return formatMoney(n, currency, locale);
     case "win_rate":
       return formatPercent(n, 1);
     case "won_count":

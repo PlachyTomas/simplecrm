@@ -134,6 +134,9 @@ class SalesLeaderboardItem(_BaseResponse):
 class SalesLeaderboardResponse(_BaseResponse):
     items: list[SalesLeaderboardItem]
     metric: str  # echoes the request's metric config
+    # Echoes org currency so the frontend can format `won_value`
+    # entries as money. Other metrics (count, percent) ignore it.
+    currency: str
 
 
 class RepActivityItem(_BaseResponse):

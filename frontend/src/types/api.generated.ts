@@ -244,7 +244,17 @@ export interface paths {
          */
         get: operations["export_deals_csv_api_v1_reports_export_csv_get"];
         put?: never;
-        post?: never;
+        /**
+         * Export Widgets Csv
+         * @description Render the visible widget set + filters as a single CSV.
+         *
+         *     REPORTS_TASK §R7: one section per widget separated by a blank
+         *     line and a header row, UTF-8 with BOM so Excel renders Czech
+         *     diacritics. The legacy `GET /reports/export-csv` (deals data
+         *     export, mounted in `data_export.py`) is intentionally a different
+         *     endpoint — same path, distinct method.
+         */
+        post: operations["export_widgets_csv_api_v1_reports_export_csv_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2962,6 +2972,8 @@ export interface components {
             items: components["schemas"]["SalesLeaderboardItem"][];
             /** Metric */
             metric: string;
+            /** Currency */
+            currency: string;
         };
         /** SetCompIn */
         SetCompIn: {
@@ -3403,6 +3415,39 @@ export interface components {
             lost_count: number;
             comparison: components["schemas"]["Comparison"] | null;
         };
+        /**
+         * _ExportCsvRequest
+         * @description Multi-widget CSV export body. Frontend sends the resolved
+         *     `from`/`to` ISO date pair (it already does the preset → range
+         *     resolution per widget request) plus the widget set + scope.
+         */
+        _ExportCsvRequest: {
+            /** Widgets */
+            widgets: components["schemas"]["_ExportWidgetItem"][];
+            /**
+             * From
+             * Format: date
+             */
+            from: string;
+            /**
+             * To
+             * Format: date
+             */
+            to: string;
+            /** Teamid */
+            teamId?: string | null;
+            /** Owneruserid */
+            ownerUserId?: string | null;
+        };
+        /** _ExportWidgetItem */
+        _ExportWidgetItem: {
+            /** Type */
+            type: string;
+            /** Config */
+            config?: {
+                [key: string]: unknown;
+            };
+        };
     };
     responses: never;
     parameters: never;
@@ -3705,6 +3750,39 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_widgets_csv_api_v1_reports_export_csv_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["_ExportCsvRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

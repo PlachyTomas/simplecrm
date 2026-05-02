@@ -87,6 +87,26 @@ export function BarChartWidget({
       role="img"
       aria-label={ariaLabel}
     >
+      {/* Visually-hidden data table so screen readers can read the chart
+          contents — Recharts itself isn't AT-friendly. Per
+          REPORTS_TASK §R9.3. */}
+      <table className="sr-only">
+        <caption>{ariaLabel}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Položka</th>
+            <th scope="col">Hodnota</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((d, i) => (
+            <tr key={i}>
+              <td>{d.name}</td>
+              <td>{d.display}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
       <ResponsiveContainer>
         <BarChart
           data={data}

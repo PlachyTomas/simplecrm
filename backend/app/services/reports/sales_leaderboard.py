@@ -192,4 +192,6 @@ async def compute_sales_leaderboard(
         ),
         reverse=True,
     )
-    return SalesLeaderboardResponse(items=items, metric=config.metric)
+    return SalesLeaderboardResponse(
+        items=items, metric=config.metric, currency=org.currency
+    )
