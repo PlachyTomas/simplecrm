@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
   type StageOut,
@@ -13,6 +13,7 @@ import {
 import { InvitationsSection } from "@/app/settings/InvitationsSection";
 import { TeamsSection } from "@/app/settings/TeamsSection";
 import { UsersSection } from "@/app/settings/UsersSection";
+import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { formatCzkMinor } from "@/components/billing/format";
@@ -36,6 +37,7 @@ type SettingsTab =
   | "invitations"
   | "appearance"
   | "permissions"
+  | "organization"
   | "billing"
   | "integrations";
 
@@ -69,6 +71,11 @@ const TABS: { key: SettingsTab; label: string; description: string }[] = [
     key: "permissions",
     label: "Oprávnění",
     description: "Pravidla, kdo a co může v aplikaci dělat.",
+  },
+  {
+    key: "organization",
+    label: "Organizace",
+    description: "Smluvní počet uživatelů a způsob fakturace.",
   },
   {
     key: "billing",
@@ -421,6 +428,7 @@ export function SettingsPage({ initialTab = "pipeline" }: SettingsPageProps = {}
       {activeTab === "invitations" ? <InvitationsSection /> : null}
       {activeTab === "appearance" ? <AppearanceSection /> : null}
       {activeTab === "permissions" ? <PermissionsSection /> : null}
+      {activeTab === "organization" ? <OrganizationSection /> : null}
       {activeTab === "billing" ? <BillingSection /> : null}
       {activeTab === "integrations" ? <IntegrationsSection /> : null}
       {activeTab !== "pipeline" ? null : isPending ? (
@@ -963,9 +971,15 @@ function BillingDetailsCard({ sub, summary, onSwitchToAnnual }: BillingDetailsCa
   const interval = planInterval(sub);
   const isAnnual = interval === "annual";
   const periodLabel = isAnnual ? "rok" : "měsíc";
-  const totalMinor = isAnnual
-    ? (summary.annual_total_minor ?? 0)
-    : summary.monthly_total_minor;
+  // Bill total is computed against the contracted seat_count, not the
+  // live active-user count — so a queued downsize that takes effect next
+  // period still bills the contracted amount this period, and a
+  // headcount that's below seats still pays for what was bought.
+  const billedSeats = sub.seat_count;
+  const perUserMinor = summary.effective_price_per_user_minor;
+  const monthlyContractTotal = perUserMinor * billedSeats;
+  const annualContractTotal = perUserMinor * 12 * billedSeats;
+  const totalMinor = isAnnual ? annualContractTotal : monthlyContractTotal;
   const renewalDate = formatCsDate(sub.current_period_ends_at);
 
   return (
@@ -973,9 +987,9 @@ function BillingDetailsCard({ sub, summary, onSwitchToAnnual }: BillingDetailsCa
       <h2 className="text-lg font-semibold">Účtování</h2>
 
       <p className="mt-4 text-sm text-text-secondary">
-        {summary.user_count} {csNoun(summary.user_count, "uzivatel")} ×{" "}
+        {billedSeats} {csNoun(billedSeats, "uzivatel")} ×{" "}
         <span className="font-medium text-text-primary">
-          {formatCzkMinor(summary.effective_price_per_user_minor)}
+          {formatCzkMinor(perUserMinor)}
         </span>{" "}
         ={" "}
         <span className="font-semibold text-text-primary">
@@ -1237,6 +1251,404 @@ function PlanModalCard({
         )}
       </div>
       {caption ? <div className="mt-3">{caption}</div> : null}
+    </div>
+  );
+}
+
+interface SubscriptionLite {
+  seat_count: number;
+  status: string;
+  current_period_ends_at: string | null;
+  plan: { code: string; display_name_cs: string };
+  pending_plan: { code: string; display_name_cs: string } | null;
+  pending_seat_count: number | null;
+  effective_price_per_user_minor: number | null;
+}
+
+function OrganizationSection() {
+  const subQuery = useCurrentSubscription();
+  const sub = subQuery.data as SubscriptionLite | null | undefined;
+  const usersPage = useOrgUsers();
+  const activeUsers = (usersPage.data?.items ?? []).filter((u) => u.is_active);
+
+  if (subQuery.isPending) {
+    return (
+      <section className="rounded-lg border border-border bg-surface p-6 text-sm text-text-tertiary">
+        Načítání…
+      </section>
+    );
+  }
+  if (!sub) {
+    return (
+      <section className="rounded-lg border border-border bg-surface p-6 text-sm text-danger" role="alert">
+        Načítání předplatného se nezdařilo.
+      </section>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <SeatCountCard
+        sub={sub}
+        activeUserCount={activeUsers.length}
+        activeUsers={activeUsers}
+      />
+      <BillingIntervalCard sub={sub} />
+    </div>
+  );
+}
+
+interface SeatCountCardProps {
+  sub: SubscriptionLite;
+  activeUserCount: number;
+  activeUsers: components["schemas"]["UserOut"][];
+}
+
+function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps) {
+  const { accessToken } = useAuth();
+  const qc = useQueryClient();
+  const { data: me } = useCurrentUser();
+  const [draft, setDraft] = useState<string>(String(sub.seat_count));
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [error, setError] = useState<string | null>(null);
+  const [savedFlash, setSavedFlash] = useState(false);
+
+  useEffect(() => {
+    setDraft(String(sub.seat_count));
+    setPicked(new Set());
+    setError(null);
+  }, [sub.seat_count]);
+
+  const target = Number(draft);
+  const targetValid = Number.isFinite(target) && target >= 1 && target <= 500;
+  const needsToDeactivate = targetValid && target < activeUserCount;
+  const requiredCount = needsToDeactivate ? activeUserCount - target : 0;
+  const pickedArray = useMemo(() => Array.from(picked), [picked]);
+
+  const mutation = useMutation<unknown, Error, void>({
+    mutationFn: async () => {
+      return apiFetch("/api/v1/organizations/current/subscription/seat-count", {
+        method: "PUT",
+        token: accessToken,
+        body: {
+          seat_count: target,
+          deactivate_user_ids: needsToDeactivate ? pickedArray : [],
+        },
+      });
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["subscription", "current"] });
+      void qc.invalidateQueries({ queryKey: ["billing-summary", "current"] });
+      void qc.invalidateQueries({ queryKey: ["users", "org"] });
+      setSavedFlash(true);
+      setPicked(new Set());
+      window.setTimeout(() => setSavedFlash(false), 2500);
+    },
+    onError: (err) => {
+      if (err instanceof ApiError) {
+        const detail = (err.body as { detail?: { detail?: string } })?.detail;
+        const msg = typeof detail === "string" ? detail : detail?.detail;
+        setError(msg ?? "Uložení se nezdařilo.");
+      } else {
+        setError("Něco se pokazilo. Zkontrolujte připojení.");
+      }
+    },
+  });
+
+  function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!targetValid) {
+      setError("Hodnota musí být v rozsahu 1–500.");
+      return;
+    }
+    if (target === sub.seat_count) return;
+    if (needsToDeactivate && picked.size !== requiredCount) {
+      setError(
+        `Snížením na ${target} ztratí přístup ${requiredCount} uživatelů — vyberte přesně ${requiredCount}.`,
+      );
+      return;
+    }
+    mutation.mutate();
+  }
+
+  function togglePick(id: string) {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // Anyone who's still active and isn't the founding admin themself.
+  const eligibleVictims = activeUsers.filter((u) => u.id !== me?.id);
+
+  return (
+    <form
+      onSubmit={onSubmit}
+      className="rounded-lg border border-border bg-surface p-6"
+    >
+      <header>
+        <h2 className="text-lg font-semibold">Smluvní počet uživatelů</h2>
+        <p className="mt-1 text-sm text-text-tertiary">
+          Aktuálně máte {activeUserCount} aktivních uživatelů z {sub.seat_count}{" "}
+          smluvních. Limit ovlivňuje, kolik pozvánek lze odeslat, a odpovídá
+          fakturované ceně.
+        </p>
+      </header>
+
+      <label className="mt-4 block text-sm font-medium text-text-primary">
+        Cílový počet uživatelů
+        <input
+          type="number"
+          min={1}
+          max={500}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          className="mt-1 block h-10 w-32 rounded-md border border-border bg-bg px-3 text-sm tabular-nums text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+        />
+      </label>
+
+      {needsToDeactivate ? (
+        <div className="mt-4 rounded-md border border-warning/40 bg-warning-subtle p-4">
+          <p className="text-sm font-medium text-text-primary">
+            Snížením na {target} ztratí přístup {requiredCount}{" "}
+            {requiredCount === 1 ? "uživatel" : "uživatelů"}.
+          </p>
+          <p className="mt-1 text-xs text-text-secondary">
+            Vyberte koho chcete deaktivovat. Sami sebe odstranit nemůžete.
+            Účet uživatele zůstane v databázi (pro historii dat), ale ztratí
+            přihlášení.
+          </p>
+          <ul className="mt-3 space-y-1.5">
+            {eligibleVictims.map((u) => {
+              const checked = picked.has(u.id);
+              return (
+                <li key={u.id}>
+                  <label className="flex items-center gap-2 rounded-md px-1 py-1 text-sm hover:bg-surface-overlay">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => togglePick(u.id)}
+                      className="h-4 w-4"
+                    />
+                    <span className="font-medium text-text-primary">{u.name}</span>
+                    <span className="text-xs text-text-tertiary">
+                      · {u.email}
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+            {eligibleVictims.length === 0 ? (
+              <li className="text-xs text-text-tertiary">
+                Nelze snížit pod 1 — jste jediný aktivní uživatel.
+              </li>
+            ) : null}
+          </ul>
+          <p className="mt-2 text-xs text-text-tertiary">
+            Vybráno {picked.size} z {requiredCount}.
+          </p>
+        </div>
+      ) : null}
+
+      {error ? (
+        <p
+          role="alert"
+          className="mt-4 rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
+        >
+          {error}
+        </p>
+      ) : null}
+
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={
+            mutation.isPending ||
+            !targetValid ||
+            target === sub.seat_count ||
+            (needsToDeactivate && picked.size !== requiredCount)
+          }
+          className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {mutation.isPending ? "Ukládáme…" : "Uložit počet"}
+        </button>
+        {savedFlash ? (
+          <span className="text-sm text-success" role="status">
+            Uloženo.
+          </span>
+        ) : null}
+      </div>
+    </form>
+  );
+}
+
+function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
+  const { accessToken } = useAuth();
+  const qc = useQueryClient();
+
+  const currentInterval: "monthly" | "annual" | "other" =
+    sub.plan.code === "monthly"
+      ? "monthly"
+      : sub.plan.code === "annual"
+        ? "annual"
+        : "other";
+  const pendingInterval: "monthly" | "annual" | null =
+    sub.pending_plan?.code === "monthly"
+      ? "monthly"
+      : sub.pending_plan?.code === "annual"
+        ? "annual"
+        : null;
+  const effective = pendingInterval ?? currentInterval;
+
+  const [target, setTarget] = useState<"monthly" | "annual">(
+    effective === "annual" ? "annual" : "monthly",
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [savedFlash, setSavedFlash] = useState(false);
+
+  useEffect(() => {
+    setTarget(effective === "annual" ? "annual" : "monthly");
+  }, [effective]);
+
+  const mutation = useMutation<unknown, Error, void>({
+    mutationFn: async () => {
+      return apiFetch("/api/v1/organizations/current/subscription/change-interval", {
+        method: "POST",
+        token: accessToken,
+        body: { plan_code: target },
+      });
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["subscription", "current"] });
+      void qc.invalidateQueries({ queryKey: ["billing-summary", "current"] });
+      setSavedFlash(true);
+      window.setTimeout(() => setSavedFlash(false), 2500);
+    },
+    onError: () => setError("Uložení se nezdařilo. Zkuste to znovu."),
+  });
+
+  function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (target === effective) return;
+    mutation.mutate();
+  }
+
+  // For trial-stage orgs, the "current" interval is the trial; the
+  // pending plan is what they intend to land on. Show that wording
+  // explicitly so the admin understands what changes when.
+  const isTrial = sub.plan.code === "trial";
+  const switchTakesEffect = isTrial
+    ? "po skončení zkušební doby"
+    : "při dalším zúčtovacím období";
+
+  return (
+    <form
+      onSubmit={onSubmit}
+      className="rounded-lg border border-border bg-surface p-6"
+    >
+      <header>
+        <h2 className="text-lg font-semibold">Způsob fakturace</h2>
+        <p className="mt-1 text-sm text-text-tertiary">
+          Změna se projeví {switchTakesEffect}. Nezasahuje do aktuálního období.
+        </p>
+      </header>
+
+      <div
+        role="radiogroup"
+        aria-label="Způsob fakturace"
+        className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"
+      >
+        <IntervalRadio
+          code="monthly"
+          title="Měsíční"
+          subtitle="Účtováno každý měsíc"
+          selected={target === "monthly"}
+          onSelect={() => setTarget("monthly")}
+        />
+        <IntervalRadio
+          code="annual"
+          title="Roční"
+          subtitle="Účtováno jednou ročně, ušetříte 16 %"
+          selected={target === "annual"}
+          onSelect={() => setTarget("annual")}
+        />
+      </div>
+
+      {pendingInterval && pendingInterval !== currentInterval ? (
+        <p className="mt-4 rounded-md border border-info/40 bg-info-subtle px-3 py-2 text-sm text-info">
+          Aktuálně účtujeme {currentInterval === "monthly" ? "měsíčně" : currentInterval === "annual" ? "ročně" : "dle vašeho plánu"}.
+          Při dalším období přejdete na{" "}
+          {pendingInterval === "annual" ? "roční" : "měsíční"} fakturaci.
+        </p>
+      ) : null}
+
+      {error ? (
+        <p
+          role="alert"
+          className="mt-4 rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
+        >
+          {error}
+        </p>
+      ) : null}
+
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={mutation.isPending || target === effective}
+          className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {mutation.isPending ? "Ukládáme…" : "Uložit způsob fakturace"}
+        </button>
+        {savedFlash ? (
+          <span className="text-sm text-success" role="status">
+            Uloženo.
+          </span>
+        ) : null}
+      </div>
+    </form>
+  );
+}
+
+function IntervalRadio({
+  code,
+  title,
+  subtitle,
+  selected,
+  onSelect,
+}: {
+  code: string;
+  title: string;
+  subtitle: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <div
+      role="radio"
+      aria-checked={selected}
+      tabIndex={0}
+      data-interval={code}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      className={cn(
+        "cursor-pointer rounded-md border-2 bg-surface p-4 transition-colors",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg",
+        selected
+          ? "border-accent shadow-sm"
+          : "border-border hover:border-text-tertiary",
+      )}
+    >
+      <p className="text-sm font-semibold text-text-primary">{title}</p>
+      <p className="mt-0.5 text-xs text-text-tertiary">{subtitle}</p>
     </div>
   );
 }

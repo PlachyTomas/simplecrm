@@ -78,11 +78,15 @@ class VatBreakdown:
 async def get_current_subscription(
     session: AsyncSession, org_id: uuid.UUID
 ) -> Subscription:
-    """Return the unique Subscription row for `org_id` (eagerly joins Plan)."""
+    """Return the unique Subscription row for `org_id` (eagerly joins Plan
+    and pending_plan — both are read by the SubscriptionOut serializer)."""
     sub = (
         await session.execute(
             select(Subscription)
-            .options(selectinload(Subscription.plan))
+            .options(
+                selectinload(Subscription.plan),
+                selectinload(Subscription.pending_plan),
+            )
             .where(Subscription.organization_id == org_id)
         )
     ).scalar_one_or_none()
