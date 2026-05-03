@@ -164,13 +164,21 @@ function setupFetch(opts: SetupOpts) {
     if (url.endsWith("/api/v1/organizations/current/billing-summary"))
       return jsonResponse(summary);
     if (url.includes("/api/v1/pipeline")) return jsonResponse(PIPELINE);
-    if (url.endsWith("/api/v1/organizations/current/subscription/choose-plan")) {
+    if (url.includes("/api/v1/payments/invoices")) {
+      return jsonResponse({ items: [], total: 0 });
+    }
+    if (url.endsWith("/api/v1/payments/initial-payment-init")) {
       calls.push({
         url,
         body: init?.body ? JSON.parse(init.body as string) : null,
       });
       if (opts.choosePlanFails) return new Response("err", { status: 500 });
-      return jsonResponse({ ok: true });
+      return jsonResponse({
+        redirect_url: "https://payments.comgate.cz/client/instructions/index?id=TEST",
+        invoice_id: "00000000-0000-0000-0000-000000000099",
+        amount_minor: 99000,
+        currency: "CZK",
+      });
     }
     return new Response("not found", { status: 404 });
   });
@@ -293,9 +301,13 @@ describe("Billing settings page", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: /^Faktury$/ })).toBeInTheDocument(),
     );
-    expect(
-      screen.getByText(/Faktury budou dostupné po první platbě\./i),
-    ).toBeInTheDocument();
+    // The InvoicesCard's empty-state copy only renders once
+    // /payments/invoices resolves (items.length === 0).
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Faktury budou dostupné po první platbě\./i),
+      ).toBeInTheDocument(),
+    );
   });
 
   it("Účtování → Přejít na roční opens modal with annual pre-selected → POSTs choose-plan", async () => {
@@ -316,7 +328,7 @@ describe("Billing settings page", () => {
     );
     const annualCard = screen.getByRole("radio", { name: /Roční/i });
     expect(annualCard).toHaveAttribute("aria-checked", "true");
-    fireEvent.click(screen.getByRole("button", { name: /^Vybrat plán$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Pokračovat na platbu$/i }));
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]?.body).toEqual({ plan_code: "annual" });
   });
@@ -335,6 +347,6 @@ describe("Billing settings page", () => {
     const annual = screen.getByRole("radio", { name: /Roční/i });
     expect(monthly).toHaveAttribute("aria-checked", "false");
     expect(annual).toHaveAttribute("aria-checked", "false");
-    expect(screen.getByRole("button", { name: /^Vybrat plán$/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^Pokračovat na platbu$/i })).toBeDisabled();
   });
 });

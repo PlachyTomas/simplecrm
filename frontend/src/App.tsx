@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "@/app/AppShell";
 import { MorePage } from "@/app/MorePage";
+import { BillingReturnPage } from "@/app/billing/BillingReturnPage";
 import { CompaniesListPage } from "@/app/companies/CompaniesListPage";
 import { CompanyDetailPage } from "@/app/companies/CompanyDetailPage";
 import { ContactsPage } from "@/app/contacts/ContactsPage";
@@ -63,6 +64,7 @@ export function AppRoutes() {
           path="nastaveni/predplatne"
           element={<SettingsPage initialTab="billing" />}
         />
+        <Route path="billing/return" element={<BillingReturnPage />} />
         <Route path="more" element={<MorePage />} />
       </Route>
       <Route

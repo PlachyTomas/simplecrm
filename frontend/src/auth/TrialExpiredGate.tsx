@@ -5,8 +5,9 @@ import { formatCzkMinor } from "@/components/billing/format";
 import { PriceDisplay } from "@/components/billing/PriceDisplay";
 import { useBillingSummary } from "@/components/billing/useBillingSummary";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
+import { useInitialPaymentInit } from "@/components/billing/usePayments";
 import { usePublicPlans } from "@/components/billing/usePublicPlans";
-import { ApiError, apiFetch, type TrialExpiredPayload } from "@/lib/api";
+import { type TrialExpiredPayload } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/usePageTitle";
 
@@ -31,10 +32,10 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
   const summary = useBillingSummary();
   const plans = usePublicPlans();
   const subscription = useCurrentSubscription();
+  const initPayment = useInitialPaymentInit();
 
   const [selected, setSelected] = useState<PlanCode | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted] = useState(false); // legacy "thank-you" panel kept for shape; no longer flipped
   const [error, setError] = useState<string | null>(null);
   const contactDialogRef = useRef<HTMLDialogElement | null>(null);
 
@@ -46,27 +47,27 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
   const monthlyPlan = plans.data?.find((p) => p.code === "monthly");
   const annualPlan = plans.data?.find((p) => p.code === "annual");
   const isEnterpriseExpired = subscription.data?.plan?.code === "enterprise";
+  const submitting = initPayment.isPending;
 
-  async function onSubmitChoosePlan() {
+  function onSubmitChoosePlan() {
     if (!selected || !accessToken) return;
-    setSubmitting(true);
     setError(null);
-    try {
-      await apiFetch("/api/v1/organizations/current/subscription/choose-plan", {
-        method: "POST",
-        token: accessToken,
-        body: { plan_code: selected },
-      });
-      setSubmitted(true);
-    } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? "Nepodařilo se odeslat výběr plánu. Zkuste to prosím znovu."
-          : "Něco se pokazilo. Zkontrolujte připojení a zkuste to znovu.",
-      );
-    } finally {
-      setSubmitting(false);
-    }
+    initPayment.mutate(
+      { plan_code: selected },
+      {
+        onSuccess: (init) => {
+          // Send the customer to the ComGate hosted payment page.
+          // They'll come back to /app/billing/return where we read
+          // the resulting subscription state.
+          window.location.assign(init.redirect_url);
+        },
+        onError: () => {
+          setError(
+            "Platební brána není dostupná, zkuste to prosím za chvíli.",
+          );
+        },
+      },
+    );
   }
 
   function openContactModal() {
@@ -166,7 +167,7 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
                 disabled={!selected || submitting}
                 className="inline-flex h-11 items-center justify-center rounded-md bg-accent px-6 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {submitting ? "Odesíláme…" : "Vybrat plán"}
+                {submitting ? "Přesměrování…" : "Pokračovat na platbu"}
               </button>
               <button
                 type="button"

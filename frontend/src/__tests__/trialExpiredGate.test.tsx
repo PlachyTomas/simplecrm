@@ -135,13 +135,18 @@ function setupFetch(opts: MockOpts = {}) {
       return jsonResponse(sub);
     if (url.endsWith("/api/v1/organizations/current/billing-summary"))
       return jsonResponse(summary);
-    if (url.endsWith("/api/v1/organizations/current/subscription/choose-plan")) {
+    if (url.endsWith("/api/v1/payments/initial-payment-init")) {
       choosePlanCalls.push({
         url,
         body: init?.body ? JSON.parse(init.body as string) : null,
       });
       if (opts.choosePlanFails) return new Response("err", { status: 500 });
-      return jsonResponse({ ok: true });
+      return jsonResponse({
+        redirect_url: "https://payments.comgate.cz/client/instructions/index?id=TEST",
+        invoice_id: "00000000-0000-0000-0000-000000000001",
+        amount_minor: 99000,
+        currency: "CZK",
+      });
     }
     if (url.endsWith("/api/v1/organizations/current/subscription/contact-enterprise")) {
       return jsonResponse({ ok: true });
@@ -200,7 +205,7 @@ describe("TrialExpiredGate", () => {
     const annualCard = await screen.findByRole("radio", { name: /Roční/i });
     expect(monthlyCard).toHaveAttribute("aria-checked", "false");
     expect(annualCard).toHaveAttribute("aria-checked", "false");
-    expect(screen.getByRole("button", { name: /^Vybrat plán$/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^Pokračovat na platbu$/i })).toBeDisabled();
   });
 
   it("enables the primary CTA after selecting annual and shows the dynamic savings caption", async () => {
@@ -212,7 +217,7 @@ describe("TrialExpiredGate", () => {
     );
     fireEvent.click(annualCard);
     expect(annualCard).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByRole("button", { name: /^Vybrat plán$/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /^Pokračovat na platbu$/i })).toBeEnabled();
   });
 
   it("uses singular instrumental for N=1", async () => {
@@ -226,32 +231,47 @@ describe("TrialExpiredGate", () => {
     );
   });
 
-  it("POSTs choose-plan and shows the confirmation card on 200", async () => {
+  it("POSTs initial-payment-init and redirects to ComGate hosted page on 200", async () => {
     const { choosePlanCalls } = setupFetch({ userCount: 8 });
-    renderGate();
-    const annualCard = await screen.findByRole("radio", { name: /Roční/i });
-    fireEvent.click(annualCard);
-    fireEvent.click(screen.getByRole("button", { name: /^Vybrat plán$/i }));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("heading", { name: /Děkujeme\. Pošleme vám platební instrukce\./i }),
-      ).toBeInTheDocument(),
-    );
-    expect(choosePlanCalls).toHaveLength(1);
-    expect(choosePlanCalls[0]?.body).toEqual({ plan_code: "annual" });
-    expect(
-      screen.getByText(/Po připsání platby vás aktivujeme do 24 hodin/i),
-    ).toBeInTheDocument();
+    // Spy on window.location.assign — the redirect away from the SPA.
+    const assign = vi.fn();
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      writable: true,
+      value: { ...originalLocation, assign },
+    });
+    try {
+      renderGate();
+      const annualCard = await screen.findByRole("radio", { name: /Roční/i });
+      fireEvent.click(annualCard);
+      fireEvent.click(
+        screen.getByRole("button", { name: /^Pokračovat na platbu$/i }),
+      );
+      await waitFor(() => expect(choosePlanCalls).toHaveLength(1));
+      expect(choosePlanCalls[0]?.body).toEqual({ plan_code: "annual" });
+      await waitFor(() =>
+        expect(assign).toHaveBeenCalledWith(
+          "https://payments.comgate.cz/client/instructions/index?id=TEST",
+        ),
+      );
+    } finally {
+      Object.defineProperty(window, "location", {
+        writable: true,
+        value: originalLocation,
+      });
+    }
   });
 
-  it("shows an error and keeps the chooser visible when choose-plan fails", async () => {
+  it("shows an error and keeps the chooser visible when initial-payment-init fails", async () => {
     setupFetch({ choosePlanFails: true });
     renderGate();
     const monthlyCard = await screen.findByRole("radio", { name: /Měsíční/i });
     fireEvent.click(monthlyCard);
-    fireEvent.click(screen.getByRole("button", { name: /^Vybrat plán$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Pokračovat na platbu$/i }));
     await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(/Nepodařilo se odeslat výběr plánu/i),
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /Platební brána není dostupná/i,
+      ),
     );
     // Chooser still mounted.
     expect(screen.getByRole("radio", { name: /Měsíční/i })).toBeInTheDocument();

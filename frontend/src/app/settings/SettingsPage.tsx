@@ -21,6 +21,15 @@ import { PriceDisplay } from "@/components/billing/PriceDisplay";
 import { useBillingSummary } from "@/components/billing/useBillingSummary";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
 import { usePublicPlans } from "@/components/billing/usePublicPlans";
+import {
+  isSeatUpgradePaymentRequired,
+  useCancelSubscription,
+  useInitialPaymentInit,
+  useInvoices,
+  useReactivateSubscription,
+  useSeatChangeInit,
+  type InvoiceOut,
+} from "@/components/billing/usePayments";
 import { ApiError, apiFetch } from "@/lib/api";
 import { csNoun } from "@/lib/i18n/nouns";
 import { ThemeToggle } from "@/lib/ThemeToggle";
@@ -834,7 +843,8 @@ function BillingSection() {
         summary={summary}
         onSwitchToAnnual={() => openModal("annual")}
       />
-      <InvoicesPlaceholderCard />
+      <InvoicesCard />
+      <CancelSubscriptionCard sub={sub} />
       {modalOpen ? (
         <ChoosePlanModal preselect={modalPreselect} onClose={closeModal} />
       ) : null}
@@ -1034,13 +1044,219 @@ function BillingDetailsCard({ sub, summary, onSwitchToAnnual }: BillingDetailsCa
   );
 }
 
-function InvoicesPlaceholderCard() {
+const INVOICE_KIND_LABEL: Record<InvoiceOut["kind"], string> = {
+  initial: "První aktivace",
+  renewal: "Obnova",
+  seat_upgrade: "Navýšení uživatelů",
+};
+
+const INVOICE_STATUS_PILL: Record<
+  InvoiceOut["status"],
+  { label: string; className: string }
+> = {
+  paid: { label: "Zaplaceno", className: "bg-success-subtle text-success" },
+  pending: { label: "Čeká", className: "bg-warning-subtle text-warning" },
+  failed: { label: "Selhalo", className: "bg-danger-subtle text-danger" },
+  refunded: { label: "Vráceno", className: "bg-info-subtle text-info" },
+};
+
+function InvoicesCard() {
+  const invoices = useInvoices();
+
   return (
     <section className="rounded-lg border border-border bg-surface p-6">
       <h2 className="text-lg font-semibold">Faktury</h2>
+      {invoices.isPending ? (
+        <p className="mt-3 text-sm text-text-tertiary">Načítání…</p>
+      ) : invoices.isError ? (
+        <p className="mt-3 text-sm text-danger" role="alert">
+          Faktury se nepodařilo načíst.
+        </p>
+      ) : !invoices.data || invoices.data.items.length === 0 ? (
+        <p className="mt-3 text-sm text-text-secondary">
+          Faktury budou dostupné po první platbě.
+        </p>
+      ) : (
+        <ul className="mt-4 divide-y divide-border-subtle">
+          {invoices.data.items.map((inv) => {
+            const pill = INVOICE_STATUS_PILL[inv.status];
+            const created = formatCsDate(inv.created_at) ?? "";
+            return (
+              <li
+                key={inv.id}
+                className="flex flex-wrap items-center justify-between gap-3 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-text-primary">
+                    {INVOICE_KIND_LABEL[inv.kind]}
+                  </p>
+                  <p className="text-xs text-text-tertiary">
+                    {created}
+                    {inv.seats != null ? ` · ${inv.seats} ${csNoun(inv.seats, "uzivatel")}` : ""}
+                    {inv.failure_reason ? ` · ${inv.failure_reason}` : ""}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm tabular-nums text-text-primary">
+                    {formatCzkMinor(inv.amount_minor)}
+                  </span>
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                      pill.className,
+                    )}
+                  >
+                    {pill.label}
+                  </span>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+interface CancelSubscriptionCardProps {
+  sub: SubscriptionOut | null | undefined;
+}
+
+function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
+  const cancel = useCancelSubscription();
+  const reactivate = useReactivateSubscription();
+  const [confirming, setConfirming] = useState(false);
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  // Hide entirely for orgs that can't self-cancel: comp + enterprise go
+  // through the founder, trial doesn't have an active subscription to
+  // cancel, and an already-canceled-and-period-expired sub can't be
+  // reactivated anyway.
+  if (!sub) return null;
+  if (sub.is_comp) return null;
+  if (sub.plan?.code === "enterprise") return null;
+  if (sub.status === "trialing" || sub.status === "pending_activation") return null;
+
+  // Distinguishes "already self-cancelled, can still un-cancel" from
+  // "active, can cancel". The backend uses canceled_at != null + status
+  // 'active' as the "scheduled to cancel at period end" signal.
+  const isScheduledForCancel = sub.canceled_at != null && sub.status === "active";
+  const endsAt = formatCsDate(sub.current_period_ends_at);
+
+  if (isScheduledForCancel) {
+    return (
+      <section className="rounded-lg border border-warning/40 bg-warning-subtle p-6">
+        <h2 className="text-lg font-semibold text-text-primary">
+          Předplatné je naplánované ke zrušení
+        </h2>
+        <p className="mt-3 text-sm text-text-primary">
+          {endsAt
+            ? `Přístup do aplikace zachováme do ${endsAt}. Poté pay-gate omezí činnost — data můžete kdykoli vyexportovat.`
+            : "Přístup do aplikace zachováme do konce aktuálního období. Poté pay-gate omezí činnost — data můžete kdykoli vyexportovat."}
+        </p>
+        {error ? (
+          <p
+            role="alert"
+            className="mt-3 rounded-md border border-danger/40 bg-bg px-3 py-2 text-sm text-danger"
+          >
+            {error}
+          </p>
+        ) : null}
+        <button
+          type="button"
+          disabled={reactivate.isPending}
+          onClick={() => {
+            setError(null);
+            reactivate.mutate(undefined, {
+              onError: () =>
+                setError("Obnovení se nezdařilo. Zkuste to prosím znovu."),
+            });
+          }}
+          className="mt-4 inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {reactivate.isPending ? "Obnovuji…" : "Obnovit předplatné"}
+        </button>
+      </section>
+    );
+  }
+
+  if (sub.status !== "active" && sub.status !== "past_due") return null;
+
+  return (
+    <section className="rounded-lg border border-border bg-surface p-6">
+      <h2 className="text-lg font-semibold">Zrušit předplatné</h2>
       <p className="mt-3 text-sm text-text-secondary">
-        Faktury budou dostupné po první platbě.
+        Po zrušení dále hradíme až do konce aktuálního období
+        {endsAt ? ` (do ${endsAt})` : ""} — nikdo o přístup nepřijde okamžitě.
+        Žádné další platby vám pak strhnuty nebudou. Data si vždy můžete
+        vyexportovat ze sekce Reporty.
       </p>
+
+      {!confirming ? (
+        <button
+          type="button"
+          onClick={() => {
+            setConfirming(true);
+            setError(null);
+          }}
+          className="mt-4 inline-flex h-10 items-center justify-center rounded-md border border-danger bg-surface px-5 text-sm font-medium text-danger transition-colors duration-fast hover:bg-danger-subtle"
+        >
+          Zrušit předplatné
+        </button>
+      ) : (
+        <div className="mt-4 space-y-3 rounded-md border border-danger/40 bg-danger-subtle p-4">
+          <p className="text-sm font-medium text-text-primary">
+            Opravdu chcete zrušit předplatné?
+          </p>
+          <label className="block text-xs font-medium text-text-tertiary">
+            Důvod (nepovinné, pomůže nám se zlepšit)
+            <textarea
+              rows={2}
+              maxLength={2000}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="mt-1 block w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm text-text-primary"
+            />
+          </label>
+          {error ? (
+            <p role="alert" className="text-sm text-danger">
+              {error}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={cancel.isPending}
+              onClick={() => {
+                setError(null);
+                cancel.mutate(
+                  { reason: reason.trim() || undefined },
+                  {
+                    onSuccess: () => setConfirming(false),
+                    onError: () =>
+                      setError("Zrušení se nezdařilo. Zkuste to prosím znovu."),
+                  },
+                );
+              }}
+              className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-danger/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {cancel.isPending ? "Rušíme…" : "Ano, zrušit"}
+            </button>
+            <button
+              type="button"
+              disabled={cancel.isPending}
+              onClick={() => {
+                setConfirming(false);
+                setError(null);
+              }}
+              className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface px-4 text-sm font-medium text-text-secondary hover:text-text-primary"
+            >
+              Ne, ponechat
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -1051,8 +1267,6 @@ interface ChoosePlanModalProps {
 }
 
 function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
-  const { accessToken } = useAuth();
-  const queryClient = useQueryClient();
   const plans = usePublicPlans();
   const summary = useBillingSummary();
   const [selected, setSelected] = useState<PlanCode | null>(preselect);
@@ -1061,37 +1275,31 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
   const monthlyPlan = plans.data?.find((p) => p.code === "monthly");
   const annualPlan = plans.data?.find((p) => p.code === "annual");
 
-  const mutation = useMutation({
-    mutationFn: async (planCode: PlanCode) => {
-      return apiFetch(
-        "/api/v1/organizations/current/subscription/choose-plan",
-        {
-          method: "POST",
-          token: accessToken,
-          body: { plan_code: planCode },
-        },
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["subscription", "current"] });
-      queryClient.invalidateQueries({ queryKey: ["billing-summary", "current"] });
-      onClose();
-    },
-    onError: (err) => {
-      setError(
-        err instanceof ApiError
-          ? "Nepodařilo se odeslat výběr plánu. Zkuste to prosím znovu."
-          : "Něco se pokazilo. Zkontrolujte připojení a zkuste to znovu.",
-      );
-    },
-  });
+  // Routes through the new ComGate-backed initial-payment-init endpoint;
+  // returns a hosted-page redirect URL that we send the customer to.
+  // The legacy choose-plan endpoint still exists as a deprecated
+  // fallback but is no longer wired here.
+  const initPayment = useInitialPaymentInit();
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!selected || mutation.isPending) return;
+    if (!selected || initPayment.isPending) return;
     setError(null);
-    mutation.mutate(selected);
+    initPayment.mutate(
+      { plan_code: selected },
+      {
+        onSuccess: (init) => {
+          window.location.assign(init.redirect_url);
+        },
+        onError: () => {
+          setError(
+            "Platební brána není dostupná, zkuste to prosím za chvíli.",
+          );
+        },
+      },
+    );
   }
+  const submitting = initPayment.isPending;
 
   return (
     <div
@@ -1108,8 +1316,8 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
           Vyberte plán
         </h2>
         <p className="mt-2 text-sm text-text-secondary">
-          Po výběru vám pošleme platební instrukce na e-mail. Po připsání platby
-          vás aktivujeme do 24 hodin.
+          Po výběru vás přesměrujeme na zabezpečenou platební bránu. Po
+          úspěšné platbě se vrátíte zpět a předplatné bude okamžitě aktivní.
         </p>
 
         <div
@@ -1123,7 +1331,7 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
             priceMinor={monthlyPlan?.price_per_user_minor ?? null}
             priceInterval="monthly"
             selected={selected === "monthly"}
-            disabled={mutation.isPending}
+            disabled={submitting}
             onSelect={() => setSelected("monthly")}
           />
           <PlanModalCard
@@ -1132,7 +1340,7 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
             priceMinor={annualPlan?.price_per_user_minor ?? null}
             priceInterval="annual"
             selected={selected === "annual"}
-            disabled={mutation.isPending}
+            disabled={submitting}
             onSelect={() => setSelected("annual")}
             badge="Ušetříte 16 %"
             caption={
@@ -1165,17 +1373,17 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
           <button
             type="button"
             onClick={onClose}
-            disabled={mutation.isPending}
+            disabled={submitting}
             className="inline-flex h-10 items-center justify-center rounded-md bg-transparent px-4 text-sm font-medium text-text-secondary hover:text-text-primary disabled:opacity-50"
           >
             Zrušit
           </button>
           <button
             type="submit"
-            disabled={!selected || mutation.isPending}
+            disabled={!selected || submitting}
             className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {mutation.isPending ? "Odesíláme…" : "Vybrat plán"}
+            {submitting ? "Přesměrování…" : "Pokračovat na platbu"}
           </button>
         </div>
       </form>
@@ -1309,10 +1517,12 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
   const { accessToken } = useAuth();
   const qc = useQueryClient();
   const { data: me } = useCurrentUser();
+  const seatChangeInit = useSeatChangeInit();
   const [draft, setDraft] = useState<string>(String(sub.seat_count));
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
     setDraft(String(sub.seat_count));
@@ -1346,6 +1556,28 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
       window.setTimeout(() => setSavedFlash(false), 2500);
     },
     onError: (err) => {
+      // Active org bumping above contracted_seat_count → backend 402s
+      // with a redirect_endpoint pointing at /payments/seat-change-init.
+      // Kick off the prorated ComGate charge and forward the customer
+      // to the hosted page.
+      if (isSeatUpgradePaymentRequired(err)) {
+        setRedirecting(true);
+        seatChangeInit.mutate(
+          { seat_count: target },
+          {
+            onSuccess: (init) => {
+              window.location.assign(init.redirect_url ?? "/app/billing/return?status=failed");
+            },
+            onError: () => {
+              setRedirecting(false);
+              setError(
+                "Platební brána není dostupná, zkuste to prosím za chvíli.",
+              );
+            },
+          },
+        );
+        return;
+      }
       if (err instanceof ApiError) {
         const detail = (err.body as { detail?: { detail?: string } })?.detail;
         const msg = typeof detail === "string" ? detail : detail?.detail;
@@ -1521,13 +1753,18 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
           type="submit"
           disabled={
             mutation.isPending ||
+            redirecting ||
             !targetValid ||
             target === sub.seat_count ||
             (needsToDeactivate && picked.size !== requiredCount)
           }
           className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {mutation.isPending ? "Ukládáme…" : "Uložit počet"}
+          {redirecting
+            ? "Přesměrování na platební bránu…"
+            : mutation.isPending
+              ? "Ukládáme…"
+              : "Uložit počet"}
         </button>
         {savedFlash ? (
           <span className="text-sm text-success" role="status">

@@ -137,7 +137,7 @@ describe("App routing", () => {
         /Vaše zkušební doba skončila/i,
       ),
     );
-    expect(screen.getByRole("button", { name: /^Vybrat plán$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Pokračovat na platbu$/i })).toBeInTheDocument();
   });
 
   it("hydrates the session via /auth/refresh on cold-load (no in-memory token)", async () => {
