@@ -21,6 +21,9 @@ class Subscription(Base):
     __table_args__ = (
         Index("ix_subscriptions_org_status", "organization_id", "status"),
         Index("ix_subscriptions_current_period_ends_at", "current_period_ends_at"),
+        Index(
+            "ix_subscriptions_next_renewal_charge_at", "next_renewal_charge_at"
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -64,6 +67,35 @@ class Subscription(Base):
     # next period still bills the contracted amount this period.
     seat_count: Mapped[int] = mapped_column(
         Integer, default=1, server_default="1", nullable=False
+    )
+
+    # The seat count last blessed by a successful payment (or, during
+    # trial, the value the admin self-set). `seat_count` (the live cap)
+    # may move freely upward only while status='trialing'; once active,
+    # any increase above contracted_seat_count requires a successful
+    # ComGate charge that bumps both fields together. Closes the
+    # bump-then-drop-before-billing abuse vector documented in
+    # qa-artifacts/2026-05-03-adversary-testing-report.md (Finding 1).
+    contracted_seat_count: Mapped[int] = mapped_column(
+        Integer, default=1, server_default="1", nullable=False
+    )
+
+    # Dunning: count of consecutive failed renewal-charge attempts.
+    # `last_charge_failed_at` flips to past_due-grace handling once N
+    # attempts pile up; the recurring-charge job uses these to schedule
+    # back-off retries instead of hammering on a dead card.
+    dunning_attempts: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
+    last_charge_failed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+
+    # When the recurring-charge job should next attempt a charge.
+    # Normally equals `current_period_ends_at`; the dunning logic pushes
+    # it forward on a back-off curve after a failed attempt.
+    next_renewal_charge_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
     )
 
     # Queued change applied at the next period rollover (or trial expiry).

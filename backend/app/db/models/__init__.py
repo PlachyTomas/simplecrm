@@ -18,8 +18,10 @@ from app.db.models.enums import (
     UserRole,
 )
 from app.db.models.invitation import Invitation
+from app.db.models.invoice import Invoice
 from app.db.models.organization import Organization
 from app.db.models.ownership_history import OwnershipHistory
+from app.db.models.payment_method import PaymentMethod
 from app.db.models.pipeline import Pipeline
 from app.db.models.plan import Plan
 from app.db.models.refresh_token import RefreshToken
@@ -27,6 +29,7 @@ from app.db.models.stage import Stage
 from app.db.models.subscription import Subscription
 from app.db.models.team import Team
 from app.db.models.user import User
+from app.db.models.webhook_event import WebhookEvent
 
 __all__ = [
     "Activity",
@@ -37,9 +40,11 @@ __all__ = [
     "Contact",
     "Deal",
     "Invitation",
+    "Invoice",
     "Organization",
     "OwnershipChangeReason",
     "OwnershipHistory",
+    "PaymentMethod",
     "Pipeline",
     "Plan",
     "RefreshToken",
@@ -50,4 +55,5 @@ __all__ = [
     "Team",
     "User",
     "UserRole",
+    "WebhookEvent",
 ]

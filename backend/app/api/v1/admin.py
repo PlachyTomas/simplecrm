@@ -2,9 +2,15 @@
 
 Every route here is gated by `require_super_admin` (checks
 `User.is_super_admin`). The /admin/* routes power the founder-facing
-UI: list orgs, mark a Subscription active after a bank-transfer
-payment, set comp / enterprise overrides, extend trials, and toggle
-the seller-side DPH flag.
+UI: list orgs, set comp / enterprise overrides, extend trials, toggle
+the seller-side DPH flag, and inspect invoices.
+
+Since the ComGate-backed billing rewrite, monthly/annual activations
+are normally driven by the customer flow (`POST /payments/initial-payment-init`
+→ ComGate hosted page → webhook). The `activate_subscription` route
+here is kept as a manual-override escape hatch — useful when ComGate
+is down and a customer wires money directly, or when fixing a stuck
+subscription state.
 """
 
 from __future__ import annotations
@@ -23,6 +29,7 @@ from app.db import get_db
 from app.db.models import (
     Activity,
     BillingSettings,
+    Invoice,
     Organization,
     Subscription,
     User,
@@ -43,6 +50,7 @@ from app.schemas.billing import (
     SubscriptionOut,
     SubscriptionStatus,
 )
+from app.schemas.payments import InvoiceList, InvoiceOut
 from app.services import billing
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -174,6 +182,7 @@ def _subscription_payload(sub: Subscription) -> SubscriptionOut:
             "comp_reason": sub.comp_reason,
             "notes": sub.notes,
             "seat_count": sub.seat_count,
+            "contracted_seat_count": sub.contracted_seat_count,
             "pending_plan": sub.pending_plan,
             "pending_seat_count": sub.pending_seat_count,
             "pending_user_deactivations": sub.pending_user_deactivations,
@@ -431,3 +440,40 @@ async def update_billing_settings(
     await session.commit()
     await session.refresh(settings)
     return settings
+
+
+# ---------------------------------------------------------------------------
+# Per-org invoice history (super-admin visibility into ComGate charges)
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/organizations/{org_id}/invoices",
+    response_model=InvoiceList,
+)
+async def list_org_invoices(
+    org_id: uuid.UUID,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    _admin: User = Depends(require_super_admin),
+    session: AsyncSession = Depends(get_db),
+) -> InvoiceList:
+    """Founder-facing invoice list for one org.
+
+    Mirrors the customer-facing `GET /payments/invoices` shape but
+    skips the `require_role(admin)` org-membership check — super-admin
+    operates across orgs.
+    """
+    base = select(Invoice).where(Invoice.organization_id == org_id)
+    total = (
+        await session.execute(select(func.count()).select_from(base.subquery()))
+    ).scalar_one()
+    rows = (
+        await session.execute(
+            base.order_by(Invoice.created_at.desc()).limit(limit).offset(offset)
+        )
+    ).scalars().all()
+    return InvoiceList(
+        items=[InvoiceOut.model_validate(r) for r in rows],
+        total=total,
+    )

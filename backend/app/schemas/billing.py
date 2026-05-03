@@ -68,6 +68,11 @@ class SubscriptionOut(BaseModel):
     # Contracted seats and any queued change applied at the next period
     # rollover (or trial expiry).
     seat_count: int = 1
+    # The seat count last blessed by a successful payment (or, during
+    # trial, the value the admin self-set). Drives the seat-cap gate in
+    # PUT /subscription/seat-count: increases above this on an active
+    # org require routing through ComGate.
+    contracted_seat_count: int = 1
     pending_plan: PlanOut | None = None
     pending_seat_count: int | None = None
     # User IDs queued to lose access at next period rollover. Drives the
@@ -102,6 +107,14 @@ class ChangeIntervalIn(BaseModel):
     """
 
     plan_code: Literal["monthly", "annual"]
+
+
+class CancelSelfServeIn(BaseModel):
+    """Body for `POST /subscription/cancel`. Optional free-form reason
+    is stored in the Activity audit row for support follow-up.
+    """
+
+    reason: str | None = Field(default=None, max_length=2000)
 
 
 class ContactEnterpriseIn(BaseModel):

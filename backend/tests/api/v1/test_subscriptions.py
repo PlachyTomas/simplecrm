@@ -401,3 +401,225 @@ async def test_seat_count_rejects_self_deactivation(
     )
     # seat_count=0 is below ge=1; pydantic rejects with 422 before our checks.
     assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Seat-cap gate (Finding 1 from 2026-05-03 adversary report)
+#
+# These cover the post-ComGate seat-count gate: trial bumps stay free,
+# within-contract re-raises stay free, but mid-period upgrades on an
+# active subscription require routing through /payments/seat-change-init
+# (i.e. paying the prorated charge via ComGate).
+# ---------------------------------------------------------------------------
+
+
+async def _promote_to_active(
+    session: AsyncSession,
+    *,
+    org_id: uuid.UUID,
+    seat_count: int,
+    contracted_seat_count: int,
+) -> None:
+    """Test helper: flip a freshly-seeded trialing org to active with
+    the given paid baseline, using ORM-style mutation to stay
+    compatible with the conftest's outer-transaction fixture."""
+    sub = (
+        await session.execute(
+            select(Subscription).where(Subscription.organization_id == org_id)
+        )
+    ).scalar_one()
+    sub.status = "active"
+    sub.seat_count = seat_count
+    sub.contracted_seat_count = contracted_seat_count
+    await session.commit()
+
+
+async def test_seat_count_active_blocked_above_contracted(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """Repro of adversary-test Finding 1: org admin on an active paid
+    subscription tries to bump seat_count well above their contracted
+    cap. Must 402 with a redirect_endpoint pointing at the payments
+    init flow; seat_count stays unchanged in the DB."""
+    org, admin = await _seed_org_with_admin(db_session, owned_emails)
+    await _promote_to_active(
+        db_session, org_id=org.id, seat_count=5, contracted_seat_count=5
+    )
+
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    response = await client.put(
+        "/api/v1/organizations/current/subscription/seat-count",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"seat_count": 500},
+    )
+    assert response.status_code == 402, response.text
+    body = response.json()["detail"]
+    assert body["code"] == "seat_upgrade_payment_required"
+    assert body["contracted_seat_count"] == 5
+    assert body["redirect_endpoint"] == "/api/v1/payments/seat-change-init"
+
+    # Confirm the DB is untouched — the spike never landed. Read via a
+    # fresh GET (the conftest's outer-transaction fixture doesn't play
+    # nicely with raw post-mutation queries on the same session).
+    state = await client.get(
+        "/api/v1/organizations/current/subscription",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert state.status_code == 200
+    state_body = state.json()
+    assert state_body["seat_count"] == 5
+    assert state_body["contracted_seat_count"] == 5
+
+
+async def test_seat_count_active_within_contracted_allowed(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """Active org can raise seat_count back up to (but not above)
+    contracted_seat_count without payment — they're un-queueing a
+    downsize or staying within their paid baseline."""
+    org, admin = await _seed_org_with_admin(db_session, owned_emails)
+    await _promote_to_active(
+        db_session, org_id=org.id, seat_count=2, contracted_seat_count=10
+    )
+
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    response = await client.put(
+        "/api/v1/organizations/current/subscription/seat-count",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"seat_count": 10},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["seat_count"] == 10
+    assert body["contracted_seat_count"] == 10
+
+
+async def test_seat_count_trial_bump_lifts_contracted(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """Trial admin can play the slider freely (per user-stated intent);
+    the contracted_seat_count tracks the new high so it's locked in at
+    the first activation."""
+    org, admin = await _seed_org_with_admin(db_session, owned_emails)  # status=trialing
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    response = await client.put(
+        "/api/v1/organizations/current/subscription/seat-count",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"seat_count": 500},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["seat_count"] == 500
+    assert body["contracted_seat_count"] == 500
+
+
+async def _set_plan_and_period(
+    session: AsyncSession,
+    *,
+    org_id: uuid.UUID,
+    plan_code: str,
+    period_days_remaining: int,
+    is_comp: bool = False,
+) -> None:
+    """Test helper: switch the org's subscription onto a real paid plan
+    with a fixed period-end window. Mirrors the post-activation state
+    so cancel/reactivate flows can be exercised."""
+    from datetime import UTC, datetime, timedelta
+
+    plan_id = (
+        await session.execute(select(Plan.id).where(Plan.code == plan_code))
+    ).scalar_one()
+    sub = (
+        await session.execute(
+            select(Subscription).where(Subscription.organization_id == org_id)
+        )
+    ).scalar_one()
+    sub.plan_id = plan_id
+    sub.status = "active"
+    sub.is_comp = is_comp
+    sub.current_period_ends_at = datetime.now(tz=UTC) + timedelta(
+        days=period_days_remaining
+    )
+    await session.commit()
+
+
+async def test_self_serve_cancel_keeps_access_through_period(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """Cancel sets status=canceled but doesn't immediately revoke access —
+    the customer keeps using the app through current_period_ends_at."""
+    org, admin = await _seed_org_with_admin(db_session, owned_emails)
+    await _set_plan_and_period(
+        db_session,
+        org_id=org.id,
+        plan_code="monthly",
+        period_days_remaining=20,
+    )
+
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    response = await client.post(
+        "/api/v1/organizations/current/subscription/cancel",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"reason": "Found a competitor"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    # Status stays 'active' through the period; `canceled_at` carries
+    # the cancel intent. The eventual period-rollover job flips status
+    # to 'canceled' at current_period_ends_at.
+    assert body["status"] == "active"
+    assert body["canceled_at"] is not None
+    assert body["access_status"] == "active"
+
+
+async def test_self_serve_cancel_rejects_comp_org(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """Comp orgs are managed by the founder — self-serve cancel 422s."""
+    org, admin = await _seed_org_with_admin(db_session, owned_emails)
+    await _set_plan_and_period(
+        db_session,
+        org_id=org.id,
+        plan_code="comp",
+        period_days_remaining=30,
+        is_comp=True,
+    )
+
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    response = await client.post(
+        "/api/v1/organizations/current/subscription/cancel",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"reason": None},
+    )
+    assert response.status_code == 422
+    assert "comp" in response.json()["detail"].lower()
+
+
+async def test_self_serve_reactivate_restores_active(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """Cancel → reactivate before period ends flips status back to active."""
+    org, admin = await _seed_org_with_admin(db_session, owned_emails)
+    await _set_plan_and_period(
+        db_session,
+        org_id=org.id,
+        plan_code="monthly",
+        period_days_remaining=10,
+    )
+
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    cancel_resp = await client.post(
+        "/api/v1/organizations/current/subscription/cancel",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"reason": "test"},
+    )
+    assert cancel_resp.status_code == 200
+    assert cancel_resp.json()["canceled_at"] is not None
+
+    reactivate_resp = await client.post(
+        "/api/v1/organizations/current/subscription/reactivate",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert reactivate_resp.status_code == 200, reactivate_resp.text
+    assert reactivate_resp.json()["status"] == "active"
+    assert reactivate_resp.json()["canceled_at"] is None

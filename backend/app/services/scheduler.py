@@ -1,14 +1,14 @@
 """Background scheduler for daily/periodic jobs.
 
 MVP uses a minimal asyncio loop rather than a full APScheduler
-dependency — the only scheduled job is the nightly freeing sweep, so
-the extra dep would be overkill. If we add more complex schedules (say,
-per-org cron expressions), swap `_DailyRunner` for APScheduler in one
-module.
+dependency — current jobs:
 
-The freeing sweep runs once at 03:00 Europe/Prague (which corresponds to
-01:00 or 02:00 UTC depending on DST — we compute the next local midnight
-offset rather than hard-coding UTC).
+  - Nightly freeing sweep (`run_freeing_sweep`) at 03:00 Europe/Prague
+  - Hourly ComGate recurring-charge job (`run_recurring_charges`) for
+    subscriptions whose `next_renewal_charge_at` has elapsed
+
+If we add per-org cron expressions, swap `_DailyRunner` /
+`_PeriodicRunner` for APScheduler in one module.
 """
 
 from __future__ import annotations
@@ -22,8 +22,16 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 
-from app.db.models import Company, User
+from app.db.models import (
+    Company,
+    Invoice,
+    PaymentMethod,
+    Subscription,
+    User,
+)
 from app.db.session import AsyncSessionLocal
+from app.services import billing
+from app.services.comgate import ComGateError, get_comgate_client
 from app.services.email import build_freed_company_email, send_email
 from app.services.freeing import free_expired_companies
 
@@ -135,3 +143,153 @@ class _DailyRunner:
 
 
 scheduler = _DailyRunner(hour=DEFAULT_HOUR, job=run_freeing_sweep)
+
+
+# ---------------------------------------------------------------------------
+# Recurring-charge job (ComGate-backed renewals)
+# ---------------------------------------------------------------------------
+
+
+# How often to scan for renewals whose `next_renewal_charge_at` has
+# elapsed. Hourly is the common SaaS cadence — finer than that wastes
+# work, coarser leaves customers without service for too long after
+# their period ends.
+RECURRING_CHARGE_INTERVAL_SECONDS = 3600
+
+
+async def run_recurring_charges() -> int:
+    """For every active subscription whose `next_renewal_charge_at` has
+    elapsed, fire a ComGate recurring charge using the saved card.
+
+    The ComGate webhook handler eventually lands the success/failure
+    via `apply_renewal_success` / `mark_charge_failed` — this job just
+    triggers the request and writes a pending Invoice as a breadcrumb.
+
+    Returns the number of charge attempts initiated (useful for tests).
+    """
+    now = datetime.now(tz=UTC)
+    attempts = 0
+    comgate = get_comgate_client()
+
+    async with AsyncSessionLocal() as session:
+        # Find subscriptions due for a renewal charge. Filters mirror
+        # the design: skip comp orgs, skip those with cancel_at_period_end
+        # (next_renewal_charge_at IS NULL), skip those without a saved
+        # card, skip non-monthly/annual plans (trial / enterprise / comp
+        # don't auto-renew through this path).
+        due_stmt = (
+            select(Subscription, PaymentMethod)
+            .join(
+                PaymentMethod,
+                PaymentMethod.organization_id == Subscription.organization_id,
+            )
+            .where(Subscription.status == "active")
+            .where(Subscription.is_comp.is_(False))
+            .where(Subscription.next_renewal_charge_at.is_not(None))
+            .where(Subscription.next_renewal_charge_at <= now)
+        )
+        due_rows = (await session.execute(due_stmt)).all()
+
+        for sub, payment_method in due_rows:
+            plan_code = sub.plan.code if sub.plan else None
+            if plan_code not in {"monthly", "annual"}:
+                continue
+            price = billing.get_effective_price_per_user_minor(sub)
+            if price is None or price <= 0:
+                continue
+            amount_minor = price * sub.seat_count
+
+            invoice = Invoice(
+                organization_id=sub.organization_id,
+                kind="renewal",
+                amount_minor=amount_minor,
+                currency=sub.plan.currency,
+                status="pending",
+                seats=sub.seat_count,
+                period_starts_at=sub.current_period_starts_at,
+                period_ends_at=sub.current_period_ends_at,
+            )
+            session.add(invoice)
+            await session.flush()
+
+            label = f"SimpleCRM {sub.plan.display_name_cs} – obnovení"
+            try:
+                result = await comgate.create_recurring_payment(
+                    initial_trans_id=payment_method.comgate_initial_trans_id,
+                    amount_minor=amount_minor,
+                    currency=sub.plan.currency,
+                    ref_id=str(invoice.id),
+                    label=label,
+                )
+                invoice.comgate_trans_id = result.trans_id
+                attempts += 1
+            except ComGateError as exc:
+                # Mark the invoice failed inline; the dunning logic in
+                # `mark_charge_failed` would normally fire via webhook
+                # but a transport-level rejection never produces one.
+                logger.warning(
+                    "recurring charge failed for %s: %s",
+                    sub.organization_id,
+                    exc,
+                )
+                invoice.status = "failed"
+                invoice.failure_reason = str(exc)[:500]
+                await billing.mark_charge_failed(
+                    session,
+                    org_id=sub.organization_id,
+                    kind="renewal",
+                    failure_reason=str(exc),
+                )
+
+        await session.commit()
+
+    logger.info("recurring charge sweep completed: attempts=%d", attempts)
+    return attempts
+
+
+class _PeriodicRunner:
+    """Runs `job` every `interval_seconds` until cancelled.
+
+    Sibling of `_DailyRunner`: the same start/stop contract, but the
+    cadence is wall-clock interval rather than a local-time hour. Used
+    for the recurring-charge job which needs hourly granularity.
+    """
+
+    def __init__(
+        self, *, interval_seconds: float, job: Callable[[], Awaitable[object]]
+    ):
+        self.interval_seconds = interval_seconds
+        self.job = job
+        self._task: asyncio.Task[None] | None = None
+
+    async def _loop(self) -> None:
+        while True:
+            try:
+                await asyncio.sleep(self.interval_seconds)
+                await self.job()
+            except asyncio.CancelledError:
+                return
+            except Exception:
+                logger.exception("periodic scheduler job failed")
+                await asyncio.sleep(60)
+
+    def start(self) -> None:
+        if self._task is not None:
+            return
+        self._task = asyncio.create_task(
+            self._loop(), name="simplecrm.scheduler.periodic"
+        )
+
+    async def stop(self) -> None:
+        if self._task is None:
+            return
+        self._task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await self._task
+        self._task = None
+
+
+recurring_charge_scheduler = _PeriodicRunner(
+    interval_seconds=RECURRING_CHARGE_INTERVAL_SECONDS,
+    job=run_recurring_charges,
+)

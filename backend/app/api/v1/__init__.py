@@ -12,6 +12,7 @@ from app.api.v1 import (
     invitations,
     onboarding,
     organizations,
+    payments,
     pipelines,
     plans,
     reports,
@@ -60,6 +61,13 @@ api_router.include_router(activities.router, dependencies=PROTECTED_DEPS)
 # only, intentionally NOT trial-gated so a gated user can still escape the
 # gate by picking a plan.
 api_router.include_router(subscription.router, dependencies=[Depends(require_org_membership)])
+# ComGate-backed payment endpoints. Intentionally NOT trial-gated:
+# - `webhook` is server-to-server from ComGate, no user auth at all
+# - `seat-change-init` must work for active orgs upgrading mid-period
+# - `initial-payment-init` must work for trial-expired orgs escaping the gate
+# Per-route auth is enforced inside the router (`require_role(admin)` on the
+# customer-facing routes; signature on the webhook).
+api_router.include_router(payments.router)
 # Public pricing catalog — no auth, no trial gate.
 api_router.include_router(plans.router)
 # Super-admin surface — gated per-route by `require_super_admin`. Not under

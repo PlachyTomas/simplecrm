@@ -22,9 +22,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, require_role
 from app.db import get_db
-from app.db.models import BillingSettings, Subscription, User, UserRole
+from app.db.models import (
+    BillingSettings,
+    PaymentMethod,
+    Subscription,
+    User,
+    UserRole,
+)
 from app.schemas.billing import (
     BillingSummary,
+    CancelSelfServeIn,
     ChangeIntervalIn,
     ChoosePlanIn,
     ContactEnterpriseIn,
@@ -32,6 +39,7 @@ from app.schemas.billing import (
     UpdateSeatCountIn,
 )
 from app.services import billing
+from app.services.comgate import ComGateClient, get_comgate_client
 from app.services.email import Email, send_email
 
 router = APIRouter(prefix="/organizations", tags=["subscription"])
@@ -66,6 +74,7 @@ def _subscription_payload(sub: Subscription) -> SubscriptionOut:
             "comp_reason": sub.comp_reason,
             "notes": sub.notes,
             "seat_count": sub.seat_count,
+            "contracted_seat_count": sub.contracted_seat_count,
             "pending_plan": sub.pending_plan,
             "pending_seat_count": sub.pending_seat_count,
             "pending_user_deactivations": sub.pending_user_deactivations,
@@ -159,9 +168,13 @@ async def choose_plan(
 ) -> SubscriptionOut:
     """Customer (org admin) chooses a plan from the pay-gate.
 
-    Records intent — the founder activates manually after payment.
-    Idempotent: re-picking the same plan returns the existing pending
-    subscription without a second email.
+    .. deprecated::
+        Prefer ``POST /api/v1/payments/initial-payment-init`` — that
+        endpoint creates an Invoice + ComGate hosted-payment URL and
+        returns ``{redirect_url}``. This endpoint is kept for backwards
+        compatibility while the frontend migrates; new code should not
+        call it. Sets ``status='pending_activation'`` and emails the
+        founder, which is no longer how billing actually advances.
     """
     if user.organization_id is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
@@ -215,20 +228,32 @@ async def update_seat_count(
 ) -> SubscriptionOut:
     """Org admin tunes the contracted seat count.
 
-    Three shapes:
+    Four shapes:
 
-    - **Increase** (target ≥ active): apply immediately; the cap relaxes
-      and new invitations fit. Any previously-queued downsize is cleared.
+    - **Cancel queued change** (target == current `seat_count`): clear
+      both pending fields without changing anything else. Used by the
+      "Zrušit naplánovanou změnu" button in Organizace + the per-row
+      pill cancel in Uživatelé.
+    - **Trial bump** (status='trialing', target > contracted): apply
+      immediately. The trial-time slider play is locked in at first
+      payment and billed for the picked count from then on.
+    - **Increase ≤ contracted** (target > current `seat_count` but
+      target ≤ contracted_seat_count): apply immediately. Customer is
+      either un-queueing a downsize or staying within their paid
+      baseline; no charge needed.
+    - **Increase > contracted, status='active'**: rejected with HTTP 402
+      and a `redirect_url` pointing at `POST /payments/seat-change-init`.
+      The frontend kicks the customer through ComGate; the webhook
+      eventually applies the bump via `billing.apply_seat_charge_success`.
+      Closes the bump-then-drop-before-billing abuse documented in
+      qa-artifacts/2026-05-03-adversary-testing-report.md (Finding 1).
     - **Decrease** (target < active): queue the change. `seat_count`
       stays at the current contracted value through this period;
       `pending_seat_count` and `pending_user_deactivations` carry the
       target + the picked victims. The rollover service
-      (`billing.activate_subscription`, eventual scheduled job) applies
-      the queue at the next period boundary.
-    - **Cancel** (target == current `seat_count`): clear both pending
-      fields without changing anything else. Used by the
-      "Zrušit naplánovanou změnu" button in Organizace + the per-row
-      pill cancel in Uživatelé.
+      (`billing.apply_renewal_success` for ComGate-driven renewals,
+      `billing.activate_subscription` for super-admin manual flows)
+      applies the queue at the next period boundary.
 
     The user-creation cap (`Subscription.seat_count`) is unchanged for
     queued downsizes — customers keep the seats they paid for through
@@ -269,14 +294,49 @@ async def update_seat_count(
         await session.refresh(sub, attribute_names=["plan", "pending_plan"])
         return _subscription_payload(sub)
 
-    # Increase: relax the cap immediately, drop any queued downsize.
+    # Increase paths.
     if new_count >= active_count:
-        sub.seat_count = new_count
-        sub.pending_seat_count = None
-        sub.pending_user_deactivations = None
-        await session.commit()
-        await session.refresh(sub, attribute_names=["plan", "pending_plan"])
-        return _subscription_payload(sub)
+        # Trial bumps are free (locked in at first activation), as are
+        # increases that stay within the already-contracted baseline.
+        # Comp orgs also bypass the gate — they don't have a billing
+        # rail to pay along.
+        is_within_contract = new_count <= sub.contracted_seat_count
+        is_free_zone = sub.status == "trialing" or sub.is_comp
+        if is_within_contract or is_free_zone:
+            sub.seat_count = new_count
+            # Trial bumps lift contracted_seat_count too — the customer's
+            # trial-time slider play becomes their paid baseline at the
+            # first activation. Within-contract bumps don't change it
+            # (the cap is unchanged; we're just relaxing seat_count back
+            # toward it).
+            if sub.status == "trialing" or sub.is_comp:
+                sub.contracted_seat_count = max(
+                    sub.contracted_seat_count, new_count
+                )
+            sub.pending_seat_count = None
+            sub.pending_user_deactivations = None
+            await session.commit()
+            await session.refresh(sub, attribute_names=["plan", "pending_plan"])
+            return _subscription_payload(sub)
+
+        # Active org wants more seats than the contract covers → must
+        # pay before we lift the cap. 402 is the right shape — the
+        # frontend reads `redirect_url` and forwards the customer to
+        # ComGate. Same code/shape the trial-gate uses, so the existing
+        # gated-flow plumbing applies.
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail={
+                "code": "seat_upgrade_payment_required",
+                "detail": (
+                    f"Navýšení na {new_count} míst překračuje smluvní "
+                    f"limit {sub.contracted_seat_count} — je třeba úhrady "
+                    f"poměrné částky před aktivací."
+                ),
+                "contracted_seat_count": sub.contracted_seat_count,
+                "redirect_endpoint": "/api/v1/payments/seat-change-init",
+            },
+        )
 
     # Decrease: validate the deactivation list, then QUEUE — do not
     # touch User.is_active or sub.seat_count.
@@ -359,6 +419,91 @@ async def change_billing_interval(
         )
 
     sub.pending_plan_id = plan.id
+    await session.commit()
+    await session.refresh(sub, attribute_names=["plan", "pending_plan"])
+    return _subscription_payload(sub)
+
+
+@router.post(
+    "/current/subscription/cancel",
+    response_model=SubscriptionOut,
+)
+async def cancel_subscription(
+    payload: CancelSelfServeIn,
+    user: User = Depends(require_role(UserRole.admin)),
+    session: AsyncSession = Depends(get_db),
+    comgate: ComGateClient = Depends(get_comgate_client),
+) -> SubscriptionOut:
+    """Org admin cancels their own subscription.
+
+    Distinct from the super-admin `/admin/.../cancel` route. The customer
+    keeps app access through `current_period_ends_at` (standard SaaS
+    courtesy); this endpoint just stops future scheduled charges. Comp
+    + enterprise can't self-cancel — those go through the founder.
+
+    Best-effort: also calls ComGate `disable_recurring` to revoke the
+    saved-card authorization on their side. ComGate failure does NOT
+    block the local cancel — the scheduler's `is_comp=False` /
+    `status='active'` filter is what actually stops further charges.
+    """
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    org_id = user.organization_id
+
+    try:
+        sub = await billing.cancel_self_serve(
+            session,
+            org_id=org_id,
+            by_admin_id=user.id,
+            reason=payload.reason,
+        )
+    except billing.BillingError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+
+    # Best-effort merchant-side disable. We commit regardless of the
+    # outcome so a ComGate hiccup doesn't strand the cancel.
+    payment_method = (
+        await session.execute(
+            select(PaymentMethod).where(PaymentMethod.organization_id == org_id)
+        )
+    ).scalar_one_or_none()
+    if payment_method is not None:
+        await comgate.disable_recurring(
+            payment_method.comgate_initial_trans_id
+        )
+
+    await session.commit()
+    await session.refresh(sub, attribute_names=["plan", "pending_plan"])
+    return _subscription_payload(sub)
+
+
+@router.post(
+    "/current/subscription/reactivate",
+    response_model=SubscriptionOut,
+)
+async def reactivate_subscription(
+    user: User = Depends(require_role(UserRole.admin)),
+    session: AsyncSession = Depends(get_db),
+) -> SubscriptionOut:
+    """Org admin un-cancels before the period actually ends.
+
+    Only valid while `status='canceled'` AND
+    `current_period_ends_at > now()`. Once the period has expired the
+    customer must re-enter card details (initial-payment-init from
+    scratch), so reactivation isn't available there.
+    """
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    try:
+        sub = await billing.reactivate_self_serve(
+            session, org_id=user.organization_id, by_admin_id=user.id
+        )
+    except billing.BillingError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
     await session.commit()
     await session.refresh(sub, attribute_names=["plan", "pending_plan"])
     return _subscription_payload(sub)

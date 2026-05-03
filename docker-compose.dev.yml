@@ -28,6 +28,14 @@ services:
       - DEV_AUTH_ENABLED=true
       # Frontend toggle that surfaces the Dev-login panel on /login.
       - VITE_DEV_AUTH_ENABLED=true
+      # ComGate billing. Default-empty so the demo-seeded comp org keeps
+      # working without needing real merchant credentials. Populate via
+      # docs/comgate-setup.md when exercising paid-plan flows.
+      - COMGATE_MERCHANT_ID=${COMGATE_MERCHANT_ID:-}
+      - COMGATE_SECRET=${COMGATE_SECRET:-}
+      - COMGATE_BASE_URL=${COMGATE_BASE_URL:-https://payments.comgate.cz/v2.0}
+      - COMGATE_TEST_MODE=${COMGATE_TEST_MODE:-true}
+      - COMGATE_RETURN_URL=${COMGATE_RETURN_URL:-http://localhost:8000/api/v1/payments/return}
     ports:
       # Exposed to the host so the dev can open the browser against
       # http://localhost:5173 (frontend) / http://localhost:8000 (API).

@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import api_router
 from app.core.config import get_settings
-from app.services.scheduler import scheduler
+from app.services.scheduler import recurring_charge_scheduler, scheduler
 
 
 @asynccontextmanager
@@ -14,10 +14,12 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # Start background jobs on boot, stop them on shutdown. Tests use
     # `create_app` indirectly and patch the scheduler before dispatch.
     scheduler.start()
+    recurring_charge_scheduler.start()
     try:
         yield
     finally:
         await scheduler.stop()
+        await recurring_charge_scheduler.stop()
 
 
 def create_app() -> FastAPI:

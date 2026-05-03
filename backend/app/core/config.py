@@ -40,6 +40,22 @@ class Settings(BaseSettings):
     # arbitrary email — no Google round-trip. MUST stay false in prod.
     dev_auth_enabled: bool = False
 
+    # ComGate payment processor. All paid-plan billing — initial activation,
+    # recurring renewals, and mid-period seat upgrades — flows through
+    # ComGate. Comp + enterprise subscriptions still bypass billing entirely
+    # via the super-admin set_comp / set_enterprise routes. Setup walkthrough
+    # in docs/comgate-setup.md.
+    #
+    # Defaults are empty so the app boots in environments that don't
+    # exercise billing (tests, the demo-seeded comp org used by dev-login).
+    # services/comgate.ComGateClient surfaces a clear 503 when billing
+    # endpoints are hit without these populated.
+    comgate_merchant_id: str = ""
+    comgate_secret: str = ""  # noqa: S105 — credential, blank by default
+    comgate_base_url: str = "https://payments.comgate.cz/v2.0"
+    comgate_test_mode: bool = True
+    comgate_return_url: str = "http://localhost:8000/api/v1/payments/return"
+
 
 @lru_cache
 def get_settings() -> Settings:

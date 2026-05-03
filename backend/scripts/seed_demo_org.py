@@ -105,17 +105,20 @@ LOST_REASONS = [
 
 
 async def _wipe_existing(session) -> None:
-    """Remove the demo org and everything that points at it."""
-    org = (
-        await session.execute(select(Organization).where(Organization.name == ORG_NAME))
-    ).scalar_one_or_none()
-    if org is None:
-        return
-    # CASCADE deletes do most of the work because the FKs are wired with
-    # `ondelete="CASCADE"`. We delete the org and let Postgres clean up
-    # users, teams, companies, deals, activities, subscriptions, pipeline,
-    # and stages.
-    await session.delete(org)
+    """Remove the demo org and everything that points at it.
+
+    Uses a raw `DELETE FROM organizations WHERE name=...` so Postgres-level
+    `ON DELETE CASCADE` resolves the User⇄Team cycle (Users FK to Teams,
+    Teams optionally FK to manager Users). The ORM cascade can't see
+    through DB-level CASCADE and raises CircularDependencyError on the
+    re-run of an already-seeded DB.
+    """
+    from sqlalchemy import text
+
+    await session.execute(
+        text("DELETE FROM organizations WHERE name = :name"),
+        {"name": ORG_NAME},
+    )
     await session.flush()
 
 
@@ -124,17 +127,24 @@ async def _create_org_with_subscription(session) -> Organization:
     session.add(org)
     await session.flush()
 
-    trial_plan_id = (
-        await session.execute(select(Plan.id).where(Plan.code == "trial"))
+    # Demo org runs on the `comp` plan with `is_comp=True` so the paygate
+    # never fires regardless of trial expiry or future billing changes
+    # (see services/billing.is_app_access_allowed). Keeps `dev-login` into
+    # the demo org working without anyone wiring up the ComGate sandbox.
+    comp_plan_id = (
+        await session.execute(select(Plan.id).where(Plan.code == "comp"))
     ).scalar_one()
     now = datetime.now(tz=UTC)
     sub = Subscription(
         organization_id=org.id,
-        plan_id=trial_plan_id,
-        status="trialing",
+        plan_id=comp_plan_id,
+        status="active",
+        is_comp=True,
+        comp_reason="demo seed (auto)",
         started_at=now,
         current_period_starts_at=now,
-        current_period_ends_at=now + timedelta(days=30),
+        # Open-ended comp; no `current_period_ends_at` boundary.
+        current_period_ends_at=None,
         seat_count=10,
     )
     session.add(sub)
