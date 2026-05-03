@@ -10,8 +10,6 @@ interface WidgetFrameProps {
   onConfigClick?: () => void;
   /** Optional right-side header slot — per-widget controls (e.g. metric picker). */
   controls?: ReactNode;
-  /** Footer slot — usually the comparison delta badge. */
-  footer?: ReactNode;
   /** Body. Pass the loading/empty/error variant when needed. */
   children: ReactNode;
   /** Class hook so the parent grid item can position drag-handles consistently. */
@@ -32,7 +30,6 @@ export function WidgetFrame({
   onRemove,
   onConfigClick,
   controls,
-  footer,
   children,
   className,
 }: WidgetFrameProps) {
@@ -82,11 +79,6 @@ export function WidgetFrame({
         ) : null}
       </header>
       <div className="flex-1 min-h-0 px-4 py-3">{children}</div>
-      {footer ? (
-        <footer className="border-t border-border-subtle px-4 py-2 text-xs text-text-tertiary">
-          {footer}
-        </footer>
-      ) : null}
     </article>
   );
 }

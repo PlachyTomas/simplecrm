@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -16,24 +16,20 @@ interface DeltaBadgeProps {
 }
 
 /**
- * Comparison-vs-previous-period delta — sits in `WidgetFrame.footer`
- * for every KPI tile. Hidden entirely when the backend returns
- * `comparison: null` (no closed deals last period, etc.).
+ * Compact "vs. previous period" delta — just the signed percentage
+ * with a colored arrow. The previous-period date range used to live
+ * here too but the global filter bar now displays the resolved
+ * range, so the per-widget echo was redundant noise.
  *
- * Empty `delta_pct` (no previous-period data) renders as a flat "—"
- * with the previous-period dates in the secondary text.
+ * Returns `null` when there's nothing to show — no comparison, or a
+ * comparison with no `delta_pct` (no previous-period data to divide
+ * by). Callers can render it inline without needing to gate on
+ * truthiness.
  */
 export function DeltaBadge({ comparison, inverted = false }: DeltaBadgeProps) {
   if (!comparison) return null;
-
-  const formatRange = formatPreviousRange(comparison);
-
   if (comparison.delta_pct === null || comparison.delta_pct === undefined) {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-text-tertiary">
-        <ArrowRight size={12} strokeWidth={1.75} aria-hidden /> {formatRange}
-      </span>
-    );
+    return null;
   }
 
   const positive = comparison.delta_pct >= 0;
@@ -43,30 +39,13 @@ export function DeltaBadge({ comparison, inverted = false }: DeltaBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 text-xs font-medium",
+        "inline-flex items-center gap-1 text-xs font-medium",
         good ? "text-success" : "text-danger",
       )}
     >
       <Arrow size={12} strokeWidth={2} aria-hidden />
       {sign}
       {comparison.delta_pct.toFixed(1)} %
-      <span className="font-normal text-text-tertiary">
-        oproti {formatRange}
-      </span>
     </span>
   );
-}
-
-function formatPreviousRange(c: Comparison): string {
-  try {
-    const fmt = new Intl.DateTimeFormat("cs-CZ", {
-      day: "numeric",
-      month: "numeric",
-    });
-    return `${fmt.format(new Date(c.previous_from))} – ${fmt.format(
-      new Date(c.previous_to),
-    )}`;
-  } catch {
-    return `${c.previous_from} – ${c.previous_to}`;
-  }
 }

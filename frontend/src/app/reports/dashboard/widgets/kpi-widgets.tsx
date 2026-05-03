@@ -77,7 +77,7 @@ export function PipelineValueWidget(props: BaseWidgetProps) {
     globalFilters: props.globalFilters,
   });
   return (
-    <Frame {...props} type="pipeline_value" footer={<DeltaBadge comparison={q.data?.comparison} />}>
+    <Frame {...props} type="pipeline_value">
       {q.isPending ? (
         <WidgetSkeleton />
       ) : q.isError || !q.data ? (
@@ -85,6 +85,7 @@ export function PipelineValueWidget(props: BaseWidgetProps) {
       ) : (
         <KPITile
           value={formatMoney(q.data.value, q.data.currency, locale)}
+          delta={<DeltaBadge comparison={q.data.comparison} />}
           sparkline={q.data.sparkline}
           sparklineLabel="Trend hodnoty pipeline"
           hint="Otevřené obchody v období"
@@ -107,7 +108,7 @@ export function DealsWonWidget(props: BaseWidgetProps) {
   });
   const display = config.display;
   return (
-    <Frame {...props} type="deals_won" footer={<DeltaBadge comparison={q.data?.comparison} />}>
+    <Frame {...props} type="deals_won">
       {q.isPending ? (
         <WidgetSkeleton />
       ) : q.isError || !q.data ? (
@@ -124,6 +125,7 @@ export function DealsWonWidget(props: BaseWidgetProps) {
               ? formatMoney(q.data.value, q.data.currency, locale)
               : undefined
           }
+          delta={<DeltaBadge comparison={q.data.comparison} />}
           sparkline={q.data.sparkline}
           sparklineLabel="Trend vyhraných obchodů"
         />
@@ -146,7 +148,7 @@ export function WinRateWidget(props: BaseWidgetProps) {
     (q.data?.won_count ?? 0) + (q.data?.lost_count ?? 0);
   const empty = q.data?.value === null;
   return (
-    <Frame {...props} type="win_rate" footer={<DeltaBadge comparison={q.data?.comparison} />}>
+    <Frame {...props} type="win_rate">
       {q.isPending ? (
         <WidgetSkeleton />
       ) : q.isError || !q.data ? (
@@ -156,6 +158,7 @@ export function WinRateWidget(props: BaseWidgetProps) {
       ) : (
         <KPITile
           value={formatPercent(q.data.value, 1)}
+          delta={<DeltaBadge comparison={q.data.comparison} />}
           hint={`${q.data.won_count} výher z ${totalClosed} uzavřených`}
         />
       )}
@@ -175,7 +178,7 @@ export function AvgDealSizeWidget(props: BaseWidgetProps) {
     globalFilters: props.globalFilters,
   });
   return (
-    <Frame {...props} type="avg_deal_size" footer={<DeltaBadge comparison={q.data?.comparison} />}>
+    <Frame {...props} type="avg_deal_size">
       {q.isPending ? (
         <WidgetSkeleton />
       ) : q.isError || !q.data ? (
@@ -191,6 +194,7 @@ export function AvgDealSizeWidget(props: BaseWidgetProps) {
       ) : (
         <KPITile
           value={formatMoney(q.data.value, q.data.currency, locale)}
+          delta={<DeltaBadge comparison={q.data.comparison} />}
           hint={`${q.data.sample_count} ${pluralizeDeal(q.data.sample_count)} ${
             config.scope === "won" ? "(vyhrané)" : "(otevřené)"
           }`}
@@ -212,7 +216,7 @@ export function SalesCycleLengthWidget(props: BaseWidgetProps) {
   });
   // Shorter cycle = good, so the trend arrow logic flips here.
   return (
-    <Frame {...props} type="sales_cycle_length" footer={null}>
+    <Frame {...props} type="sales_cycle_length">
       {q.isPending ? (
         <WidgetSkeleton />
       ) : q.isError || !q.data ? (
@@ -244,11 +248,7 @@ export function LeadToDealConversionWidget(props: BaseWidgetProps) {
     globalFilters: props.globalFilters,
   });
   return (
-    <Frame
-      {...props}
-      type="lead_to_deal_conversion"
-      footer={<DeltaBadge comparison={q.data?.comparison} />}
-    >
+    <Frame {...props} type="lead_to_deal_conversion">
       {q.isPending ? (
         <WidgetSkeleton />
       ) : q.isError || !q.data ? (
@@ -258,6 +258,7 @@ export function LeadToDealConversionWidget(props: BaseWidgetProps) {
       ) : (
         <KPITile
           value={formatPercent(q.data.value, 1)}
+          delta={<DeltaBadge comparison={q.data.comparison} />}
           hint={`${q.data.converted_count} z ${q.data.total_count} nových firem získalo obchod`}
         />
       )}
@@ -277,7 +278,7 @@ export function NewCompaniesWidget(props: BaseWidgetProps) {
     globalFilters: props.globalFilters,
   });
   return (
-    <Frame {...props} type="new_companies" footer={<DeltaBadge comparison={q.data?.comparison} />}>
+    <Frame {...props} type="new_companies">
       {q.isPending ? (
         <WidgetSkeleton />
       ) : q.isError || !q.data ? (
@@ -285,6 +286,7 @@ export function NewCompaniesWidget(props: BaseWidgetProps) {
       ) : (
         <KPITile
           value={formatNumber(q.data.value, locale)}
+          delta={<DeltaBadge comparison={q.data.comparison} />}
           sparkline={q.data.sparkline}
           sparklineLabel="Trend nových firem"
           hint="Firmy přidané v období"
@@ -298,17 +300,15 @@ export function NewCompaniesWidget(props: BaseWidgetProps) {
 
 interface FrameProps extends BaseWidgetProps {
   type: ApiSchemas["WidgetEntry"]["config"]["type"];
-  footer: React.ReactNode;
   children: React.ReactNode;
 }
 
-function Frame({ entry: _entry, isEditMode, onRemove, type, footer, children }: FrameProps) {
+function Frame({ entry: _entry, isEditMode, onRemove, type, children }: FrameProps) {
   return (
     <WidgetFrame
       label={WIDGET_LABEL[type]}
       isEditMode={isEditMode}
       onRemove={onRemove}
-      footer={footer}
     >
       {children}
     </WidgetFrame>

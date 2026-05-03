@@ -13,6 +13,8 @@ interface KPITileProps {
   value: string;
   /** Optional second line under the value. */
   secondary?: string;
+  /** Inline +/-X.X% delta vs. previous period, rendered next to the value. */
+  delta?: ReactNode;
   /** Inline trend chart. Hidden when fewer than 2 buckets. */
   sparkline?: SparklineBucket[];
   /** Aria description for the sparkline (e.g. "Trend hodnoty pipeline"). */
@@ -23,13 +25,15 @@ interface KPITileProps {
 
 /**
  * Body shape every KPI tile widget shares: the headline number,
- * an optional secondary line, an optional inline sparkline, and a
- * tertiary hint. Lives inside `WidgetFrame.children`; the comparison
- * delta belongs in `WidgetFrame.footer` via `DeltaBadge`.
+ * an optional secondary line, an inline comparison delta, an
+ * optional sparkline, and a tertiary hint. The previous-period
+ * date pair used to live in WidgetFrame.footer; it now lives in the
+ * global filter bar, so KPI tiles never render a footer.
  */
 export function KPITile({
   value,
   secondary,
+  delta,
   sparkline,
   sparklineLabel,
   hint,
@@ -37,9 +41,12 @@ export function KPITile({
   return (
     <div className="flex h-full flex-col justify-between gap-2">
       <div>
-        <p className="text-3xl font-semibold tabular-nums text-text-primary">
-          {value}
-        </p>
+        <div className="flex flex-wrap items-baseline gap-3">
+          <p className="text-3xl font-semibold tabular-nums text-text-primary">
+            {value}
+          </p>
+          {delta ? <span className="shrink-0">{delta}</span> : null}
+        </div>
         {secondary ? (
           <p className="mt-1 text-sm text-text-secondary tabular-nums">
             {secondary}

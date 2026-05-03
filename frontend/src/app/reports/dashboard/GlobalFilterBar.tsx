@@ -8,6 +8,7 @@ import {
   PRESET_LABEL,
   type RangePreset,
   VISIBLE_PRESETS,
+  resolvePreset,
 } from "@/app/reports/dashboard/dateRange";
 import type { GlobalFilters } from "@/app/reports/dashboard/types";
 
@@ -41,6 +42,24 @@ export function GlobalFilterBar({ value, onChange }: GlobalFilterBarProps) {
   const users = useOrgUsers();
 
   const presets = useMemo(() => VISIBLE_PRESETS, []);
+
+  // Resolve the picked preset (or custom window) into the absolute
+  // date pair every widget will see, so we can echo it next to the
+  // segmented control. Format: "5. 4. – 4. 5. 2026".
+  const resolvedRange = useMemo(() => {
+    if (!value.dateRange) return null;
+    try {
+      const { from, to } = resolvePreset(value.dateRange);
+      const fmt = new Intl.DateTimeFormat("cs-CZ", {
+        day: "numeric",
+        month: "numeric",
+        year: "numeric",
+      });
+      return `${fmt.format(new Date(from))} – ${fmt.format(new Date(to))}`;
+    } catch {
+      return null;
+    }
+  }, [value.dateRange]);
 
   // Teams the current user can scope by. Admins see every team; a
   // manager sees only the teams they manage (a single user can manage
@@ -132,6 +151,14 @@ export function GlobalFilterBar({ value, onChange }: GlobalFilterBarProps) {
             );
           })}
         </div>
+        {resolvedRange ? (
+          <span
+            className="text-xs tabular-nums text-text-tertiary"
+            aria-label="Vybrané období"
+          >
+            {resolvedRange}
+          </span>
+        ) : null}
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {visibleTeams.length > 0 ? (
