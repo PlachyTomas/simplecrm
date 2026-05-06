@@ -90,7 +90,8 @@ function DealCard({ deal, locale, dragging, onWin, onLose, winning, losing }: De
       tabIndex={0}
       aria-label={`${deal.name} — ${formatMoney(deal.value, deal.currency, locale)}`}
       className={cn(
-        "group/card relative cursor-grab select-none rounded-md border border-border bg-surface px-3 py-3 shadow-sm transition-shadow duration-fast hover:shadow-md active:cursor-grabbing",
+        "group/card relative cursor-grab select-none rounded-md border border-border bg-surface px-3 py-2.5 shadow-sm transition-shadow duration-fast hover:shadow-md active:cursor-grabbing",
+        "max-md:w-64 max-md:shrink-0 max-md:snap-start",
         dragging && "opacity-0",
       )}
     >
@@ -180,21 +181,23 @@ function StageColumn({
       aria-label={`Fáze ${stage.name}`}
       style={seamStyle}
       className={cn(
-        "group/column flex w-[92vw] shrink-0 snap-start flex-col rounded-lg border border-border bg-surface transition-colors duration-fast md:w-72",
+        "group/column flex flex-col rounded-lg border border-border bg-surface transition-colors duration-fast",
+        "max-md:w-full max-md:shrink-0",
+        "md:min-w-0 md:flex-1",
         isOver && "ring-2 ring-accent",
       )}
     >
-      <header className="flex items-start justify-between gap-2 border-b border-border-subtle px-4 py-3">
+      <header className="flex items-start justify-between gap-2 border-b border-border-subtle px-3 py-2.5">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span
               aria-hidden
-              className="inline-block h-2 w-2 rounded-full"
+              className="inline-block h-2 w-2 shrink-0 rounded-full"
               style={{ backgroundColor: dotColor }}
             />
             <h2 className="truncate text-sm font-semibold">{stage.name}</h2>
           </div>
-          <p className="mt-1 text-xs text-text-tertiary">
+          <p className="mt-0.5 truncate text-xs text-text-tertiary">
             {stage.deal_count} {csNoun(stage.deal_count, "obchod")} ·{" "}
             {formatMoney(stage.total_value, boardCurrency, locale)}
           </p>
@@ -208,7 +211,14 @@ function StageColumn({
           <Plus size={16} strokeWidth={1.75} />
         </button>
       </header>
-      <div ref={setNodeRef} className="flex flex-1 flex-col gap-2 p-3">
+      <div
+        ref={setNodeRef}
+        className={cn(
+          "flex flex-1 gap-2 p-2",
+          "max-md:flex-row max-md:snap-x max-md:snap-mandatory max-md:overflow-x-auto",
+          "md:min-h-0 md:flex-col md:overflow-y-auto",
+        )}
+      >
         {stage.deals.length === 0 ? (
           <p className="text-xs text-text-tertiary">Zatím žádné obchody.</p>
         ) : (
@@ -540,7 +550,13 @@ export function PipelinePage() {
           onDragEnd={handleDragEnd}
           onDragCancel={() => setActiveDealId(null)}
         >
-          <div className="flex flex-1 snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-6 [scroll-padding-left:1rem] md:snap-none md:px-8">
+          <div
+            className={cn(
+              "flex flex-1 gap-3 px-4 pb-6 md:px-8",
+              "max-md:flex-col max-md:overflow-y-auto",
+              "md:min-h-0 md:overflow-hidden",
+            )}
+          >
             {filteredStages.map((stage) => (
               <StageColumn
                 key={stage.id}
