@@ -6,7 +6,7 @@ never touch accounts.google.com.
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator
 
 import pytest
 from httpx import AsyncClient
@@ -14,7 +14,6 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth import REFRESH_COOKIE_NAME, STATE_COOKIE_NAME
-from app.core.config import get_settings
 from app.core.security import create_access_token, sign_oauth_state
 from app.db.models import Organization, User, UserRole
 from app.db.session import AsyncSessionLocal
@@ -260,83 +259,6 @@ async def test_logout_clears_refresh_cookie(client: AsyncClient) -> None:
     assert response.status_code == 204
     set_cookie = response.headers.get("set-cookie", "")
     assert "Max-Age=0" in set_cookie or "expires=Thu, 01 Jan 1970" in set_cookie.lower()
-
-
-@pytest.fixture
-def enable_dev_auth() -> Iterator[None]:
-    settings = get_settings()
-    prev_enabled, prev_env = settings.dev_auth_enabled, settings.app_env
-    settings.dev_auth_enabled = True
-    settings.app_env = "dev"
-    try:
-        yield
-    finally:
-        settings.dev_auth_enabled = prev_enabled
-        settings.app_env = prev_env
-
-
-@pytest.fixture
-async def dev_cleanup() -> AsyncIterator[list[str]]:
-    emails: list[str] = []
-    yield emails
-    if not emails:
-        return
-    async with AsyncSessionLocal() as session:
-        org_ids = (
-            await session.execute(
-                select(User.organization_id).where(User.email.in_(emails))
-            )
-        ).scalars().all()
-        await session.execute(delete(User).where(User.email.in_(emails)))
-        if org_ids:
-            await session.execute(
-                delete(Organization).where(Organization.id.in_(org_ids))
-            )
-        await session.commit()
-
-
-async def test_dev_login_returns_token_when_enabled(
-    client: AsyncClient,
-    enable_dev_auth: None,
-    dev_cleanup: list[str],
-) -> None:
-    email = "admin@example.com"
-    dev_cleanup.append(email)
-    response = await client.post("/api/v1/auth/dev-login", json={"email": email})
-    assert response.status_code == 200, response.text
-    body = response.json()
-    assert body["access_token"]
-    assert body["user"]["email"] == email
-    assert body["user"]["role"] == "admin"
-
-    me = await client.get(
-        "/api/v1/auth/me",
-        headers={"Authorization": f"Bearer {body['access_token']}"},
-    )
-    assert me.status_code == 200
-    assert me.json()["email"] == email
-
-
-async def test_dev_login_is_idempotent(
-    client: AsyncClient,
-    enable_dev_auth: None,
-    dev_cleanup: list[str],
-) -> None:
-    email = "idem@example.com"
-    dev_cleanup.append(email)
-    first = await client.post("/api/v1/auth/dev-login", json={"email": email})
-    second = await client.post("/api/v1/auth/dev-login", json={"email": email})
-    assert first.status_code == 200
-    assert second.status_code == 200
-    assert first.json()["user"]["id"] == second.json()["user"]["id"]
-
-
-async def test_dev_login_404_when_disabled(client: AsyncClient) -> None:
-    # Default settings: dev_auth_enabled=False.
-    response = await client.post(
-        "/api/v1/auth/dev-login", json={"email": "nope@example.com"}
-    )
-    assert response.status_code == 404
 
 
 # ---------------------------------------------------------------------------

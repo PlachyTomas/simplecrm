@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Response, status
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -34,7 +34,6 @@ from app.services.auth import (
     InvitationExpiredError,
     InvitationNotFoundError,
     UserAlreadyInOrganizationError,
-    upsert_dev_user,
     upsert_user_from_google_profile,
 )
 from app.services.google_oauth import GoogleOAuthClient, get_google_oauth_client
@@ -317,52 +316,6 @@ async def refresh(
 
     _set_refresh_cookie(response, issued.token)
     return RefreshResponse(
-        access_token=access_token,
-        user=CurrentUser.model_validate(user),
-    )
-
-
-class DevLoginRequest(BaseModel):
-    email: EmailStr = Field(default="admin@example.com")
-    name: str | None = None
-
-
-class DevLoginResponse(BaseModel):
-    access_token: str
-    user: CurrentUser
-
-
-def _require_dev_auth() -> None:
-    settings = get_settings()
-    if not (settings.dev_auth_enabled and settings.app_env == "dev"):
-        # 404 (not 403) so prod deploys don't even advertise that this
-        # endpoint exists.
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-
-
-@router.post("/dev-login", response_model=DevLoginResponse)
-async def dev_login(
-    payload: DevLoginRequest,
-    response: Response,
-    session: AsyncSession = Depends(get_db),
-) -> DevLoginResponse:
-    """Dev-only: mint a JWT for an arbitrary email, no OAuth round-trip.
-
-    Guarded by both `dev_auth_enabled=True` and `app_env=="dev"`. First
-    call for an email provisions an Organization + admin User with the
-    default pipeline; subsequent calls are idempotent. Also sets the
-    refresh cookie so the dev workflow benefits from /auth/refresh on
-    cold-load — exactly the same shape as the real OAuth callback.
-    """
-    _require_dev_auth()
-    user = await upsert_dev_user(session, email=payload.email, name=payload.name)
-    await session.commit()
-    await session.refresh(user, attribute_names=["organization"])
-    access_token = create_access_token(user.id, user.organization_id, user.role)
-    issued = await _issue_and_record_refresh(session, user.id)
-    await session.commit()
-    _set_refresh_cookie(response, issued.token)
-    return DevLoginResponse(
         access_token=access_token,
         user=CurrentUser.model_validate(user),
     )

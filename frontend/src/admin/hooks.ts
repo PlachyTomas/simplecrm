@@ -9,6 +9,9 @@ export type AdminOrgRow = components["schemas"]["AdminOrgRow"];
 export type AdminActivityList = components["schemas"]["AdminActivityList"];
 export type AdminSubscriptionOut = components["schemas"]["SubscriptionOut"];
 export type BillingSettingsOut = components["schemas"]["BillingSettingsOut"];
+export type AdminOrgUserRow = components["schemas"]["AdminOrgUserRow"];
+export type AdminOrgUserList = components["schemas"]["AdminOrgUserList"];
+export type ImpersonateOut = components["schemas"]["ImpersonateOut"];
 
 const PAGE_SIZE = 50;
 
@@ -98,6 +101,28 @@ export function useAdminBillingSettings() {
       try {
         return await apiFetch<BillingSettingsOut>(
           "/api/v1/admin/billing-settings",
+          { token: accessToken },
+        );
+      } catch (err) {
+        if (err instanceof ApiError) return null;
+        throw err;
+      }
+    },
+  });
+}
+
+/** Members of an org — drives the impersonation picker on the drawer. */
+export function useAdminOrgUsers(orgId: string | null) {
+  const { accessToken } = useAuth();
+  return useQuery<AdminOrgUserList | null>({
+    queryKey: ["admin", "org-users", orgId],
+    enabled: !!accessToken && !!orgId,
+    staleTime: 30 * 1000,
+    queryFn: async () => {
+      if (!orgId) return null;
+      try {
+        return await apiFetch<AdminOrgUserList>(
+          `/api/v1/admin/organizations/${orgId}/users`,
           { token: accessToken },
         );
       } catch (err) {

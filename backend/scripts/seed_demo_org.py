@@ -13,7 +13,7 @@ Usage:
     cd backend
     uv run python scripts/seed_demo_org.py
 
-Then dev-login at http://localhost:5173/login as one of:
+Seeded users (Eva is the admin, plus three managers + three salespeople):
     eva@demo.cz            (admin — sees everything)
     adam@demo.cz           (manager — Praha)
     bara@demo.cz           (manager — Brno)
@@ -21,6 +21,10 @@ Then dev-login at http://localhost:5173/login as one of:
     jakub@demo.cz          (salesperson — Praha)
     tereza@demo.cz         (salesperson — Brno)
     petr@demo.cz           (salesperson — Bratislava)
+
+Sign-in is Google-only — to use these accounts you'd need to swap their
+emails for real Google identities (or temporarily set `users.google_id`
+via psql to a Google ID you can authenticate with).
 """
 
 from __future__ import annotations
@@ -129,8 +133,8 @@ async def _create_org_with_subscription(session) -> Organization:
 
     # Demo org runs on the `comp` plan with `is_comp=True` so the paygate
     # never fires regardless of trial expiry or future billing changes
-    # (see services/billing.is_app_access_allowed). Keeps `dev-login` into
-    # the demo org working without anyone wiring up the ComGate sandbox.
+    # (see services/billing.is_app_access_allowed). Keeps the demo org
+    # usable without wiring up the ComGate sandbox.
     comp_plan_id = (
         await session.execute(select(Plan.id).where(Plan.code == "comp"))
     ).scalar_one()

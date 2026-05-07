@@ -126,10 +126,11 @@ following sandbox cards (stable across years):
 Once the env is set + tunnel is up + URLs registered:
 
 ```bash
-# 1. Mint a fresh org via dev-login.
-TOKEN=$(curl -s -X POST localhost:8000/api/v1/auth/dev-login \
-  -H 'content-type: application/json' \
-  -d '{"email":"smoke-test@example.com"}' | jq -r .access_token)
+# 1. Sign in via Google in the browser at http://localhost:5173/login,
+#    finish org-onboarding for a brand-new org, then grab the access
+#    token from devtools (Network tab → /api/v1/auth/me request →
+#    Authorization header), and export it:
+TOKEN=...
 
 # 2. Choose plan — backend returns the ComGate hosted-payment URL.
 REDIRECT=$(curl -s -X POST \

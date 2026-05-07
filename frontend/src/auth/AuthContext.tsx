@@ -30,10 +30,10 @@ interface RefreshResponse {
 /**
  * Access tokens are held in memory only — never localStorage — per the
  * security guidance in the product brief. The httponly refresh cookie set by
- * `/auth/google/callback` and `/auth/dev-login` is exchanged for a fresh
- * access token via `POST /auth/refresh` on cold-load; that lets a typed-URL
- * navigation, full reload, or new-tab open re-hydrate the in-memory token
- * without bouncing the user through Google again.
+ * `/auth/google/callback` is exchanged for a fresh access token via
+ * `POST /auth/refresh` on cold-load; that lets a typed-URL navigation, full
+ * reload, or new-tab open re-hydrate the in-memory token without bouncing
+ * the user through Google again.
  *
  * Cold-load timeline:
  *   1. Render with `accessToken = readTokenFromHash() ?? null`.

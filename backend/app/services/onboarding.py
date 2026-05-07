@@ -1,11 +1,10 @@
 """Org-creation orchestration: org + default team + default pipeline + admin.
 
-Used by the Google OAuth callback (first-time login with no pending invite),
-the dev-login flow, and the explicit `POST /onboarding/organization`
-endpoint. Centralizes the side effects so they can't drift between call
-sites: the org always lands with one default team named "Hlavní tým" and
-the default pipeline, and the founding user is always promoted to admin
-and dropped into that team.
+Used by the Google OAuth callback (first-time login with no pending invite)
+and the explicit `POST /onboarding/organization` endpoint. Centralizes the
+side effects so they can't drift between call sites: the org always lands
+with one default team named "Hlavní tým" and the default pipeline, and the
+founding user is always promoted to admin and dropped into that team.
 """
 
 from __future__ import annotations

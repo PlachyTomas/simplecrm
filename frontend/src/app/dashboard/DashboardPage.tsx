@@ -9,9 +9,9 @@ import { usePageTitle } from "@/lib/usePageTitle";
 
 /**
  * Extract a friendly first name. The backend's `user.name` is "first last"
- * for Google OAuth signups, but falls back to the email local-part for
- * dev-login. Splitting on whitespace handles both cases without showing
- * the role or domain.
+ * for Google OAuth signups; the email local-part is the fallback when
+ * `name` is empty. Splitting on whitespace handles both cases without
+ * showing the role or domain.
  */
 function firstName(name: string, email: string): string {
   const trimmed = name.trim();

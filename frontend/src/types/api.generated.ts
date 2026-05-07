@@ -157,32 +157,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/dev-login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Dev Login
-         * @description Dev-only: mint a JWT for an arbitrary email, no OAuth round-trip.
-         *
-         *     Guarded by both `dev_auth_enabled=True` and `app_env=="dev"`. First
-         *     call for an email provisions an Organization + admin User with the
-         *     default pipeline; subsequent calls are idempotent. Also sets the
-         *     refresh cookie so the dev workflow benefits from /auth/refresh on
-         *     cold-load — exactly the same shape as the real OAuth callback.
-         */
-        post: operations["dev_login_api_v1_auth_dev_login_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/onboarding/organization": {
         parameters: {
             query?: never;
@@ -1143,9 +1117,13 @@ export interface paths {
          * Choose Plan
          * @description Customer (org admin) chooses a plan from the pay-gate.
          *
-         *     Records intent — the founder activates manually after payment.
-         *     Idempotent: re-picking the same plan returns the existing pending
-         *     subscription without a second email.
+         *     .. deprecated::
+         *         Prefer ``POST /api/v1/payments/initial-payment-init`` — that
+         *         endpoint creates an Invoice + ComGate hosted-payment URL and
+         *         returns ``{redirect_url}``. This endpoint is kept for backwards
+         *         compatibility while the frontend migrates; new code should not
+         *         call it. Sets ``status='pending_activation'`` and emails the
+         *         founder, which is no longer how billing actually advances.
          */
         post: operations["choose_plan_api_v1_organizations_current_subscription_choose_plan_post"];
         delete?: never;
@@ -1186,20 +1164,32 @@ export interface paths {
          * Update Seat Count
          * @description Org admin tunes the contracted seat count.
          *
-         *     Three shapes:
+         *     Four shapes:
          *
-         *     - **Increase** (target ≥ active): apply immediately; the cap relaxes
-         *       and new invitations fit. Any previously-queued downsize is cleared.
+         *     - **Cancel queued change** (target == current `seat_count`): clear
+         *       both pending fields without changing anything else. Used by the
+         *       "Zrušit naplánovanou změnu" button in Organizace + the per-row
+         *       pill cancel in Uživatelé.
+         *     - **Trial bump** (status='trialing', target > contracted): apply
+         *       immediately. The trial-time slider play is locked in at first
+         *       payment and billed for the picked count from then on.
+         *     - **Increase ≤ contracted** (target > current `seat_count` but
+         *       target ≤ contracted_seat_count): apply immediately. Customer is
+         *       either un-queueing a downsize or staying within their paid
+         *       baseline; no charge needed.
+         *     - **Increase > contracted, status='active'**: rejected with HTTP 402
+         *       and a `redirect_url` pointing at `POST /payments/seat-change-init`.
+         *       The frontend kicks the customer through ComGate; the webhook
+         *       eventually applies the bump via `billing.apply_seat_charge_success`.
+         *       Closes the bump-then-drop-before-billing abuse documented in
+         *       qa-artifacts/2026-05-03-adversary-testing-report.md (Finding 1).
          *     - **Decrease** (target < active): queue the change. `seat_count`
          *       stays at the current contracted value through this period;
          *       `pending_seat_count` and `pending_user_deactivations` carry the
          *       target + the picked victims. The rollover service
-         *       (`billing.activate_subscription`, eventual scheduled job) applies
-         *       the queue at the next period boundary.
-         *     - **Cancel** (target == current `seat_count`): clear both pending
-         *       fields without changing anything else. Used by the
-         *       "Zrušit naplánovanou změnu" button in Organizace + the per-row
-         *       pill cancel in Uživatelé.
+         *       (`billing.apply_renewal_success` for ComGate-driven renewals,
+         *       `billing.activate_subscription` for super-admin manual flows)
+         *       applies the queue at the next period boundary.
          *
          *     The user-creation cap (`Subscription.seat_count`) is unchanged for
          *     queued downsizes — customers keep the seats they paid for through
@@ -1232,6 +1222,184 @@ export interface paths {
          *     future scheduled-rollover job will apply it at period end.
          */
         post: operations["change_billing_interval_api_v1_organizations_current_subscription_change_interval_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/current/subscription/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Subscription
+         * @description Org admin cancels their own subscription.
+         *
+         *     Distinct from the super-admin `/admin/.../cancel` route. The customer
+         *     keeps app access through `current_period_ends_at` (standard SaaS
+         *     courtesy); this endpoint just stops future scheduled charges. Comp
+         *     + enterprise can't self-cancel — those go through the founder.
+         *
+         *     Best-effort: also calls ComGate `disable_recurring` to revoke the
+         *     saved-card authorization on their side. ComGate failure does NOT
+         *     block the local cancel — the scheduler's `is_comp=False` /
+         *     `status='active'` filter is what actually stops further charges.
+         */
+        post: operations["cancel_subscription_api_v1_organizations_current_subscription_cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/current/subscription/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reactivate Subscription
+         * @description Org admin un-cancels before the period actually ends.
+         *
+         *     Only valid while `status='canceled'` AND
+         *     `current_period_ends_at > now()`. Once the period has expired the
+         *     customer must re-enter card details (initial-payment-init from
+         *     scratch), so reactivation isn't available there.
+         */
+        post: operations["reactivate_subscription_api_v1_organizations_current_subscription_reactivate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/initial-payment-init": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Initial Payment Init
+         * @description Customer is moving from trial → paid plan.
+         *
+         *     Creates an `Invoice(kind=initial, status=pending)`, asks ComGate
+         *     for a hosted-payment-page URL, returns it for the frontend to
+         *     redirect to. The webhook lands later and promotes to active.
+         */
+        post: operations["initial_payment_init_api_v1_payments_initial_payment_init_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/seat-change-init": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Seat Change Init
+         * @description Mid-period seat upgrade — paid orgs only.
+         *
+         *     Trial bumps and decreases never reach this endpoint; they're
+         *     handled directly by `PUT /subscription/seat-count`. This is only
+         *     called when the active org wants to lift `contracted_seat_count`,
+         *     which requires an immediate prorated ComGate charge.
+         */
+        post: operations["seat_change_init_api_v1_payments_seat_change_init_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/return": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Payment Return
+         * @description ComGate redirects the customer's browser here after they
+         *     complete (or cancel) the hosted-payment page.
+         *
+         *     We don't trust this for billing state — that's the webhook's job.
+         *     Read the invoice if we know its ID, then 302 the customer to the
+         *     frontend's billing-return route with whatever status we can see.
+         */
+        get: operations["payment_return_api_v1_payments_return_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Invoices */
+        get: operations["list_invoices_api_v1_payments_invoices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Comgate Webhook
+         * @description ComGate server-to-server payment-outcome notification.
+         *
+         *     1. Verify the HMAC-SHA256 signature on the raw request body.
+         *     2. Dedupe via `webhook_events.comgate_event_id` — re-deliveries
+         *        silently 204.
+         *     3. Parse the payload, look up the matching Invoice via `refId`
+         *        (which we set to the Invoice ID at create-time).
+         *     4. Dispatch to the appropriate `services/billing.apply_*_success`
+         *        or `mark_charge_failed` based on Invoice.kind + payload status.
+         *
+         *     Returns 204 on every successful processing path (including dedupes
+         *     and known-bad inputs that we've decided to swallow). Returns 4xx
+         *     only when ComGate should be told to retry.
+         */
+        post: operations["comgate_webhook_api_v1_payments_webhook_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1453,6 +1621,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/organizations/{org_id}/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Org Invoices
+         * @description Founder-facing invoice list for one org.
+         *
+         *     Mirrors the customer-facing `GET /payments/invoices` shape but
+         *     skips the `require_role(admin)` org-membership check — super-admin
+         *     operates across orgs.
+         */
+        get: operations["list_org_invoices_api_v1_admin_organizations__org_id__invoices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/organizations/{org_id}/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Org Users
+         * @description All members of an org, ordered admin → manager → salesperson then
+         *     by name. Drives the impersonation picker on the org detail drawer.
+         */
+        get: operations["list_org_users_api_v1_admin_organizations__org_id__users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{user_id}/impersonate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Impersonate User
+         * @description Mint an access token for `user_id` so the calling super-admin can
+         *     operate the app as that user (demo / support diagnostics).
+         *
+         *     Returns access token only — no refresh cookie is set, so the
+         *     super-admin's own session survives a page reload. To "stop
+         *     impersonating," the operator simply reloads the SPA: AuthContext's
+         *     cold-load `/auth/refresh` will re-hydrate using the existing
+         *     super-admin refresh cookie.
+         *
+         *     Guardrails:
+         *       - `require_super_admin` rejects non-super-admin callers.
+         *       - Refuses to impersonate another super-admin (privilege isolation).
+         *       - Refuses to impersonate inactive users or users without an org
+         *         (the resulting session would be unusable).
+         */
+        post: operations["impersonate_user_api_v1_admin_users__user_id__impersonate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1588,6 +1834,31 @@ export interface components {
             /** Last Activity At */
             last_activity_at: string | null;
         };
+        /** AdminOrgUserList */
+        AdminOrgUserList: {
+            /** Items */
+            items: components["schemas"]["AdminOrgUserRow"][];
+        };
+        /** AdminOrgUserRow */
+        AdminOrgUserRow: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Email */
+            email: string;
+            /** Name */
+            name: string;
+            /** Role */
+            role: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Is Super Admin */
+            is_super_admin: boolean;
+            /** Last Login At */
+            last_login_at: string | null;
+        };
         /**
          * AvgDealSizeConfig
          * @description Mean Deal.value over a scoped subset of deals.
@@ -1714,6 +1985,15 @@ export interface components {
             currency: string;
             /** Deals */
             deals: components["schemas"]["DealOut"][];
+        };
+        /**
+         * CancelSelfServeIn
+         * @description Body for `POST /subscription/cancel`. Optional free-form reason
+         *     is stored in the Activity audit row for support follow-up.
+         */
+        CancelSelfServeIn: {
+            /** Reason */
+            reason?: string | null;
         };
         /** CancelSubscriptionIn */
         CancelSubscriptionIn: {
@@ -2210,23 +2490,6 @@ export interface components {
             sparkline: components["schemas"]["SparklineBucket"][];
             comparison: components["schemas"]["Comparison"] | null;
         };
-        /** DevLoginRequest */
-        DevLoginRequest: {
-            /**
-             * Email
-             * Format: email
-             * @default admin@example.com
-             */
-            email: string;
-            /** Name */
-            name?: string | null;
-        };
-        /** DevLoginResponse */
-        DevLoginResponse: {
-            /** Access Token */
-            access_token: string;
-            user: components["schemas"]["CurrentUser"];
-        };
         /** ExtendTrialIn */
         ExtendTrialIn: {
             /** Days */
@@ -2249,6 +2512,39 @@ export interface components {
         HealthResponse: {
             /** Status */
             status: string;
+        };
+        /**
+         * ImpersonateOut
+         * @description Returned by `POST /admin/users/{id}/impersonate`. Carries an access
+         *     token minted for the target user — but no refresh cookie is set, so
+         *     the calling super-admin's own refresh cookie remains intact and a
+         *     page reload restores their session.
+         */
+        ImpersonateOut: {
+            /** Access Token */
+            access_token: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Email */
+            email: string;
+        };
+        /**
+         * InitialPaymentInitIn
+         * @description Body for `POST /payments/initial-payment-init`.
+         *
+         *     The customer is choosing their first paid plan; backend computes
+         *     `seat_count * effective_price` and hands them a ComGate hosted-page
+         *     redirect URL.
+         */
+        InitialPaymentInitIn: {
+            /**
+             * Plan Code
+             * @enum {string}
+             */
+            plan_code: "monthly" | "annual";
         };
         /** InvitationCreate */
         InvitationCreate: {
@@ -2334,6 +2630,50 @@ export interface components {
             role: components["schemas"]["UserRole"];
             /** Team Name */
             team_name?: string | null;
+        };
+        /** InvoiceList */
+        InvoiceList: {
+            /** Items */
+            items: components["schemas"]["InvoiceOut"][];
+            /** Total */
+            total: number;
+        };
+        /** InvoiceOut */
+        InvoiceOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "initial" | "renewal" | "seat_upgrade";
+            /** Amount Minor */
+            amount_minor: number;
+            /** Currency */
+            currency: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "paid" | "failed" | "refunded";
+            /** Seats */
+            seats?: number | null;
+            /** Period Starts At */
+            period_starts_at?: string | null;
+            /** Period Ends At */
+            period_ends_at?: string | null;
+            /** Failure Reason */
+            failure_reason?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Paid At */
+            paid_at?: string | null;
         };
         /**
          * KpiSummary
@@ -2724,6 +3064,27 @@ export interface components {
             /** Offset */
             offset: number;
         };
+        /**
+         * PaymentInitOut
+         * @description Response for any `*-init` endpoint that creates a ComGate payment.
+         *
+         *     `redirect_url` is the ComGate hosted-page URL the frontend should
+         *     `window.location` to. `invoice_id` lets the frontend poll for
+         *     completion if it doesn't want to wait for the return-URL.
+         */
+        PaymentInitOut: {
+            /** Redirect Url */
+            redirect_url: string;
+            /**
+             * Invoice Id
+             * Format: uuid
+             */
+            invoice_id: string;
+            /** Amount Minor */
+            amount_minor: number;
+            /** Currency */
+            currency: string;
+        };
         /** PipelineBoard */
         PipelineBoard: {
             /**
@@ -2975,6 +3336,44 @@ export interface components {
             /** Currency */
             currency: string;
         };
+        /**
+         * SeatChangeInitIn
+         * @description Body for `POST /payments/seat-change-init`.
+         *
+         *     `seat_count` is the target number of seats. When the target is
+         *     above the current `contracted_seat_count` AND status is 'active',
+         *     the endpoint kicks off a prorated ComGate charge. All other
+         *     transitions (decreases, trial bumps, no-ops) are handled by
+         *     `PUT /subscription/seat-count` directly without this endpoint.
+         */
+        SeatChangeInitIn: {
+            /** Seat Count */
+            seat_count: number;
+        };
+        /**
+         * SeatChangeInitOut
+         * @description Response for `POST /payments/seat-change-init`.
+         *
+         *     `status='accepted'`: ComGate took the charge for processing; the
+         *     final outcome lands via webhook. `invoice_id` lets the frontend
+         *     poll `GET /payments/invoices/{id}` for the terminal state.
+         */
+        SeatChangeInitOut: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "accepted";
+            /**
+             * Invoice Id
+             * Format: uuid
+             */
+            invoice_id: string;
+            /** Amount Minor */
+            amount_minor: number;
+            /** Currency */
+            currency: string;
+        };
         /** SetCompIn */
         SetCompIn: {
             /** Reason */
@@ -3155,6 +3554,11 @@ export interface components {
              * @default 1
              */
             seat_count: number;
+            /**
+             * Contracted Seat Count
+             * @default 1
+             */
+            contracted_seat_count: number;
             pending_plan?: components["schemas"]["PlanOut"] | null;
             /** Pending Seat Count */
             pending_seat_count?: number | null;
@@ -3629,39 +4033,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RefreshResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    dev_login_api_v1_auth_dev_login_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DevLoginRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DevLoginResponse"];
                 };
             };
             /** @description Validation Error */
@@ -5963,6 +6334,218 @@ export interface operations {
             };
         };
     };
+    cancel_subscription_api_v1_organizations_current_subscription_cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelSelfServeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reactivate_subscription_api_v1_organizations_current_subscription_reactivate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+        };
+    };
+    initial_payment_init_api_v1_payments_initial_payment_init_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InitialPaymentInitIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentInitOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    seat_change_init_api_v1_payments_seat_change_init_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeatChangeInitIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeatChangeInitOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    payment_return_api_v1_payments_return_get: {
+        parameters: {
+            query?: {
+                transId?: string | null;
+                refId?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_invoices_api_v1_payments_invoices_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    comgate_webhook_api_v1_payments_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-comgate-signature"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_public_plans_api_v1_plans_public_get: {
         parameters: {
             query?: never;
@@ -6317,6 +6900,102 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BillingSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_org_invoices_api_v1_admin_organizations__org_id__invoices_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_org_users_api_v1_admin_organizations__org_id__users_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminOrgUserList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    impersonate_user_api_v1_admin_users__user_id__impersonate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImpersonateOut"];
                 };
             };
             /** @description Validation Error */

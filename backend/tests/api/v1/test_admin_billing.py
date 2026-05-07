@@ -423,3 +423,140 @@ async def test_activate_applies_queued_user_deactivations(
     assert sub.seat_count == 1
     assert sub.pending_seat_count is None
     assert sub.pending_user_deactivations is None
+
+
+# ---------------------------------------------------------------------------
+# Impersonation
+# ---------------------------------------------------------------------------
+
+
+async def _add_member(
+    session: AsyncSession,
+    org: Organization,
+    owned_emails: list[str],
+    *,
+    is_super_admin: bool = False,
+    is_active: bool = True,
+    role: UserRole = UserRole.salesperson,
+) -> User:
+    email = f"member-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_emails.append(email)
+    user = User(
+        email=email,
+        name="Member",
+        role=role,
+        organization_id=org.id,
+        is_super_admin=is_super_admin,
+        is_active=is_active,
+    )
+    session.add(user)
+    await session.commit()
+    return user
+
+
+async def test_list_org_users_super_admin(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    org, admin = await _seed_org_with_super_admin(db_session, owned_emails)
+    member = await _add_member(db_session, org, owned_emails)
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    response = await client.get(
+        f"/api/v1/admin/organizations/{org.id}/users",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    emails = [u["email"] for u in response.json()["items"]]
+    assert admin.email in emails
+    assert member.email in emails
+
+
+async def test_list_org_users_rejects_non_super_admin(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    org, user = await _seed_org_with_super_admin(
+        db_session, owned_emails, super_admin=False
+    )
+    token = create_access_token(user.id, user.organization_id, user.role)
+    response = await client.get(
+        f"/api/v1/admin/organizations/{org.id}/users",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 403
+
+
+async def test_impersonate_super_admin_mints_token_for_target(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    from app.core.security import decode_token
+
+    org, admin = await _seed_org_with_super_admin(db_session, owned_emails)
+    member = await _add_member(db_session, org, owned_emails)
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    response = await client.post(
+        f"/api/v1/admin/users/{member.id}/impersonate",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["user_id"] == str(member.id)
+    assert body["email"] == member.email
+    # Token decodes to the target user, not the calling super-admin.
+    payload = decode_token(body["access_token"])
+    assert payload["sub"] == str(member.id)
+    # No refresh cookie is set — super-admin keeps their own session.
+    assert "set-cookie" not in {h.lower() for h in response.headers}
+
+
+async def test_impersonate_rejects_non_super_admin(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    org, user = await _seed_org_with_super_admin(
+        db_session, owned_emails, super_admin=False
+    )
+    member = await _add_member(db_session, org, owned_emails)
+    token = create_access_token(user.id, user.organization_id, user.role)
+    response = await client.post(
+        f"/api/v1/admin/users/{member.id}/impersonate",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 403
+
+
+async def test_impersonate_refuses_other_super_admin(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    org, admin = await _seed_org_with_super_admin(db_session, owned_emails)
+    other_admin = await _add_member(
+        db_session, org, owned_emails, is_super_admin=True
+    )
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    response = await client.post(
+        f"/api/v1/admin/users/{other_admin.id}/impersonate",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 403
+
+
+async def test_impersonate_inactive_user_returns_422(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    org, admin = await _seed_org_with_super_admin(db_session, owned_emails)
+    inactive = await _add_member(db_session, org, owned_emails, is_active=False)
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    response = await client.post(
+        f"/api/v1/admin/users/{inactive.id}/impersonate",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 422
+
+
+async def test_impersonate_unknown_user_returns_404(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    _org, admin = await _seed_org_with_super_admin(db_session, owned_emails)
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    response = await client.post(
+        f"/api/v1/admin/users/{uuid.uuid4()}/impersonate",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 404

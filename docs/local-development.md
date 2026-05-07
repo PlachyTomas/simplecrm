@@ -152,57 +152,7 @@ uv run python -c "import asyncio; from app.services.scheduler import run_freeing
 Or hit the manual admin-only endpoint per-company:
 `POST /api/v1/companies/{id}/free`.
 
-## 8. Dev mode (auth bypass)
-
-Setting up a Google Cloud OAuth Client ID just to try the app locally is
-friction you don't always need. The backend ships a **dev-only** login
-endpoint that mints a JWT for any email without going through Google.
-
-### Enable
-
-In `backend/.env` (or the environment):
-
-```dotenv
-APP_ENV=dev
-DEV_AUTH_ENABLED=true
-```
-
-In `frontend/.env.local`:
-
-```dotenv
-VITE_DEV_AUTH_ENABLED=true
-```
-
-If you're using the repo's `docker-compose.dev.yml`, all three are
-pre-set on the `dev` service — just
-`docker compose -f docker-compose.dev.yml up -d`.
-
-### Use
-
-The login page now shows a **Dev login** panel under the Google button.
-Enter any email (`admin@example.com`, `alice@acme.cz`, …) and click
-**Přihlásit jako dev uživatel**. The first call for that email
-provisions an Organization with the default pipeline and makes the user
-an `admin`; subsequent calls for the same email are idempotent and log
-you back in.
-
-Or call the endpoint directly for scripting:
-
-```bash
-curl -X POST http://localhost:8000/api/v1/auth/dev-login \
-  -H 'content-type: application/json' \
-  -d '{"email":"admin@example.com"}'
-```
-
-### Safety
-
-The endpoint is gated by **both** `DEV_AUTH_ENABLED=true` **and**
-`APP_ENV=dev` — if either is missing it returns `404 Not Found` so
-production deploys don't even advertise that it exists. The production
-compose file (`docker-compose.prod.yml`) sets neither, and the `.env.example`
-for production doesn't mention them.
-
-## 9. Useful scripts
+## 8. Useful scripts
 
 - `scripts/dev.sh` — wrapper for the Claude Code dev container.
   See [`dev-container.md`](./dev-container.md).

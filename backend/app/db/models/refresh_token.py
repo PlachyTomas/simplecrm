@@ -14,9 +14,9 @@ class RefreshToken(Base):
     """Allowlist of active refresh-token jtis.
 
     A refresh JWT is only honored when its `jti` claim is present in this
-    table. Issuing a token (OAuth callback, dev-login, refresh rotation)
-    inserts a row; refresh rotates by deleting the old row and inserting
-    a new one; logout deletes the current row. Closes the
+    table. Issuing a token (OAuth callback, refresh rotation) inserts a
+    row; refresh rotates by deleting the old row and inserting a new one;
+    logout deletes the current row. Closes the
     cryptographic-rotation-but-no-server-side-invalidation gap (QA-024
     Part B): a leaked refresh JWT becomes useless the moment the legitimate
     user refreshes.

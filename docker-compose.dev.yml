@@ -22,12 +22,7 @@ services:
       - POSTGRES_PASSWORD=simplecrm
       - POSTGRES_DB=simplecrm
       - HOME=/home/node
-      # Dev-only auth bypass — POST /api/v1/auth/dev-login mints a JWT
-      # without Google OAuth. Gated on app_env=="dev" too (default).
       - APP_ENV=dev
-      - DEV_AUTH_ENABLED=true
-      # Frontend toggle that surfaces the Dev-login panel on /login.
-      - VITE_DEV_AUTH_ENABLED=true
       # ComGate billing. Default-empty so the demo-seeded comp org keeps
       # working without needing real merchant credentials. Populate via
       # docs/comgate-setup.md when exercising paid-plan flows.

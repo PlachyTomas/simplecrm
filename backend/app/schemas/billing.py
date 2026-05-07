@@ -259,3 +259,36 @@ class AdminActivityRow(BaseModel):
 class AdminActivityList(BaseModel):
     items: list[AdminActivityRow]
     total: int
+
+
+# ---------------------------------------------------------------------------
+# Admin org-members + impersonation
+# ---------------------------------------------------------------------------
+
+
+class AdminOrgUserRow(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    email: str
+    name: str
+    role: str
+    is_active: bool
+    is_super_admin: bool
+    last_login_at: datetime | None
+
+
+class AdminOrgUserList(BaseModel):
+    items: list[AdminOrgUserRow]
+
+
+class ImpersonateOut(BaseModel):
+    """Returned by `POST /admin/users/{id}/impersonate`. Carries an access
+    token minted for the target user — but no refresh cookie is set, so
+    the calling super-admin's own refresh cookie remains intact and a
+    page reload restores their session.
+    """
+
+    access_token: str
+    user_id: uuid.UUID
+    email: str

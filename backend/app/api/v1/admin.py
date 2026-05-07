@@ -15,6 +15,7 @@ subscription state.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime
 from typing import cast
@@ -25,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.deps import require_super_admin
+from app.core.security import create_access_token
 from app.db import get_db
 from app.db.models import (
     Activity,
@@ -41,10 +43,13 @@ from app.schemas.billing import (
     AdminActivityRow,
     AdminOrgList,
     AdminOrgRow,
+    AdminOrgUserList,
+    AdminOrgUserRow,
     BillingSettingsOut,
     BillingSettingsUpdate,
     CancelSubscriptionIn,
     ExtendTrialIn,
+    ImpersonateOut,
     SetCompIn,
     SetEnterpriseIn,
     SubscriptionOut,
@@ -52,6 +57,8 @@ from app.schemas.billing import (
 )
 from app.schemas.payments import InvoiceList, InvoiceOut
 from app.services import billing
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -476,4 +483,95 @@ async def list_org_invoices(
     return InvoiceList(
         items=[InvoiceOut.model_validate(r) for r in rows],
         total=total,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Org members + impersonation (super-admin diagnostic / demo access)
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/organizations/{org_id}/users",
+    response_model=AdminOrgUserList,
+)
+async def list_org_users(
+    org_id: uuid.UUID,
+    _admin: User = Depends(require_super_admin),
+    session: AsyncSession = Depends(get_db),
+) -> AdminOrgUserList:
+    """All members of an org, ordered admin → manager → salesperson then
+    by name. Drives the impersonation picker on the org detail drawer.
+    """
+    rows = (
+        await session.execute(
+            select(User)
+            .where(User.organization_id == org_id)
+            .order_by(User.role, User.name)
+        )
+    ).scalars().all()
+    return AdminOrgUserList(items=[AdminOrgUserRow.model_validate(u) for u in rows])
+
+
+@router.post(
+    "/users/{user_id}/impersonate",
+    response_model=ImpersonateOut,
+)
+async def impersonate_user(
+    user_id: uuid.UUID,
+    admin: User = Depends(require_super_admin),
+    session: AsyncSession = Depends(get_db),
+) -> ImpersonateOut:
+    """Mint an access token for `user_id` so the calling super-admin can
+    operate the app as that user (demo / support diagnostics).
+
+    Returns access token only — no refresh cookie is set, so the
+    super-admin's own session survives a page reload. To "stop
+    impersonating," the operator simply reloads the SPA: AuthContext's
+    cold-load `/auth/refresh` will re-hydrate using the existing
+    super-admin refresh cookie.
+
+    Guardrails:
+      - `require_super_admin` rejects non-super-admin callers.
+      - Refuses to impersonate another super-admin (privilege isolation).
+      - Refuses to impersonate inactive users or users without an org
+        (the resulting session would be unusable).
+    """
+    target = await session.get(User, user_id)
+    if target is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if target.is_super_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Refusing to impersonate another super-admin",
+        )
+    if not target.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Target user is inactive",
+        )
+    if target.organization_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Target user has no organization",
+        )
+
+    # Audit trail lives in the app log — no DB schema change. Includes
+    # both identities so a single grep reconstructs every impersonation.
+    logger.warning(
+        "super-admin %s (%s) impersonating user %s (%s) in org %s",
+        admin.id,
+        admin.email,
+        target.id,
+        target.email,
+        target.organization_id,
+    )
+
+    access_token = create_access_token(
+        target.id, target.organization_id, target.role
+    )
+    return ImpersonateOut(
+        access_token=access_token,
+        user_id=target.id,
+        email=target.email,
     )

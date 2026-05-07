@@ -1,10 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
+  type AdminOrgUserRow,
   type AdminSubscriptionOut,
+  type ImpersonateOut,
   useAdminOrgActivity,
   useAdminOrgSubscription,
+  useAdminOrgUsers,
 } from "@/admin/hooks";
 import { useAuth } from "@/auth/useAuth";
 import { formatCzkMinor } from "@/components/billing/format";
@@ -170,6 +174,8 @@ export function OrgDetailDrawer({ orgId, userCount }: OrgDetailDrawerProps) {
           </ActionButton>
         </div>
       </div>
+
+      <MembersList orgId={orgId} />
 
       <ActivityTimeline orgId={orgId} />
 
@@ -781,6 +787,113 @@ function ModalFooter({
         {submitting ? "Odesíláme…" : submitLabel}
       </button>
     </div>
+  );
+}
+
+function roleLabel(role: string): string {
+  switch (role) {
+    case "admin":
+      return "Admin";
+    case "manager":
+      return "Manažer";
+    case "salesperson":
+      return "Obchodník";
+    default:
+      return role;
+  }
+}
+
+function MembersList({ orgId }: { orgId: string }) {
+  const { data, isPending } = useAdminOrgUsers(orgId);
+  const items = data?.items ?? [];
+  return (
+    <div className="rounded-lg border border-border bg-surface p-6">
+      <h3 className="text-base font-semibold">Členové organizace</h3>
+      <p className="mt-1 text-xs text-text-tertiary">
+        Přepnutí (impersonace) je auditováno v server logu. Po obnovení stránky
+        se vrátíte do své vlastní super-admin relace.
+      </p>
+      {isPending ? (
+        <p className="mt-3 text-sm text-text-tertiary">Načítání…</p>
+      ) : items.length === 0 ? (
+        <p className="mt-3 text-sm text-text-tertiary">
+          Žádní členové.
+        </p>
+      ) : (
+        <ul className="mt-4 space-y-2">
+          {items.map((u) => (
+            <MemberRow key={u.id} user={u} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function MemberRow({ user }: { user: AdminOrgUserRow }) {
+  const { accessToken, setAccessToken } = useAuth();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Self-impersonation, super-admin targets, and inactive users are all
+  // backend-rejected — gray the button rather than letting the user
+  // click into an error.
+  const disabled = user.is_super_admin || !user.is_active;
+
+  async function handleImpersonate() {
+    setError(null);
+    setBusy(true);
+    try {
+      const res = await apiFetch<ImpersonateOut>(
+        `/api/v1/admin/users/${user.id}/impersonate`,
+        { method: "POST", token: accessToken },
+      );
+      setAccessToken(res.access_token);
+      navigate("/app");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Impersonace selhala.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <li className="flex flex-wrap items-center gap-3 rounded-md border border-border-subtle bg-surface-overlay px-3 py-2 text-sm">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-baseline gap-2">
+          <span className="font-medium text-text-primary">
+            {user.name || user.email}
+          </span>
+          <span className="text-xs text-text-tertiary">{user.email}</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-text-tertiary">
+          <span>{roleLabel(user.role)}</span>
+          {user.is_super_admin ? (
+            <span className="rounded-full bg-info-subtle px-2 py-0.5 text-info">
+              super-admin
+            </span>
+          ) : null}
+          {!user.is_active ? (
+            <span className="rounded-full bg-surface px-2 py-0.5 text-text-tertiary">
+              neaktivní
+            </span>
+          ) : null}
+          {error ? (
+            <span className="text-danger" role="alert">
+              {error}
+            </span>
+          ) : null}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={handleImpersonate}
+        disabled={disabled || busy}
+        className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-surface px-3 text-xs font-medium text-text-primary hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {busy ? "Přepínám…" : "Přepnout na uživatele"}
+      </button>
+    </li>
   );
 }
 
