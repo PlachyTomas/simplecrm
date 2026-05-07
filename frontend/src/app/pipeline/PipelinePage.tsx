@@ -2,7 +2,8 @@ import {
   DndContext,
   type DragEndEvent,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useDroppable,
   useDraggable,
   useSensor,
@@ -172,16 +173,18 @@ function StageColumn({
   // their semantic color. Falls back to the stored `color` for any custom
   // stages beyond the seeded six.
   const dotColor = stageColor(stage.position, stage.color);
-  // 2–3px left seam in the stage color — brief §4 "kanban columns get a
-  // left-seam color accent, do not tint the full card background".
-  const seamStyle: React.CSSProperties = { boxShadow: `inset 3px 0 0 ${dotColor}` };
+  // Brief §4: "kanban columns get a left-seam color accent". Drawn as a
+  // ::before sibling sitting above children, so on mobile rows the deal
+  // cards scroll *under* the seam instead of over it.
+  const seamStyle = { ["--stage-seam" as string]: dotColor } as React.CSSProperties;
 
   return (
     <section
       aria-label={`Fáze ${stage.name}`}
       style={seamStyle}
       className={cn(
-        "group/column flex flex-col rounded-lg border border-border bg-surface transition-colors duration-fast",
+        "group/column relative flex flex-col rounded-lg border border-border bg-surface transition-colors duration-fast",
+        "before:pointer-events-none before:absolute before:inset-y-0 before:left-0 before:z-10 before:w-[3px] before:rounded-l-lg before:bg-[var(--stage-seam)]",
         "max-md:w-full max-md:shrink-0",
         "md:min-w-0 md:flex-1",
         isOver && "ring-2 ring-accent",
@@ -265,7 +268,14 @@ export function PipelinePage() {
   const [losingDealTarget, setLosingDealTarget] = useState<BoardDeal | null>(null);
   const [deletingDealTarget, setDeletingDealTarget] = useState<BoardDeal | null>(null);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  // Mouse: drag activates on a small movement (distance:6) so power users
+  // get instant feedback. Touch: drag requires a 250ms long-press, so a
+  // horizontal swipe inside the mobile-row container scrolls deals
+  // freely instead of triggering an aborted drag.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+  );
 
   const locale = user?.organization?.locale ?? "cs-CZ";
 
@@ -428,7 +438,7 @@ export function PipelinePage() {
   const hasFilteredDeals = filteredStages.some((s) => s.deals.length > 0);
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col">
+    <div className="flex h-full min-h-0 flex-1 flex-col">
       <div className="flex flex-wrap items-end justify-between gap-3 px-4 py-4 md:px-8">
         <div>
           <h1 className="text-2xl font-semibold">Pipeline</h1>

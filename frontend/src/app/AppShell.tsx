@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { Settings, Sparkles } from "lucide-react";
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 
 import { MobileTabBar } from "@/app/MobileTabBar";
 import { Sidebar } from "@/app/Sidebar";
@@ -11,11 +11,16 @@ import { useCurrentSubscription } from "@/components/billing/useCurrentSubscript
 import { apiFetch } from "@/lib/api";
 import { csNoun } from "@/lib/i18n/nouns";
 import { queryClient } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
 
 export function AppShell() {
   const { data: user } = useCurrentUser();
   const { data: subscription } = useCurrentSubscription();
   const { accessToken, clearAuth } = useAuth();
+  const location = useLocation();
+  // Pipeline is the only route that wants fluid full-viewport layout — the
+  // kanban needs every horizontal pixel and clamps its own scroll.
+  const fluidLayout = location.pathname.startsWith("/app/pipeline");
 
   const logout = useMutation({
     mutationFn: () =>
@@ -52,7 +57,12 @@ export function AppShell() {
   const showUpgradeCta = showTrialBadge && daysRemaining <= 7;
 
   return (
-    <div className="flex min-h-screen bg-bg text-text-primary">
+    <div
+      className={cn(
+        "flex bg-bg text-text-primary",
+        fluidLayout ? "h-screen overflow-hidden" : "min-h-screen",
+      )}
+    >
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-text-on-accent focus:shadow-lg"
@@ -61,7 +71,12 @@ export function AppShell() {
       </a>
       <Sidebar onLogout={() => logout.mutate()} />
 
-      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+      <div
+        className={cn(
+          "flex min-w-0 flex-1 flex-col",
+          fluidLayout ? "h-screen overflow-hidden" : "min-h-screen",
+        )}
+      >
         <TrialBanner daysRemaining={daysRemaining} endsOn={trialEndsAt} />
         <header className="bg-bg/90 sticky top-0 z-30 border-b border-border-subtle backdrop-blur">
           <div className="flex h-16 items-center justify-between gap-3 px-4 md:px-8">
@@ -141,7 +156,12 @@ export function AppShell() {
         <main
           id="main-content"
           tabIndex={-1}
-          className="mx-auto w-full max-w-[1200px] flex-1 pb-20 md:pb-12 focus:outline-none"
+          className={cn(
+            "w-full flex-1 focus:outline-none",
+            fluidLayout
+              ? "flex min-h-0 flex-col overflow-hidden pb-20 md:pb-0"
+              : "mx-auto max-w-[1200px] pb-20 md:pb-12",
+          )}
         >
           <Outlet />
         </main>
