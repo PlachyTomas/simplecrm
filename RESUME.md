@@ -1,61 +1,79 @@
-# Resume: INVOICES_TASK.md commit #10
+# Resume: INVOICES_TASK.md commit #11
 
-**Last completed:** *feat(admin): super-admin invoices browser* — commit #9 of INVOICES_TASK.md.
+**Last completed:** *feat(admin): manual invoice + credit-note builders* — commit #10 of INVOICES_TASK.md.
 
 ## State at session end
 
-- 7 commits ahead of `origin/main` since the invoicing work began.
-- Backend: 442 tests, mypy strict, ruff format + check clean.
+- 8 commits ahead of `origin/main` since the invoicing work began.
+- Backend: 444 tests, mypy strict, ruff format + check clean.
 - Frontend: 79 tests pass, lint clean, typecheck clean, `pnpm build` green.
-- New super-admin `/admin/faktury` tab with table + filter chips + detail drawer + audit-log timeline.
-- Action endpoints wired: mark-paid (409 if already paid), void, send. Credit-note endpoint exists in the backend but **no UI builder yet** — that's commit #10.
-- New backend module `backend/app/api/v1/admin_invoices.py` (separate from the already-large `admin.py`). Schemas in `backend/app/schemas/admin_invoicing.py`. 9 new tests in `backend/tests/api/v1/test_admin_invoices.py`.
-- `api.generated.ts` was **not** regenerated this commit — admin-side types are hand-written in `frontend/src/admin/useAdminInvoices.ts`. The backend OpenAPI now exposes `AdminInvoiceListItem`/`AdminInvoiceDetail`/etc., so re-running `BACKEND_OPENAPI_URL=… pnpm run types:generate` would let the admin hooks switch to generated types.
+- Manual issuance endpoint `POST /admin/invoices/manual` wired to `InvoiceService.issue_manual` with 201/400/409 surface.
+- New frontend modals `ManualInvoiceModal.tsx` (org typeahead + line builder) and `CreditNoteModal.tsx` (negated lines pre-filled from parent).
+- "Vystavit ručně" button in `InvoicesList` header; "Vystavit dobropis" button in `InvoiceDetailDrawer` (replaces the placeholder text from #9).
+- Credit-note action selects the new credit invoice in the drawer after issuance via the new `onSelectInvoice` prop.
+- 2 new backend tests: `test_manual_invoice_creates_issued_invoice`, `test_manual_invoice_400_for_unknown_org`.
 
-## Next: commit #10 — `feat(admin): manual invoice + credit-note builders`
+## Next: commit #11 — `feat(admin): year export jobs (CSV / ZIP / full)`
 
-Per INVOICES_TASK.md §6 + §9. Two parallel UIs the founder uses:
+Per INVOICES_TASK.md §7 + §9.
 
-1. **Vystavit ručně** — header button on `/admin/faktury`. Opens a modal with: org typeahead (`useAdminOrgList`), line builder (table-style: description, quantity, unit_label, unit_price_minor, vat_rate_percent), note field, optional `due_at` override. Submit calls `POST /admin/invoices/manual` (NEW endpoint) which wraps `InvoiceService.issue_manual`.
-2. **Vystavit dobropis** — promote the placeholder text in the detail drawer into a real builder. Modal with the original invoice's lines pre-filled at *negative* quantities, editable; reason field. Submit calls the existing `POST /admin/invoices/{id}/credit-note`.
+### What
 
-### Backend additions for #10
+Three buttons on the admin Faktury page header (next to "Vystavit ručně"):
 
-- `POST /admin/invoices/manual` in `admin_invoices.py`:
-  - body: `{ org_id, lines: [{description, quantity, unit_price_minor, unit_label?, vat_rate_percent?}], note?, due_at?, taxable_supply_date? }`
-  - calls `InvoiceService.issue_manual(...)`
-  - returns `AdminInvoiceDetail` of the new row
-- Schema: `AdminManualInvoiceIn` + `AdminManualLineIn` in `schemas/admin_invoicing.py`. The `lines` shape is intentionally close to `AdminCreditNoteLineIn` — could share a base type.
-- Tests in `test_admin_invoices.py`: happy path, blocks if BillingSettings unconfigured, blocks if org doesn't exist, validates line quantities.
+1. **"Export roku — CSV"** → `GET /admin/invoices/export/csv?year=2026`
+   - One row per invoice with: number, kind, status, issued_at, taxable_supply_date, due_at, paid_at, currency, subtotal_minor, vat_amount_minor, total_minor, customer_name, customer_ico, customer_dic
+   - Czech-friendly CSV: semicolon delimiter, BOM-prefixed UTF-8 (Excel cs-CZ)
+   - Streams via `StreamingResponse` so the year doesn't have to be materialised in memory at once
+2. **"Export roku — PDF ZIP"** → `GET /admin/invoices/export/pdfs?year=2026`
+   - Streams a ZIP of every issued/paid PDF for the year, hash-verified
+   - File naming: `{year}/{number}.pdf`
+   - Skip drafts and voided (skipping voided is a policy choice — accountant prefers to see them; revisit in #14 docs)
+3. **"Export roku — Vše"** → `GET /admin/invoices/export/full?year=2026`
+   - ZIP containing both: the CSV + the per-invoice PDFs + the per-invoice ISDOC XMLs
+   - This is the one the accountant actually needs at year-end
 
-### Frontend additions for #10
+### Implementation outline
 
-- `frontend/src/admin/ManualInvoiceModal.tsx` — modal with org typeahead + line builder (TanStack Table or hand-rolled). State: `lines: ManualLineDraft[]`. Add/remove/reorder rows. Real-time total preview using the issuer's DPH state from the new public `/api/v1/plans/billing-settings/public` endpoint (or an admin variant if needed).
-- `frontend/src/admin/CreditNoteModal.tsx` — modal driven by an existing invoice. Pre-fills negated lines from the parent. Reason required.
-- "Vystavit ručně" button in `InvoicesList.tsx` header. Wire to ManualInvoiceModal.
-- "Vystavit dobropis" button in `InvoiceDetailDrawer.tsx` — replace the placeholder text with this.
-- Hooks: `useIssueManualInvoice` mutation (POST /admin/invoices/manual). Existing `issue_credit_note` API call moves into a fresh `useIssueCreditNote` mutation hook (currently the credit-note endpoint isn't wired to a hook because the UI placeholder didn't call it).
+- New service module `backend/app/services/invoicing/exporter.py` with three functions: `iter_csv_rows(session, year) -> Iterable[bytes]`, `stream_pdf_zip(session, year) -> Iterable[bytes]`, `stream_full_zip(session, year) -> Iterable[bytes]`. All async iterators / generators yielding bytes for `StreamingResponse`.
+- Each export run logs an `export_run` audit-log row with `payload={"year": Y, "kind": "csv"|"pdf_zip"|"full", "row_count": N}` and `actor_user_id=admin.id`.
+- Use Python's stdlib `zipfile` in **streaming** mode (`ZipFile(stream, mode='w', compression=ZIP_DEFLATED)` against an in-memory buffer flushed periodically). For very large years, swap to `aiozipstream` later.
+- Frontend: three new `useExportInvoiceYear*` hooks following the `useExportCsv` pattern in `frontend/src/app/reports/dashboard/useExportCsv.ts` (raw `fetch` + blob + `triggerDownload`).
 
-### Watch-outs for #10
+### Backend additions for #11
 
-- `InvoiceService.issue_manual` requires `BillingSettings.issuer_*` populated. UI should preflight with a check + inline "Doplňte fakturační údaje" link if not configured. Already-existing `AdminBillingSettings` is the destination.
-- DPH-on/off: when `issuer_is_vat_payer=False`, the line VAT is always 0 — disable the VAT rate input in the line builder when not a payer.
-- The line preview math is duplicated between FE and BE. Acceptable: the BE recomputes authoritatively, FE preview is courtesy. Don't over-engineer a shared formula.
+- `backend/app/api/v1/admin_invoices.py` — three new routes (`/export/csv`, `/export/pdfs`, `/export/full`)
+- `backend/app/services/invoicing/exporter.py` (new)
+- `backend/tests/services/test_invoicing_exporter.py` — small tests for each generator: row count, CSV column order, ZIP archive integrity (open with `zipfile.ZipFile`)
+- `backend/tests/api/v1/test_admin_invoices.py` — add tests for the export routes (200, content-type, content-disposition, audit-log entries)
 
-## Commits #11 onward (still TODO)
+### Frontend additions for #11
 
-- #11 — year export jobs (CSV/ZIP/full-year)
+- `frontend/src/admin/useExportInvoiceYear.ts` (new) — three exported hooks: `useExportInvoicesCsv`, `useExportInvoicesPdfZip`, `useExportInvoicesFull`
+- `frontend/src/admin/InvoicesList.tsx` — add three buttons in the header next to "Vystavit ručně"; keep the existing year filter in sync (pass the current year filter into the hooks)
+
+### Watch-outs for #11
+
+- Streaming a ZIP with `zipfile` requires a seekable buffer for the central directory; if the year is huge the in-memory buffer balloons. Acceptable for v1 (we have <100 invoices/year), revisit before going to enterprise volume.
+- Excel cs-CZ wants `;` delimiter + UTF-8 BOM (`﻿`). Don't use `,` unless we add a separate "international" CSV later.
+- Audit-log writes for export runs use `invoice_id=None` (the model already allows this — see the docstring in `invoice_audit_log.py`).
+- `pdf_object_key` is NULL for drafts. Skip drafts in the PDF zip, not just by status filter (defence in depth).
+
+## Commits #12 onward (still TODO)
+
 - #12 — archive integrity dashboard
 - #13 — broader test suites
 - #14 — `docs/invoicing.md`
 
-## Carryover (still applies after #9)
+## Carryover (still applies after #10)
 
 - `BillingSettings.seller_ico/seller_iban` legacy column names; snapshot uses `issuer_*`. Worth a follow-up rename.
-- The `_wipe_invoices_for_org` cleanup pattern is duplicated in 5 test files now (`test_payments.py`, `test_invoices.py`, `test_invoicing_service.py`, `test_invoicing_scheduler.py`, `test_admin_invoices.py`). **Promote to a shared helper in `tests/conftest.py` before the next test file uses it.** This is past the threshold — do it as part of #10 cleanup.
-- `useInvoices` in `usePayments.ts` is misnamed — it returns `ChargeList`. Rename to `useCharges` in a separate cleanup commit.
-- Renewal-draft scheduler is registered as `renewal_draft_scheduler` but **not auto-started** in `app/main.py` lifespan. Wire it up.
+- The `_wipe_invoices_for_org` cleanup pattern is duplicated in 5 test files. **Promote to shared helper in `tests/conftest.py` before adding a 6th.**
+- `useInvoices` in `usePayments.ts` is misnamed — it returns `ChargeList`. Rename to `useCharges` cleanup.
+- Renewal-draft scheduler `renewal_draft_scheduler` is registered but **not auto-started** in `app/main.py` lifespan.
 - WeasyPrint emits `Ignored fill:#000000` warning per render (QR SVG). Cosmetic.
 - S3 storage path implemented but not exercised by tests.
-- The PDF stream test in `test_invoices.py` writes to the default `var/invoices/` (not `tmp_path`). Cleaner long-term: `Depends(get_storage)` so tests can override. For now `var/invoices/` is gitignored.
-- `api.generated.ts` regen lagging two commits (#8 + #9). Worth running before #10 lands so the admin hooks can swap to generated types.
+- `var/invoices/` host pollution from the customer PDF-stream test.
+- `api.generated.ts` regen lagging three commits (#8, #9, #10). Worth running before #11 lands.
+- Hand-typed admin types in `frontend/src/admin/useAdminInvoices.ts` mirror `AdminInvoiceListItem` / `AdminInvoiceDetail` / `AdminInvoiceLine` / `AdminInvoiceAuditEntry`. Switch to generated types after regen.
+- `apiFetch` body argument is typed as `Record<string, unknown>`; the manual + credit-note hooks cast through `unknown` because their `interface` types lack an index signature. Could either (a) declare `[k: string]: unknown` on those interfaces or (b) loosen `apiFetch` to accept any `object`. Defer.

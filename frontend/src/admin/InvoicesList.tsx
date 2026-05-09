@@ -3,6 +3,7 @@ import { useState } from "react";
 import { formatCzkMinor } from "@/components/billing/format";
 import { cn } from "@/lib/utils";
 
+import { ManualInvoiceModal } from "@/admin/ManualInvoiceModal";
 import {
   type AdminInvoiceFilters,
   type AdminInvoiceListItem,
@@ -38,6 +39,7 @@ export function InvoicesList({ selectedInvoiceId, onSelect }: InvoicesListProps)
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<AdminInvoiceStatus[]>([]);
   const [year, setYear] = useState<number | "">("");
+  const [manualOpen, setManualOpen] = useState(false);
 
   const filters: AdminInvoiceFilters = {
     q: q.trim() || undefined,
@@ -53,6 +55,16 @@ export function InvoicesList({ selectedInvoiceId, onSelect }: InvoicesListProps)
 
   return (
     <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold">Faktury</h2>
+        <button
+          type="button"
+          onClick={() => setManualOpen(true)}
+          className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+        >
+          Vystavit ručně
+        </button>
+      </div>
       <div className="flex flex-wrap items-center gap-3">
         <input
           type="search"
@@ -158,6 +170,16 @@ export function InvoicesList({ selectedInvoiceId, onSelect }: InvoicesListProps)
           </p>
         </div>
       )}
+
+      {manualOpen ? (
+        <ManualInvoiceModal
+          onClose={() => setManualOpen(false)}
+          onIssued={(newId) => {
+            setManualOpen(false);
+            onSelect(newId);
+          }}
+        />
+      ) : null}
     </section>
   );
 }

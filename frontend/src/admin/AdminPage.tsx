@@ -103,7 +103,10 @@ export function AdminPage() {
               onSelect={setSelectedInvoiceId}
             />
             {selectedInvoiceId ? (
-              <InvoiceDetailDrawer invoiceId={selectedInvoiceId} />
+              <InvoiceDetailDrawer
+                invoiceId={selectedInvoiceId}
+                onSelectInvoice={setSelectedInvoiceId}
+              />
             ) : (
               <div className="hidden rounded-lg border border-dashed border-border bg-surface p-8 text-center text-sm text-text-tertiary md:block">
                 Vyberte fakturu ze seznamu pro zobrazení detailu.

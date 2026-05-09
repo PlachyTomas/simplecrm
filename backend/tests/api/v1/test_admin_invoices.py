@@ -372,3 +372,69 @@ async def test_credit_note_blocked_when_exceeds_original(
     )
     assert response.status_code == 409
     assert response.json()["detail"]["code"] == "credit_exceeds_original"
+
+
+# --------------------------------------------------------------------------- #
+# Manual issuance
+# --------------------------------------------------------------------------- #
+
+
+async def test_manual_invoice_creates_issued_invoice(
+    client: AsyncClient, tmp_path: Path, cleanup_orgs: list[uuid.UUID]
+) -> None:
+    async with AsyncSessionLocal() as s:
+        await _configure_issuer(s)
+    async with AsyncSessionLocal() as s:
+        org, admin, _ = await _seed(s, tmp_path=tmp_path)
+        cleanup_orgs.append(org.id)
+
+    response = await client.post(
+        "/api/v1/admin/invoices/manual",
+        headers=_auth(admin),
+        json={
+            "org_id": str(org.id),
+            "note": "Jednorázová oprava",
+            "lines": [
+                {
+                    "description": "Konzultace",
+                    "quantity": "2",
+                    "unit_price_minor": 50000,
+                    "unit_label": "h",
+                }
+            ],
+        },
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["kind"] == "invoice"
+    assert body["status"] == "issued"
+    assert body["organization_id"] == str(org.id)
+    assert body["lines"][0]["description"] == "Konzultace"
+    assert body["note"] == "Jednorázová oprava"
+
+
+async def test_manual_invoice_400_for_unknown_org(
+    client: AsyncClient, tmp_path: Path, cleanup_orgs: list[uuid.UUID]
+) -> None:
+    async with AsyncSessionLocal() as s:
+        await _configure_issuer(s)
+    async with AsyncSessionLocal() as s:
+        org, admin, _ = await _seed(s, tmp_path=tmp_path)
+        cleanup_orgs.append(org.id)
+
+    response = await client.post(
+        "/api/v1/admin/invoices/manual",
+        headers=_auth(admin),
+        json={
+            "org_id": str(uuid.uuid4()),
+            "lines": [
+                {
+                    "description": "Konzultace",
+                    "quantity": "1",
+                    "unit_price_minor": 1000,
+                }
+            ],
+        },
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "manual_issue_failed"

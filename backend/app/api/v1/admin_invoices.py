@@ -37,6 +37,7 @@ from app.schemas.admin_invoicing import (
     AdminInvoiceLine,
     AdminInvoiceList,
     AdminInvoiceListItem,
+    AdminManualInvoiceIn,
     AdminMarkPaidIn,
     AdminSendIn,
     AdminVoidIn,
@@ -44,7 +45,9 @@ from app.schemas.admin_invoicing import (
 from app.services.invoicing.mailer import InvoiceMailer, InvoiceMailerError
 from app.services.invoicing.service import (
     CreditNoteExceedsOriginalError,
+    InvoiceIssuerNotConfiguredError,
     InvoiceService,
+    InvoiceServiceError,
     ManualLineIn,
 )
 
@@ -295,6 +298,54 @@ async def issue_credit_note(
         ) from exc
     await session.commit()
     return await get_invoice_detail(credit.id, _admin=admin, session=session)
+
+
+@router.post("/manual", response_model=AdminInvoiceDetail, status_code=status.HTTP_201_CREATED)
+async def issue_manual_invoice(
+    body: AdminManualInvoiceIn,
+    admin: User = Depends(require_super_admin),
+    session: AsyncSession = Depends(get_db),
+) -> AdminInvoiceDetail:
+    """Founder-driven issuance — no ComGate charge involved. Used for
+    refunds, comp-org back-charges, and one-off corrections."""
+    svc = InvoiceService()
+    lines_in = [
+        ManualLineIn(
+            description=li.description,
+            quantity=li.quantity,
+            unit_price_minor=li.unit_price_minor,
+            unit_label=li.unit_label,
+            vat_rate_percent=li.vat_rate_percent,
+        )
+        for li in body.lines
+    ]
+    try:
+        invoice = await svc.issue_manual(
+            session,
+            org_id=body.org_id,
+            lines_in=lines_in,
+            note=body.note,
+            taxable_supply_date=body.taxable_supply_date,
+            due_at=body.due_at,
+            by_admin_id=admin.id,
+        )
+    except InvoiceIssuerNotConfiguredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "issuer_not_configured",
+                "message": str(exc),
+            },
+        ) from exc
+    except InvoiceServiceError as exc:
+        # InvoiceServiceError covers "unknown organization" and similar
+        # service-layer rejections that don't have a more specific class.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "manual_issue_failed", "message": str(exc)},
+        ) from exc
+    await session.commit()
+    return await get_invoice_detail(invoice.id, _admin=admin, session=session)
 
 
 @router.post("/{invoice_id}/send", response_model=AdminInvoiceDetail)

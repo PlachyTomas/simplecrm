@@ -154,3 +154,19 @@ class AdminSendIn(BaseModel):
         max_length=120,
         description="Override the invoice's recorded customer email.",
     )
+
+
+class AdminManualLineIn(BaseModel):
+    description: str = Field(min_length=1, max_length=500)
+    quantity: Decimal = Field(gt=0)
+    unit_price_minor: int = Field(ge=0)
+    unit_label: str | None = Field(default=None, max_length=32)
+    vat_rate_percent: Decimal | None = None
+
+
+class AdminManualInvoiceIn(BaseModel):
+    org_id: uuid.UUID
+    lines: list[AdminManualLineIn] = Field(min_length=1, max_length=50)
+    note: str | None = Field(default=None, max_length=2000)
+    taxable_supply_date: date | None = None
+    due_at: date | None = None

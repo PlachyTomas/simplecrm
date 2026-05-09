@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { formatCzkMinor } from "@/components/billing/format";
 
+import { CreditNoteModal } from "@/admin/CreditNoteModal";
 import {
   type AdminInvoiceAuditEntry,
   useAdminInvoiceDetail,
@@ -26,9 +27,10 @@ const EVENT_LABEL: Record<string, string> = {
 
 interface InvoiceDetailDrawerProps {
   invoiceId: string;
+  onSelectInvoice?: (id: string) => void;
 }
 
-export function InvoiceDetailDrawer({ invoiceId }: InvoiceDetailDrawerProps) {
+export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetailDrawerProps) {
   const detailQuery = useAdminInvoiceDetail(invoiceId);
   const markPaid = useMarkInvoicePaid();
   const voidInvoice = useVoidInvoice();
@@ -36,6 +38,7 @@ export function InvoiceDetailDrawer({ invoiceId }: InvoiceDetailDrawerProps) {
 
   const [voidReason, setVoidReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [creditOpen, setCreditOpen] = useState(false);
 
   if (detailQuery.isPending) {
     return (
@@ -194,12 +197,29 @@ export function InvoiceDetailDrawer({ invoiceId }: InvoiceDetailDrawerProps) {
             </button>
           </div>
         ) : null}
-        <p className="text-xs text-text-tertiary">
-          Vystavení dobropisu probíhá v sekci „Vystavit ručně“ (commit #10).
-        </p>
+        {inv.kind === "invoice" && inv.status !== "voided" ? (
+          <button
+            type="button"
+            onClick={() => setCreditOpen(true)}
+            className="self-start rounded-md border border-border bg-surface px-3 py-1.5 text-xs hover:bg-bg-elevated"
+          >
+            Vystavit dobropis
+          </button>
+        ) : null}
       </div>
 
       <AuditLogTimeline entries={inv.audit_log} />
+
+      {creditOpen ? (
+        <CreditNoteModal
+          parent={inv}
+          onClose={() => setCreditOpen(false)}
+          onIssued={(newId) => {
+            setCreditOpen(false);
+            onSelectInvoice?.(newId);
+          }}
+        />
+      ) : null}
     </section>
   );
 }

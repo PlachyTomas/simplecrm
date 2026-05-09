@@ -192,3 +192,71 @@ export function useSendInvoice() {
     (id) => `/api/v1/admin/invoices/${id}/send`,
   );
 }
+
+export interface ManualLineDraft {
+  description: string;
+  quantity: string;
+  unit_price_minor: number;
+  unit_label: string | null;
+  vat_rate_percent: string | null;
+}
+
+export interface ManualInvoiceDraft {
+  org_id: string;
+  lines: ManualLineDraft[];
+  note: string | null;
+  taxable_supply_date: string | null;
+  due_at: string | null;
+}
+
+export function useIssueManualInvoice() {
+  const { accessToken } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ManualInvoiceDraft) =>
+      apiFetch<AdminInvoiceDetail>("/api/v1/admin/invoices/manual", {
+        method: "POST",
+        token: accessToken,
+        body: body as unknown as Record<string, unknown>,
+      }),
+    onSuccess: (data) => {
+      void qc.invalidateQueries({ queryKey: ["admin", "invoices"] });
+      qc.setQueryData(["admin", "invoice-detail", data.id], data);
+    },
+  });
+}
+
+export interface CreditNoteLineDraft {
+  description: string;
+  quantity: string;
+  unit_price_minor: number;
+  unit_label: string | null;
+  vat_rate_percent: string | null;
+}
+
+export interface CreditNoteDraft {
+  reason: string;
+  lines: CreditNoteLineDraft[];
+}
+
+export function useIssueCreditNote(originalInvoiceId: string | null) {
+  const { accessToken } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreditNoteDraft) => {
+      if (!originalInvoiceId) throw new Error("originalInvoiceId is required");
+      return apiFetch<AdminInvoiceDetail>(
+        `/api/v1/admin/invoices/${originalInvoiceId}/credit-note`,
+        {
+          method: "POST",
+          token: accessToken,
+          body: body as unknown as Record<string, unknown>,
+        },
+      );
+    },
+    onSuccess: (data) => {
+      void qc.invalidateQueries({ queryKey: ["admin", "invoices"] });
+      qc.setQueryData(["admin", "invoice-detail", data.id], data);
+    },
+  });
+}
