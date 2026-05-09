@@ -1,90 +1,121 @@
-# Resume: INVOICES_TASK.md commit #4
+# Resume: INVOICES_TASK.md commit #5
 
-**Last completed:** *feat(invoicing): add InvoiceRenderer with WeasyPrint PDF/A and ISDOC XML output* (commit #3 of `docs/prompts/INVOICES_TASK.md`).
+**Last completed:** *feat(invoicing): InvoiceStorage with S3 + local fallback and hash verification* (commit #4).
 
 ## State at session end
 
-- Migration head: `1a5b9f76b1ee` (unchanged from commit #2; renderer adds no schema).
-- New module `backend/app/services/invoicing/`:
-  - `__init__.py` (package marker)
-  - `renderer.py` — `InvoiceRenderer.render_pdf(invoice, lines) -> bytes` and `render_isdoc(invoice, lines) -> bytes`. PDF is deterministic via `pdf_creation_date=invoice.issued_at` + WeasyPrint pinned `>=63.0,<64`. ISDOC follows the 6.0.1 schema (root `Invoice`, `DocumentType`=1 invoice / 2 credit_note, `VATApplicable`, supplier/customer parties, line items, `LegalMonetaryTotal`).
-  - `templates/invoice.html.j2` — Jinja2 template; A4 single page; two-column issuer/customer header; dates table; line-item table with optional DPH column; totals block; payment block with embedded QR Platba SVG; footer with `Nejsem plátce DPH` notice when applicable. All Czech, vykání.
-  - `templates/fonts/Inter-Regular.ttf` (407 KB), `Inter-Bold.ttf` (415 KB), `JetBrainsMono-Regular.ttf` (274 KB) — self-hosted via `@font-face` so PDF/A is self-contained. All cover Latin Extended A/B (verified Czech glyph coverage in fontTools).
-- New deps in `pyproject.toml`: `weasyprint>=63.0,<64`, `qrplatba>=1.0`, `babel>=2.16`, `lxml>=5.3`, `jinja2>=3.1`. Mypy `ignore_missing_imports` extended for the third-party libs.
-- `backend/Dockerfile` updated with native deps (`libpango-1.0-0`, `libpangoft2-1.0-0`, `libharfbuzz0b`, `libcairo2`, `libgdk-pixbuf-2.0-0`) so the container can render PDFs in production. Dev container does NOT yet have these — host venv works because Ubuntu 24.04 has them via desktop packages.
-- 7 new tests in `backend/tests/services/test_invoicing_renderer.py`:
-  - PDF magic + EOF trailer
-  - byte-stable SHA-256 across two renders (the determinism contract)
-  - Czech diacritics (`Žďár nad Sázavou s.r.o.`) renders without missing-glyph fallback (size sanity-check)
-  - ISDOC root + invoice number + variable symbol + supplier IČO + payable amount at expected XPaths
-  - DocumentType=2 for credit notes
-  - PDF size sanity (parametrized over plátce / non-plátce)
-- Full backend suite: **407 passed** (400 → 407 with the 7 new renderer tests). Three commits ahead of `origin/main`.
+- Migration head: `1a5b9f76b1ee` (unchanged from commits #2–4).
+- New module `app/services/invoicing/storage.py` with `InvoiceStorage`, `StorageResult`, `IntegrityError`. Two backends:
+  - **S3** when `settings.s3_endpoint_url` + `s3_bucket_invoices` are configured. boto3 lazy-imported; Hetzner-friendly `Config(s3={"addressing_style": "path"}, signature_version="s3v4")`. SHA-256 stored as object metadata for belt-and-suspenders integrity.
+  - **Local** otherwise. Writes under `invoice_storage_local_root` (default `var/invoices/`). One-time WARNING log on first use.
+- 6 new settings in `app/core/config.py`: `s3_endpoint_url`, `s3_bucket_invoices`, `s3_access_key_id`, `s3_secret_access_key`, `s3_region` (default `fsn1`), `invoice_storage_local_root`.
+- Object key scheme: `invoices/{year}/{organization_id}/{number}.{pdf|isdoc.xml}`.
+- 7 new tests in `tests/services/test_invoicing_storage.py` covering: PDF round-trip, ISDOC round-trip, key scoping by year+org, on-disk tampering → `IntegrityError`, recorded-hash mismatch → same error, missing key → `FileNotFoundError`, idempotent re-store of same bytes.
+- Backend suite: **414 passed** (407 → 414). mypy strict, ruff lint+format clean. **Six commits ahead of `origin/main`.**
 
-## Next: commit #4 — `feat(invoicing): add InvoiceStorage with Object Storage + local fallback and hash verification`
+## Next: commit #5 — `feat(invoicing): InvoiceService orchestrator and InvoiceMailer`
 
-The renderer outputs bytes; commit #4 stores them durably and verifies on read.
+This is the brain. Wires the renderer (#3) + storage (#4) into a transactional issuance flow that also writes audit-log entries.
 
-### Files to create
+### `app/services/invoicing/service.py`
 
-**`backend/app/services/invoicing/storage.py`**:
 ```python
-@dataclass(frozen=True)
-class StorageResult:
-    object_key: str
-    sha256: str
-    size_bytes: int
+class InvoiceService:
+    async def issue_for_charge(self, session, charge: Charge,
+                               by_admin_id: uuid.UUID | None = None) -> Invoice:
+        """Auto-issue path. Called from the ComGate webhook (commit #6)
+        when a charge transitions to `paid`. Idempotent: if an invoice
+        already exists for this charge, returns it without re-rendering."""
 
-class IntegrityError(Exception): ...
+    async def issue_manual(self, session, *, org_id: uuid.UUID,
+                           lines: list[ManualLineIn], note: str | None,
+                           by_admin_id: uuid.UUID,
+                           taxable_supply_date: date | None = None,
+                           due_at: date | None = None) -> Invoice:
+        """Founder-driven. Used for refunds, comp orgs, custom corrections."""
 
-class InvoiceStorage:
-    def __init__(self, settings: Settings | None = None): ...
+    async def mark_paid(self, session, invoice_id: uuid.UUID,
+                        paid_at: datetime | None,
+                        by_admin_id: uuid.UUID) -> Invoice: ...
 
-    def store_pdf(self, invoice: Invoice, pdf_bytes: bytes) -> StorageResult: ...
-    def store_isdoc(self, invoice: Invoice, xml_bytes: bytes) -> StorageResult: ...
+    async def void(self, session, invoice_id: uuid.UUID, reason: str,
+                   by_admin_id: uuid.UUID) -> Invoice: ...
 
-    def fetch_pdf(self, invoice: Invoice) -> bytes:
-        """Read + verify hash. Raises IntegrityError if mismatch."""
-
-    def fetch_isdoc(self, invoice: Invoice) -> bytes: ...
+    async def issue_credit_note(self, session, *,
+                                 original_invoice_id: uuid.UUID,
+                                 lines: list[ManualLineIn], reason: str,
+                                 by_admin_id: uuid.UUID) -> Invoice: ...
 ```
 
-Object key scheme: `invoices/{year}/{customer_org_id}/{number}.pdf` (and `.isdoc.xml`).
+Algorithm for `issue_for_charge`:
+1. Idempotency: `SELECT FROM invoices WHERE charge_id = :charge_id LIMIT 1`. If exists, return it.
+2. Validate `BillingSettings` issuer fields are non-empty (the founder must have configured them via the super-admin UI). Otherwise raise `InvoiceIssuerNotConfiguredError`. Tests should cover this.
+3. Allocate a number under `pg_advisory_xact_lock` for the year (use the helper from commit #1's tests as a pattern; promote to `app/services/invoicing/numbering.py`).
+4. Build the `Invoice` row with `status='draft'` initially, snapshot issuer + customer, derive lines from the charge (one line per `Charge.kind`: monthly/annual subscription, seat upgrade, etc.). Compute totals.
+5. Render PDF + ISDOC via `InvoiceRenderer`.
+6. Store both via `InvoiceStorage`.
+7. Set `pdf_*`, `isdoc_*` columns on the invoice; flip `status='issued'`.
+8. Write `InvoiceAuditLog` rows: `allocated`, `issued`, `pdf_stored`.
+9. Return.
 
-### Backend choice + config
-- Hetzner Object Storage (S3-compatible) — use `boto3` with `endpoint_url` from settings.
-- Settings to add: `s3_endpoint_url`, `s3_bucket_invoices`, `s3_access_key_id`, `s3_secret_access_key`, `invoice_storage_local_root` (default `var/invoices/`).
-- If `s3_*` settings are unset, transparently fall back to local filesystem under `invoice_storage_local_root`. Log a `WARNING` once at first access. Document the migration path in `docs/invoicing.md` (commit #14).
+### `app/services/invoicing/numbering.py`
 
-### Hash verification
-- On store: compute SHA-256 of bytes, write to storage, return `StorageResult(key, sha256, size)`. Caller writes these into `Invoice.pdf_object_key`, `.pdf_sha256`, `.pdf_size_bytes`.
-- On fetch: read bytes, compute SHA-256, compare to `Invoice.pdf_sha256`. Mismatch → `IntegrityError` + `InvoiceAuditLog(event='integrity_failure', payload={'expected': ..., 'actual': ...})`.
+Promote the advisory-lock allocator from the test file into a real helper. Used by `issue_for_charge` and `issue_manual` and `issue_credit_note`.
 
-### Tests (`backend/tests/services/test_invoicing_storage.py`)
-- store + fetch round-trip via local fallback (uses `tmp_path` to keep test artifacts off `var/`)
-- corrupt the stored file → `fetch_pdf` raises `IntegrityError`, audit-log entry written
-- distinct customer orgs → distinct object keys (don't cross-contaminate)
-- `store_pdf` is idempotent for the same byte input (safe to retry on transient errors during issuance)
+```python
+async def allocate_invoice_number(session, year: int) -> tuple[int, str, str]:
+    """Returns (sequence_in_year, number, variable_symbol)."""
+```
+
+### `app/services/invoicing/mailer.py`
+
+```python
+class InvoiceMailer:
+    async def send(self, session, invoice: Invoice,
+                   override_to: str | None = None) -> None:
+        """Render BillingSettings.invoice_email_{subject,body}_template
+        as Jinja2, attach the PDF (fetched via InvoiceStorage), send via
+        services/email.send_email, write `sent` audit log + sent_at row."""
+```
+
+Reuses the existing `services/email.py` stub (still log-only). The tax invoice's PDF gets attached as `Faktura-{number}.pdf`.
+
+### Tests
+
+- `test_invoicing_service.py` (or split per file):
+  - issue_for_charge happy path (creates an Invoice in `issued` state with PDF stored, audit log entries present)
+  - issue_for_charge idempotency (re-fired webhook returns existing invoice, no second rendering)
+  - issue_for_charge raises `InvoiceIssuerNotConfiguredError` when BillingSettings is bare
+  - mark_paid sets paid_at + writes `paid` audit log
+  - void sets status, writes `voided` audit log, leaves PDF in storage
+  - issue_credit_note creates a separate row, original is untouched, |credit_total| ≤ original_total
+  - mailer sends via the stub, writes `sent` audit log + sent_at on row
 
 ### Watch out for
-- Hetzner Object Storage requires `addressing_style="path"` in the boto3 config (virtual-hosted-style URLs don't work for non-AWS endpoints). Pass via `Config(s3={"addressing_style": "path"})`.
-- The storage layer should NOT touch the `Invoice` ORM row — that's the orchestrator's job in commit #5. Storage just returns the `StorageResult`.
-- For the local fallback, `Path.mkdir(parents=True, exist_ok=True)` to handle first-run.
-- `boto3` is heavy; lazy-import inside the method that needs it so tests + local-only operations stay fast.
 
-### How to start commit #4
+- The `Invoice` model's immutability trigger blocks UPDATE on guarded columns once `status != 'draft'`. The orchestrator must set `pdf_*`/`isdoc_*` BEFORE flipping to `issued`, or the trigger will reject the update. Build the row in `draft`, write storage, set the storage columns, THEN flip to `issued` in one final UPDATE.
+- Charge.kind → invoice line description mapping is in Czech. Helper:
+  - `initial` → `SimpleCRM, plán {Měsíční|Roční}, {N} uživatelů, období {start} – {end}`
+  - `renewal` → same shape
+  - `seat_upgrade` → `SimpleCRM, navýšení o {N} uživatelů, období {start} – {end}`
+- `BillingSettings.is_vat_payer=True` path: line items get DPH 21 %, totals split into `subtotal_minor` + `vat_amount_minor`. When False, `vat_amount_minor=0`, `vat_rate_percent=0.00`.
+- The audit log INSERTs need to be inside the orchestrator's transaction (so a renderer crash mid-issuance doesn't leave orphan log entries).
 
-1. `cd backend && uv run alembic current` — confirms head is `1a5b9f76b1ee`.
-2. `cd backend && uv run pytest -q` — confirms 407 green.
-3. Add `boto3>=1.35` to `pyproject.toml` (lazy-imported inside storage methods).
-4. Write `storage.py` with the local fallback path first; add S3 path behind a feature flag check on `settings.s3_endpoint_url`.
-5. Tests, gates, commit, update this RESUME for commit #5 (orchestrator).
+### How to start commit #5
 
-## Carryover from commits #1–3
+1. `cd backend && uv run alembic current` — head is `1a5b9f76b1ee`.
+2. `cd backend && uv run pytest -q` — confirms 414 green.
+3. Read `BillingSettings` model + `services/email.py` stub for context.
+4. Write `numbering.py` first (small, has a clean unit test).
+5. Write `service.py` orchestrator. The idempotency check + draft→issued→storage→flip pattern is the load-bearing logic.
+6. Write `mailer.py`.
+7. Tests, gates, commit, update RESUME for commit #6 (webhook integration).
+
+## Carryover from commits #1–4
 
 - Endpoint URL `/api/v1/payments/invoices` intentionally not renamed.
 - `invoice_audit_log` REVOKE deferred (triggers cover protection).
-- Webhook auto-issuance idempotency check is for commit #6.
-- The new BillingSettings issuer columns must be filled in via the super-admin UI before commit #5's orchestrator validation guard fires.
-- **Renderer ships fonts as binary blobs** — the three TTFs add ~1 MB to the repo. Cleaner long-term might be to vendor them in a separate package, but the current layout keeps `fonts/` next to the template file that uses them. Worth flagging in code review.
-- **Determinism caveat**: WeasyPrint's PDF byte layout is reproducible across runs but not guaranteed across minor version bumps. The narrow pin (`>=63.0,<64`) is what protects the stored `pdf_sha256` values; a future maintainer reading "let me bump weasyprint" should check that all already-issued invoices still hash the same after the bump.
+- BillingSettings issuer columns are empty by default — orchestrator must validate before issuance.
+- WeasyPrint pinned `>=63.0,<64`; bumping breaks already-stored `pdf_sha256`.
+- Renderer ships ~1 MB of TTFs in the repo (Inter + JetBrains Mono).
+- S3 path is implemented but not exercised by tests; configure Hetzner bucket + run an integration test before flipping `s3_endpoint_url` in production.

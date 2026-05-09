@@ -57,6 +57,19 @@ class Settings(BaseSettings):
     comgate_test_mode: bool = True
     comgate_return_url: str = "http://localhost:8000/api/v1/payments/return"
 
+    # Tax-invoice archival storage (commit #4 of INVOICES_TASK.md).
+    # When `s3_endpoint_url` is set, the storage layer writes invoice
+    # PDFs/ISDOCs to a Hetzner Object Storage bucket via the S3 API.
+    # When unset, the layer falls back to the local filesystem under
+    # `invoice_storage_local_root` — fine for dev, not durable enough
+    # for prod once the bucket is provisioned.
+    s3_endpoint_url: str = ""
+    s3_bucket_invoices: str = ""
+    s3_access_key_id: str = ""
+    s3_secret_access_key: str = ""
+    s3_region: str = "fsn1"  # Hetzner Falkenstein default
+    invoice_storage_local_root: str = "var/invoices"
+
 
 @lru_cache
 def get_settings() -> Settings:

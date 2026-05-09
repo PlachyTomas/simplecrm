@@ -38,6 +38,10 @@ dependencies = [
     "lxml>=5.3",
     # Jinja2 for the invoice HTML template + email body templates.
     "jinja2>=3.1",
+    # Hetzner Object Storage / S3-compatible backend for archived
+    # invoice PDFs. Lazy-imported in storage.py so test runs that
+    # don't exercise the S3 path stay fast.
+    "boto3>=1.35",
 ]
 
 [dependency-groups]
@@ -136,6 +140,7 @@ module = [
     "weasyprint", "weasyprint.*",
     "qrplatba", "qrplatba.*",
     "lxml", "lxml.*",
+    "boto3", "boto3.*", "botocore", "botocore.*",
 ]
 ignore_missing_imports = true
 
