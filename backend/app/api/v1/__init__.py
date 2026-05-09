@@ -10,6 +10,7 @@ from app.api.v1 import (
     deals,
     health,
     invitations,
+    invoices,
     onboarding,
     organizations,
     payments,
@@ -51,6 +52,10 @@ api_router.include_router(companies.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(contacts.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(deals.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(invitations.router, dependencies=PROTECTED_DEPS)
+# Customer-facing tax-invoice surfaces. Org-membership gated; not trial-
+# gated (a gated org must still be able to download their existing
+# invoice PDFs from before they were gated).
+api_router.include_router(invoices.router, dependencies=[Depends(require_org_membership)])
 api_router.include_router(pipelines.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(reports.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(reports_widgets.router, dependencies=PROTECTED_DEPS)

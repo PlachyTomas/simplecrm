@@ -1,93 +1,62 @@
-# Resume: INVOICES_TASK.md commit #8
+# Resume: INVOICES_TASK.md commit #8b (frontend) + #9
 
-**Last completed:** *feat(invoicing): daily renewal-draft scheduler job* (commit #7).
+**Last completed:** *feat(invoicing): customer-facing tax-invoice endpoints (backend)* — commit #8 split into 8a (backend, just landed) and 8b (frontend UI, not yet started).
 
 ## State at session end
 
 - Migration head: `1a5b9f76b1ee` (no schema changes since #2).
-- New `InvoiceService.prepare_renewal_draft(session, *, subscription)` builds a `status='draft'` Invoice projecting the next-period charge. Allocates a real sequence number (matches Fakturoid; voiding a draft consumes the number per §3). Doesn't render or store. Idempotent on `(subscription_id, status='draft')`.
-- `_issue_internal` gained a `stop_at_draft: bool = False` flag. When True, skips render/store/status-flip/audit-log-issued and just writes an `allocated` audit row.
-- `_advance_period(end, plan_code)` helper projects monthly (+30d) / annual (+365d).
-- `app/services/scheduler.py` — new daily runner `renewal_draft_scheduler` at 04:00 Europe/Prague. Job `run_renewal_draft_sweep` walks active non-comp subs with `current_period_ends_at <= now + 7d`, skips trial/comp/enterprise plans, calls `prepare_renewal_draft` per sub. Returns the count.
-- 4 new tests in `tests/services/test_invoicing_scheduler.py`:
-  - drafts created for subs ending within 7 days
-  - subs ending 12+ days out are skipped
-  - comp subs are skipped
-  - rerun is idempotent (no duplicate drafts)
-- Backend suite: **428 passed** (424 → 428). mypy strict, ruff clean. **Two commits ahead of `origin/main` after this commit lands.**
+- New backend module `app/api/v1/invoices.py` — three routes under `/api/v1/organizations/current/invoices`:
+  - `GET ` — paginated list, drafts excluded, ordered by `issued_at desc`
+  - `GET /{id}` — full detail with eagerly-loaded lines; 404 (not 403) on cross-org
+  - `GET /{id}/pdf` — streams `application/pdf` from `InvoiceStorage.fetch_pdf` (hash-verified). Returns 503 with `code=invoice_integrity_failure` if the bytes fail verification.
+- New `app/schemas/invoicing.py` with `TaxInvoiceOut`, `TaxInvoiceList`, `TaxInvoiceLineOut`, `TaxInvoiceDetailOut`. Distinct from `ChargeOut` / `ChargeList`.
+- Router registered in `app/api/v1/__init__.py` under org-membership but **not** trial-gated (a gated org must still download their PDFs).
+- 5 new tests in `tests/api/v1/test_invoices.py`: list happy-path, list excludes drafts, detail with lines, cross-org 404, PDF stream byte-validity.
+- Backend suite: **433 passed** (428 → 433). mypy strict, ruff clean. Three commits ahead of `origin/main` after this commit lands.
 
-## Next: commit #8 — `feat(invoicing): customer-facing invoice list/detail endpoints + UI`
+## Next: commit #8b — frontend UI for the "Faktury" sub-tab
 
-Wire the legal tax-invoice document into the customer-facing app. Two surfaces:
-
-### Backend: 3 new routes under `/api/v1/organizations/current/invoices`
-
-- `GET /organizations/current/invoices` — paginated list. Returns a `TaxInvoiceList` schema with summary fields (id, number, kind, status, issued_at, due_at, total_minor, vat_amount_minor, paid_at, sent_at). Filtered to `Invoice.organization_id == user.organization_id`. Order by `issued_at desc`.
-- `GET /organizations/current/invoices/{id}` — full row + lines. 403 if cross-org.
-- `GET /organizations/current/invoices/{id}/pdf` — streams `application/pdf` from `InvoiceStorage.fetch_pdf` (hash-verified). 403 cross-org. 404 if `pdf_object_key` is NULL (drafts).
-
-Add to `app/schemas/billing.py` (or a new `app/schemas/invoicing.py`):
-- `TaxInvoiceOut` — single row
-- `TaxInvoiceList` — paginated wrapper
-- `TaxInvoiceLineOut` — child rows
-- `TaxInvoiceDetailOut` — single row + lines
-
-These are NEW types, distinct from `ChargeOut` / `ChargeList` (which serialize ComGate charges). Do not conflate.
-
-### Frontend: F1 from INVOICES_TASK.md §9
-
-Sub-tab under `/app/nastaveni/predplatne` called "Faktury" (the existing Faktury card in SettingsPage shows ComGate charges; the new sub-tab shows the legal tax invoices).
-
-Wait — actually the existing card label is also "Faktury" and it lists Charges. To avoid two same-labeled UIs, options:
-- (a) Rename the existing card to "Platby" (Payments) and use "Faktury" for the new one.
-- (b) Merge them: one list with a `Druh` column (`Platba` / `Faktura`).
-- (c) Keep them separate; rename the existing list section header.
-
-**Recommendation for #8**: use option (a). Rename existing card heading to "Platby" (the rows ARE payments — ComGate charge attempts). Add a new section above titled "Faktury" listing tax invoices. The tab structure stays as-is.
-
-UI per §9 F1:
-- Table columns: Číslo / Datum vystavení / Splatnost / Stav / Celkem / [download icon]
-- Status pills: `Vystavena` / `Zaplacena` / `Po splatnosti` / `Stornována` / `Dobropis` (corner badge)
-- Empty state with line-art illustration
-- Click row → detail drawer with lines + `Stáhnout PDF` button
+The customer-facing UI per `docs/prompts/INVOICES_TASK.md` §9 F1.
 
 ### Files to touch / create
 
-Backend:
-- `backend/app/api/v1/invoices.py` — NEW. The 3 routes above + their schemas.
-- `backend/app/api/v1/__init__.py` — register the new router.
-- `backend/app/schemas/invoicing.py` — NEW. `TaxInvoiceOut`, `TaxInvoiceLineOut`, `TaxInvoiceList`, `TaxInvoiceDetailOut`.
-- `backend/tests/api/v1/test_invoices.py` — NEW. happy-path list, cross-org 403, draft has no PDF endpoint, hash-verified PDF download.
+- `frontend/src/components/billing/useTaxInvoices.ts` — NEW. React Query hooks:
+  - `useTaxInvoices()` → `apiFetch<TaxInvoiceList>("/api/v1/organizations/current/invoices?limit=50")`
+  - `useTaxInvoiceDetail(id)` → `/api/v1/organizations/current/invoices/{id}`
+  - PDF download via raw `fetch` to `/api/v1/organizations/current/invoices/{id}/pdf` with `credentials: include` and the access token — see how `useExportCsv.ts` does it for the binary-stream + `triggerDownload` pattern.
+- `frontend/src/types/api.generated.ts` — regenerate with the new schemas (`BACKEND_OPENAPI_URL=http://localhost:8000/api/v1/openapi.json pnpm run types:generate`).
+- `frontend/src/app/settings/SettingsPage.tsx` — add a new "Faktury" section under the "Předplatné" tab. The existing list of ComGate charges (currently labeled "Faktury") should be renamed to "Platby" — rows are payment attempts, not invoices.
+- Optional new test in `frontend/src/__tests__/` — table renders, status pills, click-row opens drawer, "Stáhnout PDF" button calls the right URL.
 
-Frontend:
-- `frontend/src/components/billing/useTaxInvoices.ts` — NEW. `useTaxInvoices()` query hook + types.
-- `frontend/src/app/settings/SettingsPage.tsx` — add "Faktury" section above the existing (renamed to "Platby") Charges card.
-- Frontend test for the new section in `__tests__/`.
+### UI per §9 F1
+- Table columns (TanStack): `Číslo` / `Datum vystavení` / `Splatnost` / `Stav` / `Celkem` / [download icon]
+- Status pills: `Vystavena` (info) / `Zaplacena` (success) / `Po splatnosti` (danger) / `Stornována` (neutral, strikethrough) / `Dobropis` (info with corner badge for `kind=credit_note`)
+- Empty state: line-art illustration + `Zatím nemáte žádné faktury. Po první platbě tu uvidíte přehled.`
+- Click row → detail drawer with all fields + lines table + `Stáhnout PDF` button
+- Mobile: stacked cards with download action
+- **No magenta** anywhere on the screen — financial records are operational density, not celebration
 
-### Watch out for
-- `Invoice.status` includes `'draft'`. Drafts shouldn't appear in the customer-facing list yet (they belong to the founder's review queue). Filter `status != 'draft'`.
-- Cross-org access: use the existing `require_org_membership` dep + `Invoice.organization_id == user.organization_id` filter. Don't trust the path's `org_id` argument.
-- The PDF stream endpoint must verify the hash via `InvoiceStorage.fetch_pdf` before serving. If the bucket got tampered with, return 503 with a clear "integrity check failed" message — don't ship corrupted bytes.
-- The customer-facing label "Faktury" maps to the legal tax invoices, not the ComGate charges. The renaming in SettingsPage is a small but meaningful UX shift; the existing test mocks for the Charges list still apply, just under the new heading.
-- Frontend types regen needed once the new schemas land — `BACKEND_OPENAPI_URL=http://localhost:8000/api/v1/openapi.json pnpm run types:generate`.
+### How to start
 
-### How to start commit #8
+1. `cd backend && uv run uvicorn app.main:app --reload --port 8000` (or restart the existing one) so the new schemas are available for types-regen.
+2. `cd frontend && BACKEND_OPENAPI_URL=http://localhost:8000/api/v1/openapi.json pnpm run types:generate`. Verify `TaxInvoiceOut` etc. appear in `api.generated.ts`.
+3. Write `useTaxInvoices.ts` mirroring `usePayments.ts`'s shape.
+4. Add the section to SettingsPage. The Czech label "Faktury" goes to the new section; rename the existing Charges section to "Platby".
+5. Frontend gates: `pnpm lint && pnpm typecheck && pnpm test --run && pnpm build`.
+6. Commit. RESUME → commit #9.
 
-1. `cd backend && uv run alembic current` — head is `1a5b9f76b1ee`.
-2. `cd backend && uv run pytest -q` — confirms 428 green.
-3. Write `app/schemas/invoicing.py` first (small, easy to test).
-4. Write `app/api/v1/invoices.py` with the 3 routes.
-5. Register in `app/api/v1/__init__.py`.
-6. Tests for the routes (happy / cross-org / draft / hash-verify).
-7. Frontend: regenerate types, write the hook, add the new section in SettingsPage, rename existing card.
-8. Gates, commit, update RESUME.
+## Then: commit #9 — `feat(admin): super-admin invoices browser`
 
-## Carryover from commits #1–7
+Top-level tab `/admin/faktury`. Filter bar (year, status multi-select, druh, org typeahead, date range, free text). Big table with action menu (zobrazit PDF / stáhnout ISDOC / odeslat / označit zaplacenou / stornovat / vytvořit dobropis). Detail drawer with audit-log timeline. Header buttons: "Vystavit ručně", "Export roku".
 
-- Endpoint URL `/api/v1/payments/invoices` (the legacy charge-list URL) intentionally not renamed — leave alone or fold into the new section in commit #8.
-- `BillingSettings.seller_ico` / `seller_iban` are the legacy column names; snapshot fields use `issuer_*`. Worth a follow-up rename.
+This needs **NEW super-admin endpoints** — `GET /admin/invoices`, action endpoints (issue / send / mark-paid / void / credit-note), audit-log endpoint. All in `app/api/v1/admin.py` or a new `app/api/v1/admin_invoices.py` (the existing admin.py is already big — leaning toward splitting).
+
+## Carryover from commits #1–8a
+
 - WeasyPrint pinned `>=63.0,<64`; bumping breaks already-stored `pdf_sha256`.
-- WeasyPrint emits `Ignored fill:#000000` warnings per render (QR SVG). Cosmetic.
+- `BillingSettings.seller_ico/seller_iban` legacy column names; snapshot uses `issuer_*`. Worth a follow-up rename.
+- The `_wipe_invoices_for_org` cleanup pattern is duplicated in 4 test files now (`test_payments.py`, `test_invoices.py`, `test_invoicing_service.py`, `test_invoicing_scheduler.py`). **Promote to a shared helper in `tests/conftest.py` before the next test file uses it** — that's now the threshold.
+- Renewal-draft scheduler is registered as `renewal_draft_scheduler` but **not auto-started**. Wire into `app/main.py` lifespan in commit #8b or later.
+- WeasyPrint emits `Ignored fill:#000000` warning per render (QR SVG). Cosmetic.
 - S3 storage path implemented but not exercised by tests.
-- Commit #6 added `_wipe_invoices_for_org` helper to `test_payments.py`. Same pattern duplicated in `test_invoicing_scheduler.py:_teardown` and `test_invoicing_service.py:_teardown_invoices`. Worth promoting to a shared `tests/conftest.py` helper if a fourth use-site appears.
-- The renewal-draft scheduler is registered as `renewal_draft_scheduler` at module level but **not** auto-started anywhere yet. Need to add `await renewal_draft_scheduler.start()` somewhere in app startup (probably `app/main.py`'s lifespan handler, alongside the existing freeing-sweep + recurring-charge schedulers). Check the existing pattern there. Add this in commit #8 or break it out separately — your call.
+- The PDF stream test in `test_invoices.py` writes to the default `var/invoices/` (not `tmp_path`) because the route's `InvoiceStorage()` is instantiated inside the handler with default settings. Cleaner long-term: `Depends(get_storage)` so tests can override. For now, `var/invoices/` is gitignored, so pollution is harmless on CI.
