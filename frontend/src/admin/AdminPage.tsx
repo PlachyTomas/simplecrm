@@ -3,16 +3,19 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { AdminBillingSettings } from "@/admin/AdminBillingSettings";
+import { InvoiceDetailDrawer } from "@/admin/InvoiceDetailDrawer";
+import { InvoicesList } from "@/admin/InvoicesList";
 import { OrgDetailDrawer } from "@/admin/OrgDetailDrawer";
 import { OrgList } from "@/admin/OrgList";
 import { ThemeToggle } from "@/lib/ThemeToggle";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 
-type AdminTab = "organizations" | "settings";
+type AdminTab = "organizations" | "invoices" | "settings";
 
 const TABS: { key: AdminTab; label: string }[] = [
   { key: "organizations", label: "Organizace" },
+  { key: "invoices", label: "Faktury" },
   { key: "settings", label: "Nastavení" },
 ];
 
@@ -24,6 +27,7 @@ export function AdminPage() {
   // Enterprise-price modal can render the live `users × override`
   // preview without a second fetch — the list row already has it.
   const [selectedUserCount, setSelectedUserCount] = useState<number | null>(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
   return (
     <div className="min-h-screen bg-bg text-text-primary">
@@ -89,6 +93,20 @@ export function AdminPage() {
             ) : (
               <div className="hidden rounded-lg border border-dashed border-border bg-surface p-8 text-center text-sm text-text-tertiary md:block">
                 Vyberte organizaci ze seznamu pro zobrazení detailu.
+              </div>
+            )}
+          </div>
+        ) : activeTab === "invoices" ? (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-[3fr_2fr]">
+            <InvoicesList
+              selectedInvoiceId={selectedInvoiceId}
+              onSelect={setSelectedInvoiceId}
+            />
+            {selectedInvoiceId ? (
+              <InvoiceDetailDrawer invoiceId={selectedInvoiceId} />
+            ) : (
+              <div className="hidden rounded-lg border border-dashed border-border bg-surface p-8 text-center text-sm text-text-tertiary md:block">
+                Vyberte fakturu ze seznamu pro zobrazení detailu.
               </div>
             )}
           </div>

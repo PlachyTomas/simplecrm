@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends
 from app.api.v1 import (
     activities,
     admin,
+    admin_invoices,
     auth,
     companies,
     contacts,
@@ -79,3 +80,4 @@ api_router.include_router(plans.router)
 # PROTECTED_DEPS because the trial gate is per-org and super-admins operate
 # across orgs (and may themselves belong to a freshly-trialing test org).
 api_router.include_router(admin.router)
+api_router.include_router(admin_invoices.router)
