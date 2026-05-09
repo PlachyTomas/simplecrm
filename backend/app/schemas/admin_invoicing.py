@@ -170,3 +170,19 @@ class AdminManualInvoiceIn(BaseModel):
     note: str | None = Field(default=None, max_length=2000)
     taxable_supply_date: date | None = None
     due_at: date | None = None
+
+
+class AdminIntegrityFailure(BaseModel):
+    invoice_id: uuid.UUID
+    invoice_number: str
+    kind: Literal["pdf", "isdoc"]
+    error: str
+
+
+class AdminIntegrityRunOut(BaseModel):
+    run_id: uuid.UUID
+    checked: int
+    ok: int
+    failed: int
+    failures: list[AdminIntegrityFailure]
+    created_at: datetime | None = None

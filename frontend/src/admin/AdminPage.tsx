@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { AdminBillingSettings } from "@/admin/AdminBillingSettings";
+import { IntegrityPanel } from "@/admin/IntegrityPanel";
 import { InvoiceDetailDrawer } from "@/admin/InvoiceDetailDrawer";
 import { InvoicesList } from "@/admin/InvoicesList";
 import { OrgDetailDrawer } from "@/admin/OrgDetailDrawer";
@@ -97,21 +98,24 @@ export function AdminPage() {
             )}
           </div>
         ) : activeTab === "invoices" ? (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-[3fr_2fr]">
-            <InvoicesList
-              selectedInvoiceId={selectedInvoiceId}
-              onSelect={setSelectedInvoiceId}
-            />
-            {selectedInvoiceId ? (
-              <InvoiceDetailDrawer
-                invoiceId={selectedInvoiceId}
-                onSelectInvoice={setSelectedInvoiceId}
+          <div className="space-y-6">
+            <IntegrityPanel />
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-[3fr_2fr]">
+              <InvoicesList
+                selectedInvoiceId={selectedInvoiceId}
+                onSelect={setSelectedInvoiceId}
               />
-            ) : (
-              <div className="hidden rounded-lg border border-dashed border-border bg-surface p-8 text-center text-sm text-text-tertiary md:block">
-                Vyberte fakturu ze seznamu pro zobrazení detailu.
-              </div>
-            )}
+              {selectedInvoiceId ? (
+                <InvoiceDetailDrawer
+                  invoiceId={selectedInvoiceId}
+                  onSelectInvoice={setSelectedInvoiceId}
+                />
+              ) : (
+                <div className="hidden rounded-lg border border-dashed border-border bg-surface p-8 text-center text-sm text-text-tertiary md:block">
+                  Vyberte fakturu ze seznamu pro zobrazení detailu.
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <AdminBillingSettings />

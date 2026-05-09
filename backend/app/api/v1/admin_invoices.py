@@ -32,6 +32,8 @@ from app.db.models import (
 )
 from app.schemas.admin_invoicing import (
     AdminCreditNoteIn,
+    AdminIntegrityFailure,
+    AdminIntegrityRunOut,
     AdminInvoiceAuditEntry,
     AdminInvoiceDetail,
     AdminInvoiceLine,
@@ -43,6 +45,10 @@ from app.schemas.admin_invoicing import (
     AdminVoidIn,
 )
 from app.services.invoicing.exporter import build_csv, build_full_zip, build_pdf_zip
+from app.services.invoicing.integrity import (
+    latest_integrity_run,
+    run_archive_integrity_check,
+)
 from app.services.invoicing.mailer import InvoiceMailer, InvoiceMailerError
 from app.services.invoicing.service import (
     CreditNoteExceedsOriginalError,
@@ -430,6 +436,71 @@ async def export_year_full(
             "Content-Disposition": f'attachment; filename="faktury-{year}-uplny-export.zip"',
             "Cache-Control": "private, no-store",
         },
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Archive integrity dashboard
+# --------------------------------------------------------------------------- #
+
+
+@router.post("/integrity/check", response_model=AdminIntegrityRunOut)
+async def run_integrity_check(
+    admin: User = Depends(require_super_admin),
+    session: AsyncSession = Depends(get_db),
+) -> AdminIntegrityRunOut:
+    """Walk every issued invoice's stored bytes and verify hashes.
+
+    Synchronous — finishes within the request. Acceptable at our scale
+    (sub-second per invoice). If we ever take more than a few seconds,
+    move to a background job + a status-poll endpoint.
+    """
+    result = await run_archive_integrity_check(session, actor_user_id=admin.id)
+    await session.commit()
+    return AdminIntegrityRunOut(
+        run_id=result.run_id,
+        checked=result.checked,
+        ok=result.ok,
+        failed=len(result.failures),
+        failures=[
+            AdminIntegrityFailure(
+                invoice_id=f.invoice_id,
+                invoice_number=f.invoice_number,
+                kind=f.kind,
+                error=f.error,
+            )
+            for f in result.failures
+        ],
+    )
+
+
+@router.get("/integrity/last-run", response_model=AdminIntegrityRunOut | None)
+async def get_last_integrity_run(
+    _admin: User = Depends(require_super_admin),
+    session: AsyncSession = Depends(get_db),
+) -> AdminIntegrityRunOut | None:
+    """Return the most recent integrity-check run summary, or null if
+    no run has happened yet."""
+    row = await latest_integrity_run(session)
+    if row is None:
+        return None
+    payload = row.payload
+    failures = payload.get("failures") or []
+    return AdminIntegrityRunOut(
+        run_id=uuid.UUID(payload["run_id"]),
+        checked=int(payload.get("checked", 0)),
+        ok=int(payload.get("ok", 0)),
+        failed=int(payload.get("failed", 0)),
+        failures=[
+            AdminIntegrityFailure(
+                invoice_id=uuid.UUID(item["invoice_id"]),
+                invoice_number=item["invoice_number"],
+                kind=item["kind"],
+                error=item["error"],
+            )
+            for item in failures
+        ],
+        created_at=row.created_at,
     )
 
 

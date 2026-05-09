@@ -360,3 +360,32 @@ async def run_renewal_draft_sweep() -> int:
 
 
 renewal_draft_scheduler = _DailyRunner(hour=RENEWAL_DRAFT_HOUR, job=run_renewal_draft_sweep)
+
+
+# ---------------------------------------------------------------------------
+# Weekly archive-integrity sweep (commit #12 of INVOICES_TASK.md)
+# ---------------------------------------------------------------------------
+#
+# Runs every 7 days. Walks every issued invoice's stored bytes, hash-
+# verifies via InvoiceStorage. Failures land in the admin Faktury
+# integrity panel — and feed back into the monthly accountant export
+# so a missing PDF is caught long before year-end audit.
+
+INTEGRITY_CHECK_INTERVAL_SECONDS = 7 * 24 * 3600
+
+
+async def run_weekly_integrity_check() -> int:
+    """Background-runner version of the integrity walk. Returns the
+    number of failures (useful for tests + log inspection)."""
+    from app.services.invoicing.integrity import run_archive_integrity_check
+
+    async with AsyncSessionLocal() as session:
+        result = await run_archive_integrity_check(session, actor_user_id=None)
+        await session.commit()
+        return len(result.failures)
+
+
+integrity_check_scheduler = _PeriodicRunner(
+    interval_seconds=INTEGRITY_CHECK_INTERVAL_SECONDS,
+    job=run_weekly_integrity_check,
+)
