@@ -287,3 +287,76 @@ recurring_charge_scheduler = _PeriodicRunner(
     interval_seconds=RECURRING_CHARGE_INTERVAL_SECONDS,
     job=run_recurring_charges,
 )
+
+
+# ---------------------------------------------------------------------------
+# Invoice-renewal-draft job (commit #7 of INVOICES_TASK.md)
+# ---------------------------------------------------------------------------
+#
+# Runs daily at 04:00 Europe/Prague (one hour after the freeing sweep so
+# nightly bookkeeping finishes first). For each active subscription whose
+# `current_period_ends_at` is within `RENEWAL_DRAFT_LEAD_DAYS`, build a
+# `status='draft'` Invoice projecting the next-period charge. The founder
+# reviews + confirms via the super-admin UI in commits #9-10 before the
+# next morning's 03:00 ComGate charge fires.
+#
+# Idempotent: re-running on the same day returns existing drafts via the
+# `(subscription_id, status='draft')` uniqueness check inside
+# `prepare_renewal_draft`. CI / dev can call this manually.
+
+RENEWAL_DRAFT_LEAD_DAYS = 7
+RENEWAL_DRAFT_HOUR = 4  # 04:00 local
+
+
+async def run_renewal_draft_sweep() -> int:
+    """Build draft invoices for every active subscription whose current
+    period ends within the next `RENEWAL_DRAFT_LEAD_DAYS` days.
+
+    Skips:
+      - comp orgs (no money owed)
+      - subs with `current_period_ends_at IS NULL` (no anchor, can't
+        project the next period)
+      - subs whose plan isn't monthly/annual (trial / enterprise / comp
+        don't auto-renew through this path)
+
+    Returns the number of drafts created (or returned-as-existing) so
+    tests can assert.
+    """
+    from app.services.invoicing.service import InvoiceService
+
+    now = datetime.now(tz=UTC)
+    horizon = now + timedelta(days=RENEWAL_DRAFT_LEAD_DAYS)
+    drafts = 0
+
+    async with AsyncSessionLocal() as session:
+        from sqlalchemy.orm import selectinload
+
+        due_stmt = (
+            select(Subscription)
+            .options(selectinload(Subscription.plan))
+            .where(Subscription.status == "active")
+            .where(Subscription.is_comp.is_(False))
+            .where(Subscription.current_period_ends_at.is_not(None))
+            .where(Subscription.current_period_ends_at <= horizon)
+        )
+        subs = (await session.execute(due_stmt)).scalars().all()
+        svc = InvoiceService()
+
+        for sub in subs:
+            plan_code = sub.plan.code if sub.plan else None
+            if plan_code not in {"monthly", "annual"}:
+                continue
+            try:
+                await svc.prepare_renewal_draft(session, subscription=sub)
+                drafts += 1
+            except Exception:
+                # A single sub failing shouldn't take down the sweep.
+                logger.exception("renewal-draft prep failed for subscription %s", sub.id)
+
+        await session.commit()
+
+    logger.info("renewal-draft sweep completed: drafts=%d", drafts)
+    return drafts
+
+
+renewal_draft_scheduler = _DailyRunner(hour=RENEWAL_DRAFT_HOUR, job=run_renewal_draft_sweep)

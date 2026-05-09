@@ -206,6 +206,93 @@ class InvoiceService:
             by_admin_id=by_admin_id,
         )
 
+    # ------------------------- renewal drafts ---------------------------- #
+
+    async def prepare_renewal_draft(
+        self,
+        session: AsyncSession,
+        *,
+        subscription: Subscription,
+    ) -> Invoice:
+        """Build a `status='draft'` Invoice projecting the next-period
+        charge for `subscription`. Used by the daily scheduler job so
+        the founder can eyeball upcoming invoices before the renewal
+        charge fires the next day.
+
+        Drafts deliberately don't validate issuer fields (the founder
+        may not have filled them in yet) and don't render or store
+        PDFs. They DO consume a real sequence number from the yearly
+        counter — matches Fakturoid; voiding a draft just leaves a
+        consumed number per §3 of INVOICES_TASK.md.
+
+        Idempotent on `(subscription_id, status='draft')` — re-running
+        the scheduler returns the existing row.
+        """
+        existing = (
+            (
+                await session.execute(
+                    select(Invoice).where(
+                        Invoice.subscription_id == subscription.id,
+                        Invoice.status == "draft",
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+        if existing is not None:
+            return existing
+
+        billing = await self._load_billing_settings(session)
+        org = await session.get(Organization, subscription.organization_id)
+        if org is None:
+            raise InvoiceServiceError(
+                f"Subscription {subscription.id} points at missing organization"
+            )
+
+        plan = await session.get(Plan, subscription.plan_id)
+        if plan is None or plan.code not in {"monthly", "annual"}:
+            raise InvoiceServiceError(f"Subscription {subscription.id} has no renewable plan")
+
+        # Build a synthetic charge-shaped object so the existing
+        # line-builder can reuse its logic.
+        from app.services import billing as billing_module
+
+        seats = subscription.seat_count
+        unit_price = billing_module.get_effective_price_per_user_minor(subscription) or 0
+        total = unit_price * seats
+
+        synthetic = Charge(
+            id=uuid.uuid4(),
+            organization_id=org.id,
+            kind="renewal",
+            amount_minor=total,
+            currency="CZK",
+            status="pending",
+            seats=seats,
+            period_starts_at=subscription.current_period_ends_at,
+            period_ends_at=_advance_period(subscription.current_period_ends_at, plan.code),
+        )
+        lines = self._build_lines_for_charge(synthetic, plan, billing)
+
+        return await self._issue_internal(
+            session,
+            organization=org,
+            billing=billing,
+            lines=lines,
+            charge=None,
+            subscription=subscription,
+            note=None,
+            taxable_supply_date=(
+                synthetic.period_starts_at.date() if synthetic.period_starts_at else None
+            ),
+            due_at=None,
+            by_admin_id=None,
+            kind="invoice",
+            related_invoice_id=None,
+            stop_at_draft=True,
+        )
+
     # ------------------------- state transitions ------------------------- #
 
     async def mark_paid(
@@ -411,6 +498,7 @@ class InvoiceService:
         by_admin_id: uuid.UUID | None,
         kind: str = "invoice",
         related_invoice_id: uuid.UUID | None = None,
+        stop_at_draft: bool = False,
     ) -> Invoice:
         now = datetime.now(tz=UTC)
         year = now.year
@@ -482,6 +570,21 @@ class InvoiceService:
 
         await session.flush()
 
+        if stop_at_draft:
+            # Renewal-draft path: don't render, don't store, don't flip
+            # to 'issued'. Drafts wait in the super-admin UI for the
+            # founder to confirm. Audit-log just `allocated`.
+            session.add(
+                InvoiceAuditLog(
+                    invoice_id=invoice.id,
+                    event="allocated",
+                    actor_user_id=by_admin_id,
+                    payload={"number": number, "year": year, "kind": "draft"},
+                )
+            )
+            await session.flush()
+            return invoice
+
         # Render + store BEFORE flipping status, because the immutability
         # trigger blocks UPDATE of pdf_*/isdoc_* columns once status leaves
         # 'draft'.
@@ -526,6 +629,17 @@ class InvoiceService:
 # --------------------------------------------------------------------------- #
 # Helpers
 # --------------------------------------------------------------------------- #
+
+
+def _advance_period(end: datetime | None, plan_code: str) -> datetime | None:
+    """Project the next billing period's end from the current one.
+    Returns None if `end` is None (e.g. comp / fresh-trial subscriptions
+    without a period anchor)."""
+    if end is None:
+        return None
+    if plan_code == "annual":
+        return end + timedelta(days=365)
+    return end + timedelta(days=30)
 
 
 def _user_word(n: int) -> str:
