@@ -15,6 +15,9 @@ from sqlalchemy.orm import joinedload
 
 from app.core.config import get_settings
 from app.core.deps import require_active_trial_or_subscription
+from app.core.passwords import (
+    validate_password_strength,
+)
 from app.core.security import (
     REFRESH_TOKEN_TYPE,
     IssuedRefreshToken,
@@ -27,7 +30,19 @@ from app.core.security import (
 )
 from app.db import get_db
 from app.db.models import RefreshToken, User
-from app.schemas.auth import CurrentUser
+from app.schemas.auth import (
+    AuthSuccessResponse,
+    CurrentUser,
+    InviteAcceptRequest,
+    LoginRequest,
+    PasswordResetConfirmRequest,
+    PasswordResetRequest,
+    ResendVerificationRequest,
+    SignupRequest,
+    TokenCheckRequest,
+    TokenCheckResponse,
+    VerifyConsumeRequest,
+)
 from app.services.auth import (
     InvitationAlreadyConsumedError,
     InvitationEmailMismatchError,
@@ -36,7 +51,27 @@ from app.services.auth import (
     UserAlreadyInOrganizationError,
     upsert_user_from_google_profile,
 )
+from app.services.email_auth import (
+    ActionTokenError,
+    EmailAlreadyRegisteredError,
+    EmailNotVerifiedError,
+    InvalidCredentialsError,
+    OAuthOnlyAccountError,
+    PasswordRequiredError,
+    TokenCooldownError,
+    WeakPasswordError,
+    authenticate_email_user,
+    check_verification_token,
+    consume_password_reset,
+    consume_verification_token,
+    issue_password_reset,
+    resend_verification,
+    signup_email_user,
+)
 from app.services.google_oauth import GoogleOAuthClient, get_google_oauth_client
+from app.services.invitations import (
+    accept_invitation_for_email_signup,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -319,3 +354,302 @@ async def refresh(
         access_token=access_token,
         user=CurrentUser.model_validate(user),
     )
+
+
+# --------------------------------------------------------------------------- #
+# Email + password auth
+#
+# Lives next to the Google OAuth flow above. Reuses _set_refresh_cookie and
+# _issue_and_record_refresh; verify/reset links are built off the same
+# `frontend_success_redirect` origin used by the Google callback.
+# --------------------------------------------------------------------------- #
+
+
+def _verify_email_link(signed_token: str) -> str:
+    settings = get_settings()
+    return (
+        f"{_frontend_origin(settings.frontend_success_redirect)}"
+        f"{settings.frontend_verify_email_path}?token={signed_token}"
+    )
+
+
+def _reset_password_link(signed_token: str) -> str:
+    settings = get_settings()
+    return (
+        f"{_frontend_origin(settings.frontend_success_redirect)}"
+        f"{settings.frontend_reset_password_path}?token={signed_token}"
+    )
+
+
+def _cooldown_response(exc: TokenCooldownError) -> HTTPException:
+    """Map a cooldown error to a 429 with a Retry-After header."""
+    return HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail={"code": "cooldown", "retry_after_seconds": exc.retry_after_seconds},
+        headers={"Retry-After": str(exc.retry_after_seconds)},
+    )
+
+
+async def _issue_session(
+    session: AsyncSession, response: Response, user: User
+) -> AuthSuccessResponse:
+    """Mint access+refresh tokens for `user`, set the refresh cookie, commit.
+
+    Shared tail of signup-verify, login, and password-reset-confirm so all
+    three return the same shape and update the same allowlist.
+    """
+    access_token = create_access_token(user.id, user.organization_id, user.role)
+    issued = await _issue_and_record_refresh(session, user.id)
+    await session.commit()
+    _set_refresh_cookie(response, issued.token)
+    return AuthSuccessResponse(
+        access_token=access_token,
+        user=CurrentUser.model_validate(user),
+    )
+
+
+@router.post("/signup", status_code=status.HTTP_202_ACCEPTED)
+async def signup(
+    body: SignupRequest,
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """Start an email-signup flow. The user must click the verification link
+    we email them before they can log in.
+
+    For a brand-new email, this creates a User row with the password hash
+    set but `email_verified=False`. For an email that already belongs to a
+    Google-only user, it sends a "verify to add a password" link without
+    touching the row — the password is written when the verify link is
+    consumed (so a stranger who knows your email can't overwrite a pending
+    password).
+    """
+    try:
+        await signup_email_user(
+            session,
+            email=body.email,
+            password=body.password,
+            name=body.name,
+            link_builder=_verify_email_link,
+        )
+    except WeakPasswordError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "weak_password", "message": str(exc)},
+        ) from exc
+    except EmailAlreadyRegisteredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "email_already_registered"},
+        ) from exc
+    except TokenCooldownError as exc:
+        raise _cooldown_response(exc) from exc
+    return {"detail": "Verification email sent."}
+
+
+@router.post("/verify-email/check", response_model=TokenCheckResponse)
+async def verify_email_check(
+    body: TokenCheckRequest,
+    session: AsyncSession = Depends(get_db),
+) -> TokenCheckResponse:
+    """Inspect a verification token without consuming it.
+
+    Powers VerifyEmailPage's first call: the page uses `requires_password`
+    to decide whether to prompt for a password before calling consume.
+    """
+    try:
+        result = await check_verification_token(session, signed_token=body.token)
+    except ActionTokenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "token_invalid"},
+        ) from exc
+    return TokenCheckResponse(email=result.email, requires_password=result.requires_password)
+
+
+@router.post("/verify-email/consume", response_model=AuthSuccessResponse)
+async def verify_email_consume(
+    body: VerifyConsumeRequest,
+    response: Response,
+    session: AsyncSession = Depends(get_db),
+) -> AuthSuccessResponse:
+    """Consume a verification token, mark the user verified, auto-login.
+
+    Same auto-login shape as the Google callback (access token in body,
+    refresh cookie set), so the frontend can hand the user a logged-in app
+    immediately after they click the link.
+    """
+    try:
+        user = await consume_verification_token(
+            session, signed_token=body.token, password=body.password
+        )
+    except ActionTokenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "token_invalid"},
+        ) from exc
+    except PasswordRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "password_required"},
+        ) from exc
+    except WeakPasswordError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "weak_password", "message": str(exc)},
+        ) from exc
+    return await _issue_session(session, response, user)
+
+
+@router.post("/verify-email/resend", status_code=status.HTTP_202_ACCEPTED)
+async def verify_email_resend(
+    body: ResendVerificationRequest,
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """Resend the verification email if the user is unverified.
+
+    Always returns 202 — we don't reveal whether the email is registered or
+    already verified. A 429 cooldown is the one exception (carries a clear
+    'wait N seconds' signal which the user already knows applies to them).
+    """
+    try:
+        await resend_verification(
+            session, email=body.email, link_builder=_verify_email_link
+        )
+    except TokenCooldownError as exc:
+        raise _cooldown_response(exc) from exc
+    return {"detail": "If your email is registered and not verified, we sent a new link."}
+
+
+@router.post("/login", response_model=AuthSuccessResponse)
+async def login(
+    body: LoginRequest,
+    response: Response,
+    session: AsyncSession = Depends(get_db),
+) -> AuthSuccessResponse:
+    """Log in with email + password. Issues access + refresh tokens.
+
+    Returns 401 with `code=oauth_only_account` when the email belongs to a
+    Google-only user; the frontend renders a "use Google to sign in" CTA.
+    Returns 403 with `code=email_not_verified` when the user signed up but
+    hasn't clicked the verification link yet, with a 'resend' affordance.
+    """
+    try:
+        user = await authenticate_email_user(
+            session, email=body.email, password=body.password
+        )
+    except InvalidCredentialsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "invalid_credentials"},
+        ) from exc
+    except OAuthOnlyAccountError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "oauth_only_account"},
+        ) from exc
+    except EmailNotVerifiedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "email_not_verified"},
+        ) from exc
+    return await _issue_session(session, response, user)
+
+
+@router.post("/password-reset/request", status_code=status.HTTP_202_ACCEPTED)
+async def password_reset_request(
+    body: PasswordResetRequest,
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """Email a password-reset link to the user (if they exist + have a password).
+
+    Silent on missing / oauth-only emails; only the cooldown surfaces a
+    distinct 429.
+    """
+    try:
+        await issue_password_reset(
+            session, email=body.email, link_builder=_reset_password_link
+        )
+    except TokenCooldownError as exc:
+        raise _cooldown_response(exc) from exc
+    return {"detail": "If your email is registered, we sent a reset link."}
+
+
+@router.post("/password-reset/confirm", response_model=AuthSuccessResponse)
+async def password_reset_confirm(
+    body: PasswordResetConfirmRequest,
+    response: Response,
+    session: AsyncSession = Depends(get_db),
+) -> AuthSuccessResponse:
+    """Set a new password and auto-login. Revokes every existing refresh
+    token for the user so a stolen pre-reset session can't outlive the
+    reset."""
+    try:
+        user = await consume_password_reset(
+            session, signed_token=body.token, new_password=body.new_password
+        )
+    except ActionTokenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "token_invalid"},
+        ) from exc
+    except WeakPasswordError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "weak_password", "message": str(exc)},
+        ) from exc
+    return await _issue_session(session, response, user)
+
+
+@router.post("/invite/accept", response_model=AuthSuccessResponse)
+async def invite_accept(
+    body: InviteAcceptRequest,
+    response: Response,
+    session: AsyncSession = Depends(get_db),
+) -> AuthSuccessResponse:
+    """Accept an invitation by signing up with email + password.
+
+    Mirrors the Google invite path on `/auth/google/callback` but for
+    email-only invitees: the invite click is treated as proof of email
+    ownership (the link was sent to that exact address), so we mark the
+    user verified and auto-login without a separate verify-email step.
+
+    Errors map to the same set the Google path emits, so the AcceptInvitePage
+    can render one localized message for each:
+      404 invitation_not_found
+      410 invitation_expired
+      409 invitation_consumed
+      409 user_already_in_organization
+      422 weak_password
+    """
+    try:
+        validate_password_strength(body.password)
+    except WeakPasswordError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "weak_password", "message": str(exc)},
+        ) from exc
+    try:
+        user = await accept_invitation_for_email_signup(
+            session, token=body.token, password=body.password, name=body.name
+        )
+    except InvitationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "invitation_not_found"},
+        ) from exc
+    except InvitationExpiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail={"code": "invitation_expired"},
+        ) from exc
+    except InvitationAlreadyConsumedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "invitation_consumed"},
+        ) from exc
+    except UserAlreadyInOrganizationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "user_already_in_organization"},
+        ) from exc
+    return await _issue_session(session, response, user)

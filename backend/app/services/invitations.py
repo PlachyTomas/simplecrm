@@ -304,3 +304,83 @@ async def accept_invitation_for_google_profile(
     await session.flush()
     await session.refresh(user, attribute_names=["organization"])
     return user
+
+
+async def accept_invitation_for_email_signup(
+    session: AsyncSession,
+    *,
+    token: str,
+    password: str,
+    name: str,
+) -> User:
+    """Consume an invitation as part of an email + password signup.
+
+    Click on the invite link is itself proof of email ownership (only the
+    inbox owner could receive it), so we don't send a separate verification
+    email — we just mark `email_verified=True` and auto-login.
+
+    Behavior matrix on `password_hash`:
+      * No user exists for invite.email → create with `password_hash=hash(password)`,
+        adopt the invite's org/role/team/can_invite, mark verified.
+      * User exists with no password (Google-only) → set `password_hash`, adopt
+        the invite, mark verified. The two methods are now linked on one row.
+      * User exists with a password already set → DO NOT overwrite the
+        password. Adopt the invite's org/role/team. The user keeps logging in
+        with whatever password they had; auto-login is justified by the
+        invite-token-as-email-proof.
+
+    Cross-org safety: if the existing user already belongs to a *different*
+    org, raise `UserAlreadyInOrganizationError` — caller maps to 409 with the
+    same error code as the Google invite path.
+
+    Caller is responsible for password-strength validation before calling.
+    """
+    invitation = await get_invitation_by_token(session, token)
+
+    existing_stmt = select(User).where(User.email == invitation.email)
+    user = (await session.execute(existing_stmt)).scalar_one_or_none()
+
+    if user is not None:
+        if (
+            user.organization_id is not None
+            and user.organization_id != invitation.organization_id
+        ):
+            raise UserAlreadyInOrganizationError()
+        # Adopt the invite. Preserve any existing password — the invite click
+        # is enough to justify the org change, but not enough to overwrite a
+        # credential the user might still rely on.
+        user.organization_id = invitation.organization_id
+        user.role = invitation.role
+        user.team_id = invitation.team_id
+        user.can_invite = invitation.can_invite
+        if user.password_hash is None:
+            # Defer the heavy import so module load stays cheap.
+            from app.core.passwords import hash_password
+
+            user.password_hash = hash_password(password)
+        if name and name != user.name:
+            user.name = name
+        if not user.email_verified:
+            user.email_verified = True
+            user.email_verified_at = _now()
+    else:
+        from app.core.passwords import hash_password
+
+        user = User(
+            email=invitation.email,
+            name=name or invitation.email.split("@", 1)[0].capitalize(),
+            password_hash=hash_password(password),
+            email_verified=True,
+            email_verified_at=_now(),
+            role=invitation.role,
+            organization_id=invitation.organization_id,
+            team_id=invitation.team_id,
+            can_invite=invitation.can_invite,
+        )
+        session.add(user)
+
+    user.last_login_at = _now()
+    invitation.accepted_at = _now()
+    await session.flush()
+    await session.refresh(user, attribute_names=["organization"])
+    return user

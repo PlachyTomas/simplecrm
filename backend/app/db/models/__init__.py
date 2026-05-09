@@ -5,6 +5,7 @@ so Alembic autogenerate can see them. Always add new models here.
 """
 
 from app.db.models.activity import Activity
+from app.db.models.auth_action_token import AuthActionToken
 from app.db.models.billing_settings import BillingSettings
 from app.db.models.company import Company
 from app.db.models.contact import Contact
@@ -35,6 +36,7 @@ __all__ = [
     "Activity",
     "ActivityEntityType",
     "ActivityType",
+    "AuthActionToken",
     "BillingSettings",
     "Company",
     "Contact",

@@ -69,13 +69,65 @@ def build_subscription_pending_email(
     return Email(to=founder_email, subject=subject, body=body)
 
 
+def build_verification_email(*, recipient: str, name: str, link: str) -> Email:
+    """Compose the verify-your-email message for a new (or linking) user.
+
+    Sent from the email-auth signup and resend flows. Link points at the
+    frontend's `/verify-email?token=...` page; valid 24 h.
+    """
+    subject = "SimpleCRM: ověřte svůj e-mail"
+    body = (
+        f"Ahoj {name},\n\n"
+        "vítejte v SimpleCRM. Pro dokončení registrace prosím potvrďte "
+        "svou e-mailovou adresu kliknutím na následující odkaz:\n\n"
+        f"{link}\n\n"
+        "Odkaz je platný 24 hodin. Pokud jste registraci nezahájili, "
+        "tento e-mail prosím ignorujte.\n"
+    )
+    return Email(to=recipient, subject=subject, body=body)
+
+
+def build_password_reset_email(*, recipient: str, name: str, link: str) -> Email:
+    """Compose the reset-your-password message.
+
+    Sent from the email-auth password-reset flow. Link points at the
+    frontend's `/reset-password?token=...` page; valid 1 h.
+    """
+    subject = "SimpleCRM: obnovení hesla"
+    body = (
+        f"Ahoj {name},\n\n"
+        "obdrželi jsme žádost o obnovení hesla pro váš účet. Nové heslo "
+        "můžete nastavit kliknutím na následující odkaz:\n\n"
+        f"{link}\n\n"
+        "Odkaz je platný 1 hodinu. Pokud jste o reset nežádali, tento "
+        "e-mail prosím ignorujte — vaše heslo zůstane beze změny.\n"
+    )
+    return Email(to=recipient, subject=subject, body=body)
+
+
 async def send_email(message: Email) -> None:
-    """Dispatch an email. Stub: logs structured fields at INFO level."""
+    """Dispatch an email. Stub: logs structured fields at INFO level.
+
+    Until a real provider is wired up, dev/test extracts the verification
+    or reset link from the structured logs (`extra.link` if present, else
+    parse out of `extra.body`).
+    """
+    # Pull out the first http(s) URL in the body, if any, so dev can
+    # `docker compose logs backend | grep email.send` and copy-paste the
+    # link without needing to inspect the body.
+    link: str | None = None
+    for line in message.body.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(("http://", "https://")):
+            link = stripped
+            break
+
     logger.info(
         "email.send",
         extra={
             "to": message.to,
             "subject": message.subject,
             "body_preview": message.body[:80],
+            "link": link,
         },
     )

@@ -37,6 +37,22 @@ class User(Base):
     avatar_url: Mapped[str | None] = mapped_column(String(500))
     google_id: Mapped[str | None] = mapped_column(String(64), unique=True)
 
+    # Email + password authentication. Nullable: a Google-only user has no
+    # password until they go through "Forgot password?" or sign up with the
+    # same email and a password (which links the two methods on one row).
+    # Bcrypt hashes are 60 chars; 255 leaves room for a future argon2id swap.
+    password_hash: Mapped[str | None] = mapped_column(String(255))
+
+    # Google OAuth verifies email at the IdP, so users created via that flow
+    # are seeded with email_verified=True (see migration backfill). Email
+    # signups start False and flip to True when the user clicks the link in
+    # their verification email — `authenticate_email_user` rejects logins
+    # while this is False so the verify step can't be skipped.
+    email_verified: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
+    )
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     role: Mapped[UserRole] = mapped_column(
         Enum(UserRole, name="user_role"),
         default=UserRole.salesperson,

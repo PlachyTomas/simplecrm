@@ -14,8 +14,12 @@ import { PipelinePage } from "@/app/pipeline/PipelinePage";
 import { ReportsPage } from "@/app/reports/ReportsPage";
 import { SettingsPage } from "@/app/settings/SettingsPage";
 import { AuthProvider } from "@/auth/AuthContext";
+import { ForgotPasswordPage } from "@/auth/ForgotPasswordPage";
 import { LoginPage } from "@/auth/LoginPage";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
+import { ResetPasswordPage } from "@/auth/ResetPasswordPage";
+import { SignupPage } from "@/auth/SignupPage";
+import { VerifyEmailPage } from "@/auth/VerifyEmailPage";
 import { queryClient } from "@/lib/queryClient";
 import { ThemeProvider } from "@/lib/theme";
 import { ToastProvider } from "@/lib/toast";
@@ -33,6 +37,10 @@ export function AppRoutes() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/cenik" element={<CenikPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/invite/:token" element={<AcceptInvitePage />} />
       <Route
         path="/onboarding/create-org"

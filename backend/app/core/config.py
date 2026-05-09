@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     # Where to send them when they log out or hit an error.
     frontend_login_redirect: str = "http://localhost:5173/login"
 
+    # Email verification + password reset link paths on the frontend. The
+    # backend builds links as `{origin}{path}?token=...` using the origin
+    # of `frontend_success_redirect`.
+    frontend_verify_email_path: str = "/verify-email"
+    frontend_reset_password_path: str = "/reset-password"  # noqa: S105 — URL path, not a credential
+
     # ComGate payment processor. All paid-plan billing — initial activation,
     # recurring renewals, and mid-period seat upgrades — flows through
     # ComGate. Comp + enterprise subscriptions still bypass billing entirely
@@ -46,7 +52,7 @@ class Settings(BaseSettings):
     # .ComGateClient surfaces a clear 503 when billing endpoints are hit
     # without these populated.
     comgate_merchant_id: str = ""
-    comgate_secret: str = ""  # noqa: S105 — credential, blank by default
+    comgate_secret: str = ""
     comgate_base_url: str = "https://payments.comgate.cz/v2.0"
     comgate_test_mode: bool = True
     comgate_return_url: str = "http://localhost:8000/api/v1/payments/return"
