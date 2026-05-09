@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { ChevronRight, Handshake, LineChart, LogOut, Settings } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/auth/useAuth";
 import { apiFetch } from "@/lib/api";
@@ -20,11 +20,15 @@ export function MorePage() {
   usePageTitle("Více");
   const isMobile = useMediaQuery("(max-width: 767px)");
   const { accessToken, clearAuth } = useAuth();
+  const navigate = useNavigate();
   const logout = useMutation({
     mutationFn: () => apiFetch<void>("/api/v1/auth/logout", { method: "POST", token: accessToken }),
     onSettled: () => {
       clearAuth();
       queryClient.clear();
+      // Land on the public landing page; logout is a goodbye, not a
+      // "please sign back in" prompt.
+      navigate("/");
     },
   });
 

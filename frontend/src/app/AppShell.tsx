@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { Settings, Sparkles } from "lucide-react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { MobileTabBar } from "@/app/MobileTabBar";
 import { Sidebar } from "@/app/Sidebar";
@@ -18,6 +18,7 @@ export function AppShell() {
   const { data: subscription } = useCurrentSubscription();
   const { accessToken, clearAuth } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   // Pipeline is the only route that wants fluid full-viewport layout — the
   // kanban needs every horizontal pixel and clamps its own scroll.
   const fluidLayout = location.pathname.startsWith("/app/pipeline");
@@ -31,6 +32,10 @@ export function AppShell() {
     onSettled: () => {
       clearAuth();
       queryClient.clear();
+      // Land on the public landing page rather than letting ProtectedRoute
+      // bounce the now-tokenless session to /login. Logout is a goodbye,
+      // not a "please sign back in" prompt.
+      navigate("/");
     },
   });
 
