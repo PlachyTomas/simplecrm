@@ -228,6 +228,23 @@ async def move_deal_stage(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Deal:
+    """Drag-and-drop endpoint for the kanban board.
+
+    Syncs `closed_at` and `lost_reason` to the destination stage's type:
+      * Drag into a `won` stage  → set `closed_at = now`, clear lost_reason,
+        refresh the company's last_order_at + ownership_expires_at (matches
+        `mark-won` semantics; otherwise the deal would be invisible from
+        the board's won-window filter).
+      * Drag into a `lost` stage → set `closed_at = now` so the deal is
+        marked terminal. `lost_reason` is left as-is — drag has no UI for
+        capturing it; the founder can edit via the deal detail page.
+      * Drag into an `open` stage → clear `closed_at` and `lost_reason`
+        ("reopen"). Without this, dragging a won deal back to an earlier
+        stage would leave `closed_at` set, and the board's visibility
+        filter would hide the row.
+    """
+    from datetime import UTC, datetime, timedelta
+
     deal = await _get_scoped(session, user, deal_id)
     if not await can_write_row(session, user, deal.owner_user_id):
         raise HTTPException(
@@ -239,8 +256,35 @@ async def move_deal_stage(
     if deal.stage_id == payload.stage_id:
         return deal  # no-op; UI sometimes sends it on drop
 
+    previous_stage = await session.get(Stage, deal.stage_id)
+    previous_type = previous_stage.stage_type if previous_stage else StageType.open
+    dest_stage = await session.get(Stage, payload.stage_id)
+    # _assert_stage_in_org already verified existence + org ownership.
+    assert dest_stage is not None  # noqa: S101 — guaranteed by the assert above
+
     previous_stage_id = deal.stage_id
     deal.stage_id = payload.stage_id
+
+    now = datetime.now(tz=UTC)
+    if dest_stage.stage_type is StageType.won:
+        # Match mark-won: set closed_at + refresh the owning company so
+        # the auto-free clock resets. Only on transition INTO won; drags
+        # between won stages (multi-won pipelines) don't double-refresh.
+        if previous_type is not StageType.won:
+            deal.closed_at = now
+            company = await session.get(Company, deal.company_id)
+            if company is not None:
+                company.last_order_at = now
+                window_days = user.organization.ownership_window_days if user.organization else 365
+                company.ownership_expires_at = now + timedelta(days=window_days)
+        deal.lost_reason = None
+    elif dest_stage.stage_type is StageType.lost:
+        if previous_type is not StageType.lost:
+            deal.closed_at = now
+    else:  # StageType.open
+        # Reopen: a deal moving back to an open stage stops being terminal.
+        deal.closed_at = None
+        deal.lost_reason = None
 
     session.add(
         Activity(
