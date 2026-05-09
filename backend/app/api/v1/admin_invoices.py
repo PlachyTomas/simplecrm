@@ -17,7 +17,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import cast
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -42,6 +42,7 @@ from app.schemas.admin_invoicing import (
     AdminSendIn,
     AdminVoidIn,
 )
+from app.services.invoicing.exporter import build_csv, build_full_zip, build_pdf_zip
 from app.services.invoicing.mailer import InvoiceMailer, InvoiceMailerError
 from app.services.invoicing.service import (
     CreditNoteExceedsOriginalError,
@@ -371,6 +372,65 @@ async def send_invoice(
         ) from exc
     await session.commit()
     return await get_invoice_detail(invoice_id, _admin=admin, session=session)
+
+
+# --------------------------------------------------------------------------- #
+# Year exports — CSV / PDF ZIP / full bundle
+# --------------------------------------------------------------------------- #
+
+
+@router.get("/export/csv")
+async def export_year_csv(
+    year: int = Query(..., ge=2020, le=2100),
+    admin: User = Depends(require_super_admin),
+    session: AsyncSession = Depends(get_db),
+) -> Response:
+    payload = await build_csv(session, year, actor_user_id=admin.id)
+    await session.commit()
+    return Response(
+        content=payload,
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="faktury-{year}.csv"',
+            "Cache-Control": "private, no-store",
+        },
+    )
+
+
+@router.get("/export/pdfs")
+async def export_year_pdf_zip(
+    year: int = Query(..., ge=2020, le=2100),
+    admin: User = Depends(require_super_admin),
+    session: AsyncSession = Depends(get_db),
+) -> Response:
+    payload = await build_pdf_zip(session, year, actor_user_id=admin.id)
+    await session.commit()
+    return Response(
+        content=payload,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="faktury-{year}-pdfs.zip"',
+            "Cache-Control": "private, no-store",
+        },
+    )
+
+
+@router.get("/export/full")
+async def export_year_full(
+    year: int = Query(..., ge=2020, le=2100),
+    admin: User = Depends(require_super_admin),
+    session: AsyncSession = Depends(get_db),
+) -> Response:
+    payload = await build_full_zip(session, year, actor_user_id=admin.id)
+    await session.commit()
+    return Response(
+        content=payload,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="faktury-{year}-uplny-export.zip"',
+            "Cache-Control": "private, no-store",
+        },
+    )
 
 
 __all__ = cast("list[str]", ["router"])

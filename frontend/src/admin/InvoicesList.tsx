@@ -10,6 +10,11 @@ import {
   type AdminInvoiceStatus,
   useAdminInvoiceList,
 } from "@/admin/useAdminInvoices";
+import {
+  useExportInvoicesCsv,
+  useExportInvoicesFull,
+  useExportInvoicesPdfZip,
+} from "@/admin/useExportInvoiceYear";
 
 const STATUS_PILL: Record<AdminInvoiceStatus, { label: string; className: string }> = {
   draft: { label: "Koncept", className: "bg-bg-elevated text-text-secondary" },
@@ -40,6 +45,12 @@ export function InvoicesList({ selectedInvoiceId, onSelect }: InvoicesListProps)
   const [statusFilter, setStatusFilter] = useState<AdminInvoiceStatus[]>([]);
   const [year, setYear] = useState<number | "">("");
   const [manualOpen, setManualOpen] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const exportCsv = useExportInvoicesCsv();
+  const exportPdfZip = useExportInvoicesPdfZip();
+  const exportFull = useExportInvoicesFull();
+  const exportYear = year || new Date().getFullYear();
 
   const filters: AdminInvoiceFilters = {
     q: q.trim() || undefined,
@@ -55,16 +66,66 @@ export function InvoicesList({ selectedInvoiceId, onSelect }: InvoicesListProps)
 
   return (
     <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold">Faktury</h2>
-        <button
-          type="button"
-          onClick={() => setManualOpen(true)}
-          className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
-        >
-          Vystavit ručně
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setExportError(null);
+              exportCsv.mutate(exportYear, {
+                onError: () => setExportError("Export CSV selhal."),
+              });
+            }}
+            disabled={exportCsv.isPending}
+            title={`Export ${exportYear} – CSV`}
+            className="rounded-md border border-border bg-bg px-3 py-1.5 text-xs hover:bg-bg-elevated disabled:opacity-50"
+          >
+            {exportCsv.isPending ? "Stahuji…" : `CSV ${exportYear}`}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setExportError(null);
+              exportPdfZip.mutate(exportYear, {
+                onError: () => setExportError("Export PDFs selhal."),
+              });
+            }}
+            disabled={exportPdfZip.isPending}
+            className="rounded-md border border-border bg-bg px-3 py-1.5 text-xs hover:bg-bg-elevated disabled:opacity-50"
+          >
+            {exportPdfZip.isPending ? "Stahuji…" : `PDF ZIP ${exportYear}`}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setExportError(null);
+              exportFull.mutate(exportYear, {
+                onError: () => setExportError("Úplný export selhal."),
+              });
+            }}
+            disabled={exportFull.isPending}
+            className="rounded-md border border-border bg-bg px-3 py-1.5 text-xs hover:bg-bg-elevated disabled:opacity-50"
+          >
+            {exportFull.isPending ? "Stahuji…" : `Úplný ${exportYear}`}
+          </button>
+          <button
+            type="button"
+            onClick={() => setManualOpen(true)}
+            className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+          >
+            Vystavit ručně
+          </button>
+        </div>
       </div>
+      {exportError ? (
+        <p
+          role="alert"
+          className="border-danger/40 rounded-md border bg-bg px-3 py-2 text-xs text-danger"
+        >
+          {exportError}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center gap-3">
         <input
           type="search"

@@ -1,79 +1,63 @@
-# Resume: INVOICES_TASK.md commit #11
+# Resume: INVOICES_TASK.md commit #12
 
-**Last completed:** *feat(admin): manual invoice + credit-note builders* — commit #10 of INVOICES_TASK.md.
+**Last completed:** *feat(invoicing): year-end CSV/PDF/full export bundles* — commit #11 of INVOICES_TASK.md.
 
 ## State at session end
 
-- 8 commits ahead of `origin/main` since the invoicing work began.
-- Backend: 444 tests, mypy strict, ruff format + check clean.
+- 9 commits ahead of `origin/main` since the invoicing work began.
+- Backend: 448 tests, mypy strict, ruff format + check clean.
 - Frontend: 79 tests pass, lint clean, typecheck clean, `pnpm build` green.
-- Manual issuance endpoint `POST /admin/invoices/manual` wired to `InvoiceService.issue_manual` with 201/400/409 surface.
-- New frontend modals `ManualInvoiceModal.tsx` (org typeahead + line builder) and `CreditNoteModal.tsx` (negated lines pre-filled from parent).
-- "Vystavit ručně" button in `InvoicesList` header; "Vystavit dobropis" button in `InvoiceDetailDrawer` (replaces the placeholder text from #9).
-- Credit-note action selects the new credit invoice in the drawer after issuance via the new `onSelectInvoice` prop.
-- 2 new backend tests: `test_manual_invoice_creates_issued_invoice`, `test_manual_invoice_400_for_unknown_org`.
+- New service module `app/services/invoicing/exporter.py` with `build_csv`, `build_pdf_zip`, `build_full_zip`. CSV is Czech-friendly (`;` delimiter, UTF-8 BOM). ZIP entry timestamps pinned to 1980-01-01 for byte-stable archives.
+- Three new admin endpoints under `/api/v1/admin/invoices/export/{csv,pdfs,full}` returning content-disposition'd downloads. Each export run writes an `export_run` audit row with `payload={year, kind, row_count, ...}`.
+- Three new frontend buttons in InvoicesList header (CSV / PDF ZIP / Úplný), each driven by a hook in `useExportInvoiceYear.ts`. The export year follows the `year` filter, falling back to the current year when none is set.
+- 4 new backend tests in `tests/services/test_invoicing_exporter.py`: BOM + delimiter, audit-log write, ZIP archive integrity, full-zip composition.
 
-## Next: commit #11 — `feat(admin): year export jobs (CSV / ZIP / full)`
+## Next: commit #12 — `feat(admin): archive integrity dashboard`
 
-Per INVOICES_TASK.md §7 + §9.
+Per INVOICES_TASK.md §8 + §9.
 
 ### What
 
-Three buttons on the admin Faktury page header (next to "Vystavit ručně"):
+A new admin sub-page (or section of the existing Faktury tab) that periodically:
+1. Iterates every issued/paid invoice
+2. Re-fetches its PDF from storage, recomputes SHA-256, compares to `pdf_sha256`
+3. Same for ISDOC
+4. Writes either an `pdf_verified`/`isdoc_verified` event or `integrity_failure` (with details) to `invoice_audit_log`
 
-1. **"Export roku — CSV"** → `GET /admin/invoices/export/csv?year=2026`
-   - One row per invoice with: number, kind, status, issued_at, taxable_supply_date, due_at, paid_at, currency, subtotal_minor, vat_amount_minor, total_minor, customer_name, customer_ico, customer_dic
-   - Czech-friendly CSV: semicolon delimiter, BOM-prefixed UTF-8 (Excel cs-CZ)
-   - Streams via `StreamingResponse` so the year doesn't have to be materialised in memory at once
-2. **"Export roku — PDF ZIP"** → `GET /admin/invoices/export/pdfs?year=2026`
-   - Streams a ZIP of every issued/paid PDF for the year, hash-verified
-   - File naming: `{year}/{number}.pdf`
-   - Skip drafts and voided (skipping voided is a policy choice — accountant prefers to see them; revisit in #14 docs)
-3. **"Export roku — Vše"** → `GET /admin/invoices/export/full?year=2026`
-   - ZIP containing both: the CSV + the per-invoice PDFs + the per-invoice ISDOC XMLs
-   - This is the one the accountant actually needs at year-end
+The dashboard surface shows: total checked, % passing, last-run timestamp, list of failures (number + which file failed). It also offers a "Run integrity check now" button.
+
+A weekly scheduler job runs the same logic automatically (sibling of `renewal_draft_scheduler` in `app/services/scheduler.py`). The dashboard reflects whichever ran last.
 
 ### Implementation outline
 
-- New service module `backend/app/services/invoicing/exporter.py` with three functions: `iter_csv_rows(session, year) -> Iterable[bytes]`, `stream_pdf_zip(session, year) -> Iterable[bytes]`, `stream_full_zip(session, year) -> Iterable[bytes]`. All async iterators / generators yielding bytes for `StreamingResponse`.
-- Each export run logs an `export_run` audit-log row with `payload={"year": Y, "kind": "csv"|"pdf_zip"|"full", "row_count": N}` and `actor_user_id=admin.id`.
-- Use Python's stdlib `zipfile` in **streaming** mode (`ZipFile(stream, mode='w', compression=ZIP_DEFLATED)` against an in-memory buffer flushed periodically). For very large years, swap to `aiozipstream` later.
-- Frontend: three new `useExportInvoiceYear*` hooks following the `useExportCsv` pattern in `frontend/src/app/reports/dashboard/useExportCsv.ts` (raw `fetch` + blob + `triggerDownload`).
+- New service module `app/services/invoicing/integrity.py` with `run_archive_integrity_check(session, *, actor_user_id) -> IntegrityRunResult`.
+- The check delegates to `InvoiceStorage.fetch_pdf` / `fetch_isdoc` which already hash-verify on read — wrap each in `try/except IntegrityError` and accumulate failures.
+- Result schema: `{ run_id, checked, ok, failed: [{invoice_id, number, kind ('pdf'|'isdoc'), error}] }`.
+- New route `POST /admin/invoices/integrity/check` (super-admin) returns the run result.
+- New route `GET /admin/invoices/integrity/last-run` returns the most recent `export_run`/`integrity_check_run` summary by reading the audit log.
+- New scheduler `weekly_integrity_runner = _PeriodicRunner(interval_seconds=7*24*3600, ...)` — wire into `app/main.py` lifespan along with the renewal-draft scheduler that's still un-wired (carryover).
+- Frontend: a card in the AdminPage Faktury tab (or a new sub-tab) showing the last run + failures + "Spustit kontrolu integrity" button.
 
-### Backend additions for #11
+### Watch-outs for #12
 
-- `backend/app/api/v1/admin_invoices.py` — three new routes (`/export/csv`, `/export/pdfs`, `/export/full`)
-- `backend/app/services/invoicing/exporter.py` (new)
-- `backend/tests/services/test_invoicing_exporter.py` — small tests for each generator: row count, CSV column order, ZIP archive integrity (open with `zipfile.ZipFile`)
-- `backend/tests/api/v1/test_admin_invoices.py` — add tests for the export routes (200, content-type, content-disposition, audit-log entries)
+- `_fetch` raises `FileNotFoundError` for a missing local file, `IntegrityError` for a hash mismatch, and may raise the underlying boto3 `ClientError` on S3. Catch all three classes in the integrity walker.
+- Running the check on N invoices does N storage round-trips. Acceptable at our scale; if it ever takes more than a few seconds, switch to async fan-out with `asyncio.gather` over a bounded semaphore.
+- The check **rewrites** the audit log with one row per invoice — at scale that's noisy. Limit to one summary row per run + only-failed-rows for granular tracking.
 
-### Frontend additions for #11
+## Commits #13 + #14 still TODO
 
-- `frontend/src/admin/useExportInvoiceYear.ts` (new) — three exported hooks: `useExportInvoicesCsv`, `useExportInvoicesPdfZip`, `useExportInvoicesFull`
-- `frontend/src/admin/InvoicesList.tsx` — add three buttons in the header next to "Vystavit ručně"; keep the existing year filter in sync (pass the current year filter into the hooks)
+- #13 — broader test suites (cross-cutting: end-to-end happy path, ComGate webhook → audit-log → mailer, scheduler integration)
+- #14 — `docs/invoicing.md` accountant-facing operations doc
 
-### Watch-outs for #11
-
-- Streaming a ZIP with `zipfile` requires a seekable buffer for the central directory; if the year is huge the in-memory buffer balloons. Acceptable for v1 (we have <100 invoices/year), revisit before going to enterprise volume.
-- Excel cs-CZ wants `;` delimiter + UTF-8 BOM (`﻿`). Don't use `,` unless we add a separate "international" CSV later.
-- Audit-log writes for export runs use `invoice_id=None` (the model already allows this — see the docstring in `invoice_audit_log.py`).
-- `pdf_object_key` is NULL for drafts. Skip drafts in the PDF zip, not just by status filter (defence in depth).
-
-## Commits #12 onward (still TODO)
-
-- #12 — archive integrity dashboard
-- #13 — broader test suites
-- #14 — `docs/invoicing.md`
-
-## Carryover (still applies after #10)
+## Carryover
 
 - `BillingSettings.seller_ico/seller_iban` legacy column names; snapshot uses `issuer_*`. Worth a follow-up rename.
-- The `_wipe_invoices_for_org` cleanup pattern is duplicated in 5 test files. **Promote to shared helper in `tests/conftest.py` before adding a 6th.**
+- The `_wipe_invoices_for_org` cleanup pattern is duplicated in 6 test files now (added `test_invoicing_exporter.py` this commit). **Promote to shared helper in `tests/conftest.py` before adding a 7th.** Past the threshold — should be a follow-up cleanup commit.
 - `useInvoices` in `usePayments.ts` is misnamed — it returns `ChargeList`. Rename to `useCharges` cleanup.
-- Renewal-draft scheduler `renewal_draft_scheduler` is registered but **not auto-started** in `app/main.py` lifespan.
+- Renewal-draft scheduler `renewal_draft_scheduler` is registered but **not auto-started** in `app/main.py` lifespan. Pair with the new weekly_integrity_runner wiring in #12.
 - WeasyPrint emits `Ignored fill:#000000` warning per render (QR SVG). Cosmetic.
 - S3 storage path implemented but not exercised by tests.
-- `var/invoices/` host pollution from the customer PDF-stream test.
-- `api.generated.ts` regen lagging three commits (#8, #9, #10). Worth running before #11 lands.
-- Hand-typed admin types in `frontend/src/admin/useAdminInvoices.ts` mirror `AdminInvoiceListItem` / `AdminInvoiceDetail` / `AdminInvoiceLine` / `AdminInvoiceAuditEntry`. Switch to generated types after regen.
-- `apiFetch` body argument is typed as `Record<string, unknown>`; the manual + credit-note hooks cast through `unknown` because their `interface` types lack an index signature. Could either (a) declare `[k: string]: unknown` on those interfaces or (b) loosen `apiFetch` to accept any `object`. Defer.
+- `var/invoices/` host pollution from PDF-stream/exporter tests.
+- `api.generated.ts` regen lagging four commits (#8–#11). Worth running before #12 lands.
+- Hand-typed admin types in `frontend/src/admin/useAdminInvoices.ts` should switch to generated types after regen.
+- `apiFetch` body argument is typed as `Record<string, unknown>`; the manual + credit-note hooks cast through `unknown` because their `interface` types lack an index signature. Defer.
