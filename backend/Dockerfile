@@ -3,8 +3,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_LINK_MODE=copy \
     UV_COMPILE_BYTECODE=1
+# Native deps:
+#   curl, ca-certificates       — uv installer trust roots
+#   libpango-1.0-0, libpangoft2-1.0-0, libharfbuzz0b,
+#   libcairo2, libgdk-pixbuf-2.0-0
+#                                — WeasyPrint's PDF rendering pipeline
+#                                  (text shaping → glyph rendering →
+#                                  raster compositing). Missing any of
+#                                  these makes `weasyprint.HTML(...).write_pdf()`
+#                                  fail at import with a cryptic OSError.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl ca-certificates \
+    libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b \
+    libcairo2 libgdk-pixbuf-2.0-0 \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR /app

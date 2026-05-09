@@ -23,6 +23,21 @@ dependencies = [
     # secret; bcrypt 5.x raises ValueError instead of silently truncating, which
     # breaks the probe. Pin to 4.x until passlib ships a fix.
     "bcrypt>=4.0,<5",
+    # Tax-invoice rendering pipeline (commit #3 of INVOICES_TASK.md).
+    # WeasyPrint version is pinned narrowly because PDF byte-output isn't
+    # contractually stable across feature releases — bumping minor versions
+    # can change byte layout even when the rendered page is visually
+    # identical, which would invalidate stored pdf_sha256 values.
+    "weasyprint>=63.0,<64",
+    # SPAYD QR-code (CZ "QR Platba") generator. Pure-Python, MIT.
+    "qrplatba>=1.0",
+    # Czech locale-aware number/date formatting in the PDF template.
+    "babel>=2.16",
+    # ISDOC XML emission. lxml is faster + more rigorous than xml.etree
+    # and is already pulled in by WeasyPrint, so we depend on it explicitly.
+    "lxml>=5.3",
+    # Jinja2 for the invoice HTML template + email body templates.
+    "jinja2>=3.1",
 ]
 
 [dependency-groups]
@@ -114,7 +129,14 @@ disallow_untyped_defs = false
 check_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ["jose", "jose.*", "authlib", "authlib.*", "passlib", "passlib.*"]
+module = [
+    "jose", "jose.*",
+    "authlib", "authlib.*",
+    "passlib", "passlib.*",
+    "weasyprint", "weasyprint.*",
+    "qrplatba", "qrplatba.*",
+    "lxml", "lxml.*",
+]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

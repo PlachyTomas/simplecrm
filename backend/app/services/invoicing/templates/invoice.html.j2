@@ -1,0 +1,353 @@
+{# Czech-law tax invoice template, rendered by InvoiceRenderer.
+
+Variables provided by the renderer:
+  invoice         — Invoice ORM row (snapshot fields are authoritative)
+  lines           — list[InvoiceLine] sorted by `position`
+  qr_svg          — pre-rendered QR Platba SVG (string of <svg>...</svg>)
+  fmt_money       — callable: int minor -> "12 345,00 Kč" (Czech locale)
+  fmt_qty         — callable: Decimal -> "1,000" (Czech locale)
+  fmt_date        — callable: date -> "9. května 2026"
+
+The DPH-only blocks render conditional on `invoice.issuer_is_vat_payer`.
+For non-plátce invoices we explicitly emit the legally-required
+`Nejsem plátce DPH` notice in the footer.
+#}
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8">
+    <title>Faktura {{ invoice.number }}</title>
+    <style>
+      @page { size: A4; margin: 18mm 16mm; }
+
+      @font-face {
+        font-family: "Inter";
+        src: url("./fonts/Inter-Regular.ttf") format("truetype");
+        font-weight: 400;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: "Inter";
+        src: url("./fonts/Inter-Bold.ttf") format("truetype");
+        font-weight: 700;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: "JetBrains Mono";
+        src: url("./fonts/JetBrainsMono-Regular.ttf") format("truetype");
+        font-weight: 400;
+      }
+
+      html, body { margin: 0; padding: 0; }
+      body {
+        font-family: "Inter", sans-serif;
+        font-size: 9.5pt;
+        color: #111;
+        line-height: 1.45;
+      }
+      .mono { font-family: "JetBrains Mono", monospace; }
+      h1, h2 { margin: 0; font-weight: 700; }
+      table { border-collapse: collapse; width: 100%; }
+
+      /* Header strip */
+      .header { display: flex; justify-content: space-between; align-items: flex-start; }
+      .header h1 { font-size: 22pt; }
+      .header .number { font-size: 22pt; font-weight: 700; }
+
+      /* Two-column issuer + customer */
+      .parties {
+        margin-top: 8mm;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10mm;
+      }
+      .party-label {
+        font-size: 8pt;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #666;
+        margin-bottom: 2mm;
+      }
+      .party-name { font-weight: 700; font-size: 11pt; margin-bottom: 1mm; }
+      .party-line { white-space: pre-line; }
+      .party-meta {
+        margin-top: 2mm;
+        font-size: 8.5pt;
+        color: #444;
+      }
+      .party-meta-row { display: flex; gap: 1.5em; }
+
+      /* Dates */
+      .dates {
+        margin-top: 6mm;
+        border-top: 1px solid #eee;
+        border-bottom: 1px solid #eee;
+        padding: 3mm 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8mm;
+      }
+      .dates .label {
+        font-size: 8pt;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #666;
+      }
+      .dates .value { font-size: 11pt; font-weight: 700; margin-top: 1mm; }
+
+      /* Line items */
+      .lines { margin-top: 8mm; }
+      .lines th {
+        text-align: left;
+        font-size: 8pt;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #666;
+        border-bottom: 1px solid #ccc;
+        padding: 2mm 2mm 2mm 0;
+      }
+      .lines td {
+        padding: 2.5mm 2mm 2.5mm 0;
+        border-bottom: 1px solid #f0f0f0;
+        vertical-align: top;
+      }
+      .lines td.num { text-align: right; font-variant-numeric: tabular-nums; }
+      .lines th.num { text-align: right; }
+
+      /* Totals — right-aligned float-style block */
+      .totals {
+        margin-top: 6mm;
+        display: flex;
+        justify-content: flex-end;
+      }
+      .totals table {
+        width: auto;
+        min-width: 70mm;
+        font-variant-numeric: tabular-nums;
+      }
+      .totals td { padding: 1.5mm 0; }
+      .totals td.label { color: #444; padding-right: 6mm; }
+      .totals td.value { text-align: right; }
+      .totals .grand td {
+        font-size: 13pt;
+        font-weight: 700;
+        border-top: 1px solid #111;
+        padding-top: 3mm;
+      }
+
+      /* Payment */
+      .payment {
+        margin-top: 8mm;
+        display: grid;
+        grid-template-columns: 1fr 36mm;
+        gap: 8mm;
+        align-items: flex-start;
+      }
+      .payment .label {
+        font-size: 8pt;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #666;
+      }
+      .payment dl {
+        margin: 0;
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        column-gap: 4mm;
+        row-gap: 1.5mm;
+      }
+      .payment dt { color: #444; }
+      .payment dd { margin: 0; font-weight: 700; }
+      .payment .qr svg { width: 36mm; height: 36mm; }
+      .payment .qr-caption {
+        font-size: 7.5pt;
+        text-align: center;
+        color: #666;
+        margin-top: 1mm;
+      }
+
+      /* Footer */
+      .footer {
+        position: running(footer);
+        margin-top: 10mm;
+        padding-top: 4mm;
+        border-top: 1px solid #eee;
+        font-size: 8pt;
+        color: #555;
+      }
+      .footer .non-vat-notice {
+        font-weight: 700;
+        color: #111;
+        margin-bottom: 1.5mm;
+      }
+    </style>
+  </head>
+  <body>
+
+    <header class="header">
+      <h1>
+        {% if invoice.issuer_is_vat_payer %}
+          {% if invoice.kind == "credit_note" %}Opravný daňový doklad
+          {% elif invoice.kind == "proforma" %}Proforma faktura
+          {% else %}Faktura — daňový doklad
+          {% endif %}
+        {% else %}
+          {% if invoice.kind == "credit_note" %}Dobropis k faktuře
+          {% elif invoice.kind == "proforma" %}Proforma faktura
+          {% else %}Faktura
+          {% endif %}
+        {% endif %}
+      </h1>
+      <div class="number mono">{{ invoice.number }}</div>
+    </header>
+
+    {% if invoice.kind == "credit_note" and invoice.related_invoice_number %}
+    <p style="margin-top: 2mm; color: #555; font-size: 9pt;">
+      Vystaveno k faktuře <span class="mono">{{ invoice.related_invoice_number }}</span>
+    </p>
+    {% endif %}
+
+    <section class="parties">
+      <div>
+        <div class="party-label">Dodavatel</div>
+        <div class="party-name">{{ invoice.issuer_name }}</div>
+        <div class="party-line">{{ invoice.issuer_address }}</div>
+        <div class="party-meta">
+          <div class="party-meta-row">
+            <span>IČO: <span class="mono">{{ invoice.issuer_ico }}</span></span>
+            {% if invoice.issuer_dic %}
+            <span>DIČ: <span class="mono">{{ invoice.issuer_dic }}</span></span>
+            {% endif %}
+          </div>
+          {% if invoice.issuer_register_text %}
+          <div style="margin-top: 1mm; white-space: pre-line;">{{ invoice.issuer_register_text }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div>
+        <div class="party-label">Odběratel</div>
+        <div class="party-name">{{ invoice.customer_name }}</div>
+        <div class="party-line">{{ invoice.customer_address }}</div>
+        <div class="party-meta">
+          <div class="party-meta-row">
+            {% if invoice.customer_ico %}
+            <span>IČO: <span class="mono">{{ invoice.customer_ico }}</span></span>
+            {% endif %}
+            {% if invoice.customer_dic %}
+            <span>DIČ: <span class="mono">{{ invoice.customer_dic }}</span></span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dates">
+      <div>
+        <div class="label">Datum vystavení</div>
+        <div class="value">{{ fmt_date(invoice.issued_at.date()) }}</div>
+      </div>
+      <div>
+        <div class="label">DUZP</div>
+        <div class="value">{{ fmt_date(invoice.taxable_supply_date) }}</div>
+      </div>
+      <div>
+        <div class="label">Datum splatnosti</div>
+        <div class="value">{{ fmt_date(invoice.due_at) }}</div>
+      </div>
+    </section>
+
+    <section class="lines">
+      <table>
+        <thead>
+          <tr>
+            <th>Popis</th>
+            <th class="num">Množství</th>
+            <th class="num">Jednotková cena</th>
+            {% if invoice.issuer_is_vat_payer %}
+            <th class="num">Sazba DPH</th>
+            {% endif %}
+            <th class="num">Celkem</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for line in lines %}
+          <tr>
+            <td>{{ line.description }}</td>
+            <td class="num">
+              {{ fmt_qty(line.quantity) }}{% if line.unit_label %} {{ line.unit_label }}{% endif %}
+            </td>
+            <td class="num">{{ fmt_money(line.unit_price_minor) }}</td>
+            {% if invoice.issuer_is_vat_payer %}
+            <td class="num">{{ fmt_qty(line.vat_rate_percent) }} %</td>
+            {% endif %}
+            <td class="num">{{ fmt_money(line.line_total_minor) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="totals">
+      <table>
+        <tbody>
+          {% if invoice.issuer_is_vat_payer %}
+          <tr>
+            <td class="label">Základ daně</td>
+            <td class="value">{{ fmt_money(invoice.subtotal_minor) }}</td>
+          </tr>
+          <tr>
+            <td class="label">DPH {{ fmt_qty(invoice.vat_rate_percent) }} %</td>
+            <td class="value">{{ fmt_money(invoice.vat_amount_minor) }}</td>
+          </tr>
+          {% endif %}
+          <tr class="grand">
+            <td class="label">Celkem k úhradě</td>
+            <td class="value">{{ fmt_money(invoice.total_minor) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="payment">
+      <div>
+        <div class="label" style="margin-bottom: 2mm;">Bankovní spojení</div>
+        <dl>
+          <dt>IBAN</dt>
+          <dd class="mono">{{ invoice.issuer_iban }}</dd>
+          {% if invoice.issuer_account_domestic %}
+          <dt>Účet</dt>
+          <dd class="mono">{{ invoice.issuer_account_domestic }}</dd>
+          {% endif %}
+          <dt>Variabilní symbol</dt>
+          <dd class="mono">{{ invoice.variable_symbol }}</dd>
+          <dt>Způsob platby</dt>
+          <dd>
+            {% if invoice.payment_method == "card" %}Platební karta
+            {% elif invoice.payment_method == "qr_platba" %}QR Platba
+            {% else %}Bankovní převod
+            {% endif %}
+          </dd>
+        </dl>
+      </div>
+
+      <div class="qr">
+        {{ qr_svg|safe }}
+        <div class="qr-caption">QR Platba</div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      {% if not invoice.issuer_is_vat_payer %}
+      <div class="non-vat-notice">Nejsem plátce DPH.</div>
+      {% endif %}
+      {% if invoice.note %}
+      <div style="white-space: pre-line; margin-bottom: 1.5mm;">{{ invoice.note }}</div>
+      {% endif %}
+      <div>
+        Děkujeme, že podnikáte se SimpleCRM.
+      </div>
+    </footer>
+
+  </body>
+</html>
