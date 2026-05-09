@@ -25,10 +25,9 @@ export function useBillingSummary() {
     gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       try {
-        return await apiFetch<BillingSummary>(
-          "/api/v1/organizations/current/billing-summary",
-          { token: accessToken },
-        );
+        return await apiFetch<BillingSummary>("/api/v1/organizations/current/billing-summary", {
+          token: accessToken,
+        });
       } catch (err) {
         if (err instanceof ApiError) return null;
         throw err;

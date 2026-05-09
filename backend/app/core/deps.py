@@ -197,9 +197,7 @@ async def require_active_trial_or_subscription(
 
     sub = (
         await session.execute(
-            select(Subscription).where(
-                Subscription.organization_id == user.organization_id
-            )
+            select(Subscription).where(Subscription.organization_id == user.organization_id)
         )
     ).scalar_one_or_none()
 
@@ -229,9 +227,7 @@ async def require_active_trial_or_subscription(
             "is_comp": sub.is_comp,
             "can_choose_plan": True,
             "ends_at": (
-                sub.current_period_ends_at.isoformat()
-                if sub.current_period_ends_at
-                else None
+                sub.current_period_ends_at.isoformat() if sub.current_period_ends_at else None
             ),
         },
     )

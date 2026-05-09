@@ -67,8 +67,8 @@ export function ForgotPasswordPage() {
         ) : (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-left" noValidate>
             <p className="text-sm text-text-secondary">
-              Zadejte e-mail, kterým se obvykle přihlašujete. Pošleme vám odkaz pro nastavení
-              nového hesla.
+              Zadejte e-mail, kterým se obvykle přihlašujete. Pošleme vám odkaz pro nastavení nového
+              hesla.
             </p>
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-text-secondary">E-mail</span>

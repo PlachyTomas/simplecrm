@@ -217,11 +217,7 @@ PRORATION_CASES: list[tuple[str, dict, int, int]] = [
     PRORATION_CASES,
     ids=[c[0] for c in PRORATION_CASES],
 )
-def test_compute_seat_proration(
-    label: str, sub_kwargs: dict, target: int, expected: int
-) -> None:
+def test_compute_seat_proration(label: str, sub_kwargs: dict, target: int, expected: int) -> None:
     sub = _sub(**sub_kwargs)
     actual = billing.compute_seat_proration(sub, new_seat_count=target, now=_NOW)
-    assert actual == expected, (
-        f"{label}: expected {expected} minor, got {actual}"
-    )
+    assert actual == expected, f"{label}: expected {expected} minor, got {actual}"

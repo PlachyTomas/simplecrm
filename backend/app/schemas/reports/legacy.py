@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-import enum
 import uuid
 from datetime import date
 from decimal import Decimal
+from enum import StrEnum
 
 from pydantic import BaseModel
 
 
-class TeamMetric(str, enum.Enum):
+class TeamMetric(StrEnum):
     """Metric the manager can pick on the team-vs-team leaderboard.
 
     Stored as a string enum so it round-trips cleanly through the

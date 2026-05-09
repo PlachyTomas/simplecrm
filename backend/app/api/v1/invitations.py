@@ -43,10 +43,12 @@ async def list_invitations(
         Invitation.accepted_at.is_(None),
         Invitation.revoked_at.is_(None),
     )
-    total = (
-        await session.execute(select(func.count()).select_from(base.subquery()))
-    ).scalar_one()
-    stmt = base.order_by(Invitation.created_at.desc()).limit(pagination.limit).offset(pagination.offset)
+    total = (await session.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
+    stmt = (
+        base.order_by(Invitation.created_at.desc())
+        .limit(pagination.limit)
+        .offset(pagination.offset)
+    )
     rows = (await session.execute(stmt)).scalars().all()
     return Page[InvitationOut](
         items=[InvitationOut.model_validate(inv) for inv in rows],
@@ -95,9 +97,7 @@ async def create(
             },
         ) from exc
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     await session.commit()
     await session.refresh(issued.invitation)

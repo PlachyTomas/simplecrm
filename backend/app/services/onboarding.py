@@ -62,9 +62,7 @@ async def create_organization_with_admin(
     pending_plan_id = None
     if intended_plan_code in {"monthly", "annual"}:
         pending_plan_id = (
-            await session.execute(
-                select(Plan.id).where(Plan.code == intended_plan_code)
-            )
+            await session.execute(select(Plan.id).where(Plan.code == intended_plan_code))
         ).scalar_one()
 
     subscription = Subscription(

@@ -28,9 +28,7 @@ export function useBillingSettings() {
     gcTime: 30 * 60 * 1000,
     queryFn: async () => {
       try {
-        return await apiFetch<BillingSettingsPublic>(
-          "/api/v1/plans/billing-settings/public",
-        );
+        return await apiFetch<BillingSettingsPublic>("/api/v1/plans/billing-settings/public");
       } catch (err) {
         if (err instanceof ApiError) return FALLBACK;
         throw err;

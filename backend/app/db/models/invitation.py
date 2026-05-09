@@ -40,9 +40,7 @@ class Invitation(Base):
         nullable=False,
     )
     email: Mapped[str] = mapped_column(String(320), nullable=False)
-    role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, name="user_role"), nullable=False
-    )
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole, name="user_role"), nullable=False)
     team_id: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True),
         ForeignKey("teams.id", ondelete="SET NULL"),
@@ -58,9 +56,7 @@ class Invitation(Base):
 
     # The signed-token's jti, also unique across the table — collisions are
     # cosmically unlikely (uuid4) but the index keeps lookups O(1).
-    token_jti: Mapped[uuid.UUID] = mapped_column(
-        PgUUID(as_uuid=True), unique=True, nullable=False
-    )
+    token_jti: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), unique=True, nullable=False)
 
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

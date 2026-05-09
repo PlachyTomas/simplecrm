@@ -107,12 +107,42 @@ export function DealsListPage() {
         <table className="min-w-full divide-y divide-border-subtle">
           <thead>
             <tr>
-              <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary">Název</th>
-              <th scope="col" className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary md:table-cell">Firma</th>
-              <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-text-tertiary">Hodnota</th>
-              <th scope="col" className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary md:table-cell">Fáze</th>
-              <th scope="col" className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary lg:table-cell">Vlastník</th>
-              <th scope="col" className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary md:table-cell">Uzavření</th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary"
+              >
+                Název
+              </th>
+              <th
+                scope="col"
+                className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary md:table-cell"
+              >
+                Firma
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-text-tertiary"
+              >
+                Hodnota
+              </th>
+              <th
+                scope="col"
+                className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary md:table-cell"
+              >
+                Fáze
+              </th>
+              <th
+                scope="col"
+                className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary lg:table-cell"
+              >
+                Vlastník
+              </th>
+              <th
+                scope="col"
+                className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary md:table-cell"
+              >
+                Uzavření
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-subtle">
@@ -120,7 +150,7 @@ export function DealsListPage() {
               const stage = stageById.get(deal.stage_id);
               const stageDot = stage ? stageColor(stage.position, stage.color) : null;
               const owner = deal.owner_user_id
-                ? ownerNameById.get(deal.owner_user_id) ?? "—"
+                ? (ownerNameById.get(deal.owner_user_id) ?? "—")
                 : "—";
               const companyName = companyNameById.get(deal.company_id) ?? "—";
               return (

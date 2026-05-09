@@ -8,7 +8,7 @@ days remaining.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -25,14 +25,14 @@ async def compute_companies_at_risk(
     session: AsyncSession,
     *,
     organization_id: UUID,
-    from_: date,  # noqa: ARG001 — list widget ignores global window
-    to: date,  # noqa: ARG001 — list widget ignores global window
+    from_: date,
+    to: date,
     team_id: UUID | None,
     owner_user_id: UUID | None,
     config: CompaniesAtRiskConfig,
 ) -> CompaniesAtRiskResponse:
     threshold = config.threshold
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     cutoff = now + timedelta(days=threshold)
 
     # Last activity timestamp per-company so the UI can show "last
@@ -81,9 +81,7 @@ async def compute_companies_at_risk(
                 owner_user_id=owner.id if owner is not None else None,
                 owner_name=owner.name if owner is not None else "—",
                 days_until_freeing=days_remaining,
-                last_activity_at=(
-                    last_activity_at.date() if last_activity_at else None
-                ),
+                last_activity_at=(last_activity_at.date() if last_activity_at else None),
             )
         )
     items.sort(key=lambda i: i.days_until_freeing)

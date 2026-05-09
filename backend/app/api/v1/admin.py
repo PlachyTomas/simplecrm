@@ -80,27 +80,29 @@ async def list_organizations(
     if q:
         base = base.where(Organization.name.ilike(f"%{q}%"))
 
-    total = (
-        await session.execute(select(func.count()).select_from(base.subquery()))
-    ).scalar_one()
+    total = (await session.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
 
     orgs = (
-        await session.execute(
-            base.order_by(Organization.name).limit(limit).offset(offset)
-        )
-    ).scalars().all()
+        (await session.execute(base.order_by(Organization.name).limit(limit).offset(offset)))
+        .scalars()
+        .all()
+    )
 
     if not orgs:
         return AdminOrgList(items=[], total=total)
 
     org_ids = [o.id for o in orgs]
     sub_rows = (
-        await session.execute(
-            select(Subscription)
-            .options(selectinload(Subscription.plan))
-            .where(Subscription.organization_id.in_(org_ids))
+        (
+            await session.execute(
+                select(Subscription)
+                .options(selectinload(Subscription.plan))
+                .where(Subscription.organization_id.in_(org_ids))
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     subs_by_org = {s.organization_id: s for s in sub_rows}
 
     user_counts: dict[uuid.UUID, int] = {
@@ -138,9 +140,7 @@ async def list_organizations(
             name=o.name,
             plan_code=subs_by_org[o.id].plan.code if o.id in subs_by_org else "trial",
             plan_display=(
-                subs_by_org[o.id].plan.display_name_cs
-                if o.id in subs_by_org
-                else "Zkušební verze"
+                subs_by_org[o.id].plan.display_name_cs if o.id in subs_by_org else "Zkušební verze"
             ),
             status=cast(
                 SubscriptionStatus,
@@ -150,9 +150,7 @@ async def list_organizations(
             user_count=user_counts.get(o.id, 0),
             trial_ends_at=o.trial_ends_at,
             current_period_ends_at=(
-                subs_by_org[o.id].current_period_ends_at
-                if o.id in subs_by_org
-                else None
+                subs_by_org[o.id].current_period_ends_at if o.id in subs_by_org else None
             ),
             last_activity_at=last_activity.get(o.id),
         )
@@ -387,15 +385,17 @@ async def get_org_subscription_activity(
         .where(Activity.activity_type == ActivityType.subscription_change)
     )
 
-    total = (
-        await session.execute(select(func.count()).select_from(base.subquery()))
-    ).scalar_one()
+    total = (await session.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
 
     rows = (
-        await session.execute(
-            base.order_by(Activity.created_at.desc()).limit(limit).offset(offset)
+        (
+            await session.execute(
+                base.order_by(Activity.created_at.desc()).limit(limit).offset(offset)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     items = [
         AdminActivityRow(
@@ -426,9 +426,7 @@ async def get_billing_settings(
     _admin: User = Depends(require_super_admin),
     session: AsyncSession = Depends(get_db),
 ) -> BillingSettings:
-    settings = (
-        await session.execute(select(BillingSettings))
-    ).scalar_one()
+    settings = (await session.execute(select(BillingSettings))).scalar_one()
     return settings
 
 
@@ -438,9 +436,7 @@ async def update_billing_settings(
     _admin: User = Depends(require_super_admin),
     session: AsyncSession = Depends(get_db),
 ) -> BillingSettings:
-    settings = (
-        await session.execute(select(BillingSettings))
-    ).scalar_one()
+    settings = (await session.execute(select(BillingSettings))).scalar_one()
     updates = payload.model_dump(exclude_unset=True)
     for field, value in updates.items():
         setattr(settings, field, value)
@@ -472,14 +468,16 @@ async def list_org_invoices(
     operates across orgs.
     """
     base = select(Invoice).where(Invoice.organization_id == org_id)
-    total = (
-        await session.execute(select(func.count()).select_from(base.subquery()))
-    ).scalar_one()
+    total = (await session.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
     rows = (
-        await session.execute(
-            base.order_by(Invoice.created_at.desc()).limit(limit).offset(offset)
+        (
+            await session.execute(
+                base.order_by(Invoice.created_at.desc()).limit(limit).offset(offset)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return InvoiceList(
         items=[InvoiceOut.model_validate(r) for r in rows],
         total=total,
@@ -504,12 +502,14 @@ async def list_org_users(
     by name. Drives the impersonation picker on the org detail drawer.
     """
     rows = (
-        await session.execute(
-            select(User)
-            .where(User.organization_id == org_id)
-            .order_by(User.role, User.name)
+        (
+            await session.execute(
+                select(User).where(User.organization_id == org_id).order_by(User.role, User.name)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return AdminOrgUserList(items=[AdminOrgUserRow.model_validate(u) for u in rows])
 
 
@@ -567,9 +567,7 @@ async def impersonate_user(
         target.organization_id,
     )
 
-    access_token = create_access_token(
-        target.id, target.organization_id, target.role
-    )
+    access_token = create_access_token(target.id, target.organization_id, target.role)
     return ImpersonateOut(
         access_token=access_token,
         user_id=target.id,

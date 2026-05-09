@@ -172,11 +172,11 @@ async def create_company(
     # back to the model's column default (365) when the org row is missing
     # — only ever the case for legacy fixtures the test layer seeds
     # directly.
-    from datetime import UTC, datetime as _dt, timedelta as _td
+    from datetime import UTC
+    from datetime import datetime as _dt
+    from datetime import timedelta as _td
 
-    window_days = (
-        user.organization.ownership_window_days if user.organization else 365
-    )
+    window_days = user.organization.ownership_window_days if user.organization else 365
     company = Company(
         organization_id=user.organization_id,
         owner_user_id=owner_id,

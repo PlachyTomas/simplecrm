@@ -1,7 +1,4 @@
-import {
-  formatCzk,
-  formatCzkMinorWithFraction,
-} from "@/components/billing/format";
+import { formatCzk, formatCzkMinorWithFraction } from "@/components/billing/format";
 import { useBillingSettings } from "@/components/billing/useBillingSettings";
 import { cn } from "@/lib/utils";
 
@@ -49,7 +46,6 @@ const SUFFIX: Record<Interval, string> = {
   custom: "",
 };
 
-
 /**
  * The single place currency formatting + DPH copy lives. Imported by every
  * pricing surface (public /cenik, in-app pay-gate, /app/nastaveni/predplatne,
@@ -90,17 +86,13 @@ export function PriceDisplay({
         {suffix ? (
           <span className={cn("text-text-secondary", SUFFIX_CLASSES[size])}>
             {suffix}
-            {isVatPayer ? (
-              <span className="text-text-tertiary"> bez DPH</span>
-            ) : null}
+            {isVatPayer ? <span className="text-text-tertiary"> bez DPH</span> : null}
           </span>
         ) : null}
       </div>
       {hideVatLine ? null : (
         <p className={cn("text-text-tertiary", SUB_CLASSES[size])}>
-          {isVatPayer
-            ? `(${formatCzkMinorWithFraction(withVatMinor)} s DPH)`
-            : "Nejsem plátce DPH"}
+          {isVatPayer ? `(${formatCzkMinorWithFraction(withVatMinor)} s DPH)` : "Nejsem plátce DPH"}
         </p>
       )}
     </div>

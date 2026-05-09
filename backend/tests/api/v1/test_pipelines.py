@@ -272,9 +272,7 @@ async def test_pipeline_board_won_rolling_window(
     assert {d["name"] for d in open_col["deals"]} == {"Open"}
 
     # Explicit 30-day window hides the older win.
-    r = await client.get(
-        "/api/v1/pipelines/default/board?won_window_days=30", headers=_auth(user)
-    )
+    r = await client.get("/api/v1/pipelines/default/board?won_window_days=30", headers=_auth(user))
     won_col = next(s for s in r.json()["stages"] if s["stage_type"] == "won")
     assert {d["name"] for d in won_col["deals"]} == {"Won-recent"}
 
@@ -399,9 +397,7 @@ async def test_delete_stage_refuses_when_deals_present(
     )
     await db_session.commit()
 
-    response = await client.delete(
-        f"/api/v1/pipelines/stages/{stages[0].id}", headers=_auth(user)
-    )
+    response = await client.delete(f"/api/v1/pipelines/stages/{stages[0].id}", headers=_auth(user))
     assert response.status_code == 409
 
 
@@ -410,9 +406,7 @@ async def test_delete_empty_stage_succeeds(
 ) -> None:
     _org, user, stages = await _seed(db_session, owned_cleanup)
     # stages[0] is empty in a fresh org.
-    response = await client.delete(
-        f"/api/v1/pipelines/stages/{stages[0].id}", headers=_auth(user)
-    )
+    response = await client.delete(f"/api/v1/pipelines/stages/{stages[0].id}", headers=_auth(user))
     assert response.status_code == 204
 
 

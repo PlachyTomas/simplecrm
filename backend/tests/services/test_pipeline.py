@@ -92,16 +92,10 @@ async def test_create_organization_seeds_default_pipeline(db_session: AsyncSessi
     db_session.add(founder)
     await db_session.flush()
 
-    org = await create_organization_with_admin(
-        db_session, name="Pipe s.r.o.", founder=founder
-    )
+    org = await create_organization_with_admin(db_session, name="Pipe s.r.o.", founder=founder)
 
     pipelines = (
-        (
-            await db_session.execute(
-                select(Pipeline).where(Pipeline.organization_id == org.id)
-            )
-        )
+        (await db_session.execute(select(Pipeline).where(Pipeline.organization_id == org.id)))
         .scalars()
         .all()
     )

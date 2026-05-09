@@ -24,9 +24,7 @@ export function BillingReturnPage() {
   usePageTitle("Návrat z platební brány");
   const [params] = useSearchParams();
   const queryStatus = params.get("status");
-  const status: ReturnStatus | "unknown" = isStatus(queryStatus)
-    ? queryStatus
-    : "unknown";
+  const status: ReturnStatus | "unknown" = isStatus(queryStatus) ? queryStatus : "unknown";
 
   // Re-fetch the subscription on mount so the AppShell + this page
   // reflect whatever the webhook applied while the customer was on
@@ -72,12 +70,10 @@ export function BillingReturnPage() {
 function SuccessPanel() {
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-text-primary">
-        Platba byla úspěšná.
-      </h1>
+      <h1 className="text-2xl font-semibold text-text-primary">Platba byla úspěšná.</h1>
       <p className="mt-3 text-sm text-text-secondary">
-        Děkujeme — vaše předplatné je aktivní. Faktura dorazila na e-mail
-        a najdete ji v sekci Fakturace.
+        Děkujeme — vaše předplatné je aktivní. Faktura dorazila na e-mail a najdete ji v sekci
+        Fakturace.
       </p>
     </div>
   );
@@ -86,12 +82,10 @@ function SuccessPanel() {
 function PendingPanel() {
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-text-primary">
-        Zpracováváme vaši platbu.
-      </h1>
+      <h1 className="text-2xl font-semibold text-text-primary">Zpracováváme vaši platbu.</h1>
       <p className="mt-3 text-sm text-text-secondary">
-        Banka nám platbu potvrdí během několika sekund. Stránku můžete
-        nechat otevřenou nebo se za chvíli vrátit do Fakturace.
+        Banka nám platbu potvrdí během několika sekund. Stránku můžete nechat otevřenou nebo se za
+        chvíli vrátit do Fakturace.
       </p>
     </div>
   );
@@ -100,12 +94,10 @@ function PendingPanel() {
 function FailedPanel() {
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-danger">
-        Platba se nezdařila.
-      </h1>
+      <h1 className="text-2xl font-semibold text-danger">Platba se nezdařila.</h1>
       <p className="mt-3 text-sm text-text-secondary">
-        Žádné peníze vám nebyly strženy. Zkuste platbu znovu, nebo
-        kontaktujte podporu pokud problém přetrvává.
+        Žádné peníze vám nebyly strženy. Zkuste platbu znovu, nebo kontaktujte podporu pokud problém
+        přetrvává.
       </p>
     </div>
   );
@@ -118,8 +110,8 @@ function UnknownPanel() {
         Vrátili jste se z platební brány.
       </h1>
       <p className="mt-3 text-sm text-text-secondary">
-        Stav platby zatím nebyl potvrzen. Zkontrolujte sekci Fakturace,
-        kam ihned po přijetí platby přistanou faktury.
+        Stav platby zatím nebyl potvrzen. Zkontrolujte sekci Fakturace, kam ihned po přijetí platby
+        přistanou faktury.
       </p>
     </div>
   );

@@ -90,7 +90,7 @@ export function CreateOrgPage() {
 
   function goBack() {
     setError(null);
-    if (step > 1) setStep(((step - 1) as Step));
+    if (step > 1) setStep((step - 1) as Step);
   }
 
   function onSubmit(e: FormEvent) {
@@ -155,18 +155,11 @@ export function CreateOrgPage() {
           ) : step === 2 ? (
             <SeatsStep seatCount={seatCount} setSeatCount={setSeatCount} />
           ) : (
-            <PlanStep
-              seatCount={seatCount}
-              planCode={planCode}
-              setPlanCode={setPlanCode}
-            />
+            <PlanStep seatCount={seatCount} planCode={planCode} setPlanCode={setPlanCode} />
           )}
 
           {error ? (
-            <p
-              role="alert"
-              className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger"
-            >
+            <p role="alert" className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger">
               {error}
             </p>
           ) : null}
@@ -204,8 +197,8 @@ export function CreateOrgPage() {
         </form>
 
         <p className="mt-6 text-center text-xs text-text-tertiary">
-          Pozvánka od kolegů? Použijte odkaz, který vám přišel e-mailem,
-          místo zakládání nové organizace.
+          Pozvánka od kolegů? Použijte odkaz, který vám přišel e-mailem, místo zakládání nové
+          organizace.
         </p>
       </main>
     </div>
@@ -233,22 +226,14 @@ function StepDots({ step }: { step: Step }) {
   );
 }
 
-function NameStep({
-  name,
-  setName,
-}: {
-  name: string;
-  setName: (v: string) => void;
-}) {
+function NameStep({ name, setName }: { name: string; setName: (v: string) => void }) {
   return (
     <div>
       <p className="text-center text-sm text-text-secondary">
         Začněte názvem. Detaily firmy lze doplnit kdykoli později.
       </p>
       <label className="mt-5 block">
-        <span className="text-xs font-medium text-text-secondary">
-          Název organizace
-        </span>
+        <span className="text-xs font-medium text-text-secondary">Název organizace</span>
         <div className="relative mt-2">
           <Building2
             aria-hidden
@@ -282,13 +267,10 @@ function SeatsStep({
   return (
     <div>
       <p className="text-center text-sm text-text-secondary">
-        Kolik obchodníků bude SimpleCRM používat? Můžete kdykoli později
-        změnit v Nastavení.
+        Kolik obchodníků bude SimpleCRM používat? Můžete kdykoli později změnit v Nastavení.
       </p>
       <label className="mt-5 block">
-        <span className="text-xs font-medium text-text-secondary">
-          Počet obchodníků
-        </span>
+        <span className="text-xs font-medium text-text-secondary">Počet obchodníků</span>
         <div className="relative mt-2">
           <Users
             aria-hidden
@@ -303,15 +285,12 @@ function SeatsStep({
             autoFocus
             required
             value={seatCount}
-            onChange={(e) =>
-              setSeatCount(Math.max(1, Math.min(500, Number(e.target.value) || 1)))
-            }
+            onChange={(e) => setSeatCount(Math.max(1, Math.min(500, Number(e.target.value) || 1)))}
             className="block h-10 w-32 rounded-md border border-border bg-surface-overlay pl-10 pr-3 text-sm tabular-nums text-text-primary focus:border-accent focus:outline-none"
           />
         </div>
         <span className="mt-2 block text-xs text-text-tertiary">
-          Tato hodnota slouží jako limit pro pozvánky a podle ní se počítá
-          výsledná fakturace.
+          Tato hodnota slouží jako limit pro pozvánky a podle ní se počítá výsledná fakturace.
         </span>
       </label>
     </div>
@@ -328,24 +307,16 @@ function PlanStep({
   setPlanCode: (c: PlanCode) => void;
 }) {
   const plans = usePublicPlans();
-  const monthlyPlan = useMemo(
-    () => plans.data?.find((p) => p.code === "monthly"),
-    [plans.data],
-  );
-  const annualPlan = useMemo(
-    () => plans.data?.find((p) => p.code === "annual"),
-    [plans.data],
-  );
+  const monthlyPlan = useMemo(() => plans.data?.find((p) => p.code === "monthly"), [plans.data]);
+  const annualPlan = useMemo(() => plans.data?.find((p) => p.code === "annual"), [plans.data]);
 
   return (
     <div>
       <div className="rounded-md border border-border-subtle bg-surface-overlay p-4 text-sm">
-        <p className="font-medium text-text-primary">
-          Začnete s 30denní zkušební verzí zdarma.
-        </p>
+        <p className="font-medium text-text-primary">Začnete s 30denní zkušební verzí zdarma.</p>
         <p className="mt-1 text-text-tertiary">
-          Po zkušební době budete pokračovat ve vybraném plánu níže —
-          fakturujeme až po skončení zkoušky.
+          Po zkušební době budete pokračovat ve vybraném plánu níže — fakturujeme až po skončení
+          zkoušky.
         </p>
       </div>
 
@@ -420,9 +391,7 @@ function BillingPlanCard({
       className={cn(
         "relative flex cursor-pointer flex-col rounded-lg border-2 bg-surface p-5 transition-colors",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg",
-        selected
-          ? "border-accent shadow-md"
-          : "border-border hover:border-text-tertiary",
+        selected ? "border-accent shadow-md" : "border-border hover:border-text-tertiary",
       )}
     >
       {badge ? (
@@ -433,27 +402,16 @@ function BillingPlanCard({
       <h3 className="text-base font-semibold text-text-primary">{title}</h3>
       <div className="mt-3">
         {priceMinor != null ? (
-          <PriceDisplay
-            baseMinor={priceMinor}
-            interval={priceInterval}
-            size="lg"
-            hideVatLine
-          />
+          <PriceDisplay baseMinor={priceMinor} interval={priceInterval} size="lg" hideVatLine />
         ) : (
-          <div
-            aria-hidden
-            className="h-9 w-32 animate-pulse rounded bg-surface-overlay"
-          />
+          <div aria-hidden className="h-9 w-32 animate-pulse rounded bg-surface-overlay" />
         )}
       </div>
       {totalMinor != null ? (
         <p className="mt-3 text-sm text-text-secondary">
-          Při {seatCount}{" "}
-          {seatCount === 1 ? "obchodníkovi" : "obchodnících"} fakturujeme{" "}
-          <span className="font-semibold text-text-primary">
-            {formatCzkMinor(totalMinor)}
-          </span>{" "}
-          / {per}.
+          Při {seatCount} {seatCount === 1 ? "obchodníkovi" : "obchodnících"} fakturujeme{" "}
+          <span className="font-semibold text-text-primary">{formatCzkMinor(totalMinor)}</span> /{" "}
+          {per}.
         </p>
       ) : null}
     </div>

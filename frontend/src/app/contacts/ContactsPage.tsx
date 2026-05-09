@@ -28,8 +28,8 @@ function ContactRow({
         aria-current={isActive ? "true" : undefined}
         className={cn(
           // 2px indigo seam on the active row's left edge — brief §5 selected-row pattern.
-          "flex w-full items-center gap-3 border-b border-border-subtle border-l-2 border-l-transparent px-4 py-3 text-left transition-colors duration-fast",
-          isActive ? "bg-accent-subtle border-l-accent" : "hover:bg-surface-overlay",
+          "flex w-full items-center gap-3 border-b border-l-2 border-border-subtle border-l-transparent px-4 py-3 text-left transition-colors duration-fast",
+          isActive ? "border-l-accent bg-accent-subtle" : "hover:bg-surface-overlay",
         )}
       >
         <span

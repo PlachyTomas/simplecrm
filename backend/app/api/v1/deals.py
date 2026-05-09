@@ -306,9 +306,7 @@ async def mark_deal_won(
     company = await session.get(Company, deal.company_id)
     if company is not None:
         company.last_order_at = now
-        window_days = (
-            user.organization.ownership_window_days if user.organization else 365
-        )
+        window_days = user.organization.ownership_window_days if user.organization else 365
         company.ownership_expires_at = now + timedelta(days=window_days)
 
     session.add(

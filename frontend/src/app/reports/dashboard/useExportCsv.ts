@@ -4,10 +4,7 @@ import { useAuth } from "@/auth/useAuth";
 import { API_BASE_URL } from "@/lib/api";
 
 import { resolvePreset } from "@/app/reports/dashboard/dateRange";
-import type {
-  DashboardConfig,
-  GlobalFilters,
-} from "@/app/reports/dashboard/types";
+import type { DashboardConfig, GlobalFilters } from "@/app/reports/dashboard/types";
 
 /**
  * "Stáhnout CSV" hook. Posts the currently visible widget set + the
@@ -27,9 +24,7 @@ export function useExportCsv() {
       config: DashboardConfig;
       globalFilters: GlobalFilters;
     }) => {
-      const range = globalFilters.dateRange
-        ? resolvePreset(globalFilters.dateRange)
-        : null;
+      const range = globalFilters.dateRange ? resolvePreset(globalFilters.dateRange) : null;
       if (!range) throw new Error("missing date range");
 
       const body = {

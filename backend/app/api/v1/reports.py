@@ -10,10 +10,9 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.core.deps import get_current_user, require_leaderboard_visibility, require_role
 from app.core.scoping import scope_by_owner
@@ -103,9 +102,7 @@ async def kpi_summary(
     )
 
 
-async def _assert_team_visible(
-    *, session: AsyncSession, user: User, team_id: uuid.UUID
-) -> Team:
+async def _assert_team_visible(*, session: AsyncSession, user: User, team_id: uuid.UUID) -> Team:
     """Ensure the caller is allowed to drill into `team_id`.
 
     Admins always pass. Managers pass only for teams they manage.
@@ -211,6 +208,7 @@ async def loss_reasons(
         Deal.lost_reason.is_not(None),
     )
     scoped = await scope_by_owner(stmt, session=session, user=user, owner_col=Deal.owner_user_id)
+
     @dataclasses.dataclass
     class _ReasonAgg:
         count: int = 0
@@ -259,6 +257,7 @@ async def pipeline_velocity(
         )
     )
     scoped = await scope_by_owner(stmt, session=session, user=user, owner_col=Deal.owner_user_id)
+
     @dataclasses.dataclass
     class _StageAgg:
         stage_id: uuid.UUID | None = None
@@ -342,13 +341,13 @@ async def team_leaderboard(
     manager_ids = [t.manager_user_id for t in teams if t.manager_user_id is not None]
     manager_names: dict[uuid.UUID, str] = {}
     if manager_ids:
-        rows = (
+        manager_rows = (
             await session.execute(select(User.id, User.name).where(User.id.in_(manager_ids)))
         ).all()
-        manager_names = {row[0]: row[1] for row in rows}
+        manager_names = {row[0]: row[1] for row in manager_rows}
 
     # Member counts per team.
-    member_counts: dict[uuid.UUID, int] = {tid: 0 for tid in team_ids}
+    member_counts: dict[uuid.UUID, int] = dict.fromkeys(team_ids, 0)
     if team_ids:
         member_rows = (
             await session.execute(
@@ -454,9 +453,7 @@ async def team_leaderboard(
                 won_count=agg.won_count,
                 won_value=agg.won_value,
                 open_pipeline_value=agg.open_value,
-                conversion_rate=(
-                    agg.won_count / agg.closed_count if agg.closed_count else None
-                ),
+                conversion_rate=(agg.won_count / agg.closed_count if agg.closed_count else None),
                 avg_cycle_days=(
                     agg.cycle_days_sum / agg.cycle_days_count if agg.cycle_days_count else None
                 ),
@@ -545,9 +542,7 @@ async def my_summary(
             if deal.currency == org.currency:
                 won_value += deal.value
         if deal.closed_at is not None:
-            cycle_sum += max(
-                0.0, (deal.closed_at - deal.created_at).total_seconds() / 86400.0
-            )
+            cycle_sum += max(0.0, (deal.closed_at - deal.created_at).total_seconds() / 86400.0)
             cycle_count += 1
 
     return MySummary(

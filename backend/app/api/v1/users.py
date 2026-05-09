@@ -18,9 +18,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 async def _get_target(session: AsyncSession, user: User, user_id: uuid.UUID) -> User:
-    stmt = select(User).where(
-        User.organization_id == user.organization_id, User.id == user_id
-    )
+    stmt = select(User).where(User.organization_id == user.organization_id, User.id == user_id)
     target = (await session.execute(stmt)).scalar_one_or_none()
     if target is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -34,9 +32,7 @@ async def list_users(
     session: AsyncSession = Depends(get_db),
 ) -> Page[UserOut]:
     base = select(User).where(User.organization_id == user.organization_id)
-    total = (
-        await session.execute(select(func.count()).select_from(base.subquery()))
-    ).scalar_one()
+    total = (await session.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
     stmt = base.order_by(User.name).limit(pagination.limit).offset(pagination.offset)
     rows = (await session.execute(stmt)).scalars().all()
     return Page[UserOut](
@@ -59,9 +55,8 @@ async def update_user(
 
     # Guard: never strip the org of its last active admin — that would lock
     # everyone out of admin-only settings (pipeline, users, teams).
-    would_lose_admin = (
-        ("role" in data and data["role"] is not UserRole.admin)
-        or ("is_active" in data and data["is_active"] is False)
+    would_lose_admin = ("role" in data and data["role"] is not UserRole.admin) or (
+        "is_active" in data and data["is_active"] is False
     )
     if would_lose_admin and target.role is UserRole.admin:
         stmt = (

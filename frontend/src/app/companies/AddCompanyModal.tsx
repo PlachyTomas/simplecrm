@@ -163,15 +163,11 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
     }
   };
 
-  const lookupErrorMessage = lookup.isError ? describeLookupError(lookup.error, debouncedIco) : null;
+  const lookupErrorMessage = lookup.isError
+    ? describeLookupError(lookup.error, debouncedIco)
+    : null;
   const icoLength = form.ico.replace(/\D/g, "").length;
-  const lookupState:
-    | "empty"
-    | "typing"
-    | "loading"
-    | "success"
-    | "not_found"
-    | "error" = !form.ico
+  const lookupState: "empty" | "typing" | "loading" | "success" | "not_found" | "error" = !form.ico
     ? "empty"
     : !icoQuery
       ? "typing"
@@ -374,9 +370,7 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
                     <input
                       type="text"
                       value={contact.first_name}
-                      onChange={(e) =>
-                        setContact((p) => ({ ...p, first_name: e.target.value }))
-                      }
+                      onChange={(e) => setContact((p) => ({ ...p, first_name: e.target.value }))}
                       className="mt-2 block h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
                     />
                   </label>
@@ -385,9 +379,7 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
                     <input
                       type="text"
                       value={contact.last_name}
-                      onChange={(e) =>
-                        setContact((p) => ({ ...p, last_name: e.target.value }))
-                      }
+                      onChange={(e) => setContact((p) => ({ ...p, last_name: e.target.value }))}
                       className="mt-2 block h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
                     />
                   </label>
@@ -399,9 +391,7 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
                   <input
                     type="text"
                     value={contact.position}
-                    onChange={(e) =>
-                      setContact((p) => ({ ...p, position: e.target.value }))
-                    }
+                    onChange={(e) => setContact((p) => ({ ...p, position: e.target.value }))}
                     className="mt-2 block h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
                   />
                 </label>
@@ -413,9 +403,7 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
                     <input
                       type="email"
                       value={contact.email}
-                      onChange={(e) =>
-                        setContact((p) => ({ ...p, email: e.target.value }))
-                      }
+                      onChange={(e) => setContact((p) => ({ ...p, email: e.target.value }))}
                       className="mt-2 block h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
                     />
                   </label>
@@ -426,16 +414,14 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
                     <input
                       type="tel"
                       value={contact.phone}
-                      onChange={(e) =>
-                        setContact((p) => ({ ...p, phone: e.target.value }))
-                      }
+                      onChange={(e) => setContact((p) => ({ ...p, phone: e.target.value }))}
                       className="mt-2 block h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
                     />
                   </label>
                 </div>
                 <p className="text-xs text-text-tertiary">
-                  Kontakt přiřadíme této firmě. Vyplňte alespoň jméno a příjmení nebo
-                  pole nechte prázdná, abyste přiřadili kontakt později.
+                  Kontakt přiřadíme této firmě. Vyplňte alespoň jméno a příjmení nebo pole nechte
+                  prázdná, abyste přiřadili kontakt později.
                 </p>
               </div>
             )}

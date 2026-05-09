@@ -159,9 +159,8 @@ function ContactsTab({ companyId }: { companyId: string }) {
 function DealsTab({ companyId, locale }: { companyId: string; locale: string }) {
   const { data, isPending, isError } = useDeals({ companyId, limit: 100 });
   const moneyFmt = useMemo(
-    () =>
-      (value: string, currency: string) =>
-        new Intl.NumberFormat(locale, { style: "currency", currency }).format(Number(value)),
+    () => (value: string, currency: string) =>
+      new Intl.NumberFormat(locale, { style: "currency", currency }).format(Number(value)),
     [locale],
   );
   if (isPending) {
@@ -189,7 +188,8 @@ function DealsTab({ companyId, locale }: { companyId: string; locale: string }) 
                   <span className="block font-medium">{d.name}</span>
                   {d.closed_at ? (
                     <span className="block text-xs text-text-tertiary">
-                      Uzavřeno {new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(
+                      Uzavřeno{" "}
+                      {new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(
                         new Date(d.closed_at),
                       )}
                     </span>
@@ -260,13 +260,7 @@ function ActivityTab({ companyId, locale }: { companyId: string; locale: string 
   );
 }
 
-function NotesTab({
-  companyId,
-  initialNote,
-}: {
-  companyId: string;
-  initialNote: string | null;
-}) {
+function NotesTab({ companyId, initialNote }: { companyId: string; initialNote: string | null }) {
   const update = useUpdateCompany(companyId);
   const toast = useToast();
   const [draft, setDraft] = useState(initialNote ?? "");

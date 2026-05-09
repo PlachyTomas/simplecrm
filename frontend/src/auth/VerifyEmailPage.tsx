@@ -2,12 +2,7 @@ import { Sparkles } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
-import {
-  authErrorCode,
-  authErrorMessage,
-  checkVerifyToken,
-  consumeVerifyToken,
-} from "@/auth/api";
+import { authErrorCode, authErrorMessage, checkVerifyToken, consumeVerifyToken } from "@/auth/api";
 import { useAuth } from "@/auth/useAuth";
 import { ApiError } from "@/lib/api";
 import { ThemeToggle } from "@/lib/ThemeToggle";
@@ -155,10 +150,7 @@ export function VerifyEmailPage() {
               </span>
             </label>
             {localError ? (
-              <p
-                role="alert"
-                className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger"
-              >
+              <p role="alert" className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger">
                 {localError}
               </p>
             ) : null}

@@ -76,9 +76,7 @@ class VatBreakdown:
 # ---------------------------------------------------------------------------
 
 
-async def get_current_subscription(
-    session: AsyncSession, org_id: uuid.UUID
-) -> Subscription:
+async def get_current_subscription(session: AsyncSession, org_id: uuid.UUID) -> Subscription:
     """Return the unique Subscription row for `org_id` (eagerly joins Plan
     and pending_plan — both are read by the SubscriptionOut serializer)."""
     sub = (
@@ -129,9 +127,7 @@ async def compute_with_vat(session: AsyncSession, base_minor: int) -> VatBreakdo
     """Apply DPH if the seller is currently a plátce."""
     settings = (await session.execute(select(BillingSettings))).scalar_one()
     if not settings.is_vat_payer:
-        return VatBreakdown(
-            base_minor=base_minor, with_vat_minor=base_minor, vat_amount_minor=0
-        )
+        return VatBreakdown(base_minor=base_minor, with_vat_minor=base_minor, vat_amount_minor=0)
     multiplier = Decimal(1) + (settings.vat_rate_percent / Decimal(100))
     with_vat = int((Decimal(base_minor) * multiplier).to_integral_value())
     return VatBreakdown(
@@ -177,9 +173,7 @@ def is_app_access_allowed(sub: Subscription, now: datetime | None = None) -> boo
 
 
 async def _load_plan_by_code(session: AsyncSession, code: str) -> Plan:
-    plan = (
-        await session.execute(select(Plan).where(Plan.code == code))
-    ).scalar_one_or_none()
+    plan = (await session.execute(select(Plan).where(Plan.code == code))).scalar_one_or_none()
     if plan is None:
         raise BillingError(f"unknown plan code: {code}")
     return plan
@@ -209,9 +203,7 @@ async def _audit(
     await session.flush()
 
 
-async def _apply_queued_downsize(
-    session: AsyncSession, sub: Subscription
-) -> list[str]:
+async def _apply_queued_downsize(session: AsyncSession, sub: Subscription) -> list[str]:
     """Flip queued users to is_active=False, drop seat_count to
     pending_seat_count, clear pending_* fields. Returns the IDs that
     actually got deactivated (skips users that were already inactive
@@ -289,10 +281,7 @@ async def choose_plan(
     sub = await get_current_subscription(session, org_id)
     plan = await _load_plan_by_code(session, plan_code)
 
-    if (
-        sub.status == "pending_activation"
-        and sub.plan_id == plan.id
-    ):
+    if sub.status == "pending_activation" and sub.plan_id == plan.id:
         return sub  # idempotent — same intent, same plan
 
     sub.plan_id = plan.id
@@ -304,9 +293,7 @@ async def choose_plan(
     org = await session.get(Organization, org_id)
     if org is None:
         raise BillingError(f"organization {org_id} not found")
-    email = build_subscription_pending_email(
-        org_name=org.name, plan_display=plan.display_name_cs
-    )
+    email = build_subscription_pending_email(org_name=org.name, plan_display=plan.display_name_cs)
     await send_email(email)
 
     await _audit(
@@ -333,9 +320,7 @@ async def activate_subscription(
     plan = await _load_plan_by_code(session, plan_code)
 
     if plan_code == "enterprise" and override_price_minor is None:
-        raise BillingError(
-            "enterprise activation requires override_price_per_user_minor"
-        )
+        raise BillingError("enterprise activation requires override_price_per_user_minor")
 
     months = period_months or _PLAN_PERIOD_MONTHS.get(plan_code)
     if months is None and plan_code in {"monthly", "annual", "enterprise"}:
@@ -582,7 +567,7 @@ def compute_seat_proration(
         return 0
     fraction = min(1.0, remaining_seconds / period_seconds)
 
-    return int(round(delta * effective * fraction))
+    return round(delta * effective * fraction)
 
 
 async def apply_initial_payment_success(
@@ -600,13 +585,11 @@ async def apply_initial_payment_success(
     paid baseline). The Invoice row is updated by the webhook caller.
     """
     if plan_code not in {"monthly", "annual"}:
-        raise BillingError(
-            f"plan_code must be 'monthly' or 'annual', got {plan_code!r}"
-        )
+        raise BillingError(f"plan_code must be 'monthly' or 'annual', got {plan_code!r}")
     sub = await get_current_subscription(session, org_id)
     plan = await _load_plan_by_code(session, plan_code)
     months = _PLAN_PERIOD_MONTHS[plan_code]
-    assert months is not None  # narrowed by the {monthly, annual} check above
+    assert months is not None  # noqa: S101 — type-narrowing for mypy after the {monthly,annual} guard
 
     now = datetime.now(tz=UTC)
     sub.plan_id = plan.id
@@ -652,8 +635,7 @@ async def apply_seat_charge_success(
     sub = await get_current_subscription(session, org_id)
     if new_seat_count < sub.contracted_seat_count:
         raise BillingError(
-            f"seat upgrade target {new_seat_count} below "
-            f"contracted {sub.contracted_seat_count}"
+            f"seat upgrade target {new_seat_count} below contracted {sub.contracted_seat_count}"
         )
     sub.seat_count = new_seat_count
     sub.contracted_seat_count = new_seat_count
@@ -704,9 +686,7 @@ async def apply_renewal_success(
 
     months = _PLAN_PERIOD_MONTHS.get(sub.plan.code)
     if months is None:
-        raise BillingError(
-            f"plan {sub.plan.code!r} is not eligible for recurring renewal"
-        )
+        raise BillingError(f"plan {sub.plan.code!r} is not eligible for recurring renewal")
 
     now = datetime.now(tz=UTC)
     sub.status = "active"
@@ -815,8 +795,7 @@ async def cancel_self_serve(
         raise BillingError("comp subscriptions cannot be self-canceled")
     if sub.plan.code == "enterprise":
         raise BillingError(
-            "enterprise subscriptions are managed by the founder; "
-            "contact podpora@simplecrm.cz"
+            "enterprise subscriptions are managed by the founder; contact podpora@simplecrm.cz"
         )
     sub.canceled_at = datetime.now(tz=UTC)
     sub.next_renewal_charge_at = None  # don't ever try to renew
@@ -829,9 +808,7 @@ async def cancel_self_serve(
         payload={
             "reason": reason,
             "ends_at": (
-                sub.current_period_ends_at.isoformat()
-                if sub.current_period_ends_at
-                else None
+                sub.current_period_ends_at.isoformat() if sub.current_period_ends_at else None
             ),
         },
     )
@@ -857,14 +834,11 @@ async def reactivate_self_serve(
     sub = await get_current_subscription(session, org_id)
     if sub.canceled_at is None:
         raise BillingError(
-            "reactivate is only valid for a self-cancelled subscription "
-            "(canceled_at must be set)"
+            "reactivate is only valid for a self-cancelled subscription (canceled_at must be set)"
         )
     now = datetime.now(tz=UTC)
     if sub.current_period_ends_at is None or sub.current_period_ends_at <= now:
-        raise BillingError(
-            "subscription period has already ended; choose a plan again"
-        )
+        raise BillingError("subscription period has already ended; choose a plan again")
 
     sub.canceled_at = None
     sub.next_renewal_charge_at = sub.current_period_ends_at

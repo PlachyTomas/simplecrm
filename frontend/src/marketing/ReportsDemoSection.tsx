@@ -120,15 +120,13 @@ export function ReportsDemoSection() {
     <section className="bg-surface">
       <div className="mx-auto max-w-[1200px] px-4 py-16 md:px-8 md:py-24">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
-            Reporty
-          </p>
+          <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">Reporty</p>
           <h2 className="mt-2 text-3xl font-bold md:text-4xl">
             Sledujte přesně to, co potřebujete
           </h2>
           <p className="mt-4 text-base text-text-secondary md:text-lg">
-            Přizpůsobte si dashboard. Vyberte z 12 widgetů, vytvořte si vlastní
-            rozložení, sdílejte výsledky CSV exportem.
+            Přizpůsobte si dashboard. Vyberte z 12 widgetů, vytvořte si vlastní rozložení, sdílejte
+            výsledky CSV exportem.
           </p>
         </div>
 
@@ -160,26 +158,14 @@ export function ReportsDemoSection() {
 
         <div className="mx-auto mt-10 max-w-[1100px]">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <DemoTile
-              label="Hodnota pipeline"
-              data={FAKE_DATA[preset]}
-              variant="pipeline"
-            />
-            <DemoTile
-              label="Žebříček obchodníků"
-              data={FAKE_DATA[preset]}
-              variant="leaderboard"
-            />
+            <DemoTile label="Hodnota pipeline" data={FAKE_DATA[preset]} variant="pipeline" />
+            <DemoTile label="Žebříček obchodníků" data={FAKE_DATA[preset]} variant="leaderboard" />
             <DemoTile
               label="Důvody prohraných obchodů"
               data={FAKE_DATA[preset]}
               variant="lost_reasons"
             />
-            <DemoTile
-              label="Stagnující obchody"
-              data={FAKE_DATA[preset]}
-              variant="stale_deals"
-            />
+            <DemoTile label="Stagnující obchody" data={FAKE_DATA[preset]} variant="stale_deals" />
           </div>
         </div>
       </div>
@@ -215,11 +201,8 @@ function PipelineBody({ data }: { data: DemoData }) {
         {CZK_FORMATTER.format(animated)}
       </p>
       <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-success">
-        <TrendingUp size={12} strokeWidth={2} aria-hidden />+
-        {data.pipelineDeltaPct.toFixed(1)} %
-        <span className="font-normal text-text-tertiary">
-          oproti předchozímu období
-        </span>
+        <TrendingUp size={12} strokeWidth={2} aria-hidden />+{data.pipelineDeltaPct.toFixed(1)} %
+        <span className="font-normal text-text-tertiary">oproti předchozímu období</span>
       </p>
     </div>
   );
@@ -242,9 +225,7 @@ function LeaderboardBody({ data }: { data: DemoData }) {
                 <Crown size={10} strokeWidth={2} aria-hidden />
               </span>
             ) : (
-              <span className="w-5 text-right text-text-tertiary tabular-nums">
-                {i + 1}.
-              </span>
+              <span className="w-5 text-right tabular-nums text-text-tertiary">{i + 1}.</span>
             )}
             <div className="flex-1">
               <div className="flex items-baseline justify-between gap-2">
@@ -280,9 +261,7 @@ function LostReasonsBody({ data }: { data: DemoData }) {
           <li key={row.reason} className="text-xs">
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-text-secondary">{row.reason}</span>
-              <span className="tabular-nums text-text-tertiary">
-                {row.count}×
-              </span>
+              <span className="tabular-nums text-text-tertiary">{row.count}×</span>
             </div>
             <div className="mt-1 h-1.5 rounded-full bg-surface">
               <div
@@ -319,7 +298,7 @@ function StaleDealsBody({ data }: { data: DemoData }) {
             </td>
             <td
               className={cn(
-                "py-1.5 text-right tabular-nums font-medium",
+                "py-1.5 text-right font-medium tabular-nums",
                 row.days >= 90 && "text-danger",
                 row.days >= 60 && row.days < 90 && "text-warning",
                 row.days < 60 && "text-text-secondary",

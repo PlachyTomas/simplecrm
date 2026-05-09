@@ -62,9 +62,7 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
           window.location.assign(init.redirect_url);
         },
         onError: () => {
-          setError(
-            "Platební brána není dostupná, zkuste to prosím za chvíli.",
-          );
+          setError("Platební brána není dostupná, zkuste to prosím za chvíli.");
         },
       },
     );
@@ -82,23 +80,17 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
     <div
       role="alertdialog"
       aria-labelledby="trial-expired-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 py-8 backdrop-blur-md"
+      className="bg-bg/80 fixed inset-0 z-50 flex items-center justify-center px-4 py-8 backdrop-blur-md"
     >
       <div className="w-full max-w-2xl rounded-xl border border-border bg-surface p-6 shadow-lg sm:p-8">
         {submitted ? (
           <ConfirmationCard onExport={onExport} />
         ) : isEnterpriseExpired ? (
-          <EnterpriseExpiredBody
-            onContact={openContactModal}
-            onExport={onExport}
-          />
+          <EnterpriseExpiredBody onContact={openContactModal} onExport={onExport} />
         ) : (
           <>
             <header className="text-center">
-              <h1
-                id="trial-expired-title"
-                className="text-2xl font-semibold text-text-primary"
-              >
+              <h1 id="trial-expired-title" className="text-2xl font-semibold text-text-primary">
                 Vaše zkušební doba skončila.
               </h1>
               <p className="mt-2 text-sm text-text-secondary">
@@ -154,7 +146,7 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
             {error ? (
               <p
                 role="alert"
-                className="mt-4 rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
+                className="border-danger/40 mt-4 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
               >
                 {error}
               </p>
@@ -181,10 +173,7 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
 
             <p className="mt-6 text-center text-xs text-text-tertiary">
               Máte otázky? Napište nám na{" "}
-              <a
-                className="text-accent hover:text-accent-hover"
-                href={`mailto:${SUPPORT_EMAIL}`}
-              >
+              <a className="text-accent hover:text-accent-hover" href={`mailto:${SUPPORT_EMAIL}`}>
                 {SUPPORT_EMAIL}
               </a>
             </p>
@@ -242,9 +231,7 @@ function PlanRadioCard({
       className={cn(
         "relative flex cursor-pointer flex-col rounded-lg border-2 bg-surface p-5 transition-colors",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg",
-        selected
-          ? "border-accent shadow-md"
-          : "border-border hover:border-text-tertiary",
+        selected ? "border-accent shadow-md" : "border-border hover:border-text-tertiary",
         disabled && "cursor-not-allowed opacity-60",
       )}
     >
@@ -256,17 +243,9 @@ function PlanRadioCard({
       <h3 className="text-base font-semibold text-text-primary">{title}</h3>
       <div className="mt-3">
         {priceMinor != null ? (
-          <PriceDisplay
-            baseMinor={priceMinor}
-            interval={priceInterval}
-            size="lg"
-            hideVatLine
-          />
+          <PriceDisplay baseMinor={priceMinor} interval={priceInterval} size="lg" hideVatLine />
         ) : (
-          <div
-            aria-hidden
-            className="h-9 w-32 animate-pulse rounded bg-surface-overlay"
-          />
+          <div aria-hidden className="h-9 w-32 animate-pulse rounded bg-surface-overlay" />
         )}
       </div>
       {caption ? <div className="mt-3">{caption}</div> : null}
@@ -289,8 +268,8 @@ function ConfirmationCard({ onExport }: ConfirmationCardProps) {
         Děkujeme. Pošleme vám platební instrukce.
       </h2>
       <p className="mt-3 text-sm text-text-secondary">
-        Na váš e-mail odešleme fakturu a platební údaje. Po připsání platby
-        vás aktivujeme do 24 hodin. Mezitím můžete data exportovat.
+        Na váš e-mail odešleme fakturu a platební údaje. Po připsání platby vás aktivujeme do 24
+        hodin. Mezitím můžete data exportovat.
       </p>
       <button
         type="button"
@@ -309,21 +288,14 @@ interface EnterpriseExpiredBodyProps {
   onExport?: () => void;
 }
 
-function EnterpriseExpiredBody({
-  onContact,
-  onExport,
-}: EnterpriseExpiredBodyProps) {
+function EnterpriseExpiredBody({ onContact, onExport }: EnterpriseExpiredBodyProps) {
   return (
     <div className="text-center">
-      <h1
-        id="trial-expired-title"
-        className="text-2xl font-semibold text-text-primary"
-      >
+      <h1 id="trial-expired-title" className="text-2xl font-semibold text-text-primary">
         Vaše zkušební doba skončila.
       </h1>
       <p className="mt-3 text-sm text-text-secondary">
-        Vaše enterprise předplatné skončilo. Domluvte se s naším obchodním
-        týmem na prodloužení.
+        Vaše enterprise předplatné skončilo. Domluvte se s naším obchodním týmem na prodloužení.
       </p>
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
         <button
@@ -344,10 +316,7 @@ function EnterpriseExpiredBody({
       </div>
       <p className="mt-6 text-xs text-text-tertiary">
         Máte otázky? Napište nám na{" "}
-        <a
-          className="text-accent hover:text-accent-hover"
-          href={`mailto:${SUPPORT_EMAIL}`}
-        >
+        <a className="text-accent hover:text-accent-hover" href={`mailto:${SUPPORT_EMAIL}`}>
           {SUPPORT_EMAIL}
         </a>
       </p>
@@ -417,15 +386,13 @@ function ContactEnterpriseDialog({
     <dialog
       ref={dialogRef}
       onClose={handleClose}
-      className="rounded-xl border border-border bg-surface p-0 text-text-primary shadow-lg backdrop:bg-bg/60 backdrop:backdrop-blur-sm"
+      className="backdrop:bg-bg/60 rounded-xl border border-border bg-surface p-0 text-text-primary shadow-lg backdrop:backdrop-blur-sm"
     >
       <div className="w-[min(92vw,32rem)] p-6">
         {done ? (
           <>
             <h2 className="text-lg font-semibold">Děkujeme.</h2>
-            <p className="mt-2 text-sm text-text-secondary">
-              Ozveme se vám na e-mail do 24 hodin.
-            </p>
+            <p className="mt-2 text-sm text-text-secondary">Ozveme se vám na e-mail do 24 hodin.</p>
             <div className="mt-6 flex justify-end">
               <button
                 type="button"
@@ -450,9 +417,7 @@ function ContactEnterpriseDialog({
                 min={1}
                 max={10000}
                 value={expectedUsers}
-                onChange={(e) =>
-                  setExpectedUsers(Math.max(1, Number(e.target.value) || 1))
-                }
+                onChange={(e) => setExpectedUsers(Math.max(1, Number(e.target.value) || 1))}
                 className="mt-1 block h-10 w-32 rounded-md border border-border bg-bg px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </label>
@@ -474,7 +439,7 @@ function ContactEnterpriseDialog({
             {err ? (
               <p
                 role="alert"
-                className="mt-3 rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
+                className="border-danger/40 mt-3 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
               >
                 {err}
               </p>

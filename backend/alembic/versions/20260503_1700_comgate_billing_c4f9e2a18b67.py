@@ -103,12 +103,8 @@ def upgrade() -> None:
         sa.Column("status", sa.String(16), nullable=False, server_default="pending"),
         sa.Column("comgate_trans_id", sa.String(64), nullable=True, unique=True),
         sa.Column("seats", sa.Integer(), nullable=True),
-        sa.Column(
-            "period_starts_at", sa.DateTime(timezone=True), nullable=True
-        ),
-        sa.Column(
-            "period_ends_at", sa.DateTime(timezone=True), nullable=True
-        ),
+        sa.Column("period_starts_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("period_ends_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("failure_reason", sa.Text(), nullable=True),
         sa.Column(
             "created_at",
@@ -141,18 +137,14 @@ def upgrade() -> None:
         # here so we can dedupe even before the invoice exists (e.g. a
         # webhook racing the customer's return). Unique so a second
         # delivery silently no-ops.
-        sa.Column(
-            "comgate_event_id", sa.String(128), nullable=False, unique=True
-        ),
+        sa.Column("comgate_event_id", sa.String(128), nullable=False, unique=True),
         sa.Column(
             "received_at",
             sa.DateTime(timezone=True),
             nullable=False,
             server_default=sa.func.now(),
         ),
-        sa.Column(
-            "processed_at", sa.DateTime(timezone=True), nullable=True
-        ),
+        sa.Column("processed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
             "payload",
             postgresql.JSONB(astext_type=sa.Text()),
@@ -178,9 +170,7 @@ def upgrade() -> None:
         ),
     )
     # Backfill: every existing org's contracted cap = current seat_count.
-    op.execute(
-        "UPDATE subscriptions SET contracted_seat_count = seat_count"
-    )
+    op.execute("UPDATE subscriptions SET contracted_seat_count = seat_count")
 
     op.add_column(
         "subscriptions",
@@ -218,17 +208,13 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index(
-        "ix_subscriptions_next_renewal_charge_at", table_name="subscriptions"
-    )
+    op.drop_index("ix_subscriptions_next_renewal_charge_at", table_name="subscriptions")
     op.drop_column("subscriptions", "next_renewal_charge_at")
     op.drop_column("subscriptions", "last_charge_failed_at")
     op.drop_column("subscriptions", "dunning_attempts")
     op.drop_column("subscriptions", "contracted_seat_count")
 
     op.drop_table("webhook_events")
-    op.drop_index(
-        "ix_invoices_organization_id_created_at", table_name="invoices"
-    )
+    op.drop_index("ix_invoices_organization_id_created_at", table_name="invoices")
     op.drop_table("invoices")
     op.drop_table("payment_methods")

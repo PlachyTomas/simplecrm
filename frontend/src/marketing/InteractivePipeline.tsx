@@ -84,7 +84,7 @@ function DealCard({
       }}
       className={
         "group relative rounded-md border border-border bg-surface p-2.5 text-left shadow-sm transition-all duration-fast " +
-        (draggable ? "cursor-grab active:cursor-grabbing hover:border-accent-border" : "")
+        (draggable ? "cursor-grab hover:border-accent-border active:cursor-grabbing" : "")
       }
     >
       <p className="pr-1 text-xs font-medium leading-snug text-text-primary">{deal.name}</p>
@@ -116,7 +116,7 @@ function DealCard({
           type="button"
           onClick={onWin}
           aria-label={`Označit obchod ${deal.name} jako vyhraný`}
-          className="absolute right-1.5 top-1.5 inline-flex h-5 items-center gap-1 rounded-full bg-brand-accent px-1.5 text-[10px] font-semibold text-text-on-brand-accent opacity-0 transition-opacity duration-fast hover:bg-brand-accent-hover group-hover:opacity-100 focus:opacity-100"
+          className="absolute right-1.5 top-1.5 inline-flex h-5 items-center gap-1 rounded-full bg-brand-accent px-1.5 text-[10px] font-semibold text-text-on-brand-accent opacity-0 transition-opacity duration-fast hover:bg-brand-accent-hover focus:opacity-100 group-hover:opacity-100"
         >
           <Crown size={9} strokeWidth={2} aria-hidden /> Win
         </button>
@@ -132,10 +132,7 @@ export function InteractivePipeline() {
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
 
   const visibleDeals = useMemo(
-    () =>
-      teamFilter === ALL_TEAMS
-        ? deals
-        : deals.filter((d) => ownerTeamId(d) === teamFilter),
+    () => (teamFilter === ALL_TEAMS ? deals : deals.filter((d) => ownerTeamId(d) === teamFilter)),
     [deals, teamFilter],
   );
 
@@ -210,9 +207,7 @@ export function InteractivePipeline() {
   const maxSalesValue = Math.max(1, ...salesLeaderboard.map((r) => r.value));
 
   function moveDealToStage(dealId: string, stageId: string) {
-    setDeals((prev) =>
-      prev.map((d) => (d.id === dealId ? { ...d, stage_id: stageId } : d)),
-    );
+    setDeals((prev) => prev.map((d) => (d.id === dealId ? { ...d, stage_id: stageId } : d)));
   }
 
   function handleDrop(stageId: string) {
@@ -237,8 +232,8 @@ export function InteractivePipeline() {
           </p>
           <h3 className="mt-1 text-lg font-semibold">Přesouvejte obchody — statistiky reagují</h3>
           <p className="mt-1 text-sm text-text-secondary">
-            Zkuste přetáhnout kartu mezi sloupci nebo kliknout na <em>Vyhráno</em>.
-            Žebříček týmů a hodnota pipeline se přepočítají v reálném čase.
+            Zkuste přetáhnout kartu mezi sloupci nebo kliknout na <em>Vyhráno</em>. Žebříček týmů a
+            hodnota pipeline se přepočítají v reálném čase.
           </p>
         </div>
         <button
@@ -276,11 +271,7 @@ export function InteractivePipeline() {
                   ? "text-text-on-accent"
                   : "border border-border-subtle bg-surface-overlay text-text-secondary hover:text-text-primary")
               }
-              style={
-                active
-                  ? { backgroundColor: team.color }
-                  : undefined
-              }
+              style={active ? { backgroundColor: team.color } : undefined}
             >
               <span
                 aria-hidden
@@ -294,11 +285,7 @@ export function InteractivePipeline() {
       </div>
 
       <div className="mb-5 grid grid-cols-2 gap-2 md:grid-cols-5">
-        <StatTile
-          label="Otevřené"
-          value={String(stats.openCount)}
-          hint="V probíhající pipeline"
-        />
+        <StatTile label="Otevřené" value={String(stats.openCount)} hint="V probíhající pipeline" />
         <StatTile
           label="Hodnota pipeline"
           value={moneyFmt.format(stats.openValue)}
@@ -340,9 +327,7 @@ export function InteractivePipeline() {
               }}
               className={
                 "rounded-md border bg-surface-overlay p-2.5 transition-colors duration-fast " +
-                (isHover
-                  ? "border-accent bg-accent-subtle"
-                  : "border-border-subtle")
+                (isHover ? "border-accent bg-accent-subtle" : "border-border-subtle")
               }
             >
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border-subtle pb-2">
@@ -405,7 +390,7 @@ export function InteractivePipeline() {
                       <Crown size={11} strokeWidth={2} aria-hidden />
                     </span>
                   ) : (
-                    <span className="w-5 shrink-0 text-right text-xs font-medium text-text-tertiary tabular-nums">
+                    <span className="w-5 shrink-0 text-right text-xs font-medium tabular-nums text-text-tertiary">
                       {idx + 1}.
                     </span>
                   )}
@@ -460,7 +445,7 @@ export function InteractivePipeline() {
                         <Crown size={11} strokeWidth={2} aria-hidden />
                       </span>
                     ) : (
-                      <span className="w-5 shrink-0 text-right text-xs font-medium text-text-tertiary tabular-nums">
+                      <span className="w-5 shrink-0 text-right text-xs font-medium tabular-nums text-text-tertiary">
                         {idx + 1}.
                       </span>
                     )}

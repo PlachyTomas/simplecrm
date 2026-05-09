@@ -55,13 +55,7 @@ interface OrgDetailDrawerProps {
   userCount: number | null;
 }
 
-type ActiveModal =
-  | "activate"
-  | "set-comp"
-  | "set-enterprise"
-  | "extend-trial"
-  | "cancel"
-  | null;
+type ActiveModal = "activate" | "set-comp" | "set-enterprise" | "extend-trial" | "cancel" | null;
 
 export function OrgDetailDrawer({ orgId, userCount }: OrgDetailDrawerProps) {
   const subQuery = useAdminOrgSubscription(orgId);
@@ -84,7 +78,10 @@ export function OrgDetailDrawer({ orgId, userCount }: OrgDetailDrawerProps) {
 
   if (!sub) {
     return (
-      <section className="rounded-lg border border-border bg-surface p-6 text-sm text-danger" role="alert">
+      <section
+        className="rounded-lg border border-border bg-surface p-6 text-sm text-danger"
+        role="alert"
+      >
         Načítání detailu se nezdařilo.
       </section>
     );
@@ -226,7 +223,7 @@ function ActionButton({
       className={cn(
         "inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-medium transition-colors duration-fast",
         variant === "danger"
-          ? "border border-danger/40 bg-danger-subtle text-danger hover:bg-danger/10"
+          ? "border-danger/40 hover:bg-danger/10 border bg-danger-subtle text-danger"
           : "border border-border bg-surface text-text-primary hover:bg-surface-overlay",
       )}
     >
@@ -247,7 +244,7 @@ function ModalShell({ title, onClose, children }: ModalShellProps) {
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 py-8 backdrop-blur-md"
+      className="bg-bg/80 fixed inset-0 z-50 flex items-center justify-center px-4 py-8 backdrop-blur-md"
     >
       <div
         className="w-full max-w-lg rounded-xl border border-border bg-surface p-6 shadow-lg"
@@ -294,10 +291,11 @@ function ActivateModal({ orgId, onClose }: { orgId: string; onClose: () => void 
       const body: Record<string, unknown> = { plan_code: planCode };
       if (overrideKc) body.override_price_per_user_minor = Number(overrideKc) * 100;
       if (periodMonths) body.period_months = Number(periodMonths);
-      return apiFetch(
-        `/api/v1/admin/organizations/${orgId}/subscription/activate`,
-        { method: "POST", token: accessToken, body },
-      );
+      return apiFetch(`/api/v1/admin/organizations/${orgId}/subscription/activate`, {
+        method: "POST",
+        token: accessToken,
+        body,
+      });
     },
     onSuccess: () => {
       invalidate();
@@ -367,7 +365,7 @@ function ActivateModal({ orgId, onClose }: { orgId: string; onClose: () => void 
         {error ? (
           <p
             role="alert"
-            className="rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
+            className="border-danger/40 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
           >
             {error}
           </p>
@@ -391,10 +389,11 @@ function SetCompModal({ orgId, onClose }: { orgId: string; onClose: () => void }
     mutationFn: async () => {
       const body: Record<string, unknown> = { reason };
       if (endsAt) body.ends_at = new Date(endsAt).toISOString();
-      return apiFetch(
-        `/api/v1/admin/organizations/${orgId}/subscription/set-comp`,
-        { method: "POST", token: accessToken, body },
-      );
+      return apiFetch(`/api/v1/admin/organizations/${orgId}/subscription/set-comp`, {
+        method: "POST",
+        token: accessToken,
+        body,
+      });
     },
     onSuccess: () => {
       invalidate();
@@ -441,7 +440,7 @@ function SetCompModal({ orgId, onClose }: { orgId: string; onClose: () => void }
         {error ? (
           <p
             role="alert"
-            className="rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
+            className="border-danger/40 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
           >
             {error}
           </p>
@@ -472,9 +471,7 @@ function SetEnterpriseModal({
 
   const overrideMinor = overrideKc ? Number(overrideKc) * 100 : null;
   const previewTotal =
-    overrideMinor != null && userCount != null
-      ? userCount * overrideMinor
-      : null;
+    overrideMinor != null && userCount != null ? userCount * overrideMinor : null;
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -483,10 +480,11 @@ function SetEnterpriseModal({
         period_months: Number(periodMonths),
       };
       if (notes) body.notes = notes;
-      return apiFetch(
-        `/api/v1/admin/organizations/${orgId}/subscription/set-enterprise`,
-        { method: "POST", token: accessToken, body },
-      );
+      return apiFetch(`/api/v1/admin/organizations/${orgId}/subscription/set-enterprise`, {
+        method: "POST",
+        token: accessToken,
+        body,
+      });
     },
     onSuccess: () => {
       invalidate();
@@ -551,9 +549,7 @@ function SetEnterpriseModal({
             className="rounded-md border border-border-subtle bg-surface-overlay p-3 text-sm text-text-secondary"
           >
             Měsíční účet:{" "}
-            <span className="font-semibold text-text-primary">
-              {formatCzkMinor(previewTotal)}
-            </span>{" "}
+            <span className="font-semibold text-text-primary">{formatCzkMinor(previewTotal)}</span>{" "}
             / měsíc bez DPH
           </p>
         ) : userCount == null ? (
@@ -564,7 +560,7 @@ function SetEnterpriseModal({
         {error ? (
           <p
             role="alert"
-            className="rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
+            className="border-danger/40 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
           >
             {error}
           </p>
@@ -601,10 +597,11 @@ function ExtendTrialModal({
 
   const mutation = useMutation({
     mutationFn: async () => {
-      return apiFetch(
-        `/api/v1/admin/organizations/${orgId}/subscription/extend-trial`,
-        { method: "POST", token: accessToken, body: { days: Number(days) } },
-      );
+      return apiFetch(`/api/v1/admin/organizations/${orgId}/subscription/extend-trial`, {
+        method: "POST",
+        token: accessToken,
+        body: { days: Number(days) },
+      });
     },
     onSuccess: () => {
       invalidate();
@@ -651,7 +648,7 @@ function ExtendTrialModal({
         {error ? (
           <p
             role="alert"
-            className="rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
+            className="border-danger/40 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
           >
             {error}
           </p>
@@ -688,10 +685,11 @@ function CancelModal({
     mutationFn: async () => {
       const body: Record<string, unknown> = {};
       if (effectiveAt) body.effective_at = new Date(effectiveAt).toISOString();
-      return apiFetch(
-        `/api/v1/admin/organizations/${orgId}/subscription/cancel`,
-        { method: "POST", token: accessToken, body },
-      );
+      return apiFetch(`/api/v1/admin/organizations/${orgId}/subscription/cancel`, {
+        method: "POST",
+        token: accessToken,
+        body,
+      });
     },
     onSuccess: () => {
       invalidate();
@@ -733,7 +731,7 @@ function CancelModal({
         {error ? (
           <p
             role="alert"
-            className="rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
+            className="border-danger/40 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
           >
             {error}
           </p>
@@ -750,7 +748,7 @@ function CancelModal({
           <button
             type="submit"
             disabled={!confirmMatches || mutation.isPending}
-            className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-semibold text-white hover:bg-danger/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="hover:bg-danger/90 inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {mutation.isPending ? "Rušíme…" : "Zrušit předplatné"}
           </button>
@@ -810,15 +808,13 @@ function MembersList({ orgId }: { orgId: string }) {
     <div className="rounded-lg border border-border bg-surface p-6">
       <h3 className="text-base font-semibold">Členové organizace</h3>
       <p className="mt-1 text-xs text-text-tertiary">
-        Přepnutí (impersonace) je auditováno v server logu. Po obnovení stránky
-        se vrátíte do své vlastní super-admin relace.
+        Přepnutí (impersonace) je auditováno v server logu. Po obnovení stránky se vrátíte do své
+        vlastní super-admin relace.
       </p>
       {isPending ? (
         <p className="mt-3 text-sm text-text-tertiary">Načítání…</p>
       ) : items.length === 0 ? (
-        <p className="mt-3 text-sm text-text-tertiary">
-          Žádní členové.
-        </p>
+        <p className="mt-3 text-sm text-text-tertiary">Žádní členové.</p>
       ) : (
         <ul className="mt-4 space-y-2">
           {items.map((u) => (
@@ -845,10 +841,10 @@ function MemberRow({ user }: { user: AdminOrgUserRow }) {
     setError(null);
     setBusy(true);
     try {
-      const res = await apiFetch<ImpersonateOut>(
-        `/api/v1/admin/users/${user.id}/impersonate`,
-        { method: "POST", token: accessToken },
-      );
+      const res = await apiFetch<ImpersonateOut>(`/api/v1/admin/users/${user.id}/impersonate`, {
+        method: "POST",
+        token: accessToken,
+      });
       setAccessToken(res.access_token);
       navigate("/app");
     } catch (err) {
@@ -861,17 +857,13 @@ function MemberRow({ user }: { user: AdminOrgUserRow }) {
     <li className="flex flex-wrap items-center gap-3 rounded-md border border-border-subtle bg-surface-overlay px-3 py-2 text-sm">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-2">
-          <span className="font-medium text-text-primary">
-            {user.name || user.email}
-          </span>
+          <span className="font-medium text-text-primary">{user.name || user.email}</span>
           <span className="text-xs text-text-tertiary">{user.email}</span>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs text-text-tertiary">
           <span>{roleLabel(user.role)}</span>
           {user.is_super_admin ? (
-            <span className="rounded-full bg-info-subtle px-2 py-0.5 text-info">
-              super-admin
-            </span>
+            <span className="rounded-full bg-info-subtle px-2 py-0.5 text-info">super-admin</span>
           ) : null}
           {!user.is_active ? (
             <span className="rounded-full bg-surface px-2 py-0.5 text-text-tertiary">
@@ -906,14 +898,11 @@ function ActivityTimeline({ orgId }: { orgId: string }) {
       {isPending ? (
         <p className="mt-3 text-sm text-text-tertiary">Načítání…</p>
       ) : items.length === 0 ? (
-        <p className="mt-3 text-sm text-text-tertiary">
-          Žádná aktivita dosud nezaznamenána.
-        </p>
+        <p className="mt-3 text-sm text-text-tertiary">Žádná aktivita dosud nezaznamenána.</p>
       ) : (
         <ol className="mt-4 space-y-3">
           {items.map((row) => {
-            const action =
-              typeof row.payload?.action === "string" ? row.payload.action : "—";
+            const action = typeof row.payload?.action === "string" ? row.payload.action : "—";
             const summary = Object.entries(row.payload ?? {})
               .filter(([k]) => k !== "action")
               .map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`)
@@ -923,17 +912,13 @@ function ActivityTimeline({ orgId }: { orgId: string }) {
                 <div className="flex flex-wrap items-baseline gap-2 text-sm">
                   <span className="font-medium text-text-primary">{action}</span>
                   <span className="text-text-tertiary">·</span>
-                  <span className="text-text-secondary">
-                    {row.actor?.name ?? "Systém"}
-                  </span>
+                  <span className="text-text-secondary">{row.actor?.name ?? "Systém"}</span>
                   <span className="text-text-tertiary">·</span>
                   <span className="text-text-tertiary">
                     {dateTimeFmt.format(new Date(row.created_at))}
                   </span>
                 </div>
-                {summary ? (
-                  <p className="text-xs text-text-tertiary">{summary}</p>
-                ) : null}
+                {summary ? <p className="text-xs text-text-tertiary">{summary}</p> : null}
               </li>
             );
           })}

@@ -109,9 +109,7 @@ describe("Dashboard KPIs", () => {
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByText(/90\s?000/)).toBeInTheDocument();
 
-    await waitFor(() =>
-      expect(screen.getByText(/Leaderboard \(30 dní\)/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/Leaderboard \(30 dní\)/i)).toBeInTheDocument());
     expect(screen.getByText(/Anna/)).toBeInTheDocument();
     expect(screen.getByText(/Průměrné trvání/i)).toBeInTheDocument();
     expect(screen.getByText(/7\.5 dní/)).toBeInTheDocument();

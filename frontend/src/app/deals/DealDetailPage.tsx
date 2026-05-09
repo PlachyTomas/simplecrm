@@ -90,7 +90,7 @@ export function DealDetailPage() {
   const stages = board?.stages ?? [];
   const stage = stages.find((s) => s.id === deal.stage_id);
   const owner = deal.owner_user_id
-    ? orgUsers.find((u) => u.id === deal.owner_user_id)?.name ?? "—"
+    ? (orgUsers.find((u) => u.id === deal.owner_user_id)?.name ?? "—")
     : "—";
   const companyContacts = companyContactsPage?.items ?? [];
 
@@ -286,9 +286,7 @@ export function DealDetailPage() {
             {editing && edit ? (
               <select
                 value={edit.owner_user_id}
-                onChange={(e) =>
-                  setEdit((p) => p && { ...p, owner_user_id: e.target.value })
-                }
+                onChange={(e) => setEdit((p) => p && { ...p, owner_user_id: e.target.value })}
                 className="block h-9 rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
               >
                 <option value="">Bez vlastníka</option>
@@ -316,16 +314,14 @@ export function DealDetailPage() {
                 ))}
               </select>
             ) : (
-              stage?.name ?? "—"
+              (stage?.name ?? "—")
             )}
           </Field>
           <Field label="Hlavní kontakt">
             {editing && edit ? (
               <select
                 value={edit.primary_contact_id}
-                onChange={(e) =>
-                  setEdit((p) => p && { ...p, primary_contact_id: e.target.value })
-                }
+                onChange={(e) => setEdit((p) => p && { ...p, primary_contact_id: e.target.value })}
                 className="block h-9 rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
               >
                 <option value="">Bez hlavního kontaktu</option>
@@ -351,9 +347,7 @@ export function DealDetailPage() {
               <input
                 type="date"
                 value={edit.expected_close_date}
-                onChange={(e) =>
-                  setEdit((p) => p && { ...p, expected_close_date: e.target.value })
-                }
+                onChange={(e) => setEdit((p) => p && { ...p, expected_close_date: e.target.value })}
                 className="block h-9 rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
               />
             ) : deal.expected_close_date ? (

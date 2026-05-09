@@ -91,9 +91,7 @@ async def get_current_subscription(
 ) -> SubscriptionOut:
     if user.organization_id is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
-    sub = await billing.get_current_subscription(
-        session, user.organization_id
-    )
+    sub = await billing.get_current_subscription(session, user.organization_id)
     return _subscription_payload(sub)
 
 
@@ -126,21 +124,15 @@ async def get_current_billing_summary(
 
     if effective is not None:
         monthly_total = effective * user_count
-        monthly_with_vat = (
-            await billing.compute_with_vat(session, monthly_total)
-        ).with_vat_minor
+        monthly_with_vat = (await billing.compute_with_vat(session, monthly_total)).with_vat_minor
 
         public_savings = billing.compute_savings(user_count)
         annual_total = public_savings.annual_total_minor
-        annual_with_vat = (
-            await billing.compute_with_vat(session, annual_total)
-        ).with_vat_minor
+        annual_with_vat = (await billing.compute_with_vat(session, annual_total)).with_vat_minor
         savings_minor = public_savings.savings_minor
         savings_percent = public_savings.savings_percent
 
-    settings = (
-        await session.execute(select(BillingSettings))
-    ).scalar_one()
+    settings = (await session.execute(select(BillingSettings))).scalar_one()
 
     return BillingSummary(
         organization_id=sub.organization_id,
@@ -190,9 +182,7 @@ async def choose_plan(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
     await session.commit()
-    sub = await billing.get_current_subscription(
-        session, user.organization_id
-    )
+    sub = await billing.get_current_subscription(session, user.organization_id)
     return _subscription_payload(sub)
 
 
@@ -264,9 +254,7 @@ async def update_seat_count(
     org_id = user.organization_id
 
     sub = (
-        await session.execute(
-            select(Subscription).where(Subscription.organization_id == org_id)
-        )
+        await session.execute(select(Subscription).where(Subscription.organization_id == org_id))
     ).scalar_one_or_none()
     if sub is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -274,9 +262,7 @@ async def update_seat_count(
     active_users = (
         (
             await session.execute(
-                select(User)
-                .where(User.organization_id == org_id)
-                .where(User.is_active.is_(True))
+                select(User).where(User.organization_id == org_id).where(User.is_active.is_(True))
             )
         )
         .scalars()
@@ -310,9 +296,7 @@ async def update_seat_count(
             # (the cap is unchanged; we're just relaxing seat_count back
             # toward it).
             if sub.status == "trialing" or sub.is_comp:
-                sub.contracted_seat_count = max(
-                    sub.contracted_seat_count, new_count
-                )
+                sub.contracted_seat_count = max(sub.contracted_seat_count, new_count)
             sub.pending_seat_count = None
             sub.pending_user_deactivations = None
             await session.commit()
@@ -371,7 +355,7 @@ async def update_seat_count(
     # so postgres stores them as plain strings rather than relying on
     # asyncpg's binary UUID encoding (which would round-trip but reads
     # back as `UUID` objects awkwardly in mixed code paths).
-    sub.pending_user_deactivations = [str(v) for v in payload.deactivate_user_ids]
+    sub.pending_user_deactivations = [str(v) for v in payload.deactivate_user_ids]  # type: ignore[misc]
     await session.commit()
     await session.refresh(sub, attribute_names=["plan", "pending_plan"])
     return _subscription_payload(sub)
@@ -398,9 +382,7 @@ async def change_billing_interval(
     org_id = user.organization_id
 
     sub = (
-        await session.execute(
-            select(Subscription).where(Subscription.organization_id == org_id)
-        )
+        await session.execute(select(Subscription).where(Subscription.organization_id == org_id))
     ).scalar_one_or_none()
     if sub is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -465,14 +447,10 @@ async def cancel_subscription(
     # Best-effort merchant-side disable. We commit regardless of the
     # outcome so a ComGate hiccup doesn't strand the cancel.
     payment_method = (
-        await session.execute(
-            select(PaymentMethod).where(PaymentMethod.organization_id == org_id)
-        )
+        await session.execute(select(PaymentMethod).where(PaymentMethod.organization_id == org_id))
     ).scalar_one_or_none()
     if payment_method is not None:
-        await comgate.disable_recurring(
-            payment_method.comgate_initial_trans_id
-        )
+        await comgate.disable_recurring(payment_method.comgate_initial_trans_id)
 
     await session.commit()
     await session.refresh(sub, attribute_names=["plan", "pending_plan"])

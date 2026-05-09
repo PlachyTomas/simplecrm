@@ -17,9 +17,7 @@ class BillingSettings(Base):
     """
 
     __tablename__ = "billing_settings"
-    __table_args__ = (
-        CheckConstraint("id = 1", name="ck_billing_settings_singleton"),
-    )
+    __table_args__ = (CheckConstraint("id = 1", name="ck_billing_settings_singleton"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
 

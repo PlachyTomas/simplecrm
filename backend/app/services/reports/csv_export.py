@@ -52,7 +52,6 @@ from app.services.reports.sales_leaderboard import compute_sales_leaderboard
 from app.services.reports.stale_deals import compute_stale_deals
 from app.services.reports.win_rate import compute_win_rate
 
-
 WIDGET_LABEL = {
     "pipeline_value": "Hodnota pipeline",
     "new_companies": "Nové firmy",
@@ -114,7 +113,7 @@ async def render_widget_csv(
 
         try:
             await _render_section(writer, widget_type, raw_config, common)
-        except Exception as exc:  # noqa: BLE001 — surface in CSV, don't 500
+        except Exception as exc:
             writer.writerow(["chyba", str(exc)])
 
     body = "﻿" + buffer.getvalue()
@@ -127,6 +126,11 @@ async def _render_section(
     raw_config: dict[str, Any],
     common: dict[str, Any],
 ) -> None:
+    # Each branch binds `cfg` and `r` to a different concrete config/response
+    # pair; declaring them `Any` here keeps mypy from anchoring them to the
+    # first branch's types and complaining about every subsequent reassignment.
+    cfg: Any
+    r: Any
     if widget_type == "pipeline_value":
         cfg = PipelineValueConfig(**raw_config)
         r = await compute_pipeline_value(**common, config=cfg)
@@ -167,9 +171,7 @@ async def _render_section(
         cfg = SalesCycleLengthConfig(**raw_config)
         r = await compute_sales_cycle_length(**common, config=cfg)
         writer.writerow(["medián_dní", "průměr_dní", "počet_vzorek"])
-        writer.writerow(
-            [_fmt(r.median_days), _fmt(r.mean_days), r.sample_count]
-        )
+        writer.writerow([_fmt(r.median_days), _fmt(r.mean_days), r.sample_count])
 
     elif widget_type == "lead_to_deal_conversion":
         cfg = LeadToDealConversionConfig(**raw_config)

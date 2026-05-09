@@ -81,12 +81,7 @@ export function BarChartWidget({
     // paint before react-grid-layout measures the row — without it,
     // Recharts logs a width(-1)/height(-1) warning that only clears
     // after the second render.
-    <div
-      className="h-full w-full"
-      style={{ minHeight: 160 }}
-      role="img"
-      aria-label={ariaLabel}
-    >
+    <div className="h-full w-full" style={{ minHeight: 160 }} role="img" aria-label={ariaLabel}>
       {/* Visually-hidden data table so screen readers can read the chart
           contents — Recharts itself isn't AT-friendly. Per
           REPORTS_TASK §R9.3. */}
@@ -108,11 +103,7 @@ export function BarChartWidget({
         </tbody>
       </table>
       <ResponsiveContainer>
-        <BarChart
-          data={data}
-          layout="vertical"
-          margin={{ top: 4, right: 56, bottom: 4, left: 0 }}
-        >
+        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 56, bottom: 4, left: 0 }}>
           <XAxis type="number" hide domain={[0, "dataMax"]} />
           <YAxis
             type="category"
@@ -132,10 +123,7 @@ export function BarChartWidget({
           />
           <Bar dataKey="value" radius={4} barSize={16}>
             {data.map((d, i) => (
-              <Cell
-                key={i}
-                className={cn(d.highlighted ? "fill-brand-accent" : "fill-accent")}
-              />
+              <Cell key={i} className={cn(d.highlighted ? "fill-brand-accent" : "fill-accent")} />
             ))}
             <LabelList
               dataKey="display"

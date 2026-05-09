@@ -24,9 +24,7 @@ async def owned_emails() -> AsyncIterator[list[str]]:
     async with AsyncSessionLocal() as session:
         if tracked:
             await session.execute(delete(User).where(User.email.in_(tracked)))
-            await session.execute(
-                delete(Organization).where(Organization.name == "Sub Test Org")
-            )
+            await session.execute(delete(Organization).where(Organization.name == "Sub Test Org"))
             await session.commit()
 
 
@@ -160,9 +158,7 @@ async def test_choose_plan_rejects_non_admin(
     await db_session.flush()
     email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
     owned_emails.append(email)
-    salesperson = User(
-        email=email, name="Sales", role=UserRole.salesperson, organization_id=org.id
-    )
+    salesperson = User(email=email, name="Sales", role=UserRole.salesperson, organization_id=org.id)
     db_session.add(salesperson)
     trial_plan_id = (
         await db_session.execute(select(Plan.id).where(Plan.code == "trial"))
@@ -178,9 +174,7 @@ async def test_choose_plan_rejects_non_admin(
     )
     await db_session.commit()
 
-    token = create_access_token(
-        salesperson.id, salesperson.organization_id, salesperson.role
-    )
+    token = create_access_token(salesperson.id, salesperson.organization_id, salesperson.role)
     response = await client.post(
         "/api/v1/organizations/current/subscription/choose-plan",
         headers={"Authorization": f"Bearer {token}"},
@@ -216,7 +210,7 @@ async def test_contact_enterprise_returns_queued(
 async def test_seat_count_increase_persists(
     client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
 ) -> None:
-    org, admin = await _seed_org_with_admin(db_session, owned_emails)
+    _org, admin = await _seed_org_with_admin(db_session, owned_emails)
     token = create_access_token(admin.id, admin.organization_id, admin.role)
     response = await client.put(
         "/api/v1/organizations/current/subscription/seat-count",
@@ -239,8 +233,12 @@ async def test_seat_count_decrease_below_active_requires_deactivations(
     owned_emails.extend([second_email, third_email])
     db_session.add_all(
         [
-            _User(email=second_email, name="Second", role=UserRole.salesperson, organization_id=org.id),
-            _User(email=third_email, name="Third", role=UserRole.salesperson, organization_id=org.id),
+            _User(
+                email=second_email, name="Second", role=UserRole.salesperson, organization_id=org.id
+            ),
+            _User(
+                email=third_email, name="Third", role=UserRole.salesperson, organization_id=org.id
+            ),
         ]
     )
     await db_session.commit()
@@ -281,9 +279,7 @@ async def test_seat_count_decrease_below_active_requires_deactivations(
     assert body["pending_seat_count"] == 2
     assert body["pending_user_deactivations"] == [str(second_id)]
     db_session.expire_all()
-    second = (
-        await db_session.execute(select(_User).where(_User.id == second_id))
-    ).scalar_one()
+    second = (await db_session.execute(select(_User).where(_User.id == second_id))).scalar_one()
     assert second.is_active is True
 
 
@@ -375,7 +371,7 @@ async def test_seat_count_increase_clears_pending_queue(
 async def test_change_interval_queues_pending_plan(
     client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
 ) -> None:
-    org, admin = await _seed_org_with_admin(db_session, owned_emails)
+    _org, admin = await _seed_org_with_admin(db_session, owned_emails)
     token = create_access_token(admin.id, admin.organization_id, admin.role)
     response = await client.post(
         "/api/v1/organizations/current/subscription/change-interval",
@@ -392,7 +388,7 @@ async def test_change_interval_queues_pending_plan(
 async def test_seat_count_rejects_self_deactivation(
     client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
 ) -> None:
-    org, admin = await _seed_org_with_admin(db_session, owned_emails)
+    _org, admin = await _seed_org_with_admin(db_session, owned_emails)
     token = create_access_token(admin.id, admin.organization_id, admin.role)
     response = await client.put(
         "/api/v1/organizations/current/subscription/seat-count",
@@ -424,9 +420,7 @@ async def _promote_to_active(
     the given paid baseline, using ORM-style mutation to stay
     compatible with the conftest's outer-transaction fixture."""
     sub = (
-        await session.execute(
-            select(Subscription).where(Subscription.organization_id == org_id)
-        )
+        await session.execute(select(Subscription).where(Subscription.organization_id == org_id))
     ).scalar_one()
     sub.status = "active"
     sub.seat_count = seat_count
@@ -442,9 +436,7 @@ async def test_seat_count_active_blocked_above_contracted(
     cap. Must 402 with a redirect_endpoint pointing at the payments
     init flow; seat_count stays unchanged in the DB."""
     org, admin = await _seed_org_with_admin(db_session, owned_emails)
-    await _promote_to_active(
-        db_session, org_id=org.id, seat_count=5, contracted_seat_count=5
-    )
+    await _promote_to_active(db_session, org_id=org.id, seat_count=5, contracted_seat_count=5)
 
     token = create_access_token(admin.id, admin.organization_id, admin.role)
     response = await client.put(
@@ -478,9 +470,7 @@ async def test_seat_count_active_within_contracted_allowed(
     contracted_seat_count without payment — they're un-queueing a
     downsize or staying within their paid baseline."""
     org, admin = await _seed_org_with_admin(db_session, owned_emails)
-    await _promote_to_active(
-        db_session, org_id=org.id, seat_count=2, contracted_seat_count=10
-    )
+    await _promote_to_active(db_session, org_id=org.id, seat_count=2, contracted_seat_count=10)
 
     token = create_access_token(admin.id, admin.organization_id, admin.role)
     response = await client.put(
@@ -500,7 +490,7 @@ async def test_seat_count_trial_bump_lifts_contracted(
     """Trial admin can play the slider freely (per user-stated intent);
     the contracted_seat_count tracks the new high so it's locked in at
     the first activation."""
-    org, admin = await _seed_org_with_admin(db_session, owned_emails)  # status=trialing
+    _org, admin = await _seed_org_with_admin(db_session, owned_emails)  # status=trialing
     token = create_access_token(admin.id, admin.organization_id, admin.role)
     response = await client.put(
         "/api/v1/organizations/current/subscription/seat-count",
@@ -526,20 +516,14 @@ async def _set_plan_and_period(
     so cancel/reactivate flows can be exercised."""
     from datetime import UTC, datetime, timedelta
 
-    plan_id = (
-        await session.execute(select(Plan.id).where(Plan.code == plan_code))
-    ).scalar_one()
+    plan_id = (await session.execute(select(Plan.id).where(Plan.code == plan_code))).scalar_one()
     sub = (
-        await session.execute(
-            select(Subscription).where(Subscription.organization_id == org_id)
-        )
+        await session.execute(select(Subscription).where(Subscription.organization_id == org_id))
     ).scalar_one()
     sub.plan_id = plan_id
     sub.status = "active"
     sub.is_comp = is_comp
-    sub.current_period_ends_at = datetime.now(tz=UTC) + timedelta(
-        days=period_days_remaining
-    )
+    sub.current_period_ends_at = datetime.now(tz=UTC) + timedelta(days=period_days_remaining)
     await session.commit()
 
 

@@ -40,9 +40,7 @@ async def list_activities(
     total = (await session.execute(count_stmt)).scalar_one()
 
     items_stmt = (
-        base.order_by(Activity.created_at.desc())
-        .limit(pagination.limit)
-        .offset(pagination.offset)
+        base.order_by(Activity.created_at.desc()).limit(pagination.limit).offset(pagination.offset)
     )
     items = (await session.execute(items_stmt)).scalars().all()
     return Page[ActivityOut](

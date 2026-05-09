@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -45,9 +45,7 @@ class PublicPlanOut(PlanOut):
 # ---------------------------------------------------------------------------
 
 
-SubscriptionStatus = Literal[
-    "trialing", "pending_activation", "active", "past_due", "canceled"
-]
+SubscriptionStatus = Literal["trialing", "pending_activation", "active", "past_due", "canceled"]
 
 
 class SubscriptionOut(BaseModel):
@@ -250,7 +248,7 @@ class AdminActivityRow(BaseModel):
 
     id: uuid.UUID
     activity_type: str
-    payload: dict
+    payload: dict[str, Any]
     created_at: datetime
     # Null when the actor user was deleted (the FK is ON DELETE SET NULL).
     actor: AdminActivityActor | None = None

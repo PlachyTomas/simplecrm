@@ -81,9 +81,7 @@ def test_require_role_with_empty_set_raises_value_error() -> None:
 async def test_trial_gate_admits_users_inside_trial(db_session: AsyncSession) -> None:
     """Fallback path: org without a Subscription row, still in trial."""
     user = _build_user(UserRole.salesperson, trial_delta=timedelta(days=5))
-    assert (
-        await require_active_trial_or_subscription(user=user, session=db_session)
-    ) is user
+    assert (await require_active_trial_or_subscription(user=user, session=db_session)) is user
 
 
 async def test_trial_gate_rejects_expired_trial_without_subscription(
@@ -134,9 +132,7 @@ async def test_trial_gate_admits_active_subscription(db_session: AsyncSession) -
     )
     user.organization = org
 
-    assert (
-        await require_active_trial_or_subscription(user=user, session=db_session)
-    ) is user
+    assert (await require_active_trial_or_subscription(user=user, session=db_session)) is user
 
 
 async def test_trial_gate_admits_comp_org(db_session: AsyncSession) -> None:
@@ -171,9 +167,7 @@ async def test_trial_gate_admits_comp_org(db_session: AsyncSession) -> None:
         is_active=True,
     )
     user.organization = org
-    assert (
-        await require_active_trial_or_subscription(user=user, session=db_session)
-    ) is user
+    assert (await require_active_trial_or_subscription(user=user, session=db_session)) is user
 
 
 async def test_leaderboard_visibility_admits_admin_and_manager() -> None:

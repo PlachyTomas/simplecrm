@@ -115,9 +115,7 @@ class _DailyRunner:
     async def _loop(self) -> None:
         while True:
             try:
-                wait_s = _seconds_until_next_run(
-                    now=datetime.now(tz=UTC), hour=self.hour
-                )
+                wait_s = _seconds_until_next_run(now=datetime.now(tz=UTC), hour=self.hour)
                 await asyncio.sleep(wait_s)
                 await self.job()
             except asyncio.CancelledError:
@@ -255,9 +253,7 @@ class _PeriodicRunner:
     for the recurring-charge job which needs hourly granularity.
     """
 
-    def __init__(
-        self, *, interval_seconds: float, job: Callable[[], Awaitable[object]]
-    ):
+    def __init__(self, *, interval_seconds: float, job: Callable[[], Awaitable[object]]):
         self.interval_seconds = interval_seconds
         self.job = job
         self._task: asyncio.Task[None] | None = None
@@ -276,9 +272,7 @@ class _PeriodicRunner:
     def start(self) -> None:
         if self._task is not None:
             return
-        self._task = asyncio.create_task(
-            self._loop(), name="simplecrm.scheduler.periodic"
-        )
+        self._task = asyncio.create_task(self._loop(), name="simplecrm.scheduler.periodic")
 
     async def stop(self) -> None:
         if self._task is None:

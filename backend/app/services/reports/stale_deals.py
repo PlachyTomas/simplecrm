@@ -9,8 +9,7 @@ Up to 20 rows. Sorted descending by days-since-last-stage-change.
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta, timezone
-from typing import cast
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -37,8 +36,8 @@ async def compute_stale_deals(
     session: AsyncSession,
     *,
     organization_id: UUID,
-    from_: date,  # noqa: ARG001 — list widget ignores the global window
-    to: date,  # noqa: ARG001 — list widget ignores the global window
+    from_: date,
+    to: date,
     team_id: UUID | None,
     owner_user_id: UUID | None,
     config: StaleDealsConfig,
@@ -48,7 +47,7 @@ async def compute_stale_deals(
         raise RuntimeError(f"organization {organization_id} not found")
 
     threshold = config.threshold
-    cutoff = datetime.now(tz=timezone.utc) - timedelta(days=threshold)
+    cutoff = datetime.now(tz=UTC) - timedelta(days=threshold)
 
     # Per-deal "last stage change" timestamp: max(Activity.created_at)
     # where activity_type='stage_change' for that deal.
@@ -101,7 +100,7 @@ async def compute_stale_deals(
     rows = (await session.execute(stmt)).all()
 
     items: list[StaleDealItem] = []
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     for deal, stage, company, owner, last_change_at in rows:
         # Days since the most recent signal (last_change_at if present,
         # else updated_at).

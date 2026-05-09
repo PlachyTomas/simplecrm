@@ -25,10 +25,9 @@ export function useCurrentSubscription() {
     gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       try {
-        return await apiFetch<SubscriptionOut>(
-          "/api/v1/organizations/current/subscription",
-          { token: accessToken },
-        );
+        return await apiFetch<SubscriptionOut>("/api/v1/organizations/current/subscription", {
+          token: accessToken,
+        });
       } catch (err) {
         if (err instanceof ApiError) return null;
         throw err;

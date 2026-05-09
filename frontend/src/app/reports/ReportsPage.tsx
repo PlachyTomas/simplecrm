@@ -52,7 +52,7 @@ export function ReportsPage() {
   // The working copy is whatever's currently displayed: in view mode
   // the server config; in edit mode the in-memory draft (so unsaved
   // moves don't blow away when the query refetches).
-  const working = editMode ? draft : config.data ?? null;
+  const working = editMode ? draft : (config.data ?? null);
 
   // Initialize the draft once when entering edit mode.
   useEffect(() => {
@@ -170,7 +170,7 @@ export function ReportsPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={save.isPending}
-                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-accent bg-accent px-3 text-sm font-medium text-text-on-accent hover:bg-accent-strong disabled:opacity-50"
+                className="hover:bg-accent-strong inline-flex h-9 items-center gap-1.5 rounded-md border border-accent bg-accent px-3 text-sm font-medium text-text-on-accent disabled:opacity-50"
               >
                 <Save size={14} strokeWidth={1.75} aria-hidden /> Uložit
               </button>
@@ -237,10 +237,7 @@ function DashboardSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
       {[0, 1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className="h-[160px] rounded-lg border border-border bg-surface p-5"
-        >
+        <div key={i} className="h-[160px] rounded-lg border border-border bg-surface p-5">
           <WidgetSkeleton />
         </div>
       ))}
@@ -258,11 +255,10 @@ function EmptyDashboard({ onEdit }: { onEdit: () => void }) {
       <button
         type="button"
         onClick={onEdit}
-        className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-md border border-accent bg-accent px-3 text-sm font-medium text-text-on-accent hover:bg-accent-strong"
+        className="hover:bg-accent-strong mt-4 inline-flex h-9 items-center gap-1.5 rounded-md border border-accent bg-accent px-3 text-sm font-medium text-text-on-accent"
       >
         <Pencil size={14} strokeWidth={1.75} aria-hidden /> Upravit rozložení
       </button>
     </div>
   );
 }
-

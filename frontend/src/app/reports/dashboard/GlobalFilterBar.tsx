@@ -120,16 +120,12 @@ export function GlobalFilterBar({ value, onChange }: GlobalFilterBarProps) {
 
   return (
     <div
-      className="sticky top-0 z-10 -mx-4 border-b border-border bg-bg/90 px-4 py-3 backdrop-blur md:-mx-8 md:px-8"
+      className="bg-bg/90 sticky top-0 z-10 -mx-4 border-b border-border px-4 py-3 backdrop-blur md:-mx-8 md:px-8"
       role="toolbar"
       aria-label="Filtry reportů"
     >
       <div className="flex flex-wrap items-center gap-3">
-        <div
-          role="radiogroup"
-          aria-label="Časové období"
-          className="flex flex-wrap gap-1"
-        >
+        <div role="radiogroup" aria-label="Časové období" className="flex flex-wrap gap-1">
           {presets.map((preset) => {
             const active = value.dateRange?.preset === preset;
             return (
@@ -152,10 +148,7 @@ export function GlobalFilterBar({ value, onChange }: GlobalFilterBarProps) {
           })}
         </div>
         {resolvedRange ? (
-          <span
-            className="text-xs tabular-nums text-text-tertiary"
-            aria-label="Vybrané období"
-          >
+          <span className="text-xs tabular-nums text-text-tertiary" aria-label="Vybrané období">
             {resolvedRange}
           </span>
         ) : null}

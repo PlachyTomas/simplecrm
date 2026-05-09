@@ -46,9 +46,7 @@ export function EmptyState({
         aria-hidden
         className={cn(
           "inline-flex h-12 w-12 items-center justify-center rounded-md",
-          filtered
-            ? "bg-surface-overlay text-text-tertiary"
-            : "bg-accent-subtle text-accent",
+          filtered ? "bg-surface-overlay text-text-tertiary" : "bg-accent-subtle text-accent",
         )}
       >
         <Icon size={24} strokeWidth={1.75} />
@@ -85,8 +83,7 @@ function PrimaryAction({ action }: { action: ActionConfig }) {
 }
 
 function SecondaryAction({ action }: { action: ActionConfig }) {
-  const className =
-    "text-sm font-medium text-accent underline-offset-4 hover:underline";
+  const className = "text-sm font-medium text-accent underline-offset-4 hover:underline";
   if (action.href) {
     return (
       <a href={action.href} className={className}>

@@ -20,12 +20,7 @@ interface SparklineProps {
  * Renders nothing when there are < 2 points (a single dot reads as
  * noise next to a big number).
  */
-export function Sparkline({
-  buckets,
-  width = 80,
-  height = 24,
-  ariaLabel,
-}: SparklineProps) {
+export function Sparkline({ buckets, width = 80, height = 24, ariaLabel }: SparklineProps) {
   const gradId = useId();
   if (buckets.length < 2) {
     return <div className="h-6 w-20" aria-hidden />;
@@ -60,16 +55,17 @@ export function Sparkline({
         <linearGradient id={gradId} x1="0" x2="0" y1="0" y2="1">
           <stop
             offset="0%"
-            stopColor={trendingUp ? "rgb(var(--color-success-rgb, 34 197 94))" : "rgb(var(--color-danger-rgb, 239 68 68))"}
+            stopColor={
+              trendingUp
+                ? "rgb(var(--color-success-rgb, 34 197 94))"
+                : "rgb(var(--color-danger-rgb, 239 68 68))"
+            }
             stopOpacity="0.3"
           />
           <stop offset="100%" stopColor="transparent" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <polygon
-        points={`0,${height} ${points} ${width},${height}`}
-        fill={`url(#${gradId})`}
-      />
+      <polygon points={`0,${height} ${points} ${width},${height}`} fill={`url(#${gradId})`} />
       <polyline
         points={points}
         fill="none"

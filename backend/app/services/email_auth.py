@@ -114,11 +114,7 @@ async def _get_user_by_email(session: AsyncSession, email: str) -> User | None:
 
 
 async def _get_user_by_id(session: AsyncSession, user_id: uuid.UUID) -> User | None:
-    stmt = (
-        select(User)
-        .where(User.id == user_id)
-        .options(joinedload(User.organization))
-    )
+    stmt = select(User).where(User.id == user_id).options(joinedload(User.organization))
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
@@ -134,9 +130,7 @@ async def _latest_token(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
-async def _enforce_cooldown(
-    session: AsyncSession, *, user_id: uuid.UUID, purpose: str
-) -> None:
+async def _enforce_cooldown(session: AsyncSession, *, user_id: uuid.UUID, purpose: str) -> None:
     """60-second debounce on resend-email actions.
 
     Raises `TokenCooldownError(retry_after_seconds=...)` if the most recent
@@ -313,9 +307,7 @@ async def resend_verification(
 # --------------------------------------------------------------------------- #
 
 
-async def check_verification_token(
-    session: AsyncSession, *, signed_token: str
-) -> TokenCheckResult:
+async def check_verification_token(session: AsyncSession, *, signed_token: str) -> TokenCheckResult:
     """Inspect a verification token without consuming it.
 
     Powers VerifyEmailPage's first call — the page uses `requires_password`
@@ -379,9 +371,7 @@ async def consume_verification_token(
 # --------------------------------------------------------------------------- #
 
 
-async def authenticate_email_user(
-    session: AsyncSession, *, email: str, password: str
-) -> User:
+async def authenticate_email_user(session: AsyncSession, *, email: str, password: str) -> User:
     """Validate an email/password pair and return the user.
 
     Raises:

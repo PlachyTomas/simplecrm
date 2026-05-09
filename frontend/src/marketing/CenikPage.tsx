@@ -32,15 +32,7 @@ interface PlanCardProps {
   caption?: React.ReactNode;
 }
 
-function PlanCard({
-  eyebrow,
-  title,
-  bullets,
-  cta,
-  highlighted,
-  price,
-  caption,
-}: PlanCardProps) {
+function PlanCard({ eyebrow, title, bullets, cta, highlighted, price, caption }: PlanCardProps) {
   const ctaClass = highlighted
     ? "mt-8 inline-flex h-11 w-full items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
     : "mt-8 inline-flex h-11 w-full items-center justify-center rounded-md border border-border bg-surface-overlay px-5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-elevated";
@@ -48,9 +40,7 @@ function PlanCard({
     <article
       className={cn(
         "relative flex flex-col rounded-xl bg-surface p-6 md:p-8",
-        highlighted
-          ? "border-2 border-accent shadow-md"
-          : "border border-border shadow-sm",
+        highlighted ? "border-2 border-accent shadow-md" : "border border-border shadow-sm",
       )}
     >
       {highlighted ? (
@@ -61,9 +51,7 @@ function PlanCard({
           Doporučujeme · Ušetříte 16 %
         </span>
       ) : null}
-      <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
-        {eyebrow}
-      </p>
+      <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">{eyebrow}</p>
       <h2 className="mt-2 text-lg font-semibold text-text-primary">{title}</h2>
       <div className="mt-6">{price}</div>
       {caption ? <div className="mt-2">{caption}</div> : null}
@@ -95,11 +83,7 @@ function PlanCard({
   );
 }
 
-const MONTHLY_BULLETS = [
-  "Bez závazků",
-  "Zrušení kdykoliv",
-  "Plná funkcionalita",
-] as const;
+const MONTHLY_BULLETS = ["Bez závazků", "Zrušení kdykoliv", "Plná funkcionalita"] as const;
 
 const ANNUAL_BULLETS = [
   "Vše z měsíčního plánu",
@@ -117,15 +101,13 @@ const ENTERPRISE_BULLETS = [
 function PricingHeader() {
   return (
     <header className="mx-auto max-w-2xl text-center">
-      <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
-        Ceník
-      </p>
+      <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">Ceník</p>
       <h1 className="mt-2 text-4xl font-bold leading-tight md:text-5xl">
         Cena za to, co nabízíme.
       </h1>
       <p className="mt-4 text-base text-text-secondary md:text-lg">
-        Stejná cena bez ohledu na velikost týmu. Bez závazků, bez zbytečností.
-        Vyzkoušejte 30 dní zdarma a rozhodněte se pak.
+        Stejná cena bez ohledu na velikost týmu. Bez závazků, bez zbytečností. Vyzkoušejte 30 dní
+        zdarma a rozhodněte se pak.
       </p>
     </header>
   );
@@ -159,14 +141,7 @@ export function CenikPage() {
             <PlanCard
               eyebrow="Měsíčně"
               title="Měsíční"
-              price={
-                <PriceDisplay
-                  baseMinor={9900}
-                  interval="monthly"
-                  size="xl"
-                  hideVatLine
-                />
-              }
+              price={<PriceDisplay baseMinor={9900} interval="monthly" size="xl" hideVatLine />}
               bullets={MONTHLY_BULLETS}
               cta={{ label: "Vyzkoušet 30 dní zdarma", href: "/login" }}
             />
@@ -175,14 +150,7 @@ export function CenikPage() {
               eyebrow="Ročně"
               title="Roční"
               highlighted
-              price={
-                <PriceDisplay
-                  baseMinor={99900}
-                  interval="annual"
-                  size="xl"
-                  hideVatLine
-                />
-              }
+              price={<PriceDisplay baseMinor={99900} interval="annual" size="xl" hideVatLine />}
               caption={
                 <p className="text-sm font-medium text-success">
                   Ušetříte 189 Kč na uživatele · 2 měsíce zdarma

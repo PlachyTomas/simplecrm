@@ -218,7 +218,7 @@ function StageColumn({
         ref={setNodeRef}
         className={cn(
           "flex flex-1 gap-2 p-2",
-          "max-md:flex-row max-md:snap-x max-md:snap-mandatory max-md:overflow-x-auto",
+          "max-md:snap-x max-md:snap-mandatory max-md:flex-row max-md:overflow-x-auto",
           "md:min-h-0 md:flex-col md:overflow-y-auto",
         )}
       >
@@ -231,11 +231,7 @@ function StageColumn({
               deal={deal}
               locale={locale}
               dragging={draggingId === deal.id}
-              onWin={
-                stage.stage_type === "won"
-                  ? undefined
-                  : (anchor) => onWinDeal(deal, anchor)
-              }
+              onWin={stage.stage_type === "won" ? undefined : (anchor) => onWinDeal(deal, anchor)}
               onLose={stage.stage_type === "won" ? undefined : () => onLoseDeal(deal)}
               winning={winningDealId === deal.id}
               losing={losingDealId === deal.id}
@@ -357,11 +353,7 @@ export function PipelinePage() {
     return board.stages.map((stage) => {
       const deals = stage.deals.filter((deal) => {
         if (ownerFilter === "mine" && deal.owner_user_id !== user?.id) return false;
-        if (
-          ownerFilter !== "all" &&
-          ownerFilter !== "mine" &&
-          deal.owner_user_id !== ownerFilter
-        ) {
+        if (ownerFilter !== "all" && ownerFilter !== "mine" && deal.owner_user_id !== ownerFilter) {
           return false;
         }
         if (normalized && !deal.name.toLowerCase().includes(normalized)) return false;
@@ -586,10 +578,7 @@ export function PipelinePage() {
             ))}
           </div>
           {!hasFilteredDeals ? (
-            <p
-              className="px-4 pb-4 text-center text-sm text-text-tertiary md:px-8"
-              role="status"
-            >
+            <p className="px-4 pb-4 text-center text-sm text-text-tertiary md:px-8" role="status">
               Žádné obchody neodpovídají filtru.
             </p>
           ) : null}
@@ -625,9 +614,7 @@ export function PipelinePage() {
         initialStageId={addDealStageId}
       />
 
-      {winToast ? (
-        <WinToast message={winToast} onDismiss={() => setWinToast(null)} />
-      ) : null}
+      {winToast ? <WinToast message={winToast} onDismiss={() => setWinToast(null)} /> : null}
 
       <MarkLostDialog
         open={losingDealTarget !== null}
@@ -708,8 +695,8 @@ function DeleteConfirmDialog({
           Smazat obchod?
         </h2>
         <p className="mt-2 text-sm text-text-secondary">
-          Smaže obchod <strong className="text-text-primary">{deal.name}</strong> ({formattedValue}
-          ) natrvalo. Akci nelze vrátit zpět.
+          Smaže obchod <strong className="text-text-primary">{deal.name}</strong> ({formattedValue})
+          natrvalo. Akci nelze vrátit zpět.
         </p>
         <div className="mt-6 flex items-center justify-end gap-3">
           <button

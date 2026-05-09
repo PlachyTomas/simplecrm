@@ -128,9 +128,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id", name=op.f("pk_invitations")),
         sa.UniqueConstraint("token_jti", name=op.f("uq_invitations_token_jti")),
     )
-    op.create_index(
-        "ix_invitations_organization_id", "invitations", ["organization_id"]
-    )
+    op.create_index("ix_invitations_organization_id", "invitations", ["organization_id"])
     op.create_index(
         "ix_invitations_email_lower",
         "invitations",

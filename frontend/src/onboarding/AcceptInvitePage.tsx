@@ -56,9 +56,7 @@ export function AcceptInvitePage() {
     enabled: !!token,
     retry: false,
     queryFn: () =>
-      apiFetch<InvitationPreview>(
-        `/api/v1/onboarding/invite/${encodeURIComponent(token)}`,
-      ),
+      apiFetch<InvitationPreview>(`/api/v1/onboarding/invite/${encodeURIComponent(token)}`),
   });
 
   async function handleEmailAccept(e: FormEvent<HTMLFormElement>) {
@@ -128,10 +126,7 @@ export function AcceptInvitePage() {
               {preview.data.team_name ? (
                 <>
                   {" "}
-                  do týmu{" "}
-                  <strong className="text-text-primary">
-                    {preview.data.team_name}
-                  </strong>
+                  do týmu <strong className="text-text-primary">{preview.data.team_name}</strong>
                 </>
               ) : null}
               .
@@ -145,16 +140,11 @@ export function AcceptInvitePage() {
                 role="alert"
                 className="mt-4 rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger"
               >
-                {CALLBACK_ERROR_MESSAGES[callbackError] ??
-                  "Přijetí pozvánky se nezdařilo."}
+                {CALLBACK_ERROR_MESSAGES[callbackError] ?? "Přijetí pozvánky se nezdařilo."}
               </p>
             ) : null}
 
-            <form
-              onSubmit={handleEmailAccept}
-              className="mt-6 space-y-4 text-left"
-              noValidate
-            >
+            <form onSubmit={handleEmailAccept} className="mt-6 space-y-4 text-left" noValidate>
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-text-secondary">
                   Vaše jméno
@@ -169,9 +159,7 @@ export function AcceptInvitePage() {
                 />
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-text-secondary">
-                  Heslo
-                </span>
+                <span className="mb-1 block text-sm font-medium text-text-secondary">Heslo</span>
                 <input
                   type="password"
                   autoComplete="new-password"
@@ -204,15 +192,13 @@ export function AcceptInvitePage() {
 
             <div className="my-6 flex items-center gap-3">
               <div className="h-px flex-1 bg-border" />
-              <span className="text-xs uppercase tracking-wide text-text-tertiary">
-                nebo
-              </span>
+              <span className="text-xs uppercase tracking-wide text-text-tertiary">nebo</span>
               <div className="h-px flex-1 bg-border" />
             </div>
 
             <a
               href={`${API_BASE_URL}/api/v1/auth/google/login?invite=${encodeURIComponent(token)}`}
-              className="inline-flex h-10 w-full items-center justify-center rounded-md border border-border bg-bg px-5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-bg-subtle"
+              className="hover:bg-bg-subtle inline-flex h-10 w-full items-center justify-center rounded-md border border-border bg-bg px-5 text-sm font-medium text-text-primary transition-colors duration-fast"
             >
               Přijmout přes Google
             </a>
@@ -239,8 +225,7 @@ function InviteError({ err }: { err: ApiError }) {
       <h1 className="text-2xl font-semibold">Pozvánka není platná</h1>
       <p className="mt-3 text-sm text-text-secondary">{message}</p>
       <p className="mt-1 text-xs text-text-tertiary">
-        Pokud si myslíte, že jde o chybu, požádejte administrátora o nový
-        odkaz.
+        Pokud si myslíte, že jde o chybu, požádejte administrátora o nový odkaz.
       </p>
     </>
   );

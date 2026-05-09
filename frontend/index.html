@@ -35,8 +35,7 @@
           var pref = raw === "light" || raw === "dark" ? raw : "system";
           var dark =
             pref === "dark" ||
-            (pref === "system" &&
-              window.matchMedia("(prefers-color-scheme: dark)").matches);
+            (pref === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
           var theme = dark ? "dark" : "light";
           var root = document.documentElement;
           root.setAttribute("data-theme", theme);

@@ -71,11 +71,7 @@ export function resolvePreset(filter: DateRangeFilter): {
       return { from: isoDate(from), to: isoDate(today) };
     }
     case "last_12_months": {
-      const from = new Date(
-        today.getFullYear() - 1,
-        today.getMonth(),
-        today.getDate() + 1,
-      );
+      const from = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate() + 1);
       return { from: isoDate(from), to: isoDate(today) };
     }
     case "last_30_days":

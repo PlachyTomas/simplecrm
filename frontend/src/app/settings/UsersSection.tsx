@@ -74,9 +74,7 @@ function UserRow({
         ) : (
           <select
             value={u.team_id ?? ""}
-            onChange={(e) =>
-              void onTeamChange(e.target.value === "" ? null : e.target.value)
-            }
+            onChange={(e) => void onTeamChange(e.target.value === "" ? null : e.target.value)}
             className="rounded-md border border-border bg-surface px-2 py-1 text-sm"
           >
             <option value="">— bez týmu —</option>
@@ -119,7 +117,7 @@ function UserRow({
           {scheduledDeactivationDate ? (
             <span
               data-testid={`scheduled-deactivation-${u.id}`}
-              className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning-subtle px-2 py-0.5 text-[11px] font-medium text-warning"
+              className="border-warning/40 inline-flex items-center gap-1 rounded-full border bg-warning-subtle px-2 py-0.5 text-[11px] font-medium text-warning"
               title={`Tento uživatel ztratí přístup ${scheduledDeactivationDate}.`}
             >
               <span>Deaktivace naplánovaná na {scheduledDeactivationDate}</span>
@@ -127,7 +125,7 @@ function UserRow({
                 type="button"
                 onClick={onCancelScheduledDeactivation}
                 aria-label="Zrušit naplánovanou deaktivaci"
-                className="-mr-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full hover:bg-warning/20"
+                className="hover:bg-warning/20 -mr-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full"
               >
                 <X size={10} strokeWidth={2.5} aria-hidden />
               </button>
@@ -171,19 +169,14 @@ export function UsersSection() {
 
   function cancelQueueWithConfirm() {
     if (!sub) return;
-    const ok = window.confirm(
-      "Tím zrušíte celou naplánovanou změnu počtu uživatelů. Pokračovat?",
-    );
+    const ok = window.confirm("Tím zrušíte celou naplánovanou změnu počtu uživatelů. Pokračovat?");
     if (!ok) return;
     setError(null);
-    void apiFetch(
-      "/api/v1/organizations/current/subscription/seat-count",
-      {
-        method: "PUT",
-        token: accessToken,
-        body: { seat_count: sub.seat_count, deactivate_user_ids: [] },
-      },
-    )
+    void apiFetch("/api/v1/organizations/current/subscription/seat-count", {
+      method: "PUT",
+      token: accessToken,
+      body: { seat_count: sub.seat_count, deactivate_user_ids: [] },
+    })
       .then(() => {
         void qc.invalidateQueries({ queryKey: ["subscription", "current"] });
         void qc.invalidateQueries({ queryKey: ["billing-summary", "current"] });
@@ -239,9 +232,7 @@ export function UsersSection() {
               u={u}
               teams={teamOptions}
               managedTeams={managedTeamsByUserId.get(u.id) ?? []}
-              scheduledDeactivationDate={
-                queuedSet.has(u.id) ? scheduledDate : null
-              }
+              scheduledDeactivationDate={queuedSet.has(u.id) ? scheduledDate : null}
               onRoleChange={(role) => mutate(u.id, { role })}
               onTeamChange={(teamId) => mutate(u.id, { team_id: teamId })}
               onCanInviteChange={(can_invite) => mutate(u.id, { can_invite })}

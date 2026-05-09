@@ -219,9 +219,7 @@ describe("App routing", () => {
     );
     renderAt("/app", { token: "fake-token" });
     await waitFor(() =>
-      expect(
-        screen.getByRole("heading", { name: /vytvořte si organizaci/i }),
-      ).toBeInTheDocument(),
+      expect(screen.getByRole("heading", { name: /vytvořte si organizaci/i })).toBeInTheDocument(),
     );
   });
 

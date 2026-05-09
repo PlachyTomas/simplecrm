@@ -6,7 +6,7 @@ per-owner counts so the frontend can render the horizontal bar.
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -40,9 +40,7 @@ async def _count_in_window(
     if owner_user_id is not None:
         stmt = stmt.where(Company.owner_user_id == owner_user_id)
     if team_id is not None:
-        stmt = stmt.join(User, User.id == Company.owner_user_id).where(
-            User.team_id == team_id
-        )
+        stmt = stmt.join(User, User.id == Company.owner_user_id).where(User.team_id == team_id)
     return int((await session.execute(stmt)).scalar_one() or 0)
 
 
@@ -93,8 +91,8 @@ async def compute_new_companies(
     owner_user_id: UUID | None,
     config: NewCompaniesConfig,
 ) -> NewCompaniesResponse:
-    from_dt = datetime.combine(from_, time.min, tzinfo=timezone.utc)
-    to_dt = datetime.combine(to, time.max, tzinfo=timezone.utc)
+    from_dt = datetime.combine(from_, time.min, tzinfo=UTC)
+    to_dt = datetime.combine(to, time.max, tzinfo=UTC)
     cur = await _count_in_window(
         session,
         organization_id=organization_id,
@@ -104,8 +102,8 @@ async def compute_new_companies(
         owner_user_id=owner_user_id,
     )
     prev = compute_previous_period(from_, to)
-    prev_from_dt = datetime.combine(prev.from_, time.min, tzinfo=timezone.utc)
-    prev_to_dt = datetime.combine(prev.to, time.max, tzinfo=timezone.utc)
+    prev_from_dt = datetime.combine(prev.from_, time.min, tzinfo=UTC)
+    prev_to_dt = datetime.combine(prev.to, time.max, tzinfo=UTC)
     prev_count = await _count_in_window(
         session,
         organization_id=organization_id,

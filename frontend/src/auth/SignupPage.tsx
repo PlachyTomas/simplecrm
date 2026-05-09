@@ -36,8 +36,7 @@ export function SignupPage() {
         if (code === "email_already_registered") {
           setPhase({
             kind: "error",
-            message:
-              "Tento e-mail už je u nás registrovaný. Přihlaste se, nebo si obnovte heslo.",
+            message: "Tento e-mail už je u nás registrovaný. Přihlaste se, nebo si obnovte heslo.",
           });
         } else if (code === "weak_password") {
           setPhase({
@@ -106,12 +105,12 @@ export function SignupPage() {
             <button
               type="button"
               onClick={handleResend}
-              className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-bg px-5 text-sm font-medium text-text-primary hover:bg-bg-subtle"
+              className="hover:bg-bg-subtle inline-flex h-10 items-center justify-center rounded-md border border-border bg-bg px-5 text-sm font-medium text-text-primary"
             >
               Odeslat e-mail znovu
             </button>
             {resendInfo ? (
-              <p className="rounded-md bg-bg-subtle px-3 py-2 text-sm text-text-secondary">
+              <p className="bg-bg-subtle rounded-md px-3 py-2 text-sm text-text-secondary">
                 {resendInfo}
               </p>
             ) : null}
@@ -188,7 +187,7 @@ export function SignupPage() {
 
             <a
               href={`${API_BASE_URL}${GOOGLE_LOGIN_PATH}`}
-              className="inline-flex h-10 w-full items-center justify-center rounded-md border border-border bg-bg px-5 text-sm font-medium text-text-primary hover:bg-bg-subtle"
+              className="hover:bg-bg-subtle inline-flex h-10 w-full items-center justify-center rounded-md border border-border bg-bg px-5 text-sm font-medium text-text-primary"
             >
               Zaregistrovat se přes Google
             </a>

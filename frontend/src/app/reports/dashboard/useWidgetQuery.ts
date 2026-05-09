@@ -4,10 +4,7 @@ import { useAuth } from "@/auth/useAuth";
 import { apiFetch } from "@/lib/api";
 
 import { resolvePreset } from "@/app/reports/dashboard/dateRange";
-import type {
-  GlobalFilters,
-  WidgetType,
-} from "@/app/reports/dashboard/types";
+import type { GlobalFilters, WidgetType } from "@/app/reports/dashboard/types";
 
 /**
  * Standardized widget data hook. Per REPORTS_TASK §6.5 the queryKey
@@ -41,17 +38,15 @@ export function useWidgetQuery<TResponse>(opts: {
       params.set("from", range.from);
       params.set("to", range.to);
       if (globalFilters.teamId) params.set("team_id", globalFilters.teamId);
-      if (globalFilters.ownerUserId)
-        params.set("owner_user_id", globalFilters.ownerUserId);
+      if (globalFilters.ownerUserId) params.set("owner_user_id", globalFilters.ownerUserId);
       for (const [k, v] of Object.entries(config)) {
         if (k === "type") continue;
         if (v === null || v === undefined) continue;
         params.set(k, String(v));
       }
-      return apiFetch<TResponse>(
-        `/api/v1/reports/widgets/${endpoint}?${params.toString()}`,
-        { token: accessToken },
-      );
+      return apiFetch<TResponse>(`/api/v1/reports/widgets/${endpoint}?${params.toString()}`, {
+        token: accessToken,
+      });
     },
   });
 }

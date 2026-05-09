@@ -17,8 +17,7 @@ export function usePipeline() {
     queryKey: PIPELINE_QUERY_KEY,
     enabled: !!accessToken,
     staleTime: 30_000,
-    queryFn: () =>
-      apiFetch<PipelineSummary>("/api/v1/pipelines/default", { token: accessToken }),
+    queryFn: () => apiFetch<PipelineSummary>("/api/v1/pipelines/default", { token: accessToken }),
   });
 }
 

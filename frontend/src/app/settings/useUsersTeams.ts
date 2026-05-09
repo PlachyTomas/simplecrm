@@ -22,8 +22,7 @@ export function useOrgUsers() {
     queryKey: USERS_KEY,
     enabled: !!accessToken,
     staleTime: 15_000,
-    queryFn: () =>
-      apiFetch<PageUsers>("/api/v1/users?limit=100", { token: accessToken }),
+    queryFn: () => apiFetch<PageUsers>("/api/v1/users?limit=100", { token: accessToken }),
   });
 }
 
@@ -33,8 +32,7 @@ export function useOrgTeams() {
     queryKey: TEAMS_KEY,
     enabled: !!accessToken,
     staleTime: 15_000,
-    queryFn: () =>
-      apiFetch<PageTeams>("/api/v1/teams?limit=100", { token: accessToken }),
+    queryFn: () => apiFetch<PageTeams>("/api/v1/teams?limit=100", { token: accessToken }),
   });
 }
 

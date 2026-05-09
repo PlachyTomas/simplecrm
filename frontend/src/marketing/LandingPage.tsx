@@ -183,7 +183,10 @@ function MobileDrawer({
       className="fixed inset-0 z-50 flex flex-col bg-bg md:hidden"
     >
       <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-4 py-4">
-        <p id="landing-mobile-drawer-title" className="text-sm font-semibold uppercase tracking-wider text-text-tertiary">
+        <p
+          id="landing-mobile-drawer-title"
+          className="text-sm font-semibold uppercase tracking-wider text-text-tertiary"
+        >
           Menu
         </p>
         <button
@@ -256,9 +259,7 @@ function Hero() {
         </p>
         <h1 className="mx-auto max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
           CRM pro{" "}
-          <span
-            className="bg-[linear-gradient(transparent_82%,var(--color-brand-accent)_82%,var(--color-brand-accent)_94%,transparent_94%)] bg-no-repeat"
-          >
+          <span className="bg-[linear-gradient(transparent_82%,var(--color-brand-accent)_82%,var(--color-brand-accent)_94%,transparent_94%)] bg-no-repeat">
             prodej
           </span>
           . Nic víc, nic míň.

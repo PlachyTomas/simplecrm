@@ -52,8 +52,7 @@ export function AppShell() {
   // Hide the trial badge entirely for orgs we positively know are not in
   // trial (paid / comp / canceled). Loading or unknown → keep showing —
   // we never gate UI on a guess.
-  const showTrialBadge =
-    !subscription || subscription.access_status === "trialing";
+  const showTrialBadge = !subscription || subscription.access_status === "trialing";
   const showUpgradeCta = showTrialBadge && daysRemaining <= 7;
 
   return (
@@ -100,8 +99,7 @@ export function AppShell() {
                       <span className="hidden sm:inline">
                         Zkušební doba do <time>{trialEndsAt}</time> ·{" "}
                       </span>
-                      {daysRemaining}{" "}
-                      {csNoun(daysRemaining, "den")}{" "}
+                      {daysRemaining} {csNoun(daysRemaining, "den")}{" "}
                       {daysRemaining >= 2 && daysRemaining <= 4 ? "zbývají" : "zbývá"}
                     </span>
                     {showUpgradeCta ? (

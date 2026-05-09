@@ -11,21 +11,10 @@
 import { useNavigate } from "react-router-dom";
 
 import { formatMoney, formatNumber } from "@/app/reports/dashboard/format";
-import {
-  WidgetError,
-  WidgetFrame,
-  WidgetSkeleton,
-} from "@/app/reports/dashboard/WidgetFrame";
-import {
-  type GlobalFilters,
-  type WidgetEntry,
-  WIDGET_LABEL,
-} from "@/app/reports/dashboard/types";
+import { WidgetError, WidgetFrame, WidgetSkeleton } from "@/app/reports/dashboard/WidgetFrame";
+import { type GlobalFilters, type WidgetEntry, WIDGET_LABEL } from "@/app/reports/dashboard/types";
 import { useWidgetQuery } from "@/app/reports/dashboard/useWidgetQuery";
-import {
-  type ListColumn,
-  ListWidget,
-} from "@/app/reports/dashboard/widgets/ListWidget";
+import { type ListColumn, ListWidget } from "@/app/reports/dashboard/widgets/ListWidget";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { cn } from "@/lib/utils";
 import type { components } from "@/types/api.generated";
@@ -45,9 +34,7 @@ function narrowConfig<T extends Config["type"]>(
   expected: T,
 ): Extract<Config, { type: T }> {
   if (config.type !== expected) {
-    throw new Error(
-      `widget config type mismatch: expected ${expected}, got ${config.type}`,
-    );
+    throw new Error(`widget config type mismatch: expected ${expected}, got ${config.type}`);
   }
   return config as Extract<Config, { type: T }>;
 }
@@ -88,9 +75,7 @@ export function StaleDealsWidget(props: BaseWidgetProps) {
   const columns: ListColumn<Row>[] = [
     {
       header: "Obchod",
-      render: (r) => (
-        <span className="font-medium text-text-primary">{r.deal_name}</span>
-      ),
+      render: (r) => <span className="font-medium text-text-primary">{r.deal_name}</span>,
     },
     {
       header: "Firma",
@@ -113,9 +98,7 @@ export function StaleDealsWidget(props: BaseWidgetProps) {
     },
     {
       header: "Obchodník",
-      render: (r) => (
-        <span className="text-text-tertiary">{r.owner_name}</span>
-      ),
+      render: (r) => <span className="text-text-tertiary">{r.owner_name}</span>,
       nowrap: true,
     },
     {
@@ -127,9 +110,7 @@ export function StaleDealsWidget(props: BaseWidgetProps) {
           className={cn(
             "inline-flex tabular-nums",
             r.days_since_change >= 90 && "font-medium text-danger",
-            r.days_since_change >= 60 &&
-              r.days_since_change < 90 &&
-              "font-medium text-warning",
+            r.days_since_change >= 60 && r.days_since_change < 90 && "font-medium text-warning",
           )}
         >
           {formatNumber(r.days_since_change, locale)}
@@ -178,15 +159,11 @@ export function CompaniesAtRiskWidget(props: BaseWidgetProps) {
   const columns: ListColumn<Row>[] = [
     {
       header: "Firma",
-      render: (r) => (
-        <span className="font-medium text-text-primary">{r.company_name}</span>
-      ),
+      render: (r) => <span className="font-medium text-text-primary">{r.company_name}</span>,
     },
     {
       header: "Obchodník",
-      render: (r) => (
-        <span className="text-text-tertiary">{r.owner_name}</span>
-      ),
+      render: (r) => <span className="text-text-tertiary">{r.owner_name}</span>,
       nowrap: true,
     },
     {
@@ -196,14 +173,10 @@ export function CompaniesAtRiskWidget(props: BaseWidgetProps) {
       render: (r) => (
         <span
           className={cn(
-            "inline-flex tabular-nums font-medium",
+            "inline-flex font-medium tabular-nums",
             r.days_until_freeing <= 7 && "text-danger",
-            r.days_until_freeing > 7 &&
-              r.days_until_freeing <= 14 &&
-              "text-warning",
-            r.days_until_freeing > 14 &&
-              r.days_until_freeing <= 30 &&
-              "text-text-secondary",
+            r.days_until_freeing > 7 && r.days_until_freeing <= 14 && "text-warning",
+            r.days_until_freeing > 14 && r.days_until_freeing <= 30 && "text-text-secondary",
             r.days_until_freeing > 30 && "text-text-tertiary",
           )}
         >
@@ -215,11 +188,7 @@ export function CompaniesAtRiskWidget(props: BaseWidgetProps) {
       header: "Poslední aktivita",
       align: "right",
       nowrap: true,
-      render: (r) => (
-        <span className="text-text-tertiary">
-          {formatCsDate(r.last_activity_at)}
-        </span>
-      ),
+      render: (r) => <span className="text-text-tertiary">{formatCsDate(r.last_activity_at)}</span>,
     },
   ];
 

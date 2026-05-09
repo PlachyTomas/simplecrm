@@ -75,9 +75,7 @@ export function ListWidget<T>({
               onClick={onRowClick ? () => onRowClick(row) : undefined}
               className={cn(
                 "transition-colors duration-fast",
-                onRowClick
-                  ? "cursor-pointer hover:bg-surface-overlay"
-                  : undefined,
+                onRowClick ? "cursor-pointer hover:bg-surface-overlay" : undefined,
               )}
             >
               {columns.map((col, i) => (
@@ -85,9 +83,7 @@ export function ListWidget<T>({
                   key={i}
                   className={cn(
                     "py-2",
-                    col.align === "right"
-                      ? "text-right"
-                      : "text-left",
+                    col.align === "right" ? "text-right" : "text-left",
                     col.nowrap ? "whitespace-nowrap" : undefined,
                     col.className,
                   )}

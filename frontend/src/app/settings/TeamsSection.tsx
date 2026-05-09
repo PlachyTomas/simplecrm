@@ -65,7 +65,7 @@ function TeamRow({
                 manager_user_id: managerId === "" ? null : managerId,
               })
             }
-            className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+            className="text-accent-foreground rounded-md bg-accent px-3 py-1 text-xs font-medium hover:bg-accent-hover disabled:opacity-50"
           >
             Uložit
           </button>
@@ -120,7 +120,10 @@ export function TeamsSection() {
     }
   }
 
-  async function handleSave(team: TeamOut, patch: { name: string; manager_user_id: string | null }) {
+  async function handleSave(
+    team: TeamOut,
+    patch: { name: string; manager_user_id: string | null },
+  ) {
     setError(null);
     try {
       await updateTeam.mutateAsync({ id: team.id, patch });
@@ -152,22 +155,19 @@ export function TeamsSection() {
         </p>
       ) : null}
 
-      <form
-        onSubmit={handleCreate}
-        className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-12"
-      >
+      <form onSubmit={handleCreate} className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-12">
         <input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="Název týmu"
           required
           maxLength={120}
-          className="sm:col-span-5 rounded-md border border-border bg-surface px-2 py-1.5 text-sm"
+          className="rounded-md border border-border bg-surface px-2 py-1.5 text-sm sm:col-span-5"
         />
         <select
           value={newManagerId}
           onChange={(e) => setNewManagerId(e.target.value)}
-          className="sm:col-span-5 rounded-md border border-border bg-surface px-2 py-1.5 text-sm"
+          className="rounded-md border border-border bg-surface px-2 py-1.5 text-sm sm:col-span-5"
         >
           <option value="">— bez manažera —</option>
           {managerOptions(users.data.items).map((u) => (
@@ -179,7 +179,7 @@ export function TeamsSection() {
         <button
           type="submit"
           disabled={createTeam.isPending}
-          className="sm:col-span-2 inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+          className="text-accent-foreground inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium hover:bg-accent-hover disabled:opacity-50 sm:col-span-2"
         >
           <Plus size={14} strokeWidth={1.75} /> Přidat
         </button>

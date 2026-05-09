@@ -24,10 +24,7 @@ export function formatMoney(
   }
 }
 
-export function formatPercent(
-  value: number | null | undefined,
-  digits = 0,
-): string {
+export function formatPercent(value: number | null | undefined, digits = 0): string {
   if (value === null || value === undefined) return "—";
   return `${value.toFixed(digits)} %`;
 }
@@ -37,10 +34,7 @@ export function formatDays(value: number | null | undefined): string {
   return `${(Math.round(value * 10) / 10).toFixed(1)} dní`;
 }
 
-export function formatNumber(
-  value: number | null | undefined,
-  locale = "cs-CZ",
-): string {
+export function formatNumber(value: number | null | undefined, locale = "cs-CZ"): string {
   if (value === null || value === undefined) return "—";
   return value.toLocaleString(locale);
 }

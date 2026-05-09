@@ -65,11 +65,9 @@ class WidgetPosition(BaseModel):
     h: int = Field(ge=1)
 
     @model_validator(mode="after")
-    def _check_within_grid(self) -> "WidgetPosition":
+    def _check_within_grid(self) -> WidgetPosition:
         if self.x + self.w > GRID_COLUMNS:
-            raise ValueError(
-                f"widget extends past column {GRID_COLUMNS}: x={self.x} + w={self.w}"
-            )
+            raise ValueError(f"widget extends past column {GRID_COLUMNS}: x={self.x} + w={self.w}")
         return self
 
 
@@ -105,20 +103,16 @@ class DateRangeFilter(BaseModel):
     to: str | None = None
 
     @model_validator(mode="after")
-    def _custom_requires_dates(self) -> "DateRangeFilter":
+    def _custom_requires_dates(self) -> DateRangeFilter:
         if self.preset == "custom" and (self.from_ is None or self.to is None):
-            raise ValueError(
-                'preset="custom" requires both `from` and `to` ISO dates'
-            )
+            raise ValueError('preset="custom" requires both `from` and `to` ISO dates')
         return self
 
 
 class GlobalFilters(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    date_range: DateRangeFilter = Field(
-        default_factory=DateRangeFilter, alias="dateRange"
-    )
+    date_range: DateRangeFilter = Field(default_factory=DateRangeFilter, alias="dateRange")
     team_id: uuid.UUID | None = Field(default=None, alias="teamId")
     owner_user_id: uuid.UUID | None = Field(default=None, alias="ownerUserId")
 
@@ -134,24 +128,19 @@ class DashboardConfig(BaseModel):
 
     version: Literal[1] = 1
     widgets: list[WidgetEntry] = Field(default_factory=list)
-    global_filters: GlobalFilters = Field(
-        default_factory=GlobalFilters, alias="globalFilters"
-    )
+    global_filters: GlobalFilters = Field(default_factory=GlobalFilters, alias="globalFilters")
 
     @model_validator(mode="after")
-    def _check_widgets(self) -> "DashboardConfig":
+    def _check_widgets(self) -> DashboardConfig:
         if len(self.widgets) > MAX_WIDGETS:
-            raise ValueError(
-                f"too many widgets: {len(self.widgets)} > {MAX_WIDGETS} max"
-            )
+            raise ValueError(f"too many widgets: {len(self.widgets)} > {MAX_WIDGETS} max")
         # Reject overlapping positions. We treat each widget's footprint as
         # the rectangle [x, x+w) × [y, y+h) and check pairwise overlap.
         for i, a in enumerate(self.widgets):
             for b in self.widgets[i + 1 :]:
                 if _rects_overlap(a.position, b.position):
                     raise ValueError(
-                        "overlapping widget positions: "
-                        f"widget id={a.id} and id={b.id}"
+                        f"overlapping widget positions: widget id={a.id} and id={b.id}"
                     )
         # Reject duplicate widget IDs — they would break per-widget
         # mutations and the React keying contract.
@@ -164,9 +153,4 @@ class DashboardConfig(BaseModel):
 def _rects_overlap(a: WidgetPosition, b: WidgetPosition) -> bool:
     """Half-open rectangle overlap: [x, x+w) × [y, y+h)."""
 
-    return (
-        a.x < b.x + b.w
-        and b.x < a.x + a.w
-        and a.y < b.y + b.h
-        and b.y < a.y + a.h
-    )
+    return a.x < b.x + b.w and b.x < a.x + a.w and a.y < b.y + b.h and b.y < a.y + a.h

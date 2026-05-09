@@ -34,10 +34,9 @@ export function useAdminOrgList(q: string, offset = 0) {
           offset: String(offset),
         });
         if (q) params.set("q", q);
-        return await apiFetch<AdminOrgList>(
-          `/api/v1/admin/organizations?${params.toString()}`,
-          { token: accessToken },
-        );
+        return await apiFetch<AdminOrgList>(`/api/v1/admin/organizations?${params.toString()}`, {
+          token: accessToken,
+        });
       } catch (err) {
         if (err instanceof ApiError) return null;
         throw err;
@@ -56,10 +55,9 @@ export function useAdminOrgSubscription(orgId: string | null) {
     queryFn: async () => {
       if (!orgId) return null;
       try {
-        return await apiFetch<AdminSubscriptionOut>(
-          `/api/v1/admin/organizations/${orgId}`,
-          { token: accessToken },
-        );
+        return await apiFetch<AdminSubscriptionOut>(`/api/v1/admin/organizations/${orgId}`, {
+          token: accessToken,
+        });
       } catch (err) {
         if (err instanceof ApiError) return null;
         throw err;
@@ -99,10 +97,9 @@ export function useAdminBillingSettings() {
     staleTime: 60 * 1000,
     queryFn: async () => {
       try {
-        return await apiFetch<BillingSettingsOut>(
-          "/api/v1/admin/billing-settings",
-          { token: accessToken },
-        );
+        return await apiFetch<BillingSettingsOut>("/api/v1/admin/billing-settings", {
+          token: accessToken,
+        });
       } catch (err) {
         if (err instanceof ApiError) return null;
         throw err;
@@ -121,10 +118,9 @@ export function useAdminOrgUsers(orgId: string | null) {
     queryFn: async () => {
       if (!orgId) return null;
       try {
-        return await apiFetch<AdminOrgUserList>(
-          `/api/v1/admin/organizations/${orgId}/users`,
-          { token: accessToken },
-        );
+        return await apiFetch<AdminOrgUserList>(`/api/v1/admin/organizations/${orgId}/users`, {
+          token: accessToken,
+        });
       } catch (err) {
         if (err instanceof ApiError) return null;
         throw err;

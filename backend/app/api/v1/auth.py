@@ -109,9 +109,7 @@ async def _issue_and_record_refresh(
     refresh JWT becomes useless at the moment the legitimate user refreshes.
     """
     issued = create_refresh_token(user_id)
-    session.add(
-        RefreshToken(jti=issued.jti, user_id=user_id, expires_at=issued.expires_at)
-    )
+    session.add(RefreshToken(jti=issued.jti, user_id=user_id, expires_at=issued.expires_at))
     return issued
 
 
@@ -254,9 +252,7 @@ async def logout(
             and payload.get("type") == REFRESH_TOKEN_TYPE
             and isinstance(payload.get("jti"), str)
         ):
-            await session.execute(
-                delete(RefreshToken).where(RefreshToken.jti == payload["jti"])
-            )
+            await session.execute(delete(RefreshToken).where(RefreshToken.jti == payload["jti"]))
             await session.commit()
 
     response.delete_cookie(
@@ -302,9 +298,7 @@ async def refresh(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
         ) from exc
     if payload.get("type") != REFRESH_TOKEN_TYPE:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Wrong token type"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Wrong token type")
     try:
         user_id = uuid.UUID(payload["sub"])
     except (KeyError, ValueError) as exc:
@@ -512,9 +506,7 @@ async def verify_email_resend(
     'wait N seconds' signal which the user already knows applies to them).
     """
     try:
-        await resend_verification(
-            session, email=body.email, link_builder=_verify_email_link
-        )
+        await resend_verification(session, email=body.email, link_builder=_verify_email_link)
     except TokenCooldownError as exc:
         raise _cooldown_response(exc) from exc
     return {"detail": "If your email is registered and not verified, we sent a new link."}
@@ -534,9 +526,7 @@ async def login(
     hasn't clicked the verification link yet, with a 'resend' affordance.
     """
     try:
-        user = await authenticate_email_user(
-            session, email=body.email, password=body.password
-        )
+        user = await authenticate_email_user(session, email=body.email, password=body.password)
     except InvalidCredentialsError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -566,9 +556,7 @@ async def password_reset_request(
     distinct 429.
     """
     try:
-        await issue_password_reset(
-            session, email=body.email, link_builder=_reset_password_link
-        )
+        await issue_password_reset(session, email=body.email, link_builder=_reset_password_link)
     except TokenCooldownError as exc:
         raise _cooldown_response(exc) from exc
     return {"detail": "If your email is registered, we sent a reset link."}

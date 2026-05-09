@@ -9,7 +9,7 @@ REPORTS_TASK §4 widget #9. Metric is one of:
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
 from uuid import UUID
 
@@ -52,9 +52,7 @@ async def _count_in_window_per_owner(
         .group_by(User.id, User.name)
     )
     if stage_type is not None:
-        stmt = stmt.join(Stage, Stage.id == Deal.stage_id).where(
-            Stage.stage_type == stage_type
-        )
+        stmt = stmt.join(Stage, Stage.id == Deal.stage_id).where(Stage.stage_type == stage_type)
     if use_closed_at:
         stmt = (
             stmt.where(Deal.closed_at.is_not(None))
@@ -62,9 +60,7 @@ async def _count_in_window_per_owner(
             .where(Deal.closed_at <= to_dt)
         )
     else:
-        stmt = stmt.where(Deal.created_at >= from_dt).where(
-            Deal.created_at <= to_dt
-        )
+        stmt = stmt.where(Deal.created_at >= from_dt).where(Deal.created_at <= to_dt)
     if org_currency is not None and sum_values:
         stmt = stmt.where(Deal.currency == org_currency)
     if owner_user_id is not None:
@@ -90,8 +86,8 @@ async def compute_sales_leaderboard(
     org = await session.get(Organization, organization_id)
     if org is None:
         raise RuntimeError(f"organization {organization_id} not found")
-    from_dt = datetime.combine(from_, time.min, tzinfo=timezone.utc)
-    to_dt = datetime.combine(to, time.max, tzinfo=timezone.utc)
+    from_dt = datetime.combine(from_, time.min, tzinfo=UTC)
+    to_dt = datetime.combine(to, time.max, tzinfo=UTC)
 
     items: list[SalesLeaderboardItem] = []
 
@@ -187,11 +183,7 @@ async def compute_sales_leaderboard(
             )
 
     items.sort(
-        key=lambda r: (
-            r.metric_value if isinstance(r.metric_value, (int, float, Decimal)) else 0
-        ),
+        key=lambda r: r.metric_value if isinstance(r.metric_value, (int, float, Decimal)) else 0,
         reverse=True,
     )
-    return SalesLeaderboardResponse(
-        items=items, metric=config.metric, currency=org.currency
-    )
+    return SalesLeaderboardResponse(items=items, metric=config.metric, currency=org.currency)

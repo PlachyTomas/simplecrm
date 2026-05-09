@@ -7,9 +7,8 @@ from collections.abc import AsyncIterator
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import delete, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.auth import REFRESH_COOKIE_NAME, STATE_COOKIE_NAME
+from app.api.v1.auth import STATE_COOKIE_NAME
 from app.core.security import sign_oauth_state
 from app.db.models import Organization, User, UserRole
 from app.db.session import AsyncSessionLocal
@@ -24,7 +23,7 @@ class FakeGoogle:
     def build_authorize_url(self, state: str) -> str:
         return f"https://accounts.google.com/o/oauth2/v2/auth?state={state}"
 
-    async def exchange_code_for_profile(self, code: str) -> GoogleProfile:  # noqa: ARG002
+    async def exchange_code_for_profile(self, code: str) -> GoogleProfile:
         return self.profile
 
 
@@ -81,9 +80,7 @@ async def admin_token() -> AsyncIterator[str]:
             await s.commit()
 
 
-async def test_create_invite_returns_url_and_lists(
-    client: AsyncClient, admin_token: str
-) -> None:
+async def test_create_invite_returns_url_and_lists(client: AsyncClient, admin_token: str) -> None:
     create = await client.post(
         "/api/v1/invitations",
         json={
@@ -109,9 +106,7 @@ async def test_create_invite_returns_url_and_lists(
     assert any(i["id"] == invitation_id for i in items)
 
 
-async def test_invite_preview_returns_org_name(
-    client: AsyncClient, admin_token: str
-) -> None:
+async def test_invite_preview_returns_org_name(client: AsyncClient, admin_token: str) -> None:
     create = await client.post(
         "/api/v1/invitations",
         json={
@@ -134,9 +129,7 @@ async def test_invite_preview_returns_org_name(
     assert body["role"] == "manager"
 
 
-async def test_revoke_invitation_204(
-    client: AsyncClient, admin_token: str
-) -> None:
+async def test_revoke_invitation_204(client: AsyncClient, admin_token: str) -> None:
     create = await client.post(
         "/api/v1/invitations",
         json={

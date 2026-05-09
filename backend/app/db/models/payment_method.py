@@ -36,9 +36,7 @@ class PaymentMethod(Base):
         nullable=False,
     )
 
-    comgate_initial_trans_id: Mapped[str] = mapped_column(
-        String(64), nullable=False
-    )
+    comgate_initial_trans_id: Mapped[str] = mapped_column(String(64), nullable=False)
     card_brand: Mapped[str | None] = mapped_column(String(32))
     card_last4: Mapped[str | None] = mapped_column(String(4))
     card_exp_month: Mapped[int | None] = mapped_column(SmallInteger)

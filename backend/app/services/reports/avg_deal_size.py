@@ -7,7 +7,7 @@ created in the range.
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
 from uuid import UUID
 
@@ -59,9 +59,7 @@ async def _avg_in_window(
     if team_id is not None:
         from app.db.models import User as _User
 
-        stmt = stmt.join(_User, _User.id == Deal.owner_user_id).where(
-            _User.team_id == team_id
-        )
+        stmt = stmt.join(_User, _User.id == Deal.owner_user_id).where(_User.team_id == team_id)
     total, count = (await session.execute(stmt)).one()
     n = int(count or 0)
     if n == 0:
@@ -83,8 +81,8 @@ async def compute_avg_deal_size(
     if org is None:
         raise RuntimeError(f"organization {organization_id} not found")
 
-    from_dt = datetime.combine(from_, time.min, tzinfo=timezone.utc)
-    to_dt = datetime.combine(to, time.max, tzinfo=timezone.utc)
+    from_dt = datetime.combine(from_, time.min, tzinfo=UTC)
+    to_dt = datetime.combine(to, time.max, tzinfo=UTC)
     cur_value, cur_count = await _avg_in_window(
         session,
         organization_id=organization_id,
@@ -97,8 +95,8 @@ async def compute_avg_deal_size(
     )
 
     prev = compute_previous_period(from_, to)
-    prev_from_dt = datetime.combine(prev.from_, time.min, tzinfo=timezone.utc)
-    prev_to_dt = datetime.combine(prev.to, time.max, tzinfo=timezone.utc)
+    prev_from_dt = datetime.combine(prev.from_, time.min, tzinfo=UTC)
+    prev_to_dt = datetime.combine(prev.to, time.max, tzinfo=UTC)
     prev_value, _ = await _avg_in_window(
         session,
         organization_id=organization_id,

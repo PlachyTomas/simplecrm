@@ -23,10 +23,9 @@ export function usePipelineBoard(wonWindow: WonWindow = 30) {
       const params = new URLSearchParams();
       if (wonWindow !== "all") params.set("won_window_days", String(wonWindow));
       const qs = params.toString();
-      return apiFetch<PipelineBoard>(
-        `/api/v1/pipelines/default/board${qs ? `?${qs}` : ""}`,
-        { token: accessToken },
-      );
+      return apiFetch<PipelineBoard>(`/api/v1/pipelines/default/board${qs ? `?${qs}` : ""}`, {
+        token: accessToken,
+      });
     },
     staleTime: 15_000,
   });

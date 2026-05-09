@@ -1,5 +1,14 @@
 import type { LucideIcon } from "lucide-react";
-import { Building2, Handshake, Home, LineChart, LogOut, Settings, Users, Workflow } from "lucide-react";
+import {
+  Building2,
+  Handshake,
+  Home,
+  LineChart,
+  LogOut,
+  Settings,
+  Users,
+  Workflow,
+} from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 import { ThemeToggle } from "@/lib/ThemeToggle";

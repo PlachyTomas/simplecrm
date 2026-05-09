@@ -197,7 +197,11 @@ async def create_invitation(
 
     token = sign_invite_token(jti)
     org_name = invitation.organization.name if invitation.organization else "SimpleCRM"
-    await send_email(_build_invite_email(to=normalized_email, organization_name=org_name, link=build_invite_link(token)))
+    await send_email(
+        _build_invite_email(
+            to=normalized_email, organization_name=org_name, link=build_invite_link(token)
+        )
+    )
 
     return IssuedInvitation(invitation=invitation, token=token)
 
@@ -341,10 +345,7 @@ async def accept_invitation_for_email_signup(
     user = (await session.execute(existing_stmt)).scalar_one_or_none()
 
     if user is not None:
-        if (
-            user.organization_id is not None
-            and user.organization_id != invitation.organization_id
-        ):
+        if user.organization_id is not None and user.organization_id != invitation.organization_id:
             raise UserAlreadyInOrganizationError()
         # Adopt the invite. Preserve any existing password — the invite click
         # is enough to justify the org change, but not enough to overwrite a

@@ -42,23 +42,15 @@ export function KPITile({
     <div className="flex h-full flex-col justify-between gap-2">
       <div>
         <div className="flex flex-wrap items-baseline gap-3">
-          <p className="text-3xl font-semibold tabular-nums text-text-primary">
-            {value}
-          </p>
+          <p className="text-3xl font-semibold tabular-nums text-text-primary">{value}</p>
           {delta ? <span className="shrink-0">{delta}</span> : null}
         </div>
         {secondary ? (
-          <p className="mt-1 text-sm text-text-secondary tabular-nums">
-            {secondary}
-          </p>
+          <p className="mt-1 text-sm tabular-nums text-text-secondary">{secondary}</p>
         ) : null}
       </div>
       <div className="flex items-end justify-between gap-3">
-        {hint ? (
-          <p className="text-xs text-text-tertiary">{hint}</p>
-        ) : (
-          <span aria-hidden />
-        )}
+        {hint ? <p className="text-xs text-text-tertiary">{hint}</p> : <span aria-hidden />}
         {sparkline && sparkline.length >= 2 ? (
           <Sparkline buckets={sparkline} ariaLabel={sparklineLabel} />
         ) : null}

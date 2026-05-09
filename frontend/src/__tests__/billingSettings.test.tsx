@@ -159,10 +159,8 @@ function setupFetch(opts: SetupOpts) {
     if (url.endsWith("/api/v1/plans/public")) return jsonResponse(PLANS_PUBLIC);
     if (url.endsWith("/api/v1/plans/billing-settings/public"))
       return jsonResponse(BILLING_SETTINGS);
-    if (url.endsWith("/api/v1/organizations/current/subscription"))
-      return jsonResponse(sub);
-    if (url.endsWith("/api/v1/organizations/current/billing-summary"))
-      return jsonResponse(summary);
+    if (url.endsWith("/api/v1/organizations/current/subscription")) return jsonResponse(sub);
+    if (url.endsWith("/api/v1/organizations/current/billing-summary")) return jsonResponse(summary);
     if (url.includes("/api/v1/pipeline")) return jsonResponse(PIPELINE);
     if (url.includes("/api/v1/payments/invoices")) {
       return jsonResponse({ items: [], total: 0 });
@@ -209,13 +207,9 @@ describe("Billing settings page", () => {
     setupFetch({ status: "trialing", planCode: "trial", userCount: 8 });
     renderBillingTab();
     // Pill says exactly "Zkušební verze"; plan name says "Zkušební verze (30 dní)".
-    await waitFor(() =>
-      expect(screen.getByText(/^Zkušební verze$/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/^Zkušební verze$/)).toBeInTheDocument());
     expect(screen.getByText(/^Zkušební verze \(30 dní\)$/)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /^Změnit plán$/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Změnit plán$/i })).toBeInTheDocument();
     // Účtování only renders for active / past_due — there's no current bill
     // for trialing, pending, or canceled orgs.
     expect(screen.queryByRole("heading", { name: /^Účtování$/ })).toBeNull();
@@ -224,13 +218,12 @@ describe("Billing settings page", () => {
   it("active monthly (standard) → Aktivní pill + Kontaktujte podporu, NOT self-service", async () => {
     setupFetch({ status: "active", planCode: "monthly", userCount: 8 });
     renderBillingTab();
-    await waitFor(() =>
-      expect(screen.getByText(/^Aktivní$/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/^Aktivní$/)).toBeInTheDocument());
     expect(screen.queryByRole("button", { name: /^Změnit plán$/i })).toBeNull();
-    expect(
-      screen.getByRole("link", { name: /^Kontaktujte podporu$/i }),
-    ).toHaveAttribute("href", expect.stringContaining("mailto:"));
+    expect(screen.getByRole("link", { name: /^Kontaktujte podporu$/i })).toHaveAttribute(
+      "href",
+      expect.stringContaining("mailto:"),
+    );
     // Účtování shows projection (monthly active).
     expect(screen.getByText(/Pokud byste platili ročně/i)).toBeInTheDocument();
   });
@@ -238,9 +231,7 @@ describe("Billing settings page", () => {
   it("active annual → Aktivní pill + savings caption (no projection link)", async () => {
     setupFetch({ status: "active", planCode: "annual", userCount: 8 });
     renderBillingTab();
-    await waitFor(() =>
-      expect(screen.getByText(/^Aktivní$/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/^Aktivní$/)).toBeInTheDocument());
     expect(screen.getByText(/Šetříte/i)).toBeInTheDocument();
     expect(screen.queryByText(/Pokud byste platili ročně/i)).toBeNull();
   });
@@ -252,9 +243,7 @@ describe("Billing settings page", () => {
     await waitFor(() =>
       expect(screen.getAllByText(/^Komplementární$/).length).toBeGreaterThanOrEqual(2),
     );
-    expect(
-      screen.getByText(/Vaše organizace má speciální podmínky/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Vaše organizace má speciální podmínky/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Změnit plán$/i })).toBeNull();
     expect(screen.queryByRole("link", { name: /^Kontaktujte podporu$/i })).toBeNull();
     expect(screen.queryByRole("heading", { name: /^Účtování$/ })).toBeNull();
@@ -263,36 +252,24 @@ describe("Billing settings page", () => {
   it("enterprise → Aktivní · Enterprise pill + Kontaktovat obchod, hides Účtování", async () => {
     setupFetch({ status: "active", planCode: "enterprise", effectiveMinor: 19900 });
     renderBillingTab();
-    await waitFor(() =>
-      expect(screen.getByText(/Aktivní · Enterprise/i)).toBeInTheDocument(),
-    );
-    expect(
-      screen.getByRole("link", { name: /^Kontaktovat obchod$/i }),
-    ).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Aktivní · Enterprise/i)).toBeInTheDocument());
+    expect(screen.getByRole("link", { name: /^Kontaktovat obchod$/i })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /^Účtování$/ })).toBeNull();
   });
 
   it("past_due → Po splatnosti pill + Změnit plán button", async () => {
     setupFetch({ status: "past_due", planCode: "monthly" });
     renderBillingTab();
-    await waitFor(() =>
-      expect(screen.getByText(/Po splatnosti/i)).toBeInTheDocument(),
-    );
-    expect(
-      screen.getByRole("button", { name: /^Změnit plán$/i }),
-    ).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Po splatnosti/i)).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: /^Změnit plán$/i })).toBeInTheDocument();
   });
 
   it("pending_activation → Čeká na platbu pill, no action button", async () => {
     setupFetch({ status: "pending_activation", planCode: "annual" });
     renderBillingTab();
-    await waitFor(() =>
-      expect(screen.getByText(/Čeká na platbu/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/Čeká na platbu/i)).toBeInTheDocument());
     expect(screen.queryByRole("button", { name: /^Změnit plán$/i })).toBeNull();
-    expect(
-      screen.getByText(/Po připsání platby vás aktivujeme do 24 hodin/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Po připsání platby vás aktivujeme do 24 hodin/i)).toBeInTheDocument();
   });
 
   it("Faktury placeholder always renders", async () => {
@@ -304,9 +281,7 @@ describe("Billing settings page", () => {
     // The InvoicesCard's empty-state copy only renders once
     // /payments/invoices resolves (items.length === 0).
     await waitFor(() =>
-      expect(
-        screen.getByText(/Faktury budou dostupné po první platbě\./i),
-      ).toBeInTheDocument(),
+      expect(screen.getByText(/Faktury budou dostupné po první platbě\./i)).toBeInTheDocument(),
     );
   });
 
@@ -317,9 +292,7 @@ describe("Billing settings page", () => {
     const { calls } = setupFetch({ status: "past_due", planCode: "monthly", userCount: 8 });
     renderBillingTab();
     await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /^Přejít na roční$/i }),
-      ).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: /^Přejít na roční$/i })).toBeInTheDocument(),
     );
     fireEvent.click(screen.getByRole("button", { name: /^Přejít na roční$/i }));
     // Modal opens with annual pre-selected.

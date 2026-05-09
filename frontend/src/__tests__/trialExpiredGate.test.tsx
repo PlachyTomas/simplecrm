@@ -131,10 +131,8 @@ function setupFetch(opts: MockOpts = {}) {
     if (url.endsWith("/api/v1/plans/public")) return jsonResponse(PLANS_PUBLIC);
     if (url.endsWith("/api/v1/plans/billing-settings/public"))
       return jsonResponse(BILLING_SETTINGS);
-    if (url.endsWith("/api/v1/organizations/current/subscription"))
-      return jsonResponse(sub);
-    if (url.endsWith("/api/v1/organizations/current/billing-summary"))
-      return jsonResponse(summary);
+    if (url.endsWith("/api/v1/organizations/current/subscription")) return jsonResponse(sub);
+    if (url.endsWith("/api/v1/organizations/current/billing-summary")) return jsonResponse(summary);
     if (url.endsWith("/api/v1/payments/initial-payment-init")) {
       choosePlanCalls.push({
         url,
@@ -177,10 +175,7 @@ function renderGate(payloadOverride?: Partial<TrialExpiredPayload>) {
   return render(
     <QueryClientProvider client={qc}>
       <AuthProvider initialToken="fake-token">
-        <TrialExpiredGate
-          payload={{ ...PAYLOAD, ...payloadOverride }}
-          onExport={() => {}}
-        />
+        <TrialExpiredGate payload={{ ...PAYLOAD, ...payloadOverride }} onExport={() => {}} />
       </AuthProvider>
     </QueryClientProvider>,
   );
@@ -225,9 +220,7 @@ describe("TrialExpiredGate", () => {
     renderGate();
     const annualCard = await screen.findByRole("radio", { name: /Roční/i });
     await waitFor(() =>
-      expect(
-        within(annualCard).getByText(/S Vaším 1 uživatelem ušetříte/i),
-      ).toBeInTheDocument(),
+      expect(within(annualCard).getByText(/S Vaším 1 uživatelem ušetříte/i)).toBeInTheDocument(),
     );
   });
 
@@ -244,9 +237,7 @@ describe("TrialExpiredGate", () => {
       renderGate();
       const annualCard = await screen.findByRole("radio", { name: /Roční/i });
       fireEvent.click(annualCard);
-      fireEvent.click(
-        screen.getByRole("button", { name: /^Pokračovat na platbu$/i }),
-      );
+      fireEvent.click(screen.getByRole("button", { name: /^Pokračovat na platbu$/i }));
       await waitFor(() => expect(choosePlanCalls).toHaveLength(1));
       expect(choosePlanCalls[0]?.body).toEqual({ plan_code: "annual" });
       await waitFor(() =>
@@ -269,9 +260,7 @@ describe("TrialExpiredGate", () => {
     fireEvent.click(monthlyCard);
     fireEvent.click(screen.getByRole("button", { name: /^Pokračovat na platbu$/i }));
     await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        /Platební brána není dostupná/i,
-      ),
+      expect(screen.getByRole("alert")).toHaveTextContent(/Platební brána není dostupná/i),
     );
     // Chooser still mounted.
     expect(screen.getByRole("radio", { name: /Měsíční/i })).toBeInTheDocument();
@@ -281,15 +270,11 @@ describe("TrialExpiredGate", () => {
     setupFetch({ enterprise: true });
     renderGate();
     await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /^Kontaktovat obchod$/i }),
-      ).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: /^Kontaktovat obchod$/i })).toBeInTheDocument(),
     );
     expect(screen.queryByRole("radio", { name: /Měsíční/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: /Roční/i })).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/Vaše enterprise předplatné skončilo/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Vaše enterprise předplatné skončilo/i)).toBeInTheDocument();
   });
 
   it("renders the magenta savings badge exactly once", async () => {

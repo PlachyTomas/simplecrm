@@ -220,6 +220,4 @@ async def test_create_company_uses_configured_window(
     # Expect ownership_expires_at ≈ now + 60d, not now + 365d.
     expected_low = before + timedelta(days=60) - timedelta(seconds=5)
     expected_high = after + timedelta(days=60) + timedelta(seconds=5)
-    assert expected_low <= expires_at <= expected_high, (
-        f"expected ~+60d window, got {expires_at!s}"
-    )
+    assert expected_low <= expires_at <= expected_high, f"expected ~+60d window, got {expires_at!s}"

@@ -205,7 +205,16 @@
 /* Default focus-visible ring on every interactive element. Components can
    override per-element, but the baseline guarantees a visible cue
    everywhere — P1 a11y requirement. */
-:where(button, a, input, select, textarea, [role="button"], [role="link"], [tabindex]):focus-visible {
+:where(
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  [role="button"],
+  [role="link"],
+  [tabindex]
+):focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
   border-radius: var(--radius-sm);

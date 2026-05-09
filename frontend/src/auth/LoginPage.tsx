@@ -40,12 +40,14 @@ export function LoginPage() {
         const code = authErrorCode(err.body);
         if (code === "oauth_only_account") {
           setError({
-            message: "Tento e-mail je registrován přes Google. Použijte prosím přihlášení přes Google.",
+            message:
+              "Tento e-mail je registrován přes Google. Použijte prosím přihlášení přes Google.",
             showGoogleCta: true,
           });
         } else if (code === "email_not_verified") {
           setError({
-            message: "Váš e-mail ještě není ověřený. Zkontrolujte schránku, nebo si nechte zaslat nový odkaz.",
+            message:
+              "Váš e-mail ještě není ověřený. Zkontrolujte schránku, nebo si nechte zaslat nový odkaz.",
             showResendCta: true,
           });
         } else {
@@ -142,7 +144,7 @@ export function LoginPage() {
             </div>
           ) : null}
           {resendInfo ? (
-            <p className="rounded-md bg-bg-subtle px-3 py-2 text-sm text-text-secondary">
+            <p className="bg-bg-subtle rounded-md px-3 py-2 text-sm text-text-secondary">
               {resendInfo}
             </p>
           ) : null}
@@ -169,7 +171,7 @@ export function LoginPage() {
 
         <a
           href={`${API_BASE_URL}${GOOGLE_LOGIN_PATH}`}
-          className="inline-flex h-10 w-full items-center justify-center rounded-md border border-border bg-bg px-5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-bg-subtle"
+          className="hover:bg-bg-subtle inline-flex h-10 w-full items-center justify-center rounded-md border border-border bg-bg px-5 text-sm font-medium text-text-primary transition-colors duration-fast"
         >
           Přihlásit se přes Google
         </a>

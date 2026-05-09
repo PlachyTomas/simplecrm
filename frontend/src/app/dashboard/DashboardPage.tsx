@@ -49,10 +49,7 @@ function ManagerWidgets({ locale }: { locale: string }) {
   const velocity = useVelocity(range);
 
   return (
-    <section
-      aria-label="Manažerský přehled"
-      className="mt-8 grid grid-cols-1 gap-4 xl:grid-cols-2"
-    >
+    <section aria-label="Manažerský přehled" className="mt-8 grid grid-cols-1 gap-4 xl:grid-cols-2">
       <article className="rounded-lg border border-border bg-surface p-5">
         <div className="flex items-baseline justify-between">
           <h2 className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
@@ -70,10 +67,7 @@ function ManagerWidgets({ locale }: { locale: string }) {
         ) : (
           <ol className="mt-4 space-y-2">
             {leaderboard.data.rows.slice(0, 5).map((row, idx) => (
-              <li
-                key={row.user_id}
-                className="flex items-center justify-between text-sm"
-              >
+              <li key={row.user_id} className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-2 text-text-primary">
                   {idx === 0 ? (
                     <span
@@ -124,10 +118,7 @@ function ManagerWidgets({ locale }: { locale: string }) {
         ) : (
           <ul className="mt-4 space-y-2">
             {velocity.data.stages.map((stage) => (
-              <li
-                key={stage.stage_id}
-                className="flex items-center justify-between text-sm"
-              >
+              <li key={stage.stage_id} className="flex items-center justify-between text-sm">
                 <span className="text-text-primary">{stage.stage_name}</span>
                 <span className="tabular-nums text-text-secondary">
                   {stage.avg_days_in_stage == null

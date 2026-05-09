@@ -272,9 +272,7 @@ async def test_refresh_returns_401_when_cookie_missing(client: AsyncClient) -> N
 
 
 async def test_refresh_returns_401_when_cookie_malformed(client: AsyncClient) -> None:
-    response = await client.post(
-        "/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: "not-a-jwt"}
-    )
+    response = await client.post("/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: "not-a-jwt"})
     assert response.status_code == 401
 
 
@@ -299,9 +297,7 @@ async def test_refresh_rejects_access_token_in_refresh_slot(
     ).scalar_one()
     access_jwt = create_access_token(user.id, user.organization_id, user.role)
 
-    response = await client.post(
-        "/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: access_jwt}
-    )
+    response = await client.post("/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: access_jwt})
     assert response.status_code == 401
 
 
@@ -321,9 +317,7 @@ async def test_refresh_returns_new_access_token_and_rotates_cookie(
     # `jti` is in the active allowlist (QA-024 Part B).
     refresh_jwt = callback.cookies[REFRESH_COOKIE_NAME]
 
-    response = await client.post(
-        "/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: refresh_jwt}
-    )
+    response = await client.post("/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: refresh_jwt})
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["access_token"]
@@ -472,9 +466,7 @@ async def test_refresh_rejects_replayed_jti_after_rotation(
     refresh_a = callback.cookies[REFRESH_COOKIE_NAME]
 
     async with AsyncSessionLocal() as s:
-        user = (
-            await s.execute(select(User).where(User.email == "hero@testorg.cz"))
-        ).scalar_one()
+        user = (await s.execute(select(User).where(User.email == "hero@testorg.cz"))).scalar_one()
         user_id = user.id
         org_id = user.organization_id
 
@@ -516,9 +508,7 @@ async def test_logout_revokes_refresh_token_server_side(
     refresh_jwt = callback.cookies[REFRESH_COOKIE_NAME]
 
     async with AsyncSessionLocal() as s:
-        user = (
-            await s.execute(select(User).where(User.email == "hero@testorg.cz"))
-        ).scalar_one()
+        user = (await s.execute(select(User).where(User.email == "hero@testorg.cz"))).scalar_one()
         user_id = user.id
         org_id = user.organization_id
 
@@ -567,32 +557,22 @@ async def test_refresh_supports_multi_device(
     device_a = callback.cookies[REFRESH_COOKIE_NAME]
 
     async with AsyncSessionLocal() as s:
-        user = (
-            await s.execute(select(User).where(User.email == "hero@testorg.cz"))
-        ).scalar_one()
+        user = (await s.execute(select(User).where(User.email == "hero@testorg.cz"))).scalar_one()
         user_id = user.id
         org_id = user.organization_id
         # Provision a second active jti by hand — simulating a second device's
         # OAuth callback without re-running the fake-Google fixture.
         issued_b = create_refresh_token(user_id)
-        s.add(
-            RefreshToken(
-                jti=issued_b.jti, user_id=user_id, expires_at=issued_b.expires_at
-            )
-        )
+        s.add(RefreshToken(jti=issued_b.jti, user_id=user_id, expires_at=issued_b.expires_at))
         await s.commit()
     device_b = issued_b.token
 
     try:
         # Refresh on device A — succeeds. Device B's row is untouched.
-        ra = await client.post(
-            "/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: device_a}
-        )
+        ra = await client.post("/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: device_a})
         assert ra.status_code == 200, ra.text
         # Refresh on device B — also succeeds; multi-device is supported.
-        rb = await client.post(
-            "/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: device_b}
-        )
+        rb = await client.post("/api/v1/auth/refresh", cookies={REFRESH_COOKIE_NAME: device_b})
         assert rb.status_code == 200, rb.text
     finally:
         async with AsyncSessionLocal() as s:

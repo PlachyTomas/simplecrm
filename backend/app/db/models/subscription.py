@@ -21,9 +21,7 @@ class Subscription(Base):
     __table_args__ = (
         Index("ix_subscriptions_org_status", "organization_id", "status"),
         Index("ix_subscriptions_current_period_ends_at", "current_period_ends_at"),
-        Index(
-            "ix_subscriptions_next_renewal_charge_at", "next_renewal_charge_at"
-        ),
+        Index("ix_subscriptions_next_renewal_charge_at", "next_renewal_charge_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -48,12 +46,8 @@ class Subscription(Base):
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    current_period_starts_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
-    current_period_ends_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
+    current_period_starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    current_period_ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     canceled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Per-org override for enterprise / negotiated pricing. NULL means "use the
@@ -65,9 +59,7 @@ class Subscription(Base):
     # the org. Drives the bill total (seat_count × effective_price_per_user)
     # rather than the live headcount, so a queued downsize that takes effect
     # next period still bills the contracted amount this period.
-    seat_count: Mapped[int] = mapped_column(
-        Integer, default=1, server_default="1", nullable=False
-    )
+    seat_count: Mapped[int] = mapped_column(Integer, default=1, server_default="1", nullable=False)
 
     # The seat count last blessed by a successful payment (or, during
     # trial, the value the admin self-set). `seat_count` (the live cap)
@@ -87,16 +79,12 @@ class Subscription(Base):
     dunning_attempts: Mapped[int] = mapped_column(
         Integer, default=0, server_default="0", nullable=False
     )
-    last_charge_failed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
+    last_charge_failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # When the recurring-charge job should next attempt a charge.
     # Normally equals `current_period_ends_at`; the dunning logic pushes
     # it forward on a back-off curve after a failed attempt.
-    next_renewal_charge_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
+    next_renewal_charge_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Queued change applied at the next period rollover (or trial expiry).
     # `pending_plan_id` swaps monthly ↔ annual without disturbing the current
@@ -111,9 +99,7 @@ class Subscription(Base):
     # admin reduces seat_count below the live active-user count via Settings →
     # Organizace; cleared either by an explicit cancel (PUT seat-count == current)
     # or by the rollover service after applying.
-    pending_user_deactivations: Mapped[list[uuid.UUID] | None] = mapped_column(
-        JSONB, nullable=True
-    )
+    pending_user_deactivations: Mapped[list[uuid.UUID] | None] = mapped_column(JSONB, nullable=True)
 
     # Comp = bartered for exposure. The pay-gate never fires for these orgs.
     is_comp: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

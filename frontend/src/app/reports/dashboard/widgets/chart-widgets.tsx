@@ -8,26 +8,11 @@
  * REPORTS_TASK §4 widget #9 / `ui-design.md` §5.7.
  */
 
-import {
-  formatMoney,
-  formatNumber,
-  formatPercent,
-} from "@/app/reports/dashboard/format";
-import {
-  WidgetError,
-  WidgetFrame,
-  WidgetSkeleton,
-} from "@/app/reports/dashboard/WidgetFrame";
-import {
-  type GlobalFilters,
-  type WidgetEntry,
-  WIDGET_LABEL,
-} from "@/app/reports/dashboard/types";
+import { formatMoney, formatNumber, formatPercent } from "@/app/reports/dashboard/format";
+import { WidgetError, WidgetFrame, WidgetSkeleton } from "@/app/reports/dashboard/WidgetFrame";
+import { type GlobalFilters, type WidgetEntry, WIDGET_LABEL } from "@/app/reports/dashboard/types";
 import { useWidgetQuery } from "@/app/reports/dashboard/useWidgetQuery";
-import {
-  BarChartWidget,
-  type BarRow,
-} from "@/app/reports/dashboard/widgets/BarChartWidget";
+import { BarChartWidget, type BarRow } from "@/app/reports/dashboard/widgets/BarChartWidget";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import type { components } from "@/types/api.generated";
 
@@ -46,9 +31,7 @@ function narrowConfig<T extends Config["type"]>(
   expected: T,
 ): Extract<Config, { type: T }> {
   if (config.type !== expected) {
-    throw new Error(
-      `widget config type mismatch: expected ${expected}, got ${config.type}`,
-    );
+    throw new Error(`widget config type mismatch: expected ${expected}, got ${config.type}`);
   }
   return config as Extract<Config, { type: T }>;
 }
@@ -117,12 +100,7 @@ export function SalesLeaderboardWidget(props: BaseWidgetProps) {
     q.data?.items.map((item, i) => ({
       label: item.name,
       value: Number(item.metric_value),
-      display: formatLeaderboardValue(
-        item.metric_value,
-        config.metric,
-        q.data!.currency,
-        locale,
-      ),
+      display: formatLeaderboardValue(item.metric_value, config.metric, q.data!.currency, locale),
       rank: i + 1,
     })) ?? [];
 

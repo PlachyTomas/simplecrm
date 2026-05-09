@@ -29,13 +29,9 @@ async def owned_emails() -> AsyncIterator[list[str]]:
     async with AsyncSessionLocal() as session:
         if tracked:
             await session.execute(delete(User).where(User.email.in_(tracked)))
-            await session.execute(
-                delete(Organization).where(Organization.name == "Admin Test Org")
-            )
+            await session.execute(delete(Organization).where(Organization.name == "Admin Test Org"))
             # Reset is_vat_payer back to default in case a test mutated it.
-            settings = (
-                await session.execute(select(BillingSettings))
-            ).scalar_one()
+            settings = (await session.execute(select(BillingSettings))).scalar_one()
             settings.is_vat_payer = False
             await session.commit()
 
@@ -97,9 +93,7 @@ async def test_list_orgs_super_admin_sees_paginated(
 async def test_list_orgs_rejects_non_super_admin(
     client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
 ) -> None:
-    _org, user = await _seed_org_with_super_admin(
-        db_session, owned_emails, super_admin=False
-    )
+    _org, user = await _seed_org_with_super_admin(db_session, owned_emails, super_admin=False)
     token = create_access_token(user.id, user.organization_id, user.role)
     response = await client.get(
         "/api/v1/admin/organizations",
@@ -212,9 +206,7 @@ async def test_cancel_super_admin(
 async def test_set_comp_rejects_non_super_admin(
     client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
 ) -> None:
-    org, admin = await _seed_org_with_super_admin(
-        db_session, owned_emails, super_admin=False
-    )
+    org, admin = await _seed_org_with_super_admin(db_session, owned_emails, super_admin=False)
     token = create_access_token(admin.id, admin.organization_id, admin.role)
     response = await client.post(
         f"/api/v1/admin/organizations/{org.id}/subscription/set-comp",
@@ -263,9 +255,7 @@ async def test_put_billing_settings_super_admin(
 async def test_put_billing_settings_rejects_non_super_admin(
     client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
 ) -> None:
-    _org, admin = await _seed_org_with_super_admin(
-        db_session, owned_emails, super_admin=False
-    )
+    _org, admin = await _seed_org_with_super_admin(db_session, owned_emails, super_admin=False)
     token = create_access_token(admin.id, admin.organization_id, admin.role)
     response = await client.put(
         "/api/v1/admin/billing-settings",
@@ -313,9 +303,7 @@ async def test_org_activity_super_admin_returns_subscription_rows(
 async def test_org_activity_rejects_non_super_admin(
     client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
 ) -> None:
-    org, user = await _seed_org_with_super_admin(
-        db_session, owned_emails, super_admin=False
-    )
+    org, user = await _seed_org_with_super_admin(db_session, owned_emails, super_admin=False)
     token = create_access_token(user.id, user.organization_id, user.role)
     response = await client.get(
         f"/api/v1/admin/organizations/{org.id}/activity",
@@ -354,7 +342,8 @@ async def test_activate_applies_queued_user_deactivations(
     pending fields clear."""
     from sqlalchemy import select as _select
 
-    from app.db.models import Subscription, User as _User
+    from app.db.models import Subscription
+    from app.db.models import User as _User
 
     org, admin = await _seed_org_with_super_admin(db_session, owned_emails)
     # Capture ids before any expire_all() calls; accessing org.id from a
@@ -391,9 +380,7 @@ async def test_activate_applies_queued_user_deactivations(
 
     # Sanity: extra is still active, queue is set.
     db_session.expire_all()
-    extra = (
-        await db_session.execute(_select(_User).where(_User.id == extra_id))
-    ).scalar_one()
+    extra = (await db_session.execute(_select(_User).where(_User.id == extra_id))).scalar_one()
     assert extra.is_active is True
 
     # Activate the subscription (super-admin path).
@@ -473,9 +460,7 @@ async def test_list_org_users_super_admin(
 async def test_list_org_users_rejects_non_super_admin(
     client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
 ) -> None:
-    org, user = await _seed_org_with_super_admin(
-        db_session, owned_emails, super_admin=False
-    )
+    org, user = await _seed_org_with_super_admin(db_session, owned_emails, super_admin=False)
     token = create_access_token(user.id, user.organization_id, user.role)
     response = await client.get(
         f"/api/v1/admin/organizations/{org.id}/users",
@@ -510,9 +495,7 @@ async def test_impersonate_super_admin_mints_token_for_target(
 async def test_impersonate_rejects_non_super_admin(
     client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
 ) -> None:
-    org, user = await _seed_org_with_super_admin(
-        db_session, owned_emails, super_admin=False
-    )
+    org, user = await _seed_org_with_super_admin(db_session, owned_emails, super_admin=False)
     member = await _add_member(db_session, org, owned_emails)
     token = create_access_token(user.id, user.organization_id, user.role)
     response = await client.post(
@@ -526,9 +509,7 @@ async def test_impersonate_refuses_other_super_admin(
     client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
 ) -> None:
     org, admin = await _seed_org_with_super_admin(db_session, owned_emails)
-    other_admin = await _add_member(
-        db_session, org, owned_emails, is_super_admin=True
-    )
+    other_admin = await _add_member(db_session, org, owned_emails, is_super_admin=True)
     token = create_access_token(admin.id, admin.organization_id, admin.role)
     response = await client.post(
         f"/api/v1/admin/users/{other_admin.id}/impersonate",

@@ -33,12 +33,8 @@ def upgrade() -> None:
     # Alembic 1.13+ supports `op.execute` with a transactionless context
     # via the COMMIT-then-DDL pattern below.
     op.execute("COMMIT")
-    op.execute(
-        "ALTER TYPE activity_entity_type ADD VALUE IF NOT EXISTS 'organization'"
-    )
-    op.execute(
-        "ALTER TYPE activity_type ADD VALUE IF NOT EXISTS 'subscription_change'"
-    )
+    op.execute("ALTER TYPE activity_entity_type ADD VALUE IF NOT EXISTS 'organization'")
+    op.execute("ALTER TYPE activity_type ADD VALUE IF NOT EXISTS 'subscription_change'")
 
 
 def downgrade() -> None:

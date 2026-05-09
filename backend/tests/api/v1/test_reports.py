@@ -172,9 +172,7 @@ async def test_leaderboard_aggregates_won_deals_per_owner(
 
     other_email = f"o-{uuid.uuid4().hex[:8]}@ex.cz"
     owned_cleanup["emails"].append(other_email)
-    other = User(
-        email=other_email, name="Other", role=UserRole.admin, organization_id=org.id
-    )
+    other = User(email=other_email, name="Other", role=UserRole.admin, organization_id=org.id)
     db_session.add(other)
     await db_session.commit()
     await db_session.refresh(other)
@@ -319,9 +317,7 @@ async def test_velocity_averages_days_to_close(
     deals[1].created_at = now - __import__("datetime").timedelta(days=10)
     await db_session.commit()
 
-    response = await client.get(
-        "/api/v1/reports/pipeline-velocity", headers=_auth(user)
-    )
+    response = await client.get("/api/v1/reports/pipeline-velocity", headers=_auth(user))
     assert response.status_code == 200
     body = response.json()
     stages = body["stages"]
@@ -424,9 +420,7 @@ async def test_team_leaderboard_groups_by_team_for_admin(
     )
     await db_session.commit()
 
-    response = await client.get(
-        "/api/v1/reports/team-leaderboard", headers=_auth(admin)
-    )
+    response = await client.get("/api/v1/reports/team-leaderboard", headers=_auth(admin))
     assert response.status_code == 200
     body = response.json()
     assert body["metric"] == "won_value"
@@ -492,9 +486,7 @@ async def test_team_leaderboard_scopes_to_managed_teams_for_manager(
     )
     await db_session.commit()
 
-    response = await client.get(
-        "/api/v1/reports/team-leaderboard", headers=_auth(manager)
-    )
+    response = await client.get("/api/v1/reports/team-leaderboard", headers=_auth(manager))
     assert response.status_code == 200
     body = response.json()
     rows = body["rows"]
@@ -508,16 +500,12 @@ async def test_team_leaderboard_blocked_for_salesperson_when_toggle_off(
     org, _admin, _open_stage, _won_stage, _company = await _setup(db_session, owned_cleanup)
     sp_email = f"sp-{uuid.uuid4().hex[:6]}@ex.cz"
     owned_cleanup["emails"].append(sp_email)
-    sp = User(
-        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
-    )
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
     db_session.add(sp)
     await db_session.commit()
     await db_session.refresh(sp)
 
-    response = await client.get(
-        "/api/v1/reports/team-leaderboard", headers=_auth(sp)
-    )
+    response = await client.get("/api/v1/reports/team-leaderboard", headers=_auth(sp))
     assert response.status_code == 403
     body = response.json()
     detail = body["detail"]
@@ -534,16 +522,12 @@ async def test_team_leaderboard_visible_to_salesperson_when_toggle_on(
 
     sp_email = f"sp-{uuid.uuid4().hex[:6]}@ex.cz"
     owned_cleanup["emails"].append(sp_email)
-    sp = User(
-        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
-    )
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
     db_session.add(sp)
     await db_session.commit()
     await db_session.refresh(sp)
 
-    response = await client.get(
-        "/api/v1/reports/team-leaderboard", headers=_auth(sp)
-    )
+    response = await client.get("/api/v1/reports/team-leaderboard", headers=_auth(sp))
     assert response.status_code == 200
 
 
@@ -777,9 +761,7 @@ async def test_dashboard_config_delete_resets_to_default(
             ],
         },
     )
-    del_resp = await client.delete(
-        "/api/v1/reports/dashboard-config", headers=_auth(user)
-    )
+    del_resp = await client.delete("/api/v1/reports/dashboard-config", headers=_auth(user))
     assert del_resp.status_code == 204
     get_resp = await client.get("/api/v1/reports/dashboard-config", headers=_auth(user))
     assert get_resp.status_code == 200
@@ -913,49 +895,86 @@ async def _seed_widget_corpus(
     prev_in = now - timedelta(days=40)
     prev_in2 = now - timedelta(days=45)
 
-    session.add_all([
-        # Two open deals created in current window (count 2, sum 300).
-        Deal(
-            organization_id=org.id, company_id=company.id, stage_id=open_stage.id,
-            owner_user_id=user.id, name="O1", value=Decimal("100"),
-            currency=org.currency, created_at=cur_in,
-        ),
-        Deal(
-            organization_id=org.id, company_id=company.id, stage_id=open_stage.id,
-            owner_user_id=user.id, name="O2", value=Decimal("200"),
-            currency=org.currency, created_at=cur_in2,
-        ),
-        # One open deal created in the previous window (count 1, sum 80).
-        Deal(
-            organization_id=org.id, company_id=company.id, stage_id=open_stage.id,
-            owner_user_id=user.id, name="O0", value=Decimal("80"),
-            currency=org.currency, created_at=prev_in,
-        ),
-        # Two won deals closed in current window (count 2, sum 700).
-        Deal(
-            organization_id=org.id, company_id=company.id, stage_id=won_stage.id,
-            owner_user_id=user.id, name="W1", value=Decimal("300"),
-            currency=org.currency, closed_at=cur_in,
-        ),
-        Deal(
-            organization_id=org.id, company_id=company.id, stage_id=won_stage.id,
-            owner_user_id=user.id, name="W2", value=Decimal("400"),
-            currency=org.currency, closed_at=cur_in2,
-        ),
-        # One lost deal closed in current window. Win rate denom = 3.
-        Deal(
-            organization_id=org.id, company_id=company.id, stage_id=lost_stage.id,
-            owner_user_id=user.id, name="L1", value=Decimal("50"),
-            currency=org.currency, closed_at=cur_in,
-            lost_reason="cena",
-        ),
-        # One won deal closed in the previous window (count 1, sum 250).
-        Deal(
-            organization_id=org.id, company_id=company.id, stage_id=won_stage.id,
-            owner_user_id=user.id, name="W0", value=Decimal("250"),
-            currency=org.currency, closed_at=prev_in2,
-        ),
-    ])
+    session.add_all(
+        [
+            # Two open deals created in current window (count 2, sum 300).
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                owner_user_id=user.id,
+                name="O1",
+                value=Decimal("100"),
+                currency=org.currency,
+                created_at=cur_in,
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                owner_user_id=user.id,
+                name="O2",
+                value=Decimal("200"),
+                currency=org.currency,
+                created_at=cur_in2,
+            ),
+            # One open deal created in the previous window (count 1, sum 80).
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                owner_user_id=user.id,
+                name="O0",
+                value=Decimal("80"),
+                currency=org.currency,
+                created_at=prev_in,
+            ),
+            # Two won deals closed in current window (count 2, sum 700).
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                owner_user_id=user.id,
+                name="W1",
+                value=Decimal("300"),
+                currency=org.currency,
+                closed_at=cur_in,
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                owner_user_id=user.id,
+                name="W2",
+                value=Decimal("400"),
+                currency=org.currency,
+                closed_at=cur_in2,
+            ),
+            # One lost deal closed in current window. Win rate denom = 3.
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=lost_stage.id,
+                owner_user_id=user.id,
+                name="L1",
+                value=Decimal("50"),
+                currency=org.currency,
+                closed_at=cur_in,
+                lost_reason="cena",
+            ),
+            # One won deal closed in the previous window (count 1, sum 250).
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                owner_user_id=user.id,
+                name="W0",
+                value=Decimal("250"),
+                currency=org.currency,
+                closed_at=prev_in2,
+            ),
+        ]
+    )
     await session.commit()
 
 
@@ -997,8 +1016,12 @@ async def test_widget_pipeline_value_happy(
     )
     await _seed_widget_corpus(
         db_session,
-        org=org, user=user, open_stage=open_stage, won_stage=won_stage,
-        lost_stage=lost_stage, company=company,
+        org=org,
+        user=user,
+        open_stage=open_stage,
+        won_stage=won_stage,
+        lost_stage=lost_stage,
+        company=company,
     )
     resp = await client.get(
         "/api/v1/reports/widgets/pipeline-value",
@@ -1035,9 +1058,7 @@ async def test_widget_pipeline_value_blocks_salesperson(
     org, _admin, *_ = await _setup(db_session, owned_cleanup)
     sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
     owned_cleanup["emails"].append(sp_email)
-    sp = User(
-        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
-    )
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
     db_session.add(sp)
     await db_session.commit()
     await db_session.refresh(sp)
@@ -1057,8 +1078,12 @@ async def test_widget_deals_won_happy_with_comparison(
     )
     await _seed_widget_corpus(
         db_session,
-        org=org, user=user, open_stage=open_stage, won_stage=won_stage,
-        lost_stage=lost_stage, company=company,
+        org=org,
+        user=user,
+        open_stage=open_stage,
+        won_stage=won_stage,
+        lost_stage=lost_stage,
+        company=company,
     )
     resp = await client.get(
         "/api/v1/reports/widgets/deals-won",
@@ -1081,9 +1106,7 @@ async def test_widget_deals_won_blocks_salesperson(
     org, _admin, *_ = await _setup(db_session, owned_cleanup)
     sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
     owned_cleanup["emails"].append(sp_email)
-    sp = User(
-        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
-    )
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
     db_session.add(sp)
     await db_session.commit()
     await db_session.refresh(sp)
@@ -1103,8 +1126,12 @@ async def test_widget_win_rate_with_denominator(
     )
     await _seed_widget_corpus(
         db_session,
-        org=org, user=user, open_stage=open_stage, won_stage=won_stage,
-        lost_stage=lost_stage, company=company,
+        org=org,
+        user=user,
+        open_stage=open_stage,
+        won_stage=won_stage,
+        lost_stage=lost_stage,
+        company=company,
     )
     resp = await client.get(
         "/api/v1/reports/widgets/win-rate",
@@ -1142,9 +1169,7 @@ async def test_widget_win_rate_blocks_salesperson(
     org, _admin, *_ = await _setup(db_session, owned_cleanup)
     sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
     owned_cleanup["emails"].append(sp_email)
-    sp = User(
-        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
-    )
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
     db_session.add(sp)
     await db_session.commit()
     await db_session.refresh(sp)
@@ -1164,8 +1189,12 @@ async def test_widget_avg_deal_size_won(
     )
     await _seed_widget_corpus(
         db_session,
-        org=org, user=user, open_stage=open_stage, won_stage=won_stage,
-        lost_stage=lost_stage, company=company,
+        org=org,
+        user=user,
+        open_stage=open_stage,
+        won_stage=won_stage,
+        lost_stage=lost_stage,
+        company=company,
     )
     resp = await client.get(
         "/api/v1/reports/widgets/avg-deal-size",
@@ -1197,9 +1226,7 @@ async def test_widget_avg_deal_size_blocks_salesperson(
     org, _admin, *_ = await _setup(db_session, owned_cleanup)
     sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
     owned_cleanup["emails"].append(sp_email)
-    sp = User(
-        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
-    )
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
     db_session.add(sp)
     await db_session.commit()
     await db_session.refresh(sp)
@@ -1222,20 +1249,28 @@ async def test_widget_new_companies_happy(
     org, user, *_ = await _setup(db_session, owned_cleanup)
     now = datetime.now(tz=UTC)
     # Two companies created in the current window, one in the previous.
-    db_session.add_all([
-        Company(
-            organization_id=org.id, name="C1", owner_user_id=user.id,
-            created_at=now - timedelta(days=5),
-        ),
-        Company(
-            organization_id=org.id, name="C2", owner_user_id=user.id,
-            created_at=now - timedelta(days=10),
-        ),
-        Company(
-            organization_id=org.id, name="C0", owner_user_id=user.id,
-            created_at=now - timedelta(days=40),
-        ),
-    ])
+    db_session.add_all(
+        [
+            Company(
+                organization_id=org.id,
+                name="C1",
+                owner_user_id=user.id,
+                created_at=now - timedelta(days=5),
+            ),
+            Company(
+                organization_id=org.id,
+                name="C2",
+                owner_user_id=user.id,
+                created_at=now - timedelta(days=10),
+            ),
+            Company(
+                organization_id=org.id,
+                name="C0",
+                owner_user_id=user.id,
+                created_at=now - timedelta(days=40),
+            ),
+        ]
+    )
     await db_session.commit()
     resp = await client.get(
         "/api/v1/reports/widgets/new-companies",
@@ -1258,9 +1293,7 @@ async def test_widget_new_companies_blocks_salesperson(
     org, _admin, *_ = await _setup(db_session, owned_cleanup)
     sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
     owned_cleanup["emails"].append(sp_email)
-    sp = User(
-        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
-    )
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
     db_session.add(sp)
     await db_session.commit()
     await db_session.refresh(sp)
@@ -1289,30 +1322,46 @@ async def test_widget_sales_cycle_length_returns_median_and_mean(
 ) -> None:
     org, user, _open, won_stage, _ = await _setup(db_session, owned_cleanup)
     now = datetime.now(tz=UTC)
-    today = now.date()
     # Three won deals with different cycle lengths so median ≠ mean.
     company_a = Company(organization_id=org.id, name="A", created_at=now - timedelta(days=20))
     company_b = Company(organization_id=org.id, name="B", created_at=now - timedelta(days=30))
     company_c = Company(organization_id=org.id, name="C", created_at=now - timedelta(days=100))
     db_session.add_all([company_a, company_b, company_c])
     await db_session.commit()
-    db_session.add_all([
-        Deal(
-            organization_id=org.id, company_id=company_a.id, stage_id=won_stage.id,
-            owner_user_id=user.id, name="D-A", value=Decimal("100"),
-            currency=org.currency, closed_at=now - timedelta(days=5),
-        ),
-        Deal(
-            organization_id=org.id, company_id=company_b.id, stage_id=won_stage.id,
-            owner_user_id=user.id, name="D-B", value=Decimal("100"),
-            currency=org.currency, closed_at=now - timedelta(days=5),
-        ),
-        Deal(
-            organization_id=org.id, company_id=company_c.id, stage_id=won_stage.id,
-            owner_user_id=user.id, name="D-C", value=Decimal("100"),
-            currency=org.currency, closed_at=now - timedelta(days=5),
-        ),
-    ])
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=company_a.id,
+                stage_id=won_stage.id,
+                owner_user_id=user.id,
+                name="D-A",
+                value=Decimal("100"),
+                currency=org.currency,
+                closed_at=now - timedelta(days=5),
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company_b.id,
+                stage_id=won_stage.id,
+                owner_user_id=user.id,
+                name="D-B",
+                value=Decimal("100"),
+                currency=org.currency,
+                closed_at=now - timedelta(days=5),
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company_c.id,
+                stage_id=won_stage.id,
+                owner_user_id=user.id,
+                name="D-C",
+                value=Decimal("100"),
+                currency=org.currency,
+                closed_at=now - timedelta(days=5),
+            ),
+        ]
+    )
     await db_session.commit()
     resp = await client.get(
         "/api/v1/reports/widgets/sales-cycle-length",
@@ -1350,9 +1399,7 @@ async def test_widget_sales_cycle_length_blocks_salesperson(
     org, _admin, *_ = await _setup(db_session, owned_cleanup)
     sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
     owned_cleanup["emails"].append(sp_email)
-    sp = User(
-        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
-    )
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
     db_session.add(sp)
     await db_session.commit()
     await db_session.refresh(sp)
@@ -1373,13 +1420,22 @@ async def test_widget_lead_to_deal_conversion_happy(
     cur = now - timedelta(days=10)
     # _setup() already added "Co"; add two more without deals + one with.
     company_with_deal = Company(
-        organization_id=org.id, name="CWD", owner_user_id=user.id, created_at=cur,
+        organization_id=org.id,
+        name="CWD",
+        owner_user_id=user.id,
+        created_at=cur,
     )
     company_no_deal_1 = Company(
-        organization_id=org.id, name="CND1", owner_user_id=user.id, created_at=cur,
+        organization_id=org.id,
+        name="CND1",
+        owner_user_id=user.id,
+        created_at=cur,
     )
     company_no_deal_2 = Company(
-        organization_id=org.id, name="CND2", owner_user_id=user.id, created_at=cur,
+        organization_id=org.id,
+        name="CND2",
+        owner_user_id=user.id,
+        created_at=cur,
     )
     db_session.add_all([company_with_deal, company_no_deal_1, company_no_deal_2])
     await db_session.commit()
@@ -1441,9 +1497,7 @@ async def test_widget_lead_to_deal_conversion_blocks_salesperson(
     org, _admin, *_ = await _setup(db_session, owned_cleanup)
     sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
     owned_cleanup["emails"].append(sp_email)
-    sp = User(
-        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
-    )
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
     db_session.add(sp)
     await db_session.commit()
     await db_session.refresh(sp)
@@ -1469,23 +1523,43 @@ async def test_widget_lost_reasons_breakdown_groups_and_sorts(
     )
     now = datetime.now(tz=UTC)
     cur = now - timedelta(days=5)
-    db_session.add_all([
-        Deal(
-            organization_id=org.id, company_id=company.id, stage_id=lost_stage.id,
-            owner_user_id=user.id, name="L1", value=Decimal("100"),
-            currency=org.currency, closed_at=cur, lost_reason="cena",
-        ),
-        Deal(
-            organization_id=org.id, company_id=company.id, stage_id=lost_stage.id,
-            owner_user_id=user.id, name="L2", value=Decimal("200"),
-            currency=org.currency, closed_at=cur, lost_reason="cena",
-        ),
-        Deal(
-            organization_id=org.id, company_id=company.id, stage_id=lost_stage.id,
-            owner_user_id=user.id, name="L3", value=Decimal("50"),
-            currency=org.currency, closed_at=cur, lost_reason="konkurence",
-        ),
-    ])
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=lost_stage.id,
+                owner_user_id=user.id,
+                name="L1",
+                value=Decimal("100"),
+                currency=org.currency,
+                closed_at=cur,
+                lost_reason="cena",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=lost_stage.id,
+                owner_user_id=user.id,
+                name="L2",
+                value=Decimal("200"),
+                currency=org.currency,
+                closed_at=cur,
+                lost_reason="cena",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=lost_stage.id,
+                owner_user_id=user.id,
+                name="L3",
+                value=Decimal("50"),
+                currency=org.currency,
+                closed_at=cur,
+                lost_reason="konkurence",
+            ),
+        ]
+    )
     await db_session.commit()
     resp = await client.get(
         "/api/v1/reports/widgets/lost-reasons-breakdown",
@@ -1508,9 +1582,7 @@ async def test_widget_lost_reasons_blocks_salesperson(
     org, _admin, *_ = await _setup(db_session, owned_cleanup)
     sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
     owned_cleanup["emails"].append(sp_email)
-    sp = User(
-        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
-    )
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
     db_session.add(sp)
     await db_session.commit()
     await db_session.refresh(sp)
@@ -1555,18 +1627,30 @@ async def test_widget_sales_leaderboard_won_value(
 
     now = datetime.now(tz=UTC)
     cur = now - timedelta(days=5)
-    db_session.add_all([
-        Deal(
-            organization_id=org.id, company_id=company_for_second.id,
-            stage_id=won_stage.id, owner_user_id=user.id, name="W-admin",
-            value=Decimal("500"), currency=org.currency, closed_at=cur,
-        ),
-        Deal(
-            organization_id=org.id, company_id=company_for_second.id,
-            stage_id=won_stage.id, owner_user_id=second.id, name="W-second",
-            value=Decimal("200"), currency=org.currency, closed_at=cur,
-        ),
-    ])
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=company_for_second.id,
+                stage_id=won_stage.id,
+                owner_user_id=user.id,
+                name="W-admin",
+                value=Decimal("500"),
+                currency=org.currency,
+                closed_at=cur,
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company_for_second.id,
+                stage_id=won_stage.id,
+                owner_user_id=second.id,
+                name="W-second",
+                value=Decimal("200"),
+                currency=org.currency,
+                closed_at=cur,
+            ),
+        ]
+    )
     await db_session.commit()
     resp = await client.get(
         "/api/v1/reports/widgets/sales-leaderboard",
@@ -1588,9 +1672,7 @@ async def test_widget_sales_leaderboard_blocks_salesperson(
     org, _admin, *_ = await _setup(db_session, owned_cleanup)
     sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
     owned_cleanup["emails"].append(sp_email)
-    sp = User(
-        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
-    )
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
     db_session.add(sp)
     await db_session.commit()
     await db_session.refresh(sp)
@@ -1620,18 +1702,30 @@ async def test_widget_rep_activity_counts_deals_per_rep(
     org, user, open_stage, _won, company = await _setup(db_session, owned_cleanup)
     now = datetime.now(tz=UTC)
     cur = now - timedelta(days=5)
-    db_session.add_all([
-        Deal(
-            organization_id=org.id, company_id=company.id, stage_id=open_stage.id,
-            owner_user_id=user.id, name="A", value=Decimal("100"),
-            currency=org.currency, created_at=cur,
-        ),
-        Deal(
-            organization_id=org.id, company_id=company.id, stage_id=open_stage.id,
-            owner_user_id=user.id, name="B", value=Decimal("100"),
-            currency=org.currency, created_at=cur,
-        ),
-    ])
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                owner_user_id=user.id,
+                name="A",
+                value=Decimal("100"),
+                currency=org.currency,
+                created_at=cur,
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                owner_user_id=user.id,
+                name="B",
+                value=Decimal("100"),
+                currency=org.currency,
+                created_at=cur,
+            ),
+        ]
+    )
     await db_session.commit()
     resp = await client.get(
         "/api/v1/reports/widgets/rep-activity",
@@ -1650,9 +1744,7 @@ async def test_widget_rep_activity_blocks_salesperson(
     org, _admin, *_ = await _setup(db_session, owned_cleanup)
     sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
     owned_cleanup["emails"].append(sp_email)
-    sp = User(
-        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
-    )
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
     db_session.add(sp)
     await db_session.commit()
     await db_session.refresh(sp)
@@ -1687,9 +1779,14 @@ async def test_widget_stale_deals_returns_old_open_deals(
     now = datetime.now(tz=UTC)
     very_old = now - timedelta(days=100)
     deal = Deal(
-        organization_id=org.id, company_id=company.id, stage_id=open_stage.id,
-        owner_user_id=user.id, name="Stale", value=Decimal("100"),
-        currency=org.currency, created_at=very_old,
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=open_stage.id,
+        owner_user_id=user.id,
+        name="Stale",
+        value=Decimal("100"),
+        currency=org.currency,
+        created_at=very_old,
     )
     db_session.add(deal)
     await db_session.commit()
@@ -1729,9 +1826,7 @@ async def test_widget_stale_deals_blocks_salesperson(
     org, _admin, *_ = await _setup(db_session, owned_cleanup)
     sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
     owned_cleanup["emails"].append(sp_email)
-    sp = User(
-        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
-    )
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
     db_session.add(sp)
     await db_session.commit()
     await db_session.refresh(sp)
@@ -1749,16 +1844,22 @@ async def test_widget_companies_at_risk_returns_soon_freed(
     org, user, *_ = await _setup(db_session, owned_cleanup)
     soon = datetime.now(tz=UTC) + timedelta(days=15)
     far = datetime.now(tz=UTC) + timedelta(days=200)
-    db_session.add_all([
-        Company(
-            organization_id=org.id, name="At Risk", owner_user_id=user.id,
-            ownership_expires_at=soon,
-        ),
-        Company(
-            organization_id=org.id, name="Safe", owner_user_id=user.id,
-            ownership_expires_at=far,
-        ),
-    ])
+    db_session.add_all(
+        [
+            Company(
+                organization_id=org.id,
+                name="At Risk",
+                owner_user_id=user.id,
+                ownership_expires_at=soon,
+            ),
+            Company(
+                organization_id=org.id,
+                name="Safe",
+                owner_user_id=user.id,
+                ownership_expires_at=far,
+            ),
+        ]
+    )
     await db_session.commit()
     resp = await client.get(
         "/api/v1/reports/widgets/companies-at-risk",
@@ -1791,9 +1892,7 @@ async def test_widget_companies_at_risk_blocks_salesperson(
     org, _admin, *_ = await _setup(db_session, owned_cleanup)
     sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
     owned_cleanup["emails"].append(sp_email)
-    sp = User(
-        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
-    )
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
     db_session.add(sp)
     await db_session.commit()
     await db_session.refresh(sp)
@@ -1844,9 +1943,7 @@ async def test_widgets_export_csv_renders_sections(
             },
         ],
     }
-    resp = await client.post(
-        "/api/v1/reports/export-csv", headers=_auth(user), json=body
-    )
+    resp = await client.post("/api/v1/reports/export-csv", headers=_auth(user), json=body)
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("text/csv")
     text = resp.content.decode("utf-8")
@@ -1866,9 +1963,7 @@ async def test_widgets_export_csv_blocks_salesperson(
     org, _admin, *_ = await _setup(db_session, owned_cleanup)
     sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
     owned_cleanup["emails"].append(sp_email)
-    sp = User(
-        email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id
-    )
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
     db_session.add(sp)
     await db_session.commit()
     await db_session.refresh(sp)

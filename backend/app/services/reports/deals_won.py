@@ -7,7 +7,7 @@ range AND `Stage.stage_type = 'won'`.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
 from uuid import UUID
 
@@ -55,9 +55,7 @@ async def _won_in_window(
     if team_id is not None:
         from app.db.models import User as _User
 
-        stmt = stmt.join(_User, _User.id == Deal.owner_user_id).where(
-            _User.team_id == team_id
-        )
+        stmt = stmt.join(_User, _User.id == Deal.owner_user_id).where(_User.team_id == team_id)
     count, value = (await session.execute(stmt)).one()
     return _Won(int(count or 0), Decimal(str(value or 0)))
 
@@ -70,14 +68,14 @@ async def compute_deals_won(
     to: date,
     team_id: UUID | None,
     owner_user_id: UUID | None,
-    config: DealsWonConfig,  # noqa: ARG001 — display handled in R6
+    config: DealsWonConfig,
 ) -> DealsWonResponse:
     org = await session.get(Organization, organization_id)
     if org is None:
         raise RuntimeError(f"organization {organization_id} not found")
 
-    from_dt = datetime.combine(from_, time.min, tzinfo=timezone.utc)
-    to_dt = datetime.combine(to, time.max, tzinfo=timezone.utc)
+    from_dt = datetime.combine(from_, time.min, tzinfo=UTC)
+    to_dt = datetime.combine(to, time.max, tzinfo=UTC)
     cur = await _won_in_window(
         session,
         organization_id=organization_id,
@@ -89,8 +87,8 @@ async def compute_deals_won(
     )
 
     prev = compute_previous_period(from_, to)
-    prev_from_dt = datetime.combine(prev.from_, time.min, tzinfo=timezone.utc)
-    prev_to_dt = datetime.combine(prev.to, time.max, tzinfo=timezone.utc)
+    prev_from_dt = datetime.combine(prev.from_, time.min, tzinfo=UTC)
+    prev_to_dt = datetime.combine(prev.to, time.max, tzinfo=UTC)
     prev_w = await _won_in_window(
         session,
         organization_id=organization_id,

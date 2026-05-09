@@ -54,7 +54,6 @@ from app.db.models import (
 from app.db.models.enums import (
     ActivityEntityType,
     ActivityType,
-    StageType,
     UserRole,
 )
 from app.services.pipeline import create_default_pipeline
@@ -65,10 +64,30 @@ USERS = [
     {"email": "eva@demo.cz", "name": "Eva Nováková", "role": UserRole.admin, "team": None},
     {"email": "adam@demo.cz", "name": "Adam Procházka", "role": UserRole.manager, "team": "Praha"},
     {"email": "bara@demo.cz", "name": "Bára Dvořáková", "role": UserRole.manager, "team": "Brno"},
-    {"email": "cyril@demo.cz", "name": "Cyril Marek", "role": UserRole.manager, "team": "Bratislava"},
-    {"email": "jakub@demo.cz", "name": "Jakub Veselý", "role": UserRole.salesperson, "team": "Praha"},
-    {"email": "tereza@demo.cz", "name": "Tereza Horáková", "role": UserRole.salesperson, "team": "Brno"},
-    {"email": "petr@demo.cz", "name": "Petr Černý", "role": UserRole.salesperson, "team": "Bratislava"},
+    {
+        "email": "cyril@demo.cz",
+        "name": "Cyril Marek",
+        "role": UserRole.manager,
+        "team": "Bratislava",
+    },
+    {
+        "email": "jakub@demo.cz",
+        "name": "Jakub Veselý",
+        "role": UserRole.salesperson,
+        "team": "Praha",
+    },
+    {
+        "email": "tereza@demo.cz",
+        "name": "Tereza Horáková",
+        "role": UserRole.salesperson,
+        "team": "Brno",
+    },
+    {
+        "email": "petr@demo.cz",
+        "name": "Petr Černý",
+        "role": UserRole.salesperson,
+        "team": "Bratislava",
+    },
 ]
 
 COMPANY_NAMES = [
@@ -135,9 +154,7 @@ async def _create_org_with_subscription(session) -> Organization:
     # never fires regardless of trial expiry or future billing changes
     # (see services/billing.is_app_access_allowed). Keeps the demo org
     # usable without wiring up the ComGate sandbox.
-    comp_plan_id = (
-        await session.execute(select(Plan.id).where(Plan.code == "comp"))
-    ).scalar_one()
+    comp_plan_id = (await session.execute(select(Plan.id).where(Plan.code == "comp"))).scalar_one()
     now = datetime.now(tz=UTC)
     sub = Subscription(
         organization_id=org.id,
@@ -170,9 +187,7 @@ async def _create_teams(session, org_id: uuid.UUID) -> dict[str, Team]:
     return teams
 
 
-async def _create_users(
-    session, org_id: uuid.UUID, teams: dict[str, Team]
-) -> dict[str, User]:
+async def _create_users(session, org_id: uuid.UUID, teams: dict[str, Team]) -> dict[str, User]:
     users: dict[str, User] = {}
     for spec in USERS:
         team_id = teams[spec["team"]].id if spec["team"] else None
@@ -265,9 +280,9 @@ async def _create_deals(
     rng: random.Random,
 ) -> list[Deal]:
     """Spread deals across stages, owners, and timeframes:
-        - 18 open deals across the four open-ish stages (3 are stale: updated_at > 60 days ago).
-        - 12 won deals with closed_at scattered across the past 90 days.
-        - 6 lost deals (closed_at + lost_reason set, stage stays in an open stage).
+    - 18 open deals across the four open-ish stages (3 are stale: updated_at > 60 days ago).
+    - 12 won deals with closed_at scattered across the past 90 days.
+    - 6 lost deals (closed_at + lost_reason set, stage stays in an open stage).
     """
     now = datetime.now(tz=UTC)
     deals: list[Deal] = []
@@ -371,9 +386,7 @@ async def _create_activity_history(
                     entity_id=d.id,
                     user_id=d.owner_user_id,
                     activity_type=(
-                        ActivityType.deal_won
-                        if d.lost_reason is None
-                        else ActivityType.deal_lost
+                        ActivityType.deal_won if d.lost_reason is None else ActivityType.deal_lost
                     ),
                     payload={},
                     created_at=d.closed_at,
@@ -398,7 +411,7 @@ async def _create_activity_history(
 
 
 async def main() -> None:
-    rng = random.Random(0xC0FFEE)  # deterministic seed for reproducibility.
+    rng = random.Random(0xC0FFEE)  # noqa: S311 — deterministic seed, demo data only
     async with AsyncSessionLocal() as session:
         await _wipe_existing(session)
 

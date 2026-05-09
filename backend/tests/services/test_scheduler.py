@@ -113,9 +113,7 @@ async def test_run_freeing_sweep_frees_and_counts(
 
         rows = (
             await s2.execute(
-                _sel(Company.name, Company.owner_user_id).where(
-                    Company.organization_id == org.id
-                )
+                _sel(Company.name, Company.owner_user_id).where(Company.organization_id == org.id)
             )
         ).all()
         by_name = dict(rows)

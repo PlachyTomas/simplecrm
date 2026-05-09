@@ -91,9 +91,7 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
           </Link>
         ) : (
           <div className="space-y-2 rounded-md border border-border bg-surface px-4 py-3">
-            <p className="text-sm text-text-tertiary">
-              Tento kontakt zatím nemá přiřazenou firmu.
-            </p>
+            <p className="text-sm text-text-tertiary">Tento kontakt zatím nemá přiřazenou firmu.</p>
             {!editingCompany ? (
               <button
                 type="button"

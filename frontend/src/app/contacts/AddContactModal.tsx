@@ -31,12 +31,7 @@ const EMPTY: Form = {
   position: "",
 };
 
-export function AddContactModal({
-  open,
-  onClose,
-  onCreated,
-  forCompanyId,
-}: AddContactModalProps) {
+export function AddContactModal({ open, onClose, onCreated, forCompanyId }: AddContactModalProps) {
   const [form, setForm] = useState<Form>(EMPTY);
   const mutation = useCreateContact();
 
@@ -46,8 +41,7 @@ export function AddContactModal({
 
   if (!open) return null;
 
-  const canSubmit =
-    !!form.first_name.trim() && !!form.last_name.trim() && !!form.company_id;
+  const canSubmit = !!form.first_name.trim() && !!form.last_name.trim() && !!form.company_id;
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();

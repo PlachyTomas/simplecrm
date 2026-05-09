@@ -14,11 +14,7 @@ interface UseActivitiesOptions {
   limit?: number;
 }
 
-export function useActivities({
-  entityType,
-  entityId,
-  limit = 50,
-}: UseActivitiesOptions = {}) {
+export function useActivities({ entityType, entityId, limit = 50 }: UseActivitiesOptions = {}) {
   const { accessToken } = useAuth();
   return useQuery<ActivitiesPage>({
     queryKey: ["activities", { entityType, entityId, limit }],

@@ -1,4 +1,13 @@
-import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 export type Theme = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
@@ -75,11 +84,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const value = useMemo<ThemeContextValue>(() => ({ theme, resolved, setTheme }), [
-    theme,
-    resolved,
-    setTheme,
-  ]);
+  const value = useMemo<ThemeContextValue>(
+    () => ({ theme, resolved, setTheme }),
+    [theme, resolved, setTheme],
+  );
 
   return createElement(ThemeContext.Provider, { value }, children);
 }

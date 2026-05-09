@@ -10,7 +10,7 @@ is plenty.
 from __future__ import annotations
 
 import statistics
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 from uuid import UUID
 
 from sqlalchemy import select
@@ -32,8 +32,8 @@ async def compute_sales_cycle_length(
     owner_user_id: UUID | None,
     config: SalesCycleLengthConfig,
 ) -> SalesCycleLengthResponse:
-    from_dt = datetime.combine(from_, time.min, tzinfo=timezone.utc)
-    to_dt = datetime.combine(to, time.max, tzinfo=timezone.utc)
+    from_dt = datetime.combine(from_, time.min, tzinfo=UTC)
+    to_dt = datetime.combine(to, time.max, tzinfo=UTC)
 
     stmt = (
         select(Deal.closed_at, Company.created_at)
@@ -48,9 +48,7 @@ async def compute_sales_cycle_length(
     if owner_user_id is not None:
         stmt = stmt.where(Deal.owner_user_id == owner_user_id)
     if team_id is not None:
-        stmt = stmt.join(User, User.id == Deal.owner_user_id).where(
-            User.team_id == team_id
-        )
+        stmt = stmt.join(User, User.id == Deal.owner_user_id).where(User.team_id == team_id)
     rows = (await session.execute(stmt)).all()
 
     days = [

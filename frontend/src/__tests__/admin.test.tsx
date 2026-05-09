@@ -199,9 +199,7 @@ describe("Admin surface", () => {
     // Wait for the AppShell's sidebar to render (signals the redirect to /app
     // landed). The Admin h1 must NOT appear.
     await waitFor(() =>
-      expect(
-        screen.getAllByRole("link", { name: /^Přehled$/ }).length,
-      ).toBeGreaterThan(0),
+      expect(screen.getAllByRole("link", { name: /^Přehled$/ }).length).toBeGreaterThan(0),
     );
     expect(screen.queryByRole("heading", { level: 1, name: /^Admin$/ })).toBeNull();
   });
@@ -213,9 +211,7 @@ describe("Admin surface", () => {
       expect(screen.getByRole("heading", { level: 1, name: /^Admin$/ })).toBeInTheDocument(),
     );
     // The list query is async — wait for the rows to settle.
-    await waitFor(() =>
-      expect(screen.getByText(/^Example s\.r\.o\.$/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/^Example s\.r\.o\.$/)).toBeInTheDocument());
     expect(screen.getByText(/^Foo Corp\.$/)).toBeInTheDocument();
   });
 
@@ -243,9 +239,7 @@ describe("Admin surface", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: /^Zkušební verze \(30 dní\)$/ }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /^Aktivovat předplatné$/ }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Aktivovat předplatné$/ })).toBeInTheDocument();
   });
 
   it("Aktivovat modal → submit fires POST with the right body", async () => {
@@ -305,9 +299,7 @@ describe("Admin surface", () => {
     expect(preview.textContent).toMatch(/1\s*592\s*Kč/);
     fireEvent.change(priceInput, { target: { value: "299" } });
     await waitFor(() => {
-      expect(within(dialog).getByTestId("enterprise-preview").textContent).toMatch(
-        /2\s*392\s*Kč/,
-      );
+      expect(within(dialog).getByTestId("enterprise-preview").textContent).toMatch(/2\s*392\s*Kč/);
     });
   });
 
@@ -333,9 +325,7 @@ describe("Admin surface", () => {
   it("Nastavení tab → toggle Jsem plátce DPH → PUT body reflects the new value", async () => {
     const { calls } = setupFetch();
     renderAt("/admin");
-    fireEvent.click(
-      await screen.findByRole("tab", { name: /^Nastavení$/ }),
-    );
+    fireEvent.click(await screen.findByRole("tab", { name: /^Nastavení$/ }));
     const checkbox = await screen.findByLabelText(/Jsem plátce DPH/i);
     fireEvent.click(checkbox);
     fireEvent.click(screen.getByRole("button", { name: /^Uložit$/ }));
@@ -354,9 +344,7 @@ describe("Admin surface", () => {
     // The gear is rendered inside AppShell's header — wait for the sidebar
     // first to confirm AppShell mounted.
     await waitFor(() =>
-      expect(
-        screen.getAllByRole("link", { name: /^Přehled$/ }).length,
-      ).toBeGreaterThan(0),
+      expect(screen.getAllByRole("link", { name: /^Přehled$/ }).length).toBeGreaterThan(0),
     );
     expect(screen.getByTestId("admin-gear")).toBeInTheDocument();
   });
@@ -365,9 +353,7 @@ describe("Admin surface", () => {
     setupFetch({ superAdmin: false });
     renderAt("/app");
     await waitFor(() =>
-      expect(
-        screen.getAllByRole("link", { name: /^Přehled$/ }).length,
-      ).toBeGreaterThan(0),
+      expect(screen.getAllByRole("link", { name: /^Přehled$/ }).length).toBeGreaterThan(0),
     );
     expect(screen.queryByTestId("admin-gear")).toBeNull();
   });

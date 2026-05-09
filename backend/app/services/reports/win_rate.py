@@ -6,7 +6,8 @@ frontend can render the `—` placeholder rather than a misleading 0%.
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
+from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -43,15 +44,9 @@ async def _counts_in_window(
     if team_id is not None:
         from app.db.models import User as _User
 
-        base = base.join(_User, _User.id == Deal.owner_user_id).where(
-            _User.team_id == team_id
-        )
-    won = (
-        await session.execute(base.where(Stage.stage_type == StageType.won))
-    ).scalar_one()
-    lost = (
-        await session.execute(base.where(Stage.stage_type == StageType.lost))
-    ).scalar_one()
+        base = base.join(_User, _User.id == Deal.owner_user_id).where(_User.team_id == team_id)
+    won = (await session.execute(base.where(Stage.stage_type == StageType.won))).scalar_one()
+    lost = (await session.execute(base.where(Stage.stage_type == StageType.lost))).scalar_one()
     return int(won or 0), int(lost or 0)
 
 
@@ -70,10 +65,10 @@ async def compute_win_rate(
     to: date,
     team_id: UUID | None,
     owner_user_id: UUID | None,
-    config: WinRateConfig,  # noqa: ARG001 — no widget-specific knobs
+    config: WinRateConfig,
 ) -> WinRateResponse:
-    from_dt = datetime.combine(from_, time.min, tzinfo=timezone.utc)
-    to_dt = datetime.combine(to, time.max, tzinfo=timezone.utc)
+    from_dt = datetime.combine(from_, time.min, tzinfo=UTC)
+    to_dt = datetime.combine(to, time.max, tzinfo=UTC)
     won, lost = await _counts_in_window(
         session,
         organization_id=organization_id,
@@ -85,8 +80,8 @@ async def compute_win_rate(
     cur_value = _ratio(won, lost)
 
     prev = compute_previous_period(from_, to)
-    prev_from_dt = datetime.combine(prev.from_, time.min, tzinfo=timezone.utc)
-    prev_to_dt = datetime.combine(prev.to, time.max, tzinfo=timezone.utc)
+    prev_from_dt = datetime.combine(prev.from_, time.min, tzinfo=UTC)
+    prev_to_dt = datetime.combine(prev.to, time.max, tzinfo=UTC)
     prev_won, prev_lost = await _counts_in_window(
         session,
         organization_id=organization_id,
@@ -109,7 +104,7 @@ async def compute_win_rate(
         won_count=won,
         lost_count=lost,
         comparison=Comparison(
-            value=prev_value if prev_value is not None else 0,
+            value=Decimal(str(prev_value)) if prev_value is not None else 0,
             delta_pct=delta_pct,
             previous_from=prev.from_,
             previous_to=prev.to,

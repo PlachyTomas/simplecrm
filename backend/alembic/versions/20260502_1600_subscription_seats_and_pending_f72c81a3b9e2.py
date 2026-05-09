@@ -59,8 +59,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_column("subscriptions", "pending_seat_count")
-    op.drop_constraint(
-        "fk_subscriptions_pending_plan", "subscriptions", type_="foreignkey"
-    )
+    op.drop_constraint("fk_subscriptions_pending_plan", "subscriptions", type_="foreignkey")
     op.drop_column("subscriptions", "pending_plan_id")
     op.drop_column("subscriptions", "seat_count")

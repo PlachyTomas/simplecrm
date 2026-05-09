@@ -14,8 +14,8 @@ dependency is needed. Coverage:
 from __future__ import annotations
 
 import base64
-import hmac
 import hashlib
+import hmac
 import json
 
 import httpx
@@ -47,9 +47,7 @@ def _settings_with_creds(**overrides) -> Settings:
     return Settings(**defaults)  # type: ignore[arg-type]
 
 
-def _client_with_handler(
-    handler, **settings_overrides
-) -> ComGateClient:
+def _client_with_handler(handler, **settings_overrides) -> ComGateClient:
     """Wire a MockTransport into the ComGate client so requests don't
     hit the network. Returns the client; assertions about requests
     happen via a captured-list closure inside `handler`."""
@@ -111,32 +109,22 @@ def test_verify_webhook_signature_accepts_correct_hmac() -> None:
     settings = _settings_with_creds()
     client = ComGateClient(settings=settings)
     raw = b'{"transId":"AB12-CD34","status":"PAID"}'
-    expected = hmac.new(
-        settings.comgate_secret.encode(), raw, hashlib.sha256
-    ).hexdigest()
-    assert client.verify_webhook_signature(
-        raw_body=raw, signature_header=expected
-    ) is True
+    expected = hmac.new(settings.comgate_secret.encode(), raw, hashlib.sha256).hexdigest()
+    assert client.verify_webhook_signature(raw_body=raw, signature_header=expected) is True
 
 
 def test_verify_webhook_signature_rejects_wrong_hmac() -> None:
     settings = _settings_with_creds()
     client = ComGateClient(settings=settings)
     raw = b'{"transId":"AB12-CD34","status":"PAID"}'
-    assert client.verify_webhook_signature(
-        raw_body=raw, signature_header="0" * 64
-    ) is False
+    assert client.verify_webhook_signature(raw_body=raw, signature_header="0" * 64) is False
 
 
 def test_verify_webhook_signature_rejects_missing_header() -> None:
     settings = _settings_with_creds()
     client = ComGateClient(settings=settings)
-    assert client.verify_webhook_signature(
-        raw_body=b"x", signature_header=None
-    ) is False
-    assert client.verify_webhook_signature(
-        raw_body=b"x", signature_header=""
-    ) is False
+    assert client.verify_webhook_signature(raw_body=b"x", signature_header=None) is False
+    assert client.verify_webhook_signature(raw_body=b"x", signature_header="") is False
 
 
 def test_verify_webhook_signature_case_insensitive() -> None:
@@ -144,12 +132,8 @@ def test_verify_webhook_signature_case_insensitive() -> None:
     settings = _settings_with_creds()
     client = ComGateClient(settings=settings)
     raw = b'{"transId":"X","status":"PAID"}'
-    expected = hmac.new(
-        settings.comgate_secret.encode(), raw, hashlib.sha256
-    ).hexdigest()
-    assert client.verify_webhook_signature(
-        raw_body=raw, signature_header=expected.upper()
-    ) is True
+    expected = hmac.new(settings.comgate_secret.encode(), raw, hashlib.sha256).hexdigest()
+    assert client.verify_webhook_signature(raw_body=raw, signature_header=expected.upper()) is True
 
 
 def test_verify_webhook_signature_rejects_when_body_tampered() -> None:
@@ -158,12 +142,8 @@ def test_verify_webhook_signature_rejects_when_body_tampered() -> None:
     client = ComGateClient(settings=settings)
     original = b'{"transId":"X","status":"PAID","price":9900}'
     tampered = b'{"transId":"X","status":"PAID","price":1}'
-    sig = hmac.new(
-        settings.comgate_secret.encode(), original, hashlib.sha256
-    ).hexdigest()
-    assert client.verify_webhook_signature(
-        raw_body=tampered, signature_header=sig
-    ) is False
+    sig = hmac.new(settings.comgate_secret.encode(), original, hashlib.sha256).hexdigest()
+    assert client.verify_webhook_signature(raw_body=tampered, signature_header=sig) is False
 
 
 # ---------------------------------------------------------------------------
@@ -213,9 +193,7 @@ async def test_create_initial_payment_omits_test_flag_in_prod_mode() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         captured.append(request)
-        return httpx.Response(
-            200, json={"transId": "X", "redirect": "https://x"}
-        )
+        return httpx.Response(200, json={"transId": "X", "redirect": "https://x"})
 
     client = _client_with_handler(handler, comgate_test_mode=False)
     await client.create_initial_payment(
@@ -254,6 +232,7 @@ async def test_create_initial_payment_raises_on_missing_response_field() -> None
     """Defensive: ComGate returning an unexpected response shape shouldn't
     crash with KeyError; surface a ComGateError so the caller's 502 path
     fires cleanly."""
+
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"redirect": "https://x"})  # missing transId
 
@@ -278,9 +257,7 @@ async def test_create_recurring_payment_uses_initial_trans_id_in_path() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         captured.append(request)
-        return httpx.Response(
-            200, json={"transId": "NEW-TRANS-ID", "code": 0}
-        )
+        return httpx.Response(200, json={"transId": "NEW-TRANS-ID", "code": 0})
 
     client = _client_with_handler(handler)
     result = await client.create_recurring_payment(
@@ -318,6 +295,7 @@ async def test_disable_recurring_returns_true_on_success() -> None:
 async def test_disable_recurring_returns_false_on_4xx_without_raising() -> None:
     """Self-serve cancel must never abort because ComGate had a hiccup —
     the local cancel is what actually stops further charges."""
+
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(400, json={"code": 1400, "message": "Not found"})
 
@@ -327,6 +305,7 @@ async def test_disable_recurring_returns_false_on_4xx_without_raising() -> None:
 
 async def test_disable_recurring_returns_false_on_transport_error() -> None:
     """Network failure shouldn't propagate as an exception."""
+
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("connection refused")
 

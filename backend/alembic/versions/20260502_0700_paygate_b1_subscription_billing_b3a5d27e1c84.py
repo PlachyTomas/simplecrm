@@ -29,16 +29,10 @@ def upgrade() -> None:
     # --- 1. Plans rework -------------------------------------------------
     # Add new columns alongside the old ones, copy values, then drop old.
     op.add_column("plans", sa.Column("code", sa.String(length=32), nullable=True))
-    op.add_column(
-        "plans", sa.Column("display_name_cs", sa.String(length=120), nullable=True)
-    )
+    op.add_column("plans", sa.Column("display_name_cs", sa.String(length=120), nullable=True))
     op.add_column("plans", sa.Column("description_cs", sa.Text(), nullable=True))
-    op.add_column(
-        "plans", sa.Column("billing_interval", sa.String(length=16), nullable=True)
-    )
-    op.add_column(
-        "plans", sa.Column("price_per_user_minor", sa.Integer(), nullable=True)
-    )
+    op.add_column("plans", sa.Column("billing_interval", sa.String(length=16), nullable=True))
+    op.add_column("plans", sa.Column("price_per_user_minor", sa.Integer(), nullable=True))
     op.add_column(
         "plans",
         sa.Column(
@@ -191,9 +185,7 @@ def upgrade() -> None:
             ondelete="RESTRICT",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_subscriptions")),
-        sa.UniqueConstraint(
-            "organization_id", name=op.f("uq_subscriptions_organization_id")
-        ),
+        sa.UniqueConstraint("organization_id", name=op.f("uq_subscriptions_organization_id")),
     )
     op.create_index(
         "ix_subscriptions_org_status",
@@ -294,9 +286,7 @@ def downgrade() -> None:
 
     op.drop_table("billing_settings")
 
-    op.drop_index(
-        "ix_subscriptions_current_period_ends_at", table_name="subscriptions"
-    )
+    op.drop_index("ix_subscriptions_current_period_ends_at", table_name="subscriptions")
     op.drop_index("ix_subscriptions_org_status", table_name="subscriptions")
     op.drop_table("subscriptions")
 
@@ -330,9 +320,7 @@ def downgrade() -> None:
         )
     )
     # Drop plans the old schema didn't know about.
-    op.execute(
-        sa.text("DELETE FROM plans WHERE code IN ('annual','enterprise','comp')")
-    )
+    op.execute(sa.text("DELETE FROM plans WHERE code IN ('annual','enterprise','comp')"))
     op.alter_column("plans", "name", nullable=False)
     op.alter_column("plans", "price_minor_units", nullable=False)
     op.alter_column("plans", "interval", nullable=False)

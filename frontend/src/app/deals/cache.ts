@@ -14,10 +14,7 @@ import type { QueryClient } from "@tanstack/react-query";
  * React Query's prefix-match semantics to catch every nested key under
  * `["reports", ...]` without having to enumerate them.
  */
-export function invalidateDealReadModels(
-  queryClient: QueryClient,
-  dealId?: string,
-): void {
+export function invalidateDealReadModels(queryClient: QueryClient, dealId?: string): void {
   void queryClient.invalidateQueries({ queryKey: ["deals"] });
   void queryClient.invalidateQueries({ queryKey: ["pipeline"] });
   void queryClient.invalidateQueries({ queryKey: ["reports"] });

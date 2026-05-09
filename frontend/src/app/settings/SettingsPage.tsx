@@ -156,7 +156,7 @@ function StageForm({
 
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-3 sm:grid-cols-12">
-      <label className="sm:col-span-5 text-xs font-medium text-text-tertiary">
+      <label className="text-xs font-medium text-text-tertiary sm:col-span-5">
         Název
         <input
           type="text"
@@ -167,20 +167,18 @@ function StageForm({
           className="mt-1 block w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm text-text-primary"
         />
       </label>
-      <label className="sm:col-span-2 text-xs font-medium text-text-tertiary">
+      <label className="text-xs font-medium text-text-tertiary sm:col-span-2">
         Pravděp. (%)
         <input
           type="number"
           min={0}
           max={100}
           value={form.default_probability}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, default_probability: Number(e.target.value) }))
-          }
-          className="mt-1 block w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm text-text-primary tabular-nums"
+          onChange={(e) => setForm((f) => ({ ...f, default_probability: Number(e.target.value) }))}
+          className="mt-1 block w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm tabular-nums text-text-primary"
         />
       </label>
-      <label className="sm:col-span-2 text-xs font-medium text-text-tertiary">
+      <label className="text-xs font-medium text-text-tertiary sm:col-span-2">
         Barva
         <input
           type="color"
@@ -189,13 +187,11 @@ function StageForm({
           className="mt-1 block h-[34px] w-full rounded-md border border-border bg-surface"
         />
       </label>
-      <label className="sm:col-span-3 text-xs font-medium text-text-tertiary">
+      <label className="text-xs font-medium text-text-tertiary sm:col-span-3">
         Typ
         <select
           value={form.stage_type}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, stage_type: e.target.value as StageType }))
-          }
+          onChange={(e) => setForm((f) => ({ ...f, stage_type: e.target.value as StageType }))}
           className="mt-1 block w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm text-text-primary"
         >
           <option value="open">Otevřená</option>
@@ -204,15 +200,15 @@ function StageForm({
         </select>
       </label>
       {error ? (
-        <p className="sm:col-span-12 text-sm text-danger" role="alert">
+        <p className="text-sm text-danger sm:col-span-12" role="alert">
           {error}
         </p>
       ) : null}
-      <div className="sm:col-span-12 flex items-center gap-2">
+      <div className="flex items-center gap-2 sm:col-span-12">
         <button
           type="submit"
           disabled={busy}
-          className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+          className="text-accent-foreground rounded-md bg-accent px-3 py-1.5 text-sm font-medium hover:bg-accent-hover disabled:opacity-50"
         >
           {submitLabel}
         </button>
@@ -247,11 +243,7 @@ function StageRow({
 }) {
   return (
     <li className="flex items-center gap-3 border-b border-border-subtle py-3 last:border-0">
-      <span
-        aria-hidden
-        className="h-3 w-3 rounded-full"
-        style={{ backgroundColor: stage.color }}
-      />
+      <span aria-hidden className="h-3 w-3 rounded-full" style={{ backgroundColor: stage.color }} />
       <div className="flex-1">
         <div className="flex items-baseline gap-3">
           <span className="text-sm font-medium text-text-primary">{stage.name}</span>
@@ -354,9 +346,7 @@ export function SettingsPage({ initialTab = "pipeline" }: SettingsPageProps = {}
       </div>
     );
   }
-  const visibleTabs = canInviteOnly
-    ? TABS.filter((t) => t.key === "invitations")
-    : TABS;
+  const visibleTabs = canInviteOnly ? TABS.filter((t) => t.key === "invitations") : TABS;
 
   const stagesReady = !isPending && !isError && pipeline;
   const stages = stagesReady ? [...pipeline.stages].sort((a, b) => a.position - b.position) : [];
@@ -388,7 +378,7 @@ export function SettingsPage({ initialTab = "pipeline" }: SettingsPageProps = {}
     }
   }
 
-  const editing = editingId ? stages.find((s) => s.id === editingId) ?? null : null;
+  const editing = editingId ? (stages.find((s) => s.id === editingId) ?? null) : null;
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
@@ -449,76 +439,73 @@ export function SettingsPage({ initialTab = "pipeline" }: SettingsPageProps = {}
           Pipeline se nepodařilo načíst.
         </div>
       ) : (
-      <section className="rounded-lg border border-border bg-surface p-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Fáze</h2>
-          {!addingOpen ? (
-            <button
-              type="button"
-              onClick={() => setAddingOpen(true)}
-              className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
-            >
-              <Plus size={16} strokeWidth={1.75} /> Přidat fázi
-            </button>
-          ) : null}
-        </div>
-
-        {addingOpen ? (
-          <div className="mt-4 rounded-md border border-border-subtle p-4">
-            <StageForm
-              initial={EMPTY_FORM}
-              submitLabel="Vytvořit"
-              busy={createStage.isPending}
-              onCancel={() => setAddingOpen(false)}
-              onSubmit={async (values) => {
-                await createStage.mutateAsync(values);
-                setAddingOpen(false);
-              }}
-            />
+        <section className="rounded-lg border border-border bg-surface p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Fáze</h2>
+            {!addingOpen ? (
+              <button
+                type="button"
+                onClick={() => setAddingOpen(true)}
+                className="text-accent-foreground inline-flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium hover:bg-accent-hover"
+              >
+                <Plus size={16} strokeWidth={1.75} /> Přidat fázi
+              </button>
+            ) : null}
           </div>
-        ) : null}
 
-        <ol className="mt-4">
-          {stages.map((stage, idx) => {
-            const isEditing = editing && editing.id === stage.id;
-            if (isEditing && editing) {
-              return (
-                <li
-                  key={stage.id}
-                  className="border-b border-border-subtle py-3 last:border-0"
-                >
-                  <StageForm
-                    initial={{
-                      name: editing.name,
-                      default_probability: editing.default_probability,
-                      color: editing.color,
-                      stage_type: editing.stage_type as StageType,
-                    }}
-                    submitLabel="Uložit"
-                    busy={updateStage.isPending}
-                    onCancel={() => setEditingId(null)}
-                    onSubmit={async (values) => {
-                      await updateStage.mutateAsync({ id: editing.id, patch: values });
-                      setEditingId(null);
-                    }}
-                  />
-                </li>
-              );
-            }
-            return (
-              <StageRow
-                key={stage.id}
-                stage={stage}
-                canMoveUp={idx > 0}
-                canMoveDown={idx < stages.length - 1}
-                onMove={(dir) => void handleMove(idx, dir)}
-                onEdit={() => setEditingId(stage.id)}
-                onDelete={() => void handleDelete(stage)}
+          {addingOpen ? (
+            <div className="mt-4 rounded-md border border-border-subtle p-4">
+              <StageForm
+                initial={EMPTY_FORM}
+                submitLabel="Vytvořit"
+                busy={createStage.isPending}
+                onCancel={() => setAddingOpen(false)}
+                onSubmit={async (values) => {
+                  await createStage.mutateAsync(values);
+                  setAddingOpen(false);
+                }}
               />
-            );
-          })}
-        </ol>
-      </section>
+            </div>
+          ) : null}
+
+          <ol className="mt-4">
+            {stages.map((stage, idx) => {
+              const isEditing = editing && editing.id === stage.id;
+              if (isEditing && editing) {
+                return (
+                  <li key={stage.id} className="border-b border-border-subtle py-3 last:border-0">
+                    <StageForm
+                      initial={{
+                        name: editing.name,
+                        default_probability: editing.default_probability,
+                        color: editing.color,
+                        stage_type: editing.stage_type as StageType,
+                      }}
+                      submitLabel="Uložit"
+                      busy={updateStage.isPending}
+                      onCancel={() => setEditingId(null)}
+                      onSubmit={async (values) => {
+                        await updateStage.mutateAsync({ id: editing.id, patch: values });
+                        setEditingId(null);
+                      }}
+                    />
+                  </li>
+                );
+              }
+              return (
+                <StageRow
+                  key={stage.id}
+                  stage={stage}
+                  canMoveUp={idx > 0}
+                  canMoveDown={idx < stages.length - 1}
+                  onMove={(dir) => void handleMove(idx, dir)}
+                  onEdit={() => setEditingId(stage.id)}
+                  onDelete={() => void handleDelete(stage)}
+                />
+              );
+            })}
+          </ol>
+        </section>
       )}
     </div>
   );
@@ -584,8 +571,8 @@ function LeaderboardVisibilityToggle() {
           Zobrazit obchodníkům žebříček
         </span>
         <span className="mt-0.5 block text-xs text-text-tertiary">
-          Když je vypnuto, obchodníci v Reportech vidí pouze své vlastní výsledky.
-          Manažeři a administrátoři žebříček vidí vždy.
+          Když je vypnuto, obchodníci v Reportech vidí pouze své vlastní výsledky. Manažeři a
+          administrátoři žebříček vidí vždy.
         </span>
         {mutation.isError ? (
           <span className="mt-1 block text-xs text-danger" role="alert">
@@ -652,9 +639,8 @@ function OwnershipWindowSetting() {
           Doba držení firem (dny)
         </label>
         <p className="mt-1 text-xs text-text-tertiary">
-          Po této době bez vyhraného obchodu se firma automaticky uvolní z
-          poolu obchodníka zpět manažerům k přerozdělení. Výchozí hodnota
-          je 365 dní (1 rok). Povolený rozsah 1–3650 dní.
+          Po této době bez vyhraného obchodu se firma automaticky uvolní z poolu obchodníka zpět
+          manažerům k přerozdělení. Výchozí hodnota je 365 dní (1 rok). Povolený rozsah 1–3650 dní.
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-3">
@@ -684,7 +670,7 @@ function OwnershipWindowSetting() {
       {error ? (
         <p
           role="alert"
-          className="rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
+          className="border-danger/40 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
         >
           {error}
         </p>
@@ -695,7 +681,12 @@ function OwnershipWindowSetting() {
 
 function PermissionsSection() {
   const rows: { action: string; rep: string; manager: string; admin: string }[] = [
-    { action: "Vidět všechny obchody v rámci pipeline", rep: "Jen vlastní", manager: "Tým", admin: "Vše" },
+    {
+      action: "Vidět všechny obchody v rámci pipeline",
+      rep: "Jen vlastní",
+      manager: "Tým",
+      admin: "Vše",
+    },
     { action: "Editovat firmy", rep: "Jen vlastní", manager: "Tým", admin: "Vše" },
     { action: "Mazat firmy a uvolňovat z poolu", rep: "—", manager: "—", admin: "Ano" },
     { action: "Spravovat uživatele a týmy", rep: "—", manager: "—", admin: "Ano" },
@@ -716,8 +707,7 @@ function PermissionsSection() {
       <div className="rounded-lg border border-border bg-surface p-6">
         <h2 className="text-lg font-semibold">Pravidla pro firmy</h2>
         <p className="mt-1 text-sm text-text-tertiary">
-          Doba, po které neaktivní firmy připadají manažerům zpět k
-          přerozdělení.
+          Doba, po které neaktivní firmy připadají manažerům zpět k přerozdělení.
         </p>
         <div className="mt-4">
           <OwnershipWindowSetting />
@@ -760,8 +750,7 @@ type PlanCode = "monthly" | "annual";
 
 const SUPPORT_MAILTO = "mailto:podpora@simplecrm.cz";
 const ENTERPRISE_MAILTO =
-  "mailto:podpora@simplecrm.cz?subject=" +
-  encodeURIComponent("SimpleCRM enterprise — dotaz");
+  "mailto:podpora@simplecrm.cz?subject=" + encodeURIComponent("SimpleCRM enterprise — dotaz");
 
 const csDate = new Intl.DateTimeFormat("cs-CZ", { dateStyle: "long" });
 function formatCsDate(iso: string | null | undefined): string | null {
@@ -845,9 +834,7 @@ function BillingSection() {
       />
       <InvoicesCard />
       <CancelSubscriptionCard sub={sub} />
-      {modalOpen ? (
-        <ChoosePlanModal preselect={modalPreselect} onClose={closeModal} />
-      ) : null}
+      {modalOpen ? <ChoosePlanModal preselect={modalPreselect} onClose={closeModal} /> : null}
     </div>
   );
 }
@@ -904,8 +891,8 @@ function CurrentPlanCard({ sub, onChangePlan }: CurrentPlanCardProps) {
 
       {sub?.status === "pending_activation" ? (
         <p className="mt-4 text-sm text-text-secondary">
-          Vybrali jste plán <span className="font-medium">{planName}</span>. Po
-          připsání platby vás aktivujeme do 24 hodin.
+          Vybrali jste plán <span className="font-medium">{planName}</span>. Po připsání platby vás
+          aktivujeme do 24 hodin.
         </p>
       ) : null}
 
@@ -920,10 +907,8 @@ function CurrentPlanCard({ sub, onChangePlan }: CurrentPlanCardProps) {
           {effective !== null ? (
             <p className="text-sm text-text-secondary">
               Vlastní balíček ·{" "}
-              <span className="font-medium text-text-primary">
-                {formatCzkMinor(effective)}
-              </span>{" "}
-              / uživatel / měsíc
+              <span className="font-medium text-text-primary">{formatCzkMinor(effective)}</span> /
+              uživatel / měsíc
             </p>
           ) : null}
           <a
@@ -971,10 +956,7 @@ function BillingDetailsCard({ sub, summary, onSwitchToAnnual }: BillingDetailsCa
   // trialing/pending/canceled have no current charge.
   if (sub.status !== "active" && sub.status !== "past_due") return null;
   if (!summary) return null;
-  if (
-    summary.effective_price_per_user_minor == null ||
-    summary.monthly_total_minor == null
-  ) {
+  if (summary.effective_price_per_user_minor == null || summary.monthly_total_minor == null) {
     return null;
   }
 
@@ -998,14 +980,9 @@ function BillingDetailsCard({ sub, summary, onSwitchToAnnual }: BillingDetailsCa
 
       <p className="mt-4 text-sm text-text-secondary">
         {billedSeats} {csNoun(billedSeats, "uzivatel")} ×{" "}
-        <span className="font-medium text-text-primary">
-          {formatCzkMinor(perUserMinor)}
-        </span>{" "}
-        ={" "}
-        <span className="font-semibold text-text-primary">
-          {formatCzkMinor(totalMinor)}
-        </span>{" "}
-        / {periodLabel}
+        <span className="font-medium text-text-primary">{formatCzkMinor(perUserMinor)}</span> ={" "}
+        <span className="font-semibold text-text-primary">{formatCzkMinor(totalMinor)}</span> /{" "}
+        {periodLabel}
       </p>
 
       {!isAnnual && summary.savings_minor != null && summary.savings_minor > 0 ? (
@@ -1050,10 +1027,7 @@ const INVOICE_KIND_LABEL: Record<InvoiceOut["kind"], string> = {
   seat_upgrade: "Navýšení uživatelů",
 };
 
-const INVOICE_STATUS_PILL: Record<
-  InvoiceOut["status"],
-  { label: string; className: string }
-> = {
+const INVOICE_STATUS_PILL: Record<InvoiceOut["status"], { label: string; className: string }> = {
   paid: { label: "Zaplaceno", className: "bg-success-subtle text-success" },
   pending: { label: "Čeká", className: "bg-warning-subtle text-warning" },
   failed: { label: "Selhalo", className: "bg-danger-subtle text-danger" },
@@ -1073,19 +1047,14 @@ function InvoicesCard() {
           Faktury se nepodařilo načíst.
         </p>
       ) : !invoices.data || invoices.data.items.length === 0 ? (
-        <p className="mt-3 text-sm text-text-secondary">
-          Faktury budou dostupné po první platbě.
-        </p>
+        <p className="mt-3 text-sm text-text-secondary">Faktury budou dostupné po první platbě.</p>
       ) : (
         <ul className="mt-4 divide-y divide-border-subtle">
           {invoices.data.items.map((inv) => {
             const pill = INVOICE_STATUS_PILL[inv.status];
             const created = formatCsDate(inv.created_at) ?? "";
             return (
-              <li
-                key={inv.id}
-                className="flex flex-wrap items-center justify-between gap-3 py-3"
-              >
+              <li key={inv.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-text-primary">
                     {INVOICE_KIND_LABEL[inv.kind]}
@@ -1146,7 +1115,7 @@ function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
 
   if (isScheduledForCancel) {
     return (
-      <section className="rounded-lg border border-warning/40 bg-warning-subtle p-6">
+      <section className="border-warning/40 rounded-lg border bg-warning-subtle p-6">
         <h2 className="text-lg font-semibold text-text-primary">
           Předplatné je naplánované ke zrušení
         </h2>
@@ -1158,7 +1127,7 @@ function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
         {error ? (
           <p
             role="alert"
-            className="mt-3 rounded-md border border-danger/40 bg-bg px-3 py-2 text-sm text-danger"
+            className="border-danger/40 mt-3 rounded-md border bg-bg px-3 py-2 text-sm text-danger"
           >
             {error}
           </p>
@@ -1169,8 +1138,7 @@ function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
           onClick={() => {
             setError(null);
             reactivate.mutate(undefined, {
-              onError: () =>
-                setError("Obnovení se nezdařilo. Zkuste to prosím znovu."),
+              onError: () => setError("Obnovení se nezdařilo. Zkuste to prosím znovu."),
             });
           }}
           className="mt-4 inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
@@ -1188,9 +1156,8 @@ function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
       <h2 className="text-lg font-semibold">Zrušit předplatné</h2>
       <p className="mt-3 text-sm text-text-secondary">
         Po zrušení dále hradíme až do konce aktuálního období
-        {endsAt ? ` (do ${endsAt})` : ""} — nikdo o přístup nepřijde okamžitě.
-        Žádné další platby vám pak strhnuty nebudou. Data si vždy můžete
-        vyexportovat ze sekce Reporty.
+        {endsAt ? ` (do ${endsAt})` : ""} — nikdo o přístup nepřijde okamžitě. Žádné další platby
+        vám pak strhnuty nebudou. Data si vždy můžete vyexportovat ze sekce Reporty.
       </p>
 
       {!confirming ? (
@@ -1205,10 +1172,8 @@ function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
           Zrušit předplatné
         </button>
       ) : (
-        <div className="mt-4 space-y-3 rounded-md border border-danger/40 bg-danger-subtle p-4">
-          <p className="text-sm font-medium text-text-primary">
-            Opravdu chcete zrušit předplatné?
-          </p>
+        <div className="border-danger/40 mt-4 space-y-3 rounded-md border bg-danger-subtle p-4">
+          <p className="text-sm font-medium text-text-primary">Opravdu chcete zrušit předplatné?</p>
           <label className="block text-xs font-medium text-text-tertiary">
             Důvod (nepovinné, pomůže nám se zlepšit)
             <textarea
@@ -1234,12 +1199,11 @@ function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
                   { reason: reason.trim() || undefined },
                   {
                     onSuccess: () => setConfirming(false),
-                    onError: () =>
-                      setError("Zrušení se nezdařilo. Zkuste to prosím znovu."),
+                    onError: () => setError("Zrušení se nezdařilo. Zkuste to prosím znovu."),
                   },
                 );
               }}
-              className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-danger/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="hover:bg-danger/90 inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast disabled:cursor-not-allowed disabled:opacity-50"
             >
               {cancel.isPending ? "Rušíme…" : "Ano, zrušit"}
             </button>
@@ -1292,9 +1256,7 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
           window.location.assign(init.redirect_url);
         },
         onError: () => {
-          setError(
-            "Platební brána není dostupná, zkuste to prosím za chvíli.",
-          );
+          setError("Platební brána není dostupná, zkuste to prosím za chvíli.");
         },
       },
     );
@@ -1306,7 +1268,7 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="choose-plan-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 py-8 backdrop-blur-md"
+      className="bg-bg/80 fixed inset-0 z-50 flex items-center justify-center px-4 py-8 backdrop-blur-md"
     >
       <form
         onSubmit={handleSubmit}
@@ -1316,8 +1278,8 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
           Vyberte plán
         </h2>
         <p className="mt-2 text-sm text-text-secondary">
-          Po výběru vás přesměrujeme na zabezpečenou platební bránu. Po
-          úspěšné platbě se vrátíte zpět a předplatné bude okamžitě aktivní.
+          Po výběru vás přesměrujeme na zabezpečenou platební bránu. Po úspěšné platbě se vrátíte
+          zpět a předplatné bude okamžitě aktivní.
         </p>
 
         <div
@@ -1363,7 +1325,7 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
         {error ? (
           <p
             role="alert"
-            className="mt-4 rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
+            className="border-danger/40 mt-4 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
           >
             {error}
           </p>
@@ -1431,9 +1393,7 @@ function PlanModalCard({
       className={cn(
         "relative flex cursor-pointer flex-col rounded-lg border-2 bg-surface p-5 transition-colors",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg",
-        selected
-          ? "border-accent shadow-md"
-          : "border-border hover:border-text-tertiary",
+        selected ? "border-accent shadow-md" : "border-border hover:border-text-tertiary",
         disabled && "cursor-not-allowed opacity-60",
       )}
     >
@@ -1445,17 +1405,9 @@ function PlanModalCard({
       <h3 className="text-base font-semibold text-text-primary">{title}</h3>
       <div className="mt-3">
         {priceMinor != null ? (
-          <PriceDisplay
-            baseMinor={priceMinor}
-            interval={priceInterval}
-            size="lg"
-            hideVatLine
-          />
+          <PriceDisplay baseMinor={priceMinor} interval={priceInterval} size="lg" hideVatLine />
         ) : (
-          <div
-            aria-hidden
-            className="h-9 w-32 animate-pulse rounded bg-surface-overlay"
-          />
+          <div aria-hidden className="h-9 w-32 animate-pulse rounded bg-surface-overlay" />
         )}
       </div>
       {caption ? <div className="mt-3">{caption}</div> : null}
@@ -1489,7 +1441,10 @@ function OrganizationSection() {
   }
   if (!sub) {
     return (
-      <section className="rounded-lg border border-border bg-surface p-6 text-sm text-danger" role="alert">
+      <section
+        className="rounded-lg border border-border bg-surface p-6 text-sm text-danger"
+        role="alert"
+      >
         Načítání předplatného se nezdařilo.
       </section>
     );
@@ -1497,11 +1452,7 @@ function OrganizationSection() {
 
   return (
     <div className="space-y-6">
-      <SeatCountCard
-        sub={sub}
-        activeUserCount={activeUsers.length}
-        activeUsers={activeUsers}
-      />
+      <SeatCountCard sub={sub} activeUserCount={activeUsers.length} activeUsers={activeUsers} />
       <BillingIntervalCard sub={sub} />
     </div>
   );
@@ -1570,9 +1521,7 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
             },
             onError: () => {
               setRedirecting(false);
-              setError(
-                "Platební brána není dostupná, zkuste to prosím za chvíli.",
-              );
+              setError("Platební brána není dostupná, zkuste to prosím za chvíli.");
             },
           },
         );
@@ -1644,32 +1593,27 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="rounded-lg border border-border bg-surface p-6"
-    >
+    <form onSubmit={onSubmit} className="rounded-lg border border-border bg-surface p-6">
       <header>
         <h2 className="text-lg font-semibold">Smluvní počet uživatelů</h2>
         <p className="mt-1 text-sm text-text-tertiary">
-          Aktuálně máte {activeUserCount} aktivních uživatelů z {sub.seat_count}{" "}
-          smluvních. Limit ovlivňuje, kolik pozvánek lze odeslat, a odpovídá
-          fakturované ceně.
+          Aktuálně máte {activeUserCount} aktivních uživatelů z {sub.seat_count} smluvních. Limit
+          ovlivňuje, kolik pozvánek lze odeslat, a odpovídá fakturované ceně.
         </p>
       </header>
 
       {sub.pending_seat_count != null && queuedUsers.length > 0 ? (
         <div
           data-testid="seat-count-pending-banner"
-          className="mt-4 rounded-md border border-info/40 bg-info-subtle p-4"
+          className="border-info/40 mt-4 rounded-md border bg-info-subtle p-4"
         >
           <p className="text-sm font-medium text-text-primary">
             Naplánovaná změna: počet klesne na {sub.pending_seat_count}
             {periodEndsAt ? ` ke dni ${periodEndsAt}` : ""}.
           </p>
           <p className="mt-1 text-xs text-text-secondary">
-            Přístup ztratí:{" "}
-            {queuedUsers.map((u) => u.name).join(", ")}. Do té doby si plně
-            užijí placené sloty.
+            Přístup ztratí: {queuedUsers.map((u) => u.name).join(", ")}. Do té doby si plně užijí
+            placené sloty.
           </p>
           <button
             type="button"
@@ -1694,7 +1638,7 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
       </label>
 
       {needsToDeactivate ? (
-        <div className="mt-4 rounded-md border border-warning/40 bg-warning-subtle p-4">
+        <div className="border-warning/40 mt-4 rounded-md border bg-warning-subtle p-4">
           <p className="text-sm font-medium text-text-primary">
             {periodEndsAt
               ? `Po skončení současného období (${periodEndsAt}) ztratí přístup ${requiredCount} `
@@ -1702,10 +1646,9 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
             {requiredCount === 1 ? "uživatel" : "uživatelů"}.
           </p>
           <p className="mt-1 text-xs text-text-secondary">
-            Vyberte koho. Sami sebe odstranit nemůžete. Do konce období mají
-            vybraní lidé plný přístup; deaktivace proběhne při dalším
-            zúčtování. Účet zůstane v databázi (pro historii dat), ale
-            přihlášení skončí.
+            Vyberte koho. Sami sebe odstranit nemůžete. Do konce období mají vybraní lidé plný
+            přístup; deaktivace proběhne při dalším zúčtování. Účet zůstane v databázi (pro historii
+            dat), ale přihlášení skončí.
           </p>
           <ul className="mt-3 space-y-1.5">
             {eligibleVictims.map((u) => {
@@ -1720,9 +1663,7 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
                       className="h-4 w-4"
                     />
                     <span className="font-medium text-text-primary">{u.name}</span>
-                    <span className="text-xs text-text-tertiary">
-                      · {u.email}
-                    </span>
+                    <span className="text-xs text-text-tertiary">· {u.email}</span>
                   </label>
                 </li>
               );
@@ -1742,7 +1683,7 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
       {error ? (
         <p
           role="alert"
-          className="mt-4 rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
+          className="border-danger/40 mt-4 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
         >
           {error}
         </p>
@@ -1781,11 +1722,7 @@ function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
   const qc = useQueryClient();
 
   const currentInterval: "monthly" | "annual" | "other" =
-    sub.plan.code === "monthly"
-      ? "monthly"
-      : sub.plan.code === "annual"
-        ? "annual"
-        : "other";
+    sub.plan.code === "monthly" ? "monthly" : sub.plan.code === "annual" ? "annual" : "other";
   const pendingInterval: "monthly" | "annual" | null =
     sub.pending_plan?.code === "monthly"
       ? "monthly"
@@ -1832,15 +1769,10 @@ function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
   // pending plan is what they intend to land on. Show that wording
   // explicitly so the admin understands what changes when.
   const isTrial = sub.plan.code === "trial";
-  const switchTakesEffect = isTrial
-    ? "po skončení zkušební doby"
-    : "při dalším zúčtovacím období";
+  const switchTakesEffect = isTrial ? "po skončení zkušební doby" : "při dalším zúčtovacím období";
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="rounded-lg border border-border bg-surface p-6"
-    >
+    <form onSubmit={onSubmit} className="rounded-lg border border-border bg-surface p-6">
       <header>
         <h2 className="text-lg font-semibold">Způsob fakturace</h2>
         <p className="mt-1 text-sm text-text-tertiary">
@@ -1870,17 +1802,22 @@ function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
       </div>
 
       {pendingInterval && pendingInterval !== currentInterval ? (
-        <p className="mt-4 rounded-md border border-info/40 bg-info-subtle px-3 py-2 text-sm text-info">
-          Aktuálně účtujeme {currentInterval === "monthly" ? "měsíčně" : currentInterval === "annual" ? "ročně" : "dle vašeho plánu"}.
-          Při dalším období přejdete na{" "}
-          {pendingInterval === "annual" ? "roční" : "měsíční"} fakturaci.
+        <p className="border-info/40 mt-4 rounded-md border bg-info-subtle px-3 py-2 text-sm text-info">
+          Aktuálně účtujeme{" "}
+          {currentInterval === "monthly"
+            ? "měsíčně"
+            : currentInterval === "annual"
+              ? "ročně"
+              : "dle vašeho plánu"}
+          . Při dalším období přejdete na {pendingInterval === "annual" ? "roční" : "měsíční"}{" "}
+          fakturaci.
         </p>
       ) : null}
 
       {error ? (
         <p
           role="alert"
-          className="mt-4 rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
+          className="border-danger/40 mt-4 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
         >
           {error}
         </p>
@@ -1933,9 +1870,7 @@ function IntervalRadio({
       className={cn(
         "cursor-pointer rounded-md border-2 bg-surface p-4 transition-colors",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg",
-        selected
-          ? "border-accent shadow-sm"
-          : "border-border hover:border-text-tertiary",
+        selected ? "border-accent shadow-sm" : "border-border hover:border-text-tertiary",
       )}
     >
       <p className="text-sm font-semibold text-text-primary">{title}</p>

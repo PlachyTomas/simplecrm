@@ -21,10 +21,9 @@ export function useDashboardConfig() {
     staleTime: 30 * 1000,
     queryFn: async () => {
       try {
-        return await apiFetch<DashboardConfig>(
-          "/api/v1/reports/dashboard-config",
-          { token: accessToken },
-        );
+        return await apiFetch<DashboardConfig>("/api/v1/reports/dashboard-config", {
+          token: accessToken,
+        });
       } catch (err) {
         if (err instanceof ApiError) return null;
         throw err;

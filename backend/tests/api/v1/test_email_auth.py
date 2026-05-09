@@ -65,23 +65,17 @@ async def test_signup_creates_unverified_user_and_action_token(
     assert response.status_code == 202
 
     async with AsyncSessionLocal() as s:
-        user = (
-            await s.execute(select(User).where(User.email == email))
-        ).scalar_one()
+        user = (await s.execute(select(User).where(User.email == email))).scalar_one()
         assert user.password_hash is not None
         assert user.email_verified is False
         token_count = (
-            await s.execute(
-                select(AuthActionToken).where(AuthActionToken.user_id == user.id)
-            )
+            await s.execute(select(AuthActionToken).where(AuthActionToken.user_id == user.id))
         ).all()
         assert len(token_count) == 1
         assert token_count[0][0].purpose == "verify_email"
 
 
-async def test_signup_rejects_weak_password(
-    client: AsyncClient, cleanup_emails: list[str]
-) -> None:
+async def test_signup_rejects_weak_password(client: AsyncClient, cleanup_emails: list[str]) -> None:
     email = _unique_email()
     response = await client.post(
         "/api/v1/auth/signup",
@@ -127,9 +121,7 @@ async def _signup_and_get_token(client: AsyncClient, email: str, password: str) 
     async with AsyncSessionLocal() as s:
         user = (await s.execute(select(User).where(User.email == email))).scalar_one()
         token_row = (
-            await s.execute(
-                select(AuthActionToken).where(AuthActionToken.user_id == user.id)
-            )
+            await s.execute(select(AuthActionToken).where(AuthActionToken.user_id == user.id))
         ).scalar_one()
     return sign_action_token(token_row.jti)
 
@@ -168,17 +160,13 @@ async def test_verify_consume_logs_user_in_and_marks_verified(
         assert user.email_verified_at is not None
         # Token row was deleted on consume
         leftover = (
-            await s.execute(
-                select(AuthActionToken).where(AuthActionToken.user_id == user.id)
-            )
+            await s.execute(select(AuthActionToken).where(AuthActionToken.user_id == user.id))
         ).all()
         assert leftover == []
 
 
 async def test_verify_consume_rejects_bad_token(client: AsyncClient) -> None:
-    response = await client.post(
-        "/api/v1/auth/verify-email/consume", json={"token": "garbage"}
-    )
+    response = await client.post("/api/v1/auth/verify-email/consume", json={"token": "garbage"})
     assert response.status_code == 400
     assert response.json()["detail"]["code"] == "token_invalid"
 
@@ -198,9 +186,7 @@ async def test_login_succeeds_after_verification(
     consume = await client.post("/api/v1/auth/verify-email/consume", json={"token": token})
     assert consume.status_code == 200
 
-    response = await client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    response = await client.post("/api/v1/auth/login", json={"email": email, "password": password})
     assert response.status_code == 200
     body = response.json()
     assert "access_token" in body
@@ -216,16 +202,12 @@ async def test_login_rejects_unverified_user(
     cleanup_emails.append(email)
     await _signup_and_get_token(client, email, password)
 
-    response = await client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    response = await client.post("/api/v1/auth/login", json={"email": email, "password": password})
     assert response.status_code == 403
     assert response.json()["detail"]["code"] == "email_not_verified"
 
 
-async def test_login_rejects_wrong_password(
-    client: AsyncClient, cleanup_emails: list[str]
-) -> None:
+async def test_login_rejects_wrong_password(client: AsyncClient, cleanup_emails: list[str]) -> None:
     email = _unique_email()
     cleanup_emails.append(email)
     token = await _signup_and_get_token(client, email, "correcthorsebattery1")
@@ -303,9 +285,7 @@ async def test_signup_for_oauth_only_user_sends_link_token_without_setting_passw
         user_row = (await s.execute(select(User).where(User.email == email))).scalar_one()
         assert user_row.password_hash is None  # NOT written at signup time
         token_row = (
-            await s.execute(
-                select(AuthActionToken).where(AuthActionToken.user_id == user_row.id)
-            )
+            await s.execute(select(AuthActionToken).where(AuthActionToken.user_id == user_row.id))
         ).scalar_one()
         assert token_row.purpose == "verify_email"
 
@@ -360,15 +340,11 @@ async def test_consume_oauth_link_without_password_returns_password_required(
     async with AsyncSessionLocal() as s:
         user_row = (await s.execute(select(User).where(User.email == email))).scalar_one()
         token_row = (
-            await s.execute(
-                select(AuthActionToken).where(AuthActionToken.user_id == user_row.id)
-            )
+            await s.execute(select(AuthActionToken).where(AuthActionToken.user_id == user_row.id))
         ).scalar_one()
     signed = sign_action_token(token_row.jti)
 
-    response = await client.post(
-        "/api/v1/auth/verify-email/consume", json={"token": signed}
-    )
+    response = await client.post("/api/v1/auth/verify-email/consume", json={"token": signed})
     assert response.status_code == 422
     assert response.json()["detail"]["code"] == "password_required"
 
@@ -387,24 +363,18 @@ async def test_password_reset_revokes_existing_sessions(
     token = await _signup_and_get_token(client, email, password)
     await client.post("/api/v1/auth/verify-email/consume", json={"token": token})
     # Log in so we have a refresh row
-    login = await client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    login = await client.post("/api/v1/auth/login", json={"email": email, "password": password})
     assert login.status_code == 200
 
     async with AsyncSessionLocal() as s:
         user = (await s.execute(select(User).where(User.email == email))).scalar_one()
         before = (
-            await s.execute(
-                select(RefreshToken).where(RefreshToken.user_id == user.id)
-            )
+            await s.execute(select(RefreshToken).where(RefreshToken.user_id == user.id))
         ).all()
         assert len(before) >= 1
 
     # Trigger a reset
-    request = await client.post(
-        "/api/v1/auth/password-reset/request", json={"email": email}
-    )
+    request = await client.post("/api/v1/auth/password-reset/request", json={"email": email})
     assert request.status_code == 202
 
     async with AsyncSessionLocal() as s:
@@ -429,17 +399,11 @@ async def test_password_reset_revokes_existing_sessions(
     # Old refresh tokens are gone; the only one left is the freshly minted one
     async with AsyncSessionLocal() as s:
         user = (await s.execute(select(User).where(User.email == email))).scalar_one()
-        after = (
-            await s.execute(
-                select(RefreshToken).where(RefreshToken.user_id == user.id)
-            )
-        ).all()
+        after = (await s.execute(select(RefreshToken).where(RefreshToken.user_id == user.id))).all()
         assert len(after) == 1
 
     # Old password no longer works; new one does
-    old_login = await client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    old_login = await client.post("/api/v1/auth/login", json={"email": email, "password": password})
     assert old_login.status_code == 401
     new_login = await client.post(
         "/api/v1/auth/login", json={"email": email, "password": new_password}
@@ -474,9 +438,7 @@ async def test_resend_within_cooldown_returns_429(
     )
 
     # Immediate resend → cooldown
-    response = await client.post(
-        "/api/v1/auth/verify-email/resend", json={"email": email}
-    )
+    response = await client.post("/api/v1/auth/verify-email/resend", json={"email": email})
     assert response.status_code == 429
     assert "Retry-After" in response.headers
     retry_after = int(response.headers["Retry-After"])
@@ -526,13 +488,13 @@ class _FakeGoogle:
         return self.profile
 
 
-async def _bootstrap_org_admin(
-    client: AsyncClient, *, email: str, name: str
-) -> str:
+async def _bootstrap_org_admin(client: AsyncClient, *, email: str, name: str) -> str:
     """Same shape as test_invitations.py's _signup_and_create_org — bootstrap
     a fresh org with a Google admin, return their access token. Lets us
     exercise /api/v1/invitations without spinning up our own org fixture."""
-    profile = GoogleProfile(google_id=f"g-{secrets.token_hex(4)}", email=email, name=name, picture=None)
+    profile = GoogleProfile(
+        google_id=f"g-{secrets.token_hex(4)}", email=email, name=name, picture=None
+    )
     app.dependency_overrides[get_google_oauth_client] = lambda: _FakeGoogle(profile)
     try:
         state = sign_oauth_state({"nonce": "n"})

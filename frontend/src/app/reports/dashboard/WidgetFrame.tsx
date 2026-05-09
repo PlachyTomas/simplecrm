@@ -37,9 +37,7 @@ export function WidgetFrame({
     <article
       className={cn(
         "flex h-full flex-col rounded-lg border bg-surface shadow-sm transition-colors",
-        isEditMode
-          ? "border-dashed border-accent"
-          : "border-border",
+        isEditMode ? "border-dashed border-accent" : "border-border",
         className,
       )}
     >
@@ -53,9 +51,7 @@ export function WidgetFrame({
             <GripVertical size={14} strokeWidth={1.75} aria-hidden />
           </button>
         ) : null}
-        <h3 className="flex-1 truncate text-sm font-semibold text-text-primary">
-          {label}
-        </h3>
+        <h3 className="flex-1 truncate text-sm font-semibold text-text-primary">{label}</h3>
         {controls}
         {onConfigClick ? (
           <button
@@ -78,7 +74,7 @@ export function WidgetFrame({
           </button>
         ) : null}
       </header>
-      <div className="flex-1 min-h-0 px-4 py-3">{children}</div>
+      <div className="min-h-0 flex-1 px-4 py-3">{children}</div>
     </article>
   );
 }

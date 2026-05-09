@@ -7,11 +7,7 @@ import {
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import {
-  ADMIN_PAGE_SIZE,
-  type AdminOrgRow,
-  useAdminOrgList,
-} from "@/admin/hooks";
+import { ADMIN_PAGE_SIZE, type AdminOrgRow, useAdminOrgList } from "@/admin/hooks";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { cn } from "@/lib/utils";
 
@@ -69,15 +65,11 @@ export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
     return [
       helper.accessor("name", {
         header: "Název",
-        cell: (info) => (
-          <span className="font-medium text-text-primary">{info.getValue()}</span>
-        ),
+        cell: (info) => <span className="font-medium text-text-primary">{info.getValue()}</span>,
       }),
       helper.accessor("plan_display", {
         header: "Plán",
-        cell: (info) => (
-          <span className="text-text-secondary">{info.getValue()}</span>
-        ),
+        cell: (info) => <span className="text-text-secondary">{info.getValue()}</span>,
       }),
       helper.display({
         id: "status",
@@ -98,29 +90,22 @@ export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
       }),
       helper.accessor("user_count", {
         header: "Uživatelé",
-        cell: (info) => (
-          <span className="tabular-nums text-text-secondary">{info.getValue()}</span>
-        ),
+        cell: (info) => <span className="tabular-nums text-text-secondary">{info.getValue()}</span>,
       }),
       helper.display({
         id: "ends_at",
         header: "Končí",
         cell: ({ row }) => {
-          const iso =
-            row.original.current_period_ends_at ?? row.original.trial_ends_at;
+          const iso = row.original.current_period_ends_at ?? row.original.trial_ends_at;
           return (
-            <span className="text-text-secondary">
-              {iso ? dateFmt.format(new Date(iso)) : "—"}
-            </span>
+            <span className="text-text-secondary">{iso ? dateFmt.format(new Date(iso)) : "—"}</span>
           );
         },
       }),
       helper.accessor("last_activity_at", {
         header: "Poslední aktivita",
         cell: (info) => (
-          <span className="text-text-tertiary">
-            {formatRelativeDays(info.getValue())}
-          </span>
+          <span className="text-text-tertiary">{formatRelativeDays(info.getValue())}</span>
         ),
       }),
     ];
@@ -140,7 +125,7 @@ export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
   return (
     <section className="rounded-lg border border-border bg-surface">
       <div className="flex flex-wrap items-center gap-3 border-b border-border-subtle p-4">
-        <div className="relative flex-1 min-w-[12rem]">
+        <div className="relative min-w-[12rem] flex-1">
           <Search
             size={16}
             strokeWidth={1.75}
@@ -159,7 +144,8 @@ export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
           />
         </div>
         <span className="text-xs text-text-tertiary">
-          {total} {total === 1 ? "organizace" : total >= 2 && total <= 4 ? "organizace" : "organizací"}
+          {total}{" "}
+          {total === 1 ? "organizace" : total >= 2 && total <= 4 ? "organizace" : "organizací"}
         </span>
       </div>
 
@@ -170,9 +156,7 @@ export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
           Načítání seznamu se nezdařilo.
         </div>
       ) : items.length === 0 ? (
-        <div className="p-6 text-sm text-text-tertiary">
-          Žádné organizace nevyhovují filtru.
-        </div>
+        <div className="p-6 text-sm text-text-tertiary">Žádné organizace nevyhovují filtru.</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -194,7 +178,7 @@ export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
                   data-org-id={row.original.id}
                   onClick={() => onSelect(row.original.id, row.original.user_count)}
                   className={cn(
-                    "cursor-pointer border-b border-border-subtle/40 transition-colors",
+                    "border-border-subtle/40 cursor-pointer border-b transition-colors",
                     selectedOrgId === row.original.id
                       ? "bg-surface-overlay"
                       : "hover:bg-surface-overlay",
@@ -214,11 +198,7 @@ export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
 
       <div className="flex items-center justify-between gap-3 border-t border-border-subtle p-3 text-xs text-text-tertiary">
         <span>
-          {total > 0
-            ? `${offset + 1}–${end} z ${total}`
-            : isFetching
-              ? "Načítání…"
-              : "0 z 0"}
+          {total > 0 ? `${offset + 1}–${end} z ${total}` : isFetching ? "Načítání…" : "0 z 0"}
         </span>
         <div className="flex items-center gap-1">
           <button

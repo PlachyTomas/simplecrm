@@ -47,12 +47,7 @@ interface WidgetGridProps {
  * widget header — so clicking inside a widget body never starts a
  * drag.
  */
-export function WidgetGrid({
-  config,
-  isEditMode,
-  onLayoutChange,
-  renderWidget,
-}: WidgetGridProps) {
+export function WidgetGrid({ config, isEditMode, onLayoutChange, renderWidget }: WidgetGridProps) {
   const isMobile = useMediaQuery("(max-width: 767px)");
   const { width, containerRef } = useContainerWidth();
 

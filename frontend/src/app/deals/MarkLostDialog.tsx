@@ -17,7 +17,13 @@ interface MarkLostDialogProps {
   dealName?: string;
 }
 
-export function MarkLostDialog({ open, onClose, onConfirm, pending, dealName }: MarkLostDialogProps) {
+export function MarkLostDialog({
+  open,
+  onClose,
+  onConfirm,
+  pending,
+  dealName,
+}: MarkLostDialogProps) {
   const [reason, setReason] = useState(LOST_REASONS[0]);
   const [custom, setCustom] = useState("");
 

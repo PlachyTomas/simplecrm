@@ -28,8 +28,7 @@ function useInvitations() {
     queryKey: INVITES_KEY,
     enabled: !!accessToken,
     staleTime: 15_000,
-    queryFn: () =>
-      apiFetch<Page>("/api/v1/invitations?limit=100", { token: accessToken }),
+    queryFn: () => apiFetch<Page>("/api/v1/invitations?limit=100", { token: accessToken }),
   });
 }
 
@@ -95,8 +94,7 @@ export function InvitationsSection() {
   const [error, setError] = useState<string | null>(null);
   const [lastInviteUrl, setLastInviteUrl] = useState<string | null>(null);
 
-  const canManage =
-    currentUser?.role === "admin" || !!currentUser?.can_invite;
+  const canManage = currentUser?.role === "admin" || !!currentUser?.can_invite;
 
   // Sync default team into the draft once teams load.
   useEffect(() => {
@@ -110,8 +108,7 @@ export function InvitationsSection() {
       <section className="rounded-lg border border-border bg-surface p-6">
         <h2 className="text-lg font-semibold">Pozvánky</h2>
         <p className="mt-2 text-sm text-text-secondary">
-          Pozvánky může spravovat administrátor nebo uživatel s povolením
-          „Může zvát ostatní“.
+          Pozvánky může spravovat administrátor nebo uživatel s povolením „Může zvát ostatní“.
         </p>
       </section>
     );
@@ -135,18 +132,12 @@ export function InvitationsSection() {
       });
       setLastInviteUrl(result.invite_url);
       setDraft(emptyInvite(defaultTeamId));
-      toast.success(
-        `Pozvánka odeslána na ${result.invitation.email}.`,
-      );
+      toast.success(`Pozvánka odeslána na ${result.invitation.email}.`);
     } catch (err) {
       if (err instanceof ApiError) {
         const detail = (err.body as { detail?: unknown })?.detail;
         if (typeof detail === "string") setError(detail);
-        else if (
-          detail &&
-          typeof detail === "object" &&
-          "detail" in detail
-        )
+        else if (detail && typeof detail === "object" && "detail" in detail)
           setError(String((detail as { detail: unknown }).detail));
         else setError("Vytvoření pozvánky se nezdařilo.");
       } else {
@@ -161,8 +152,7 @@ export function InvitationsSection() {
       await revoke.mutateAsync(invite.id);
       toast.success("Pozvánka zrušena.");
     } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : "Zrušení pozvánky selhalo.";
+      const msg = err instanceof Error ? err.message : "Zrušení pozvánky selhalo.";
       toast.error(msg);
     }
   }
@@ -172,15 +162,12 @@ export function InvitationsSection() {
       <div className="rounded-lg border border-border bg-surface p-6">
         <h2 className="text-lg font-semibold">Pozvat uživatele</h2>
         <p className="mt-1 text-sm text-text-tertiary">
-          Pošleme e-mail s odkazem, kterým se pozvaný přihlásí přes Google
-          a automaticky se zařadí do vaší organizace.
+          Pošleme e-mail s odkazem, kterým se pozvaný přihlásí přes Google a automaticky se zařadí
+          do vaší organizace.
         </p>
 
-        <form
-          onSubmit={onSubmit}
-          className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-12"
-        >
-          <label className="sm:col-span-5 text-xs font-medium text-text-tertiary">
+        <form onSubmit={onSubmit} className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-12">
+          <label className="text-xs font-medium text-text-tertiary sm:col-span-5">
             E-mail
             <input
               type="email"
@@ -193,7 +180,7 @@ export function InvitationsSection() {
             />
           </label>
 
-          <label className="sm:col-span-3 text-xs font-medium text-text-tertiary">
+          <label className="text-xs font-medium text-text-tertiary sm:col-span-3">
             Role
             <select
               value={draft.role}
@@ -211,13 +198,11 @@ export function InvitationsSection() {
             </select>
           </label>
 
-          <label className="sm:col-span-4 text-xs font-medium text-text-tertiary">
+          <label className="text-xs font-medium text-text-tertiary sm:col-span-4">
             Tým
             <select
               value={draft.team_id}
-              onChange={(e) =>
-                setDraft((d) => ({ ...d, team_id: e.target.value }))
-              }
+              onChange={(e) => setDraft((d) => ({ ...d, team_id: e.target.value }))}
               className="mt-1 block w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm text-text-primary"
             >
               <option value="">— bez týmu —</option>
@@ -230,13 +215,11 @@ export function InvitationsSection() {
             </select>
           </label>
 
-          <label className="sm:col-span-12 mt-1 inline-flex items-center gap-2 text-sm text-text-secondary">
+          <label className="mt-1 inline-flex items-center gap-2 text-sm text-text-secondary sm:col-span-12">
             <input
               type="checkbox"
               checked={draft.can_invite}
-              onChange={(e) =>
-                setDraft((d) => ({ ...d, can_invite: e.target.checked }))
-              }
+              onChange={(e) => setDraft((d) => ({ ...d, can_invite: e.target.checked }))}
               className="h-4 w-4 rounded border-border accent-accent"
             />
             Může zvát další uživatele
@@ -244,7 +227,7 @@ export function InvitationsSection() {
 
           {error ? (
             <p
-              className="sm:col-span-12 rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger"
+              className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger sm:col-span-12"
               role="alert"
             >
               {error}
@@ -253,13 +236,11 @@ export function InvitationsSection() {
 
           {lastInviteUrl ? (
             <p
-              className="sm:col-span-12 rounded-md border border-border-subtle bg-surface-overlay px-3 py-2 text-xs text-text-secondary"
+              className="rounded-md border border-border-subtle bg-surface-overlay px-3 py-2 text-xs text-text-secondary sm:col-span-12"
               role="status"
             >
               Odkaz pro přijetí:{" "}
-              <code className="break-all font-mono text-text-primary">
-                {lastInviteUrl}
-              </code>
+              <code className="break-all font-mono text-text-primary">{lastInviteUrl}</code>
             </p>
           ) : null}
 
@@ -281,13 +262,9 @@ export function InvitationsSection() {
         {invitations.isPending ? (
           <p className="mt-3 text-sm text-text-tertiary">Načítání…</p>
         ) : invitations.isError ? (
-          <p className="mt-3 text-sm text-danger">
-            Pozvánky se nepodařilo načíst.
-          </p>
+          <p className="mt-3 text-sm text-danger">Pozvánky se nepodařilo načíst.</p>
         ) : invitations.data.items.length === 0 ? (
-          <p className="mt-3 text-sm text-text-tertiary">
-            Žádné nevyřízené pozvánky.
-          </p>
+          <p className="mt-3 text-sm text-text-tertiary">Žádné nevyřízené pozvánky.</p>
         ) : (
           <table className="mt-4 w-full">
             <thead>
@@ -305,9 +282,7 @@ export function InvitationsSection() {
                 <InvitationRow
                   key={inv.id}
                   invitation={inv}
-                  teamName={
-                    teamItems.find((t) => t.id === inv.team_id)?.name ?? "—"
-                  }
+                  teamName={teamItems.find((t) => t.id === inv.team_id)?.name ?? "—"}
                   onRevoke={() => void onRevoke(inv)}
                 />
               ))}
@@ -338,9 +313,7 @@ function InvitationRow({
         {ROLE_LABEL[invitation.role] ?? invitation.role}
       </td>
       <td className="py-3 text-sm text-text-secondary">{teamName}</td>
-      <td className="py-3 text-sm text-text-secondary">
-        {invitation.can_invite ? "Ano" : "Ne"}
-      </td>
+      <td className="py-3 text-sm text-text-secondary">{invitation.can_invite ? "Ano" : "Ne"}</td>
       <td className="py-3 text-sm text-text-tertiary">{expires}</td>
       <td className="py-3 text-right">
         <button

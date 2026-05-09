@@ -6,7 +6,7 @@ chart sorted descending by deals_added.
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -25,10 +25,10 @@ async def compute_rep_activity(
     to: date,
     team_id: UUID | None,
     owner_user_id: UUID | None,
-    config: RepActivityConfig,  # noqa: ARG001 — no widget-specific knobs
+    config: RepActivityConfig,
 ) -> RepActivityResponse:
-    from_dt = datetime.combine(from_, time.min, tzinfo=timezone.utc)
-    to_dt = datetime.combine(to, time.max, tzinfo=timezone.utc)
+    from_dt = datetime.combine(from_, time.min, tzinfo=UTC)
+    to_dt = datetime.combine(to, time.max, tzinfo=UTC)
 
     stmt = (
         select(User.id, User.name, func.count(Deal.id))

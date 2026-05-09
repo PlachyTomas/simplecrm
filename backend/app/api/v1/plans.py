@@ -28,19 +28,21 @@ async def list_public_plans(
     line without a second round-trip.
     """
     rows = (
-        await session.execute(
-            select(Plan).where(Plan.is_public.is_(True), Plan.is_active.is_(True))
-            .order_by(Plan.sort_order)
+        (
+            await session.execute(
+                select(Plan)
+                .where(Plan.is_public.is_(True), Plan.is_active.is_(True))
+                .order_by(Plan.sort_order)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     out: list[PublicPlanOut] = []
     for plan in rows:
         item = PublicPlanOut.model_validate(plan)
-        if (
-            plan.billing_interval == "annual"
-            and plan.price_per_user_minor is not None
-        ):
+        if plan.billing_interval == "annual" and plan.price_per_user_minor is not None:
             monthly_equiv = _MONTHLY_PRICE_MINOR * 12
             savings = monthly_equiv - plan.price_per_user_minor
             item.monthly_equivalent_minor = monthly_equiv

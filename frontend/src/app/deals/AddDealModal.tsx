@@ -33,7 +33,10 @@ interface FormState {
   stageId: string;
 }
 
-function buildEmptyForm(initialStageId: string | undefined, stages: PipelineStageOption[]): FormState {
+function buildEmptyForm(
+  initialStageId: string | undefined,
+  stages: PipelineStageOption[],
+): FormState {
   return {
     name: "",
     companyId: "",
@@ -80,10 +83,7 @@ export function AddDealModal({
   }, [open, currentUser, form.ownerId]);
 
   const companies = companiesPage?.items ?? [];
-  const orgUsers = useMemo(
-    () => (usersPage?.items ?? []).filter((u) => u.is_active),
-    [usersPage],
-  );
+  const orgUsers = useMemo(() => (usersPage?.items ?? []).filter((u) => u.is_active), [usersPage]);
   // Once a Firma is picked, fetch that company's contacts for the optional
   // "Hlavní kontakt" picker. Skipped while companyId is empty.
   const { data: contactsPage } = useContacts({
@@ -95,9 +95,7 @@ export function AddDealModal({
   // Reset primaryContactId when the company changes — the previously chosen
   // contact almost certainly belonged to a different firma.
   useEffect(() => {
-    setForm((prev) =>
-      prev.primaryContactId ? { ...prev, primaryContactId: "" } : prev,
-    );
+    setForm((prev) => (prev.primaryContactId ? { ...prev, primaryContactId: "" } : prev));
   }, [form.companyId]);
 
   if (!open) return null;
@@ -199,7 +197,9 @@ export function AddDealModal({
                     >
                       <span className="truncate">{company.name}</span>
                       {company.ico ? (
-                        <span className="ml-2 font-mono text-xs text-text-tertiary">{company.ico}</span>
+                        <span className="ml-2 font-mono text-xs text-text-tertiary">
+                          {company.ico}
+                        </span>
                       ) : null}
                     </button>
                   </li>
@@ -243,9 +243,7 @@ export function AddDealModal({
               </span>
               <select
                 value={form.primaryContactId}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, primaryContactId: e.target.value }))
-                }
+                onChange={(e) => setForm((prev) => ({ ...prev, primaryContactId: e.target.value }))}
                 className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
               >
                 <option value="">— bez kontaktu —</option>
@@ -298,7 +296,10 @@ export function AddDealModal({
         </div>
 
         {createDeal.isError ? (
-          <p className="mt-4 rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger" role="alert">
+          <p
+            className="mt-4 rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger"
+            role="alert"
+          >
             Obchod se nepodařilo uložit. Zkontrolujte údaje a zkuste to znovu.
           </p>
         ) : null}

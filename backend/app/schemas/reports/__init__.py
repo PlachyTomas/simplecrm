@@ -9,6 +9,16 @@ validation.
 # pipeline-velocity / team-leaderboard / my-summary). Kept in-tree so
 # the salesperson dashboard and existing tests stay green; the new
 # widget endpoints (R2+) live alongside under widgets/.
+from app.schemas.reports.dashboard import (
+    GRID_COLUMNS,
+    MAX_WIDGETS,
+    DashboardConfig,
+    DateRangeFilter,
+    GlobalFilters,
+    WidgetConfig,
+    WidgetEntry,
+    WidgetPosition,
+)
 from app.schemas.reports.legacy import (
     KpiSummary,
     Leaderboard,
@@ -21,17 +31,6 @@ from app.schemas.reports.legacy import (
     TeamMetric,
     Velocity,
     VelocityByStage,
-)
-
-from app.schemas.reports.dashboard import (
-    GRID_COLUMNS,
-    MAX_WIDGETS,
-    DashboardConfig,
-    DateRangeFilter,
-    GlobalFilters,
-    WidgetConfig,
-    WidgetEntry,
-    WidgetPosition,
 )
 from app.schemas.reports.responses import (
     AvgDealSizeResponse,
@@ -73,6 +72,8 @@ from app.schemas.reports.widgets import (
 )
 
 __all__ = [
+    "GRID_COLUMNS",
+    "MAX_WIDGETS",
     "AvgDealSizeConfig",
     "AvgDealSizeResponse",
     "CompaniesAtRiskConfig",
@@ -83,20 +84,18 @@ __all__ = [
     "DateRangeFilter",
     "DealsWonConfig",
     "DealsWonResponse",
-    "GRID_COLUMNS",
     "GlobalFilters",
     "KpiSummary",
-    "Leaderboard",
-    "LeaderboardRow",
     "LeadConversionBreakdownItem",
     "LeadToDealConversionConfig",
     "LeadToDealConversionResponse",
+    "Leaderboard",
+    "LeaderboardRow",
     "LossReasonRow",
     "LossReasons",
     "LostReasonItem",
     "LostReasonsBreakdownConfig",
     "LostReasonsBreakdownResponse",
-    "MAX_WIDGETS",
     "MySummary",
     "NewCompaniesBreakdownItem",
     "NewCompaniesConfig",

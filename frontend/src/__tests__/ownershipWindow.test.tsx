@@ -135,9 +135,7 @@ describe("Ownership-window setting", () => {
     const input = await screen.findByLabelText(/^Doba držení firem/i);
     fireEvent.change(input, { target: { value: "0" } });
     fireEvent.submit(input.closest("form")!);
-    await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(/Hodnota musí být/i),
-    );
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(/Hodnota musí být/i));
     expect(calls).toHaveLength(0);
   });
 

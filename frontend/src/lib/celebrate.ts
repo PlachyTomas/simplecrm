@@ -10,8 +10,7 @@ import confetti from "canvas-confetti";
  */
 export function celebrateWin(anchor?: HTMLElement | null): void {
   if (typeof window === "undefined") return;
-  const reducedMotion =
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   if (reducedMotion) return;
 
   const origin = anchorOrigin(anchor);

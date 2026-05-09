@@ -92,9 +92,7 @@ async def get_default_pipeline_board(
             visibility.append(Deal.stage_id.in_(won_stage_ids))
         else:
             cutoff = datetime.now(tz=UTC) - timedelta(days=won_window_days)
-            visibility.append(
-                and_(Deal.stage_id.in_(won_stage_ids), Deal.closed_at >= cutoff)
-            )
+            visibility.append(and_(Deal.stage_id.in_(won_stage_ids), Deal.closed_at >= cutoff))
 
     stmt = select(Deal).where(
         Deal.organization_id == user.organization_id,
@@ -146,9 +144,7 @@ async def get_default_pipeline_board(
     )
 
 
-async def _load_stage_for_write(
-    session: AsyncSession, stage_id: uuid.UUID, user: User
-) -> Stage:
+async def _load_stage_for_write(session: AsyncSession, stage_id: uuid.UUID, user: User) -> Stage:
     stmt = (
         select(Stage)
         .join(Pipeline, Pipeline.id == Stage.pipeline_id)
@@ -219,10 +215,14 @@ async def delete_stage(
     # Guard: never leave a pipeline without at least one won stage — that
     # would break mark-as-won.
     if stage.stage_type is StageType.won:
-        other_won_stmt = select(func.count()).select_from(Stage).where(
-            Stage.pipeline_id == stage.pipeline_id,
-            Stage.stage_type == StageType.won,
-            Stage.id != stage.id,
+        other_won_stmt = (
+            select(func.count())
+            .select_from(Stage)
+            .where(
+                Stage.pipeline_id == stage.pipeline_id,
+                Stage.stage_type == StageType.won,
+                Stage.id != stage.id,
+            )
         )
         remaining = (await session.execute(other_won_stmt)).scalar_one()
         if remaining == 0:

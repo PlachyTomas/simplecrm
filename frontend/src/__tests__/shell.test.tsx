@@ -192,9 +192,7 @@ describe("Responsive app shell", () => {
     renderAt("/app/more");
     // Desktop matchMedia mock returns matches:false → MorePage redirects to /app.
     await waitFor(() =>
-      expect(
-        screen.getByRole("heading", { level: 1, name: /Vítejte zpět/ }),
-      ).toBeInTheDocument(),
+      expect(screen.getByRole("heading", { level: 1, name: /Vítejte zpět/ })).toBeInTheDocument(),
     );
   });
 });

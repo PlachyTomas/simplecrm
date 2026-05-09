@@ -16,7 +16,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-import os
 import uuid
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
@@ -38,7 +37,6 @@ from app.db.models import (
     WebhookEvent,
 )
 from app.db.session import AsyncSessionLocal
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -74,9 +72,7 @@ async def owned_payments_emails() -> AsyncIterator[list[str]]:
         if tracked:
             await session.execute(delete(User).where(User.email.in_(tracked)))
             await session.execute(
-                delete(Organization).where(
-                    Organization.name == "Payments Test Org"
-                )
+                delete(Organization).where(Organization.name == "Payments Test Org")
             )
             await session.commit()
 
@@ -192,9 +188,7 @@ async def test_webhook_initial_paid_promotes_to_active(
         await setup.flush()
         email = f"init-{uuid.uuid4().hex[:8]}@ex.cz"
         owned_payments_emails.append(email)
-        setup.add(
-            User(email=email, name="A", role=UserRole.admin, organization_id=org.id)
-        )
+        setup.add(User(email=email, name="A", role=UserRole.admin, organization_id=org.id))
         monthly_plan_id = (
             await setup.execute(select(Plan.id).where(Plan.code == "monthly"))
         ).scalar_one()
@@ -243,9 +237,7 @@ async def test_webhook_initial_paid_promotes_to_active(
     # outer-rollback test fixture.
     async with AsyncSessionLocal() as fresh:
         sub = (
-            await fresh.execute(
-                select(Subscription).where(Subscription.organization_id == org_id)
-            )
+            await fresh.execute(select(Subscription).where(Subscription.organization_id == org_id))
         ).scalar_one()
         assert sub.status == "active"
         assert sub.contracted_seat_count == 10  # locked in from trial seat_count
@@ -253,9 +245,7 @@ async def test_webhook_initial_paid_promotes_to_active(
 
         pm = (
             await fresh.execute(
-                select(PaymentMethod).where(
-                    PaymentMethod.organization_id == org_id
-                )
+                select(PaymentMethod).where(PaymentMethod.organization_id == org_id)
             )
         ).scalar_one()
         assert pm.comgate_initial_trans_id == trans_id
@@ -267,14 +257,8 @@ async def test_webhook_initial_paid_promotes_to_active(
 
         # Cleanup: org-cascade does the heavy lifting; webhook_event
         # has no org FK so wipe it manually.
-        await fresh.execute(
-            delete(Organization).where(Organization.id == org_id)
-        )
-        await fresh.execute(
-            delete(WebhookEvent).where(
-                WebhookEvent.comgate_event_id == trans_id
-            )
-        )
+        await fresh.execute(delete(Organization).where(Organization.id == org_id))
+        await fresh.execute(delete(WebhookEvent).where(WebhookEvent.comgate_event_id == trans_id))
         await fresh.commit()
 
 
@@ -297,9 +281,7 @@ async def test_webhook_double_delivery_is_idempotent(
     """
     trans_id = f"UPGRADE-TX-{uuid.uuid4().hex[:12]}"
     async with AsyncSessionLocal() as setup:
-        org, _admin, _sub = await _seed_active_org_with_card(
-            setup, owned_payments_emails
-        )
+        org, _admin, _sub = await _seed_active_org_with_card(setup, owned_payments_emails)
         invoice = Invoice(
             organization_id=org.id,
             kind="seat_upgrade",
@@ -327,30 +309,26 @@ async def test_webhook_double_delivery_is_idempotent(
         "x-comgate-signature": sig,
     }
 
-    r1 = await client.post(
-        "/api/v1/payments/webhook", content=body, headers=headers
-    )
-    r2 = await client.post(
-        "/api/v1/payments/webhook", content=body, headers=headers
-    )
+    r1 = await client.post("/api/v1/payments/webhook", content=body, headers=headers)
+    r2 = await client.post("/api/v1/payments/webhook", content=body, headers=headers)
     assert r1.status_code == 204
     assert r2.status_code == 204  # idempotent
 
     async with AsyncSessionLocal() as fresh:
         # Exactly ONE webhook_event row for this trans_id.
         events = (
-            await fresh.execute(
-                select(WebhookEvent).where(
-                    WebhookEvent.comgate_event_id == trans_id
+            (
+                await fresh.execute(
+                    select(WebhookEvent).where(WebhookEvent.comgate_event_id == trans_id)
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(events) == 1
 
         sub = (
-            await fresh.execute(
-                select(Subscription).where(Subscription.organization_id == org_id)
-            )
+            await fresh.execute(select(Subscription).where(Subscription.organization_id == org_id))
         ).scalar_one()
         # Seat upgrade applied exactly once: 5 → 50, not 5 → 50 → 50+50.
         assert sub.seat_count == 50
@@ -359,14 +337,8 @@ async def test_webhook_double_delivery_is_idempotent(
         # Cleanup: delete the org and let ON DELETE CASCADE wipe
         # subscription / invoice / payment_method. webhook_event has no
         # org FK so it needs its own delete.
-        await fresh.execute(
-            delete(Organization).where(Organization.id == org_id)
-        )
-        await fresh.execute(
-            delete(WebhookEvent).where(
-                WebhookEvent.comgate_event_id == trans_id
-            )
-        )
+        await fresh.execute(delete(Organization).where(Organization.id == org_id))
+        await fresh.execute(delete(WebhookEvent).where(WebhookEvent.comgate_event_id == trans_id))
         await fresh.commit()
 
 
@@ -381,9 +353,7 @@ async def test_webhook_failed_marks_invoice_failed(
 ) -> None:
     trans_id = f"FAIL-TX-{uuid.uuid4().hex[:12]}"
     async with AsyncSessionLocal() as setup:
-        org, _admin, _sub = await _seed_active_org_with_card(
-            setup, owned_payments_emails
-        )
+        org, _admin, _sub = await _seed_active_org_with_card(setup, owned_payments_emails)
         invoice = Invoice(
             organization_id=org.id,
             kind="seat_upgrade",
@@ -418,6 +388,7 @@ async def test_webhook_failed_marks_invoice_failed(
     # Settle the connection pool: ASGITransport's connection might
     # not have flushed back to PG by the time we open `fresh` below.
     import asyncio
+
     await asyncio.sleep(0.05)
 
     async with AsyncSessionLocal() as fresh:
@@ -428,23 +399,15 @@ async def test_webhook_failed_marks_invoice_failed(
 
         # Subscription unchanged — seat_count still at original 5.
         sub = (
-            await fresh.execute(
-                select(Subscription).where(Subscription.organization_id == org_id)
-            )
+            await fresh.execute(select(Subscription).where(Subscription.organization_id == org_id))
         ).scalar_one()
         assert sub.seat_count == 5
         assert sub.contracted_seat_count == 5
 
         # Cleanup: org-cascade does the heavy lifting; webhook_event
         # has no org FK so wipe it manually.
-        await fresh.execute(
-            delete(Organization).where(Organization.id == org_id)
-        )
-        await fresh.execute(
-            delete(WebhookEvent).where(
-                WebhookEvent.comgate_event_id == trans_id
-            )
-        )
+        await fresh.execute(delete(Organization).where(Organization.id == org_id))
+        await fresh.execute(delete(WebhookEvent).where(WebhookEvent.comgate_event_id == trans_id))
         await fresh.commit()
 
 
@@ -470,9 +433,7 @@ async def test_return_url_redirects_to_frontend_with_status(
 
 
 async def test_invoices_requires_auth(client: AsyncClient) -> None:
-    assert (
-        await client.get("/api/v1/payments/invoices")
-    ).status_code == 401
+    assert (await client.get("/api/v1/payments/invoices")).status_code == 401
 
 
 async def test_seat_change_init_rejects_when_no_payment_method(

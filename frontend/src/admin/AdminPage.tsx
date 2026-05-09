@@ -85,10 +85,7 @@ export function AdminPage() {
               }}
             />
             {selectedOrgId ? (
-              <OrgDetailDrawer
-                orgId={selectedOrgId}
-                userCount={selectedUserCount}
-              />
+              <OrgDetailDrawer orgId={selectedOrgId} userCount={selectedUserCount} />
             ) : (
               <div className="hidden rounded-lg border border-dashed border-border bg-surface p-8 text-center text-sm text-text-tertiary md:block">
                 Vyberte organizaci ze seznamu pro zobrazení detailu.

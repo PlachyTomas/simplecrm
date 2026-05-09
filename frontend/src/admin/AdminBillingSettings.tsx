@@ -97,8 +97,7 @@ export function AdminBillingSettings() {
       <header>
         <h2 className="text-lg font-semibold">Fakturační nastavení</h2>
         <p className="mt-1 text-sm text-text-tertiary">
-          Tato nastavení ovlivňují všechny ceny v aplikaci a faktury, které
-          posíláme zákazníkům.
+          Tato nastavení ovlivňují všechny ceny v aplikaci a faktury, které posíláme zákazníkům.
         </p>
       </header>
 
@@ -106,16 +105,14 @@ export function AdminBillingSettings() {
         <input
           type="checkbox"
           checked={form.is_vat_payer}
-          onChange={(e) =>
-            setForm((s) => ({ ...s, is_vat_payer: e.target.checked }))
-          }
+          onChange={(e) => setForm((s) => ({ ...s, is_vat_payer: e.target.checked }))}
           className="mt-0.5 h-4 w-4"
         />
         <span>
           <span className="font-medium text-text-primary">Jsem plátce DPH</span>
           <span className="mt-1 block text-text-tertiary">
-            Při zapnutí všechny ceny v aplikaci přepočtou s DPH a fakturační
-            doklady obsahují DPH řádek.
+            Při zapnutí všechny ceny v aplikaci přepočtou s DPH a fakturační doklady obsahují DPH
+            řádek.
           </span>
         </span>
       </label>
@@ -128,9 +125,7 @@ export function AdminBillingSettings() {
           max={100}
           step="0.01"
           value={form.vat_rate_percent}
-          onChange={(e) =>
-            setForm((s) => ({ ...s, vat_rate_percent: e.target.value }))
-          }
+          onChange={(e) => setForm((s) => ({ ...s, vat_rate_percent: e.target.value }))}
           className="mt-1 block h-10 w-32 rounded-md border border-border bg-bg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
         />
       </label>
@@ -164,9 +159,7 @@ export function AdminBillingSettings() {
           type="email"
           maxLength={120}
           value={form.contact_email}
-          onChange={(e) =>
-            setForm((s) => ({ ...s, contact_email: e.target.value }))
-          }
+          onChange={(e) => setForm((s) => ({ ...s, contact_email: e.target.value }))}
           className="mt-1 block h-10 w-full rounded-md border border-border bg-bg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
         />
       </label>
@@ -174,7 +167,7 @@ export function AdminBillingSettings() {
       {error ? (
         <p
           role="alert"
-          className="rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
+          className="border-danger/40 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
         >
           {error}
         </p>

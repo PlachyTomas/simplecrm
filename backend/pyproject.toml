@@ -61,6 +61,10 @@ select = [
 ignore = [
     "E501",  # line length handled by formatter
 ]
+# Multiplication sign, en dash, and minus sign appear deliberately in math
+# docstrings/comments (price formulas, proration math) and Czech pricing
+# strings ("50 – 80 Kč"). Allow them so RUF001/002/003 stop flagging them.
+allowed-confusables = ["×", "–", "−"]
 
 [tool.ruff.lint.flake8-bugbear]
 # FastAPI and SQLAlchemy idioms use function calls in parameter defaults.

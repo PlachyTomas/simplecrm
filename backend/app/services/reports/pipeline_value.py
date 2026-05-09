@@ -11,7 +11,7 @@ request.
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
 from uuid import UUID
 
@@ -55,9 +55,8 @@ async def _sum_open_value(
         stmt = stmt.where(Deal.owner_user_id == owner_user_id)
     if team_id is not None:
         from app.db.models import User as _User
-        stmt = stmt.join(_User, _User.id == Deal.owner_user_id).where(
-            _User.team_id == team_id
-        )
+
+        stmt = stmt.join(_User, _User.id == Deal.owner_user_id).where(_User.team_id == team_id)
     result = await session.execute(stmt)
     return Decimal(str(result.scalar_one() or 0))
 
@@ -70,14 +69,14 @@ async def compute_pipeline_value(
     to: date,
     team_id: UUID | None,
     owner_user_id: UUID | None,
-    config: PipelineValueConfig,  # noqa: ARG001 — group_by handled in R6
+    config: PipelineValueConfig,
 ) -> PipelineValueResponse:
     org = await session.get(Organization, organization_id)
     if org is None:
         raise RuntimeError(f"organization {organization_id} not found")
 
-    from_dt = datetime.combine(from_, time.min, tzinfo=timezone.utc)
-    to_dt = datetime.combine(to, time.max, tzinfo=timezone.utc)
+    from_dt = datetime.combine(from_, time.min, tzinfo=UTC)
+    to_dt = datetime.combine(to, time.max, tzinfo=UTC)
     value = await _sum_open_value(
         session,
         organization_id=organization_id,
@@ -89,8 +88,8 @@ async def compute_pipeline_value(
     )
 
     prev = compute_previous_period(from_, to)
-    prev_from_dt = datetime.combine(prev.from_, time.min, tzinfo=timezone.utc)
-    prev_to_dt = datetime.combine(prev.to, time.max, tzinfo=timezone.utc)
+    prev_from_dt = datetime.combine(prev.from_, time.min, tzinfo=UTC)
+    prev_to_dt = datetime.combine(prev.to, time.max, tzinfo=UTC)
     prev_value = await _sum_open_value(
         session,
         organization_id=organization_id,

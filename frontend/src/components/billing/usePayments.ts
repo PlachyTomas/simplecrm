@@ -58,14 +58,11 @@ export function useInitialPaymentInit() {
   const { accessToken } = useAuth();
   return useMutation<PaymentInitOut, Error, { plan_code: "monthly" | "annual" }>({
     mutationFn: (body) =>
-      apiFetch<PaymentInitOut>(
-        "/api/v1/payments/initial-payment-init",
-        {
-          method: "POST",
-          token: accessToken,
-          body,
-        },
-      ),
+      apiFetch<PaymentInitOut>("/api/v1/payments/initial-payment-init", {
+        method: "POST",
+        token: accessToken,
+        body,
+      }),
   });
 }
 
@@ -77,14 +74,11 @@ export function useSeatChangeInit() {
   const { accessToken } = useAuth();
   return useMutation<SeatChangeInitOut, Error, { seat_count: number }>({
     mutationFn: (body) =>
-      apiFetch<SeatChangeInitOut>(
-        "/api/v1/payments/seat-change-init",
-        {
-          method: "POST",
-          token: accessToken,
-          body,
-        },
-      ),
+      apiFetch<SeatChangeInitOut>("/api/v1/payments/seat-change-init", {
+        method: "POST",
+        token: accessToken,
+        body,
+      }),
   });
 }
 
@@ -106,14 +100,11 @@ export function useCancelSubscription() {
   const qc = useQueryClient();
   return useMutation<unknown, Error, { reason?: string }>({
     mutationFn: (body) =>
-      apiFetch(
-        "/api/v1/organizations/current/subscription/cancel",
-        {
-          method: "POST",
-          token: accessToken,
-          body,
-        },
-      ),
+      apiFetch("/api/v1/organizations/current/subscription/cancel", {
+        method: "POST",
+        token: accessToken,
+        body,
+      }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["subscription", "current"] });
       void qc.invalidateQueries({ queryKey: ["invoices", "current"] });
@@ -126,10 +117,10 @@ export function useReactivateSubscription() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      apiFetch(
-        "/api/v1/organizations/current/subscription/reactivate",
-        { method: "POST", token: accessToken },
-      ),
+      apiFetch("/api/v1/organizations/current/subscription/reactivate", {
+        method: "POST",
+        token: accessToken,
+      }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["subscription", "current"] });
     },
@@ -153,8 +144,5 @@ export function isSeatUpgradePaymentRequired(
 ): err is { status: number; body: { detail: SeatUpgradePaymentRequired } } {
   if (typeof err !== "object" || err === null) return false;
   const e = err as { status?: number; body?: { detail?: { code?: string } } };
-  return (
-    e.status === 402 &&
-    e.body?.detail?.code === "seat_upgrade_payment_required"
-  );
+  return e.status === 402 && e.body?.detail?.code === "seat_upgrade_payment_required";
 }

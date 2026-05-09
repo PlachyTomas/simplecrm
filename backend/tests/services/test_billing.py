@@ -22,7 +22,6 @@ from app.db.models import (
 )
 from app.services import billing
 
-
 # ---------------------------------------------------------------------------
 # Test fixtures
 # ---------------------------------------------------------------------------
@@ -93,9 +92,7 @@ async def test_compute_with_vat_off(db_session: AsyncSession) -> None:
 
 
 async def test_compute_with_vat_on(db_session: AsyncSession) -> None:
-    settings = (
-        await db_session.execute(select(BillingSettings))
-    ).scalar_one()
+    settings = (await db_session.execute(select(BillingSettings))).scalar_one()
     settings.is_vat_payer = True
     await db_session.flush()
     out = await billing.compute_with_vat(db_session, base_minor=9900)
@@ -222,10 +219,10 @@ async def test_choose_plan_marks_pending_and_audits(
     assert len(sent) == 1
     assert "Roční" in sent[0].subject
     activities = (
-        await db_session.execute(
-            select(Activity).where(Activity.organization_id == org.id)
-        )
-    ).scalars().all()
+        (await db_session.execute(select(Activity).where(Activity.organization_id == org.id)))
+        .scalars()
+        .all()
+    )
     assert any(
         a.activity_type is ActivityType.subscription_change
         and a.entity_type is ActivityEntityType.organization
@@ -316,9 +313,7 @@ async def test_set_comp_clears_override_and_marks_active(
 async def test_set_comp_requires_reason(db_session: AsyncSession) -> None:
     org, admin = await _seed_org_with_trial(db_session)
     with pytest.raises(billing.BillingError):
-        await billing.set_comp(
-            db_session, org_id=org.id, reason="   ", by_admin_id=admin.id
-        )
+        await billing.set_comp(db_session, org_id=org.id, reason="   ", by_admin_id=admin.id)
 
 
 async def test_set_enterprise_applies_override(db_session: AsyncSession) -> None:
@@ -343,12 +338,16 @@ async def test_cancel_marks_canceled_and_audits(db_session: AsyncSession) -> Non
     assert sub.status == "canceled"
     assert sub.canceled_at is not None
     activities = (
-        await db_session.execute(
-            select(Activity)
-            .where(Activity.organization_id == org.id)
-            .where(Activity.activity_type == ActivityType.subscription_change)
+        (
+            await db_session.execute(
+                select(Activity)
+                .where(Activity.organization_id == org.id)
+                .where(Activity.activity_type == ActivityType.subscription_change)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert any(a.payload.get("action") == "cancel" for a in activities)
 
 
@@ -360,9 +359,7 @@ async def test_extend_trial_pushes_dates(db_session: AsyncSession) -> None:
     ).current_period_ends_at
     assert before_period_ends is not None
 
-    sub = await billing.extend_trial(
-        db_session, org_id=org.id, days=14, by_admin_id=admin.id
-    )
+    sub = await billing.extend_trial(db_session, org_id=org.id, days=14, by_admin_id=admin.id)
     assert sub.status == "trialing"
     assert sub.current_period_ends_at == before_period_ends + timedelta(days=14)
     await db_session.refresh(org)
@@ -373,6 +370,4 @@ async def test_extend_trial_rejects_non_trialing(db_session: AsyncSession) -> No
     org, admin = await _seed_org_with_trial(db_session)
     await billing.cancel(db_session, org_id=org.id, by_admin_id=admin.id)
     with pytest.raises(billing.BillingError):
-        await billing.extend_trial(
-            db_session, org_id=org.id, days=7, by_admin_id=admin.id
-        )
+        await billing.extend_trial(db_session, org_id=org.id, days=7, by_admin_id=admin.id)

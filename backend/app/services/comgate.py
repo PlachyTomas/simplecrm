@@ -156,9 +156,7 @@ class ComGateClient:
             timeout=15.0,
         )
 
-    async def _post(
-        self, path: str, payload: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         _require_credentials(self._settings)
         client = await self._client()
         try:
@@ -173,7 +171,7 @@ class ComGateClient:
     @staticmethod
     def _unwrap(response: httpx.Response) -> dict[str, Any]:
         try:
-            body = response.json()
+            body: dict[str, Any] = response.json()
         except ValueError:
             body = {}
         if response.status_code >= 400:
@@ -221,9 +219,7 @@ class ComGateClient:
                 redirect_url=str(body["redirect"]),
             )
         except KeyError as exc:
-            raise ComGateError(
-                f"ComGate response missing expected field: {exc}"
-            ) from exc
+            raise ComGateError(f"ComGate response missing expected field: {exc}") from exc
 
     async def create_recurring_payment(
         self,

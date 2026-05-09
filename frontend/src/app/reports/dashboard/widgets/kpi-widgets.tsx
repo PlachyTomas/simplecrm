@@ -23,11 +23,7 @@ import {
   WidgetFrame,
   WidgetSkeleton,
 } from "@/app/reports/dashboard/WidgetFrame";
-import {
-  type GlobalFilters,
-  type WidgetEntry,
-  WIDGET_LABEL,
-} from "@/app/reports/dashboard/types";
+import { type GlobalFilters, type WidgetEntry, WIDGET_LABEL } from "@/app/reports/dashboard/types";
 import { useWidgetQuery } from "@/app/reports/dashboard/useWidgetQuery";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import type { components } from "@/types/api.generated";
@@ -53,9 +49,7 @@ function narrowConfig<T extends Config["type"]>(
   expected: T,
 ): Extract<Config, { type: T }> {
   if (config.type !== expected) {
-    throw new Error(
-      `widget config type mismatch: expected ${expected}, got ${config.type}`,
-    );
+    throw new Error(`widget config type mismatch: expected ${expected}, got ${config.type}`);
   }
   return config as Extract<Config, { type: T }>;
 }
@@ -121,9 +115,7 @@ export function DealsWonWidget(props: BaseWidgetProps) {
               : formatNumber(q.data.count, locale)
           }
           secondary={
-            display === "both"
-              ? formatMoney(q.data.value, q.data.currency, locale)
-              : undefined
+            display === "both" ? formatMoney(q.data.value, q.data.currency, locale) : undefined
           }
           delta={<DeltaBadge comparison={q.data.comparison} />}
           sparkline={q.data.sparkline}
@@ -144,8 +136,7 @@ export function WinRateWidget(props: BaseWidgetProps) {
     config,
     globalFilters: props.globalFilters,
   });
-  const totalClosed =
-    (q.data?.won_count ?? 0) + (q.data?.lost_count ?? 0);
+  const totalClosed = (q.data?.won_count ?? 0) + (q.data?.lost_count ?? 0);
   const empty = q.data?.value === null;
   return (
     <Frame {...props} type="win_rate">
@@ -305,11 +296,7 @@ interface FrameProps extends BaseWidgetProps {
 
 function Frame({ entry: _entry, isEditMode, onRemove, type, children }: FrameProps) {
   return (
-    <WidgetFrame
-      label={WIDGET_LABEL[type]}
-      isEditMode={isEditMode}
-      onRemove={onRemove}
-    >
+    <WidgetFrame label={WIDGET_LABEL[type]} isEditMode={isEditMode} onRemove={onRemove}>
       {children}
     </WidgetFrame>
   );

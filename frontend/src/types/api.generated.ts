@@ -157,6 +157,208 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/signup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Signup
+         * @description Start an email-signup flow. The user must click the verification link
+         *     we email them before they can log in.
+         *
+         *     For a brand-new email, this creates a User row with the password hash
+         *     set but `email_verified=False`. For an email that already belongs to a
+         *     Google-only user, it sends a "verify to add a password" link without
+         *     touching the row — the password is written when the verify link is
+         *     consumed (so a stranger who knows your email can't overwrite a pending
+         *     password).
+         */
+        post: operations["signup_api_v1_auth_signup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/verify-email/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify Email Check
+         * @description Inspect a verification token without consuming it.
+         *
+         *     Powers VerifyEmailPage's first call: the page uses `requires_password`
+         *     to decide whether to prompt for a password before calling consume.
+         */
+        post: operations["verify_email_check_api_v1_auth_verify_email_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/verify-email/consume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify Email Consume
+         * @description Consume a verification token, mark the user verified, auto-login.
+         *
+         *     Same auto-login shape as the Google callback (access token in body,
+         *     refresh cookie set), so the frontend can hand the user a logged-in app
+         *     immediately after they click the link.
+         */
+        post: operations["verify_email_consume_api_v1_auth_verify_email_consume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/verify-email/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify Email Resend
+         * @description Resend the verification email if the user is unverified.
+         *
+         *     Always returns 202 — we don't reveal whether the email is registered or
+         *     already verified. A 429 cooldown is the one exception (carries a clear
+         *     'wait N seconds' signal which the user already knows applies to them).
+         */
+        post: operations["verify_email_resend_api_v1_auth_verify_email_resend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Login
+         * @description Log in with email + password. Issues access + refresh tokens.
+         *
+         *     Returns 401 with `code=oauth_only_account` when the email belongs to a
+         *     Google-only user; the frontend renders a "use Google to sign in" CTA.
+         *     Returns 403 with `code=email_not_verified` when the user signed up but
+         *     hasn't clicked the verification link yet, with a 'resend' affordance.
+         */
+        post: operations["login_api_v1_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/password-reset/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Password Reset Request
+         * @description Email a password-reset link to the user (if they exist + have a password).
+         *
+         *     Silent on missing / oauth-only emails; only the cooldown surfaces a
+         *     distinct 429.
+         */
+        post: operations["password_reset_request_api_v1_auth_password_reset_request_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/password-reset/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Password Reset Confirm
+         * @description Set a new password and auto-login. Revokes every existing refresh
+         *     token for the user so a stolen pre-reset session can't outlive the
+         *     reset.
+         */
+        post: operations["password_reset_confirm_api_v1_auth_password_reset_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/invite/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Invite Accept
+         * @description Accept an invitation by signing up with email + password.
+         *
+         *     Mirrors the Google invite path on `/auth/google/callback` but for
+         *     email-only invitees: the invite click is treated as proof of email
+         *     ownership (the link was sent to that exact address), so we mark the
+         *     user verified and auto-login without a separate verify-email step.
+         *
+         *     Errors map to the same set the Google path emits, so the AcceptInvitePage
+         *     can render one localized message for each:
+         *       404 invitation_not_found
+         *       410 invitation_expired
+         *       409 invitation_consumed
+         *       409 user_already_in_organization
+         *       422 weak_password
+         */
+        post: operations["invite_accept_api_v1_auth_invite_accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/onboarding/organization": {
         parameters: {
             query?: never;
@@ -1860,6 +2062,21 @@ export interface components {
             last_login_at: string | null;
         };
         /**
+         * AuthSuccessResponse
+         * @description Returned by signup-verify, login, password-reset-confirm — the same
+         *     shape as the Google callback's hash redirect, just over JSON.
+         */
+        AuthSuccessResponse: {
+            /** Access Token */
+            access_token: string;
+            /**
+             * Token Type
+             * @default bearer
+             */
+            token_type: string;
+            user: components["schemas"]["CurrentUser"];
+        };
+        /**
          * AvgDealSizeConfig
          * @description Mean Deal.value over a scoped subset of deals.
          */
@@ -2631,6 +2848,21 @@ export interface components {
             /** Team Name */
             team_name?: string | null;
         };
+        /**
+         * InviteAcceptRequest
+         * @description Body for `POST /auth/invite/accept`. Email is taken from the invite
+         *     row, not the request, so the user can't accept under a different
+         *     address. Password is ignored if the matched User already has one set
+         *     (preserving an existing credential).
+         */
+        InviteAcceptRequest: {
+            /** Token */
+            token: string;
+            /** Password */
+            password: string;
+            /** Name */
+            name: string;
+        };
         /** InvoiceList */
         InvoiceList: {
             /** Items */
@@ -2761,6 +2993,16 @@ export interface components {
             won_count: number;
             /** Won Value */
             won_value: string;
+        };
+        /** LoginRequest */
+        LoginRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Password */
+            password: string;
         };
         /** LossReasonRow */
         LossReasonRow: {
@@ -3064,6 +3306,21 @@ export interface components {
             /** Offset */
             offset: number;
         };
+        /** PasswordResetConfirmRequest */
+        PasswordResetConfirmRequest: {
+            /** Token */
+            token: string;
+            /** New Password */
+            new_password: string;
+        };
+        /** PasswordResetRequest */
+        PasswordResetRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+        };
         /**
          * PaymentInitOut
          * @description Response for any `*-init` endpoint that creates a ComGate payment.
@@ -3267,6 +3524,14 @@ export interface components {
             /** Items */
             items: components["schemas"]["RepActivityItem"][];
         };
+        /** ResendVerificationRequest */
+        ResendVerificationRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+        };
         /**
          * SalesCycleLengthConfig
          * @description Days between Company.created_at and Deal.closed_at for won deals.
@@ -3389,6 +3654,18 @@ export interface components {
             period_months: number;
             /** Notes */
             notes?: string | null;
+        };
+        /** SignupRequest */
+        SignupRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Password */
+            password: string;
+            /** Name */
+            name: string;
         };
         /** SparklineBucket */
         SparklineBucket: {
@@ -3668,6 +3945,21 @@ export interface components {
             /** Manager User Id */
             manager_user_id?: string | null;
         };
+        /** TokenCheckRequest */
+        TokenCheckRequest: {
+            /** Token */
+            token: string;
+        };
+        /** TokenCheckResponse */
+        TokenCheckResponse: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Requires Password */
+            requires_password: boolean;
+        };
         /**
          * UpdateSeatCountIn
          * @description Body for `PUT /subscription/seat-count`. The admin sends a target
@@ -3768,6 +4060,13 @@ export interface components {
             avg_days_in_stage: number | null;
             /** Deal Count */
             deal_count: number;
+        };
+        /** VerifyConsumeRequest */
+        VerifyConsumeRequest: {
+            /** Token */
+            token: string;
+            /** Password */
+            password?: string | null;
         };
         /**
          * WidgetEntry
@@ -4033,6 +4332,276 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RefreshResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    signup_api_v1_auth_signup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignupRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_email_check_api_v1_auth_verify_email_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TokenCheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenCheckResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_email_consume_api_v1_auth_verify_email_consume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyConsumeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSuccessResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_email_resend_api_v1_auth_verify_email_resend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResendVerificationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    login_api_v1_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSuccessResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    password_reset_request_api_v1_auth_password_reset_request_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    password_reset_confirm_api_v1_auth_password_reset_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetConfirmRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSuccessResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    invite_accept_api_v1_auth_invite_accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteAcceptRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSuccessResponse"];
                 };
             };
             /** @description Validation Error */

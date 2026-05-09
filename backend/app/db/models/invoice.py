@@ -39,22 +39,12 @@ class Invoice(Base):
 
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
     amount_minor: Mapped[int] = mapped_column(Integer, nullable=False)
-    currency: Mapped[str] = mapped_column(
-        String(3), nullable=False, server_default="CZK"
-    )
-    status: Mapped[str] = mapped_column(
-        String(16), nullable=False, server_default="pending"
-    )
-    comgate_trans_id: Mapped[str | None] = mapped_column(
-        String(64), unique=True
-    )
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, server_default="CZK")
+    status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="pending")
+    comgate_trans_id: Mapped[str | None] = mapped_column(String(64), unique=True)
     seats: Mapped[int | None] = mapped_column(Integer)
-    period_starts_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
-    period_ends_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
+    period_starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    period_ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     failure_reason: Mapped[str | None] = mapped_column(Text)
 
     created_at: Mapped[datetime] = mapped_column(

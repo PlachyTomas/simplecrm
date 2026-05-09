@@ -26,13 +26,9 @@ class WebhookEvent(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         PgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    comgate_event_id: Mapped[str] = mapped_column(
-        String(128), unique=True, nullable=False
-    )
+    comgate_event_id: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
     received_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    processed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)

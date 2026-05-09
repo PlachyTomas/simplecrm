@@ -34,7 +34,6 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import UTC, datetime
-from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from fastapi.responses import RedirectResponse
@@ -43,13 +42,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.deps import get_current_user, require_org_membership, require_role
+from app.core.deps import require_org_membership, require_role
 from app.db import get_db
 from app.db.models import (
     Invoice,
     Organization,
     PaymentMethod,
-    Subscription,
     User,
     UserRole,
     WebhookEvent,
@@ -127,9 +125,7 @@ async def initial_payment_init(
     await session.flush()
 
     org = await session.get(Organization, org_id)
-    label = (
-        f"SimpleCRM {plan.display_name_cs} – {org.name if org else ''}"
-    ).strip()
+    label = (f"SimpleCRM {plan.display_name_cs} – {org.name if org else ''}").strip()
     try:
         created = await comgate.create_initial_payment(
             amount_minor=amount_minor,
@@ -190,10 +186,7 @@ async def seat_change_init(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={
                 "code": "not_active",
-                "detail": (
-                    "Subscription must be active to upgrade seats. "
-                    "Choose a plan first."
-                ),
+                "detail": ("Subscription must be active to upgrade seats. Choose a plan first."),
             },
         )
     if payload.seat_count <= sub.contracted_seat_count:
@@ -201,17 +194,12 @@ async def seat_change_init(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={
                 "code": "not_an_upgrade",
-                "detail": (
-                    "Use PUT /subscription/seat-count for decreases and "
-                    "no-op changes."
-                ),
+                "detail": ("Use PUT /subscription/seat-count for decreases and no-op changes."),
             },
         )
 
     payment_method = (
-        await session.execute(
-            select(PaymentMethod).where(PaymentMethod.organization_id == org_id)
-        )
+        await session.execute(select(PaymentMethod).where(PaymentMethod.organization_id == org_id))
     ).scalar_one_or_none()
     if payment_method is None:
         raise HTTPException(
@@ -219,15 +207,12 @@ async def seat_change_init(
             detail={
                 "code": "no_payment_method",
                 "detail": (
-                    "No saved card on file. Choose a plan first to "
-                    "register a payment method."
+                    "No saved card on file. Choose a plan first to register a payment method."
                 ),
             },
         )
 
-    amount_minor = billing.compute_seat_proration(
-        sub, new_seat_count=payload.seat_count
-    )
+    amount_minor = billing.compute_seat_proration(sub, new_seat_count=payload.seat_count)
     if amount_minor <= 0:
         # Defensive — the upgrade check above should have caught this.
         raise HTTPException(
@@ -248,9 +233,7 @@ async def seat_change_init(
     session.add(invoice)
     await session.flush()
 
-    label = (
-        f"SimpleCRM navýšení na {payload.seat_count} uživatelů"
-    )
+    label = f"SimpleCRM navýšení na {payload.seat_count} uživatelů"
     try:
         result = await comgate.create_recurring_payment(
             initial_trans_id=payment_method.comgate_initial_trans_id,
@@ -337,14 +320,16 @@ async def list_invoices(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
     base = select(Invoice).where(Invoice.organization_id == user.organization_id)
-    total = (
-        await session.execute(select(func.count()).select_from(base.subquery()))
-    ).scalar_one()
+    total = (await session.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
     rows = (
-        await session.execute(
-            base.order_by(Invoice.created_at.desc()).limit(limit).offset(offset)
+        (
+            await session.execute(
+                base.order_by(Invoice.created_at.desc()).limit(limit).offset(offset)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return InvoiceList(
         items=[InvoiceOut.model_validate(r) for r in rows],
         total=total,
