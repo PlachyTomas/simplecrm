@@ -2118,6 +2118,24 @@ export interface components {
             seller_ico: string | null;
             /** Contact Email */
             contact_email: string;
+            /** Issuer Name */
+            issuer_name: string;
+            /** Issuer Address Street */
+            issuer_address_street: string;
+            /** Issuer Address City */
+            issuer_address_city: string;
+            /** Issuer Address Zip */
+            issuer_address_zip: string;
+            /** Issuer Register Text */
+            issuer_register_text: string;
+            /** Issuer Account Domestic */
+            issuer_account_domestic: string | null;
+            /** Default Payment Term Days */
+            default_payment_term_days: number;
+            /** Invoice Email Subject Template */
+            invoice_email_subject_template: string;
+            /** Invoice Email Body Template */
+            invoice_email_body_template: string;
             /**
              * Updated At
              * Format: date-time
@@ -2149,6 +2167,24 @@ export interface components {
             seller_ico?: string | null;
             /** Contact Email */
             contact_email?: string | null;
+            /** Issuer Name */
+            issuer_name?: string | null;
+            /** Issuer Address Street */
+            issuer_address_street?: string | null;
+            /** Issuer Address City */
+            issuer_address_city?: string | null;
+            /** Issuer Address Zip */
+            issuer_address_zip?: string | null;
+            /** Issuer Register Text */
+            issuer_register_text?: string | null;
+            /** Issuer Account Domestic */
+            issuer_account_domestic?: string | null;
+            /** Default Payment Term Days */
+            default_payment_term_days?: number | null;
+            /** Invoice Email Subject Template */
+            invoice_email_subject_template?: string | null;
+            /** Invoice Email Body Template */
+            invoice_email_body_template?: string | null;
         };
         /** BillingSummary */
         BillingSummary: {

@@ -194,6 +194,19 @@ class BillingSettingsOut(BaseModel):
     seller_iban: str | None
     seller_ico: str | None
     contact_email: str
+
+    # Issuer snapshot fields used by the tax-invoice pipeline. Empty strings
+    # for the address/name fields until the founder fills them in.
+    issuer_name: str
+    issuer_address_street: str
+    issuer_address_city: str
+    issuer_address_zip: str
+    issuer_register_text: str
+    issuer_account_domestic: str | None
+    default_payment_term_days: int
+    invoice_email_subject_template: str
+    invoice_email_body_template: str
+
     updated_at: datetime
 
 
@@ -203,6 +216,18 @@ class BillingSettingsUpdate(BaseModel):
     seller_iban: str | None = Field(default=None, max_length=34)
     seller_ico: str | None = Field(default=None, max_length=8)
     contact_email: str | None = Field(default=None, max_length=120)
+
+    # Issuer fields. All optional on PUT — partial updates are allowed
+    # so the admin UI can land per-field saves without sending the whole row.
+    issuer_name: str | None = Field(default=None, max_length=200)
+    issuer_address_street: str | None = Field(default=None, max_length=200)
+    issuer_address_city: str | None = Field(default=None, max_length=100)
+    issuer_address_zip: str | None = Field(default=None, max_length=10)
+    issuer_register_text: str | None = None
+    issuer_account_domestic: str | None = Field(default=None, max_length=32)
+    default_payment_term_days: int | None = Field(default=None, ge=0, le=365)
+    invoice_email_subject_template: str | None = Field(default=None, max_length=200)
+    invoice_email_body_template: str | None = None
 
 
 # ---------------------------------------------------------------------------

@@ -265,6 +265,88 @@ async def test_put_billing_settings_rejects_non_super_admin(
     assert response.status_code == 403
 
 
+async def test_billing_settings_exposes_issuer_snapshot_fields(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """The GET endpoint surfaces the new issuer fields so the admin UI can
+    populate the edit form. Resets the singleton to known values up-front
+    so this test is order-independent against the shared dev DB."""
+    _org, admin = await _seed_org_with_super_admin(db_session, owned_emails)
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    # Reset to known empty defaults — BillingSettings is a singleton that
+    # other tests in this suite mutate, so we can't rely on the seeded
+    # `server_default = ''` surviving a previous run.
+    reset = await client.put(
+        "/api/v1/admin/billing-settings",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "issuer_name": "",
+            "issuer_address_street": "",
+            "issuer_address_city": "",
+            "issuer_address_zip": "",
+            "issuer_register_text": "",
+            "issuer_account_domestic": None,
+            "default_payment_term_days": 14,
+        },
+    )
+    assert reset.status_code == 200, reset.text
+
+    response = await client.get(
+        "/api/v1/admin/billing-settings",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    # The new fields appear on the wire and round-trip through the schema:
+    assert body["issuer_name"] == ""
+    assert body["issuer_address_street"] == ""
+    assert body["issuer_address_city"] == ""
+    assert body["issuer_address_zip"] == ""
+    assert body["issuer_register_text"] == ""
+    assert body["issuer_account_domestic"] is None
+    assert body["default_payment_term_days"] == 14
+    # Templates aren't reset by the PUT above — assert the migration's
+    # server_default seeded sensible Czech defaults that include the
+    # core Jinja variables we'll later interpolate.
+    assert body["invoice_email_subject_template"].startswith("Faktura č.")
+    assert "Variabilní symbol" in body["invoice_email_body_template"]
+
+
+async def test_put_billing_settings_persists_issuer_fields(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """Partial PUT updates: the founder fills in their issuer details once
+    via the super-admin UI, and the next GET returns them unchanged."""
+    _org, admin = await _seed_org_with_super_admin(db_session, owned_emails)
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    response = await client.put(
+        "/api/v1/admin/billing-settings",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "issuer_name": "Tomáš Plachý",
+            "issuer_address_street": "Vinohradská 184",
+            "issuer_address_city": "Praha 3",
+            "issuer_address_zip": "130 00",
+            "issuer_register_text": (
+                "Zapsán v živnostenském rejstříku, vedeném Úřadem městské části Praha 3"
+            ),
+            "issuer_account_domestic": "123456789/0100",
+            "default_payment_term_days": 21,
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["issuer_name"] == "Tomáš Plachý"
+    assert body["issuer_address_street"] == "Vinohradská 184"
+    assert body["issuer_address_city"] == "Praha 3"
+    assert body["issuer_address_zip"] == "130 00"
+    assert "živnostenském rejstříku" in body["issuer_register_text"]
+    assert body["issuer_account_domestic"] == "123456789/0100"
+    assert body["default_payment_term_days"] == 21
+    # Untouched-by-this-PUT fields remain at defaults
+    assert body["invoice_email_subject_template"].startswith("Faktura č.")
+
+
 # ---------------------------------------------------------------------------
 # /admin/organizations/:id/activity
 # ---------------------------------------------------------------------------
