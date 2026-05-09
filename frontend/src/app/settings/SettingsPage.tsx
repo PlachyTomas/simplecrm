@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, Pencil, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
@@ -30,6 +30,11 @@ import {
   useSeatChangeInit,
   type ChargeOut,
 } from "@/components/billing/usePayments";
+import {
+  useDownloadTaxInvoicePdf,
+  useTaxInvoices,
+  type TaxInvoiceOut,
+} from "@/components/billing/useTaxInvoices";
 import { ApiError, apiFetch } from "@/lib/api";
 import { csNoun } from "@/lib/i18n/nouns";
 import { ThemeToggle } from "@/lib/ThemeToggle";
@@ -836,7 +841,8 @@ function BillingSection() {
         summary={summary}
         onSwitchToAnnual={() => openModal("annual")}
       />
-      <InvoicesCard />
+      <TaxInvoicesCard />
+      <PaymentsCard />
       <CancelSubscriptionCard sub={sub} />
       {modalOpen ? <ChoosePlanModal preselect={modalPreselect} onClose={closeModal} /> : null}
     </div>
@@ -1025,53 +1031,56 @@ function BillingDetailsCard({ sub, summary, onSwitchToAnnual }: BillingDetailsCa
   );
 }
 
-const INVOICE_KIND_LABEL: Record<ChargeOut["kind"], string> = {
+const PAYMENT_KIND_LABEL: Record<ChargeOut["kind"], string> = {
   initial: "První aktivace",
   renewal: "Obnova",
   seat_upgrade: "Navýšení uživatelů",
 };
 
-const INVOICE_STATUS_PILL: Record<ChargeOut["status"], { label: string; className: string }> = {
+const PAYMENT_STATUS_PILL: Record<ChargeOut["status"], { label: string; className: string }> = {
   paid: { label: "Zaplaceno", className: "bg-success-subtle text-success" },
   pending: { label: "Čeká", className: "bg-warning-subtle text-warning" },
   failed: { label: "Selhalo", className: "bg-danger-subtle text-danger" },
   refunded: { label: "Vráceno", className: "bg-info-subtle text-info" },
 };
 
-function InvoicesCard() {
-  const invoices = useInvoices();
+function PaymentsCard() {
+  const payments = useInvoices();
 
   return (
     <section className="rounded-lg border border-border bg-surface p-6">
-      <h2 className="text-lg font-semibold">Faktury</h2>
-      {invoices.isPending ? (
+      <h2 className="text-lg font-semibold">Platby</h2>
+      <p className="mt-1 text-xs text-text-tertiary">
+        Historie platebních pokusů (ComGate). Daňové doklady najdete výše v sekci „Faktury“.
+      </p>
+      {payments.isPending ? (
         <p className="mt-3 text-sm text-text-tertiary">Načítání…</p>
-      ) : invoices.isError ? (
+      ) : payments.isError ? (
         <p className="mt-3 text-sm text-danger" role="alert">
-          Faktury se nepodařilo načíst.
+          Platby se nepodařilo načíst.
         </p>
-      ) : !invoices.data || invoices.data.items.length === 0 ? (
-        <p className="mt-3 text-sm text-text-secondary">Faktury budou dostupné po první platbě.</p>
+      ) : !payments.data || payments.data.items.length === 0 ? (
+        <p className="mt-3 text-sm text-text-secondary">Platby budou dostupné po první platbě.</p>
       ) : (
         <ul className="mt-4 divide-y divide-border-subtle">
-          {invoices.data.items.map((inv) => {
-            const pill = INVOICE_STATUS_PILL[inv.status];
-            const created = formatCsDate(inv.created_at) ?? "";
+          {payments.data.items.map((row) => {
+            const pill = PAYMENT_STATUS_PILL[row.status];
+            const created = formatCsDate(row.created_at) ?? "";
             return (
-              <li key={inv.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+              <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-text-primary">
-                    {INVOICE_KIND_LABEL[inv.kind]}
+                    {PAYMENT_KIND_LABEL[row.kind]}
                   </p>
                   <p className="text-xs text-text-tertiary">
                     {created}
-                    {inv.seats != null ? ` · ${inv.seats} ${csNoun(inv.seats, "uzivatel")}` : ""}
-                    {inv.failure_reason ? ` · ${inv.failure_reason}` : ""}
+                    {row.seats != null ? ` · ${row.seats} ${csNoun(row.seats, "uzivatel")}` : ""}
+                    {row.failure_reason ? ` · ${row.failure_reason}` : ""}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm tabular-nums text-text-primary">
-                    {formatCzkMinor(inv.amount_minor)}
+                    {formatCzkMinor(row.amount_minor)}
                   </span>
                   <span
                     className={cn(
@@ -1081,6 +1090,109 @@ function InvoicesCard() {
                   >
                     {pill.label}
                   </span>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+const TAX_INVOICE_KIND_LABEL: Record<TaxInvoiceOut["kind"], string> = {
+  invoice: "Faktura",
+  credit_note: "Dobropis",
+  proforma: "Proforma",
+};
+
+const TAX_INVOICE_STATUS_PILL: Record<
+  TaxInvoiceOut["status"],
+  { label: string; className: string }
+> = {
+  draft: { label: "Koncept", className: "bg-bg-elevated text-text-secondary" },
+  issued: { label: "Vystavena", className: "bg-info-subtle text-info" },
+  paid: { label: "Zaplacena", className: "bg-success-subtle text-success" },
+  overdue: { label: "Po splatnosti", className: "bg-danger-subtle text-danger" },
+  voided: { label: "Stornována", className: "bg-bg-elevated text-text-tertiary line-through" },
+};
+
+function TaxInvoicesCard() {
+  const invoices = useTaxInvoices();
+  const downloadPdf = useDownloadTaxInvoicePdf();
+  const [error, setError] = useState<string | null>(null);
+
+  function onDownload(row: TaxInvoiceOut) {
+    setError(null);
+    downloadPdf.mutate(
+      { id: row.id, number: row.number },
+      {
+        onError: () => setError("Stažení PDF se nezdařilo. Zkuste to znovu nebo kontaktujte podporu."),
+      },
+    );
+  }
+
+  return (
+    <section className="rounded-lg border border-border bg-surface p-6">
+      <h2 className="text-lg font-semibold">Faktury</h2>
+      <p className="mt-1 text-xs text-text-tertiary">
+        Daňové doklady podle českého zákona. PDF si můžete kdykoli stáhnout pro účetnictví.
+      </p>
+      {error ? (
+        <p
+          role="alert"
+          className="border-danger/40 mt-3 rounded-md border bg-bg px-3 py-2 text-sm text-danger"
+        >
+          {error}
+        </p>
+      ) : null}
+      {invoices.isPending ? (
+        <p className="mt-3 text-sm text-text-tertiary">Načítání…</p>
+      ) : invoices.isError ? (
+        <p className="mt-3 text-sm text-danger" role="alert">
+          Faktury se nepodařilo načíst.
+        </p>
+      ) : !invoices.data || invoices.data.items.length === 0 ? (
+        <p className="mt-3 text-sm text-text-secondary">
+          Zatím nemáte žádné faktury. Po první platbě tu uvidíte přehled.
+        </p>
+      ) : (
+        <ul className="mt-4 divide-y divide-border-subtle">
+          {invoices.data.items.map((inv) => {
+            const pill = TAX_INVOICE_STATUS_PILL[inv.status];
+            const issued = formatCsDate(inv.issued_at) ?? "";
+            const due = formatCsDate(inv.due_at) ?? "";
+            return (
+              <li key={inv.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-text-primary">
+                    {TAX_INVOICE_KIND_LABEL[inv.kind]} {inv.number}
+                  </p>
+                  <p className="text-xs text-text-tertiary">
+                    Vystaveno {issued} · Splatnost {due}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm tabular-nums text-text-primary">
+                    {formatCzkMinor(inv.total_minor)}
+                  </span>
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                      pill.className,
+                    )}
+                  >
+                    {pill.label}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onDownload(inv)}
+                    disabled={downloadPdf.isPending}
+                    aria-label={`Stáhnout PDF faktury ${inv.number}`}
+                    className="inline-flex items-center justify-center rounded-md border border-border bg-bg p-1.5 text-text-secondary transition hover:bg-bg-elevated hover:text-text-primary disabled:cursor-wait disabled:opacity-50"
+                  >
+                    <Download className="size-4" aria-hidden="true" />
+                  </button>
                 </div>
               </li>
             );

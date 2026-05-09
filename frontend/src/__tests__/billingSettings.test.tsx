@@ -167,6 +167,9 @@ function setupFetch(opts: SetupOpts) {
     if (url.includes("/api/v1/payments/invoices")) {
       return jsonResponse({ items: [], total: 0 });
     }
+    if (url.includes("/api/v1/organizations/current/invoices")) {
+      return jsonResponse({ items: [], total: 0 });
+    }
     if (url.endsWith("/api/v1/payments/initial-payment-init")) {
       calls.push({
         url,
@@ -274,16 +277,24 @@ describe("Billing settings page", () => {
     expect(screen.getByText(/Po připsání platby vás aktivujeme do 24 hodin/i)).toBeInTheDocument();
   });
 
-  it("Faktury placeholder always renders", async () => {
+  it("Faktury + Platby placeholders both render", async () => {
     setupFetch({ status: "trialing", planCode: "trial" });
     renderBillingTab();
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: /^Faktury$/ })).toBeInTheDocument(),
     );
-    // The InvoicesCard's empty-state copy only renders once
-    // /payments/invoices resolves (items.length === 0).
     await waitFor(() =>
-      expect(screen.getByText(/Faktury budou dostupné po první platbě\./i)).toBeInTheDocument(),
+      expect(screen.getByRole("heading", { name: /^Platby$/ })).toBeInTheDocument(),
+    );
+    // TaxInvoicesCard empty-state copy resolves once /organizations/current/invoices returns.
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Zatím nemáte žádné faktury\. Po první platbě tu uvidíte přehled\./i),
+      ).toBeInTheDocument(),
+    );
+    // PaymentsCard empty-state copy resolves once /payments/invoices returns.
+    await waitFor(() =>
+      expect(screen.getByText(/Platby budou dostupné po první platbě\./i)).toBeInTheDocument(),
     );
   });
 
