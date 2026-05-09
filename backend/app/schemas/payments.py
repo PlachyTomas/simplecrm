@@ -2,7 +2,7 @@
 
 Distinct from `schemas/billing.py` which holds the Subscription view
 shapes. This module is dedicated to the ComGate-backed payment flow:
-init endpoints (return a redirect URL), invoice list, return URL.
+init endpoints (return a redirect URL), charge list, return URL.
 """
 
 from __future__ import annotations
@@ -29,12 +29,12 @@ class PaymentInitOut(BaseModel):
     """Response for any `*-init` endpoint that creates a ComGate payment.
 
     `redirect_url` is the ComGate hosted-page URL the frontend should
-    `window.location` to. `invoice_id` lets the frontend poll for
+    `window.location` to. `charge_id` lets the frontend poll for
     completion if it doesn't want to wait for the return-URL.
     """
 
     redirect_url: str
-    invoice_id: uuid.UUID
+    charge_id: uuid.UUID
     amount_minor: int
     currency: str
 
@@ -56,17 +56,23 @@ class SeatChangeInitOut(BaseModel):
     """Response for `POST /payments/seat-change-init`.
 
     `status='accepted'`: ComGate took the charge for processing; the
-    final outcome lands via webhook. `invoice_id` lets the frontend
+    final outcome lands via webhook. `charge_id` lets the frontend
     poll `GET /payments/invoices/{id}` for the terminal state.
     """
 
     status: Literal["accepted"]
-    invoice_id: uuid.UUID
+    charge_id: uuid.UUID
     amount_minor: int
     currency: str
 
 
-class InvoiceOut(BaseModel):
+class ChargeOut(BaseModel):
+    """Serialized ComGate charge attempt (renamed from `InvoiceOut`).
+
+    The Czech-law tax-invoice schema is `InvoiceOut` in the `invoicing`
+    schema module — distinct concept, distinct shape.
+    """
+
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -82,6 +88,6 @@ class InvoiceOut(BaseModel):
     paid_at: datetime | None = None
 
 
-class InvoiceList(BaseModel):
-    items: list[InvoiceOut]
+class ChargeList(BaseModel):
+    items: list[ChargeOut]
     total: int

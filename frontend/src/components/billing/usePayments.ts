@@ -16,27 +16,30 @@ import { apiFetch } from "@/lib/api";
 
 export interface PaymentInitOut {
   redirect_url: string;
-  invoice_id: string;
+  charge_id: string;
   amount_minor: number;
   currency: string;
 }
 
 export interface SeatChangeInitOut {
   status: "accepted";
-  invoice_id: string;
+  charge_id: string;
   amount_minor: number;
   currency: string;
 }
 
-export type InvoiceKind = "initial" | "renewal" | "seat_upgrade";
-export type InvoiceStatus = "pending" | "paid" | "failed" | "refunded";
+// `Charge` is a ComGate charge attempt — initial activation, recurring
+// renewal, or mid-period seat upgrade. The Czech-law tax-invoice document
+// (ships in a later commit) is a separate concept with its own type.
+export type ChargeKind = "initial" | "renewal" | "seat_upgrade";
+export type ChargeStatus = "pending" | "paid" | "failed" | "refunded";
 
-export interface InvoiceOut {
+export interface ChargeOut {
   id: string;
-  kind: InvoiceKind;
+  kind: ChargeKind;
   amount_minor: number;
   currency: string;
-  status: InvoiceStatus;
+  status: ChargeStatus;
   seats: number | null;
   period_starts_at: string | null;
   period_ends_at: string | null;
@@ -45,8 +48,8 @@ export interface InvoiceOut {
   paid_at: string | null;
 }
 
-export interface InvoiceList {
-  items: InvoiceOut[];
+export interface ChargeList {
+  items: ChargeOut[];
   total: number;
 }
 
@@ -82,12 +85,16 @@ export function useSeatChangeInit() {
   });
 }
 
+// Hook name kept as `useInvoices` (and queryKey "invoices") because the
+// customer-facing UI label is "Faktury" — that label still makes sense
+// for the user. The underlying type renamed to `ChargeList` because
+// these rows are ComGate charges, not legal invoice documents.
 export function useInvoices() {
   const { accessToken } = useAuth();
   return useQuery({
     queryKey: ["invoices", "current"],
     queryFn: () =>
-      apiFetch<InvoiceList>("/api/v1/payments/invoices?limit=50", {
+      apiFetch<ChargeList>("/api/v1/payments/invoices?limit=50", {
         token: accessToken,
       }),
     staleTime: 30_000,

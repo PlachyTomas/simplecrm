@@ -28,7 +28,7 @@ import {
   useInvoices,
   useReactivateSubscription,
   useSeatChangeInit,
-  type InvoiceOut,
+  type ChargeOut,
 } from "@/components/billing/usePayments";
 import { ApiError, apiFetch } from "@/lib/api";
 import { csNoun } from "@/lib/i18n/nouns";
@@ -1025,13 +1025,13 @@ function BillingDetailsCard({ sub, summary, onSwitchToAnnual }: BillingDetailsCa
   );
 }
 
-const INVOICE_KIND_LABEL: Record<InvoiceOut["kind"], string> = {
+const INVOICE_KIND_LABEL: Record<ChargeOut["kind"], string> = {
   initial: "První aktivace",
   renewal: "Obnova",
   seat_upgrade: "Navýšení uživatelů",
 };
 
-const INVOICE_STATUS_PILL: Record<InvoiceOut["status"], { label: string; className: string }> = {
+const INVOICE_STATUS_PILL: Record<ChargeOut["status"], { label: string; className: string }> = {
   paid: { label: "Zaplaceno", className: "bg-success-subtle text-success" },
   pending: { label: "Čeká", className: "bg-warning-subtle text-warning" },
   failed: { label: "Selhalo", className: "bg-danger-subtle text-danger" },

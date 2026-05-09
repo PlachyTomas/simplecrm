@@ -141,7 +141,7 @@ function setupFetch(opts: MockOpts = {}) {
       if (opts.choosePlanFails) return new Response("err", { status: 500 });
       return jsonResponse({
         redirect_url: "https://payments.comgate.cz/client/instructions/index?id=TEST",
-        invoice_id: "00000000-0000-0000-0000-000000000001",
+        charge_id: "00000000-0000-0000-0000-000000000001",
         amount_minor: 99000,
         currency: "CZK",
       });

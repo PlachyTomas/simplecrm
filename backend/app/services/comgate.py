@@ -195,7 +195,7 @@ class ComGateClient:
         """First-time payment with `initRecurring=true` so the resulting
         transId can be replayed for future charges.
 
-        `ref_id` should be a unique-per-attempt string (e.g. an Invoice
+        `ref_id` should be a unique-per-attempt string (e.g. a Charge
         UUID) — appears in the merchant portal for reconciliation.
         """
         payload: dict[str, Any] = {

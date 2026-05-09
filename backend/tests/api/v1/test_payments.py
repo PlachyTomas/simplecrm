@@ -5,9 +5,9 @@ Coverage:
   - Webhook idempotency (re-delivery is a no-op)
   - Webhook routes paid initial → status=active + payment_method saved
   - Webhook routes paid seat_upgrade → seat_count + contracted lifted
-  - Webhook routes failure → invoice marked failed
-  - Return URL handling (200 + Location header reflects invoice status)
-  - GET /invoices requires admin
+  - Webhook routes failure → charge marked failed
+  - Return URL handling (200 + Location header reflects charge status)
+  - GET /charges requires admin
   - POST /seat-change-init returns 422 without saved card
 """
 
@@ -27,7 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
 from app.db.models import (
-    Invoice,
+    Charge,
     Organization,
     PaymentMethod,
     Plan,
@@ -177,7 +177,7 @@ async def test_webhook_initial_paid_promotes_to_active(
     client: AsyncClient,
     owned_payments_emails: list[str],
 ) -> None:
-    """A PAID webhook for an initial-kind invoice flips the subscription
+    """A PAID webhook for an initial-kind charge flips the subscription
     to active, sets contracted_seat_count = seat_count, and writes a
     PaymentMethod row keyed on the new transId."""
     trans_id = f"WEBHOOK-TX-{uuid.uuid4().hex[:12]}"
@@ -202,7 +202,7 @@ async def test_webhook_initial_paid_promotes_to_active(
                 contracted_seat_count=1,
             )
         )
-        invoice = Invoice(
+        charge = Charge(
             organization_id=org.id,
             kind="initial",
             amount_minor=99000,
@@ -211,16 +211,16 @@ async def test_webhook_initial_paid_promotes_to_active(
             seats=10,
             comgate_trans_id=trans_id,
         )
-        setup.add(invoice)
+        setup.add(charge)
         await setup.commit()
-        invoice_id = invoice.id
+        charge_id = charge.id
         org_id = org.id
 
     body = json.dumps(
         {
             "transId": trans_id,
             "status": "PAID",
-            "refId": str(invoice_id),
+            "refId": str(charge_id),
         }
     ).encode()
     response = await client.post(
@@ -250,7 +250,7 @@ async def test_webhook_initial_paid_promotes_to_active(
         ).scalar_one()
         assert pm.comgate_initial_trans_id == trans_id
 
-        inv = await fresh.get(Invoice, invoice_id)
+        inv = await fresh.get(Charge, charge_id)
         assert inv is not None
         assert inv.status == "paid"
         assert inv.paid_at is not None
@@ -272,7 +272,7 @@ async def test_webhook_double_delivery_is_idempotent(
     owned_payments_emails: list[str],
 ) -> None:
     """Re-firing the same webhook (same transId) is a silent no-op.
-    The invoice + subscription state from the first delivery aren't
+    The charge + subscription state from the first delivery aren't
     re-applied or doubled-up.
 
     Uses AsyncSessionLocal directly (not the db_session fixture) so
@@ -282,7 +282,7 @@ async def test_webhook_double_delivery_is_idempotent(
     trans_id = f"UPGRADE-TX-{uuid.uuid4().hex[:12]}"
     async with AsyncSessionLocal() as setup:
         org, _admin, _sub = await _seed_active_org_with_card(setup, owned_payments_emails)
-        invoice = Invoice(
+        charge = Charge(
             organization_id=org.id,
             kind="seat_upgrade",
             amount_minor=49500,
@@ -291,16 +291,16 @@ async def test_webhook_double_delivery_is_idempotent(
             seats=50,
             comgate_trans_id=trans_id,
         )
-        setup.add(invoice)
+        setup.add(charge)
         await setup.commit()
-        invoice_id = invoice.id
+        charge_id = charge.id
         org_id = org.id
 
     body = json.dumps(
         {
             "transId": trans_id,
             "status": "PAID",
-            "refId": str(invoice_id),
+            "refId": str(charge_id),
         }
     ).encode()
     sig = _sign(body)
@@ -335,7 +335,7 @@ async def test_webhook_double_delivery_is_idempotent(
         assert sub.contracted_seat_count == 50
 
         # Cleanup: delete the org and let ON DELETE CASCADE wipe
-        # subscription / invoice / payment_method. webhook_event has no
+        # subscription / charge / payment_method. webhook_event has no
         # org FK so it needs its own delete.
         await fresh.execute(delete(Organization).where(Organization.id == org_id))
         await fresh.execute(delete(WebhookEvent).where(WebhookEvent.comgate_event_id == trans_id))
@@ -347,14 +347,14 @@ async def test_webhook_double_delivery_is_idempotent(
 # ---------------------------------------------------------------------------
 
 
-async def test_webhook_failed_marks_invoice_failed(
+async def test_webhook_failed_marks_charge_failed(
     client: AsyncClient,
     owned_payments_emails: list[str],
 ) -> None:
     trans_id = f"FAIL-TX-{uuid.uuid4().hex[:12]}"
     async with AsyncSessionLocal() as setup:
         org, _admin, _sub = await _seed_active_org_with_card(setup, owned_payments_emails)
-        invoice = Invoice(
+        charge = Charge(
             organization_id=org.id,
             kind="seat_upgrade",
             amount_minor=49500,
@@ -363,16 +363,16 @@ async def test_webhook_failed_marks_invoice_failed(
             seats=50,
             comgate_trans_id=trans_id,
         )
-        setup.add(invoice)
+        setup.add(charge)
         await setup.commit()
-        invoice_id = invoice.id
+        charge_id = charge.id
         org_id = org.id
 
     body = json.dumps(
         {
             "transId": trans_id,
             "status": "CANCELLED",
-            "refId": str(invoice_id),
+            "refId": str(charge_id),
             "message": "Customer cancelled",
         }
     ).encode()
@@ -392,7 +392,7 @@ async def test_webhook_failed_marks_invoice_failed(
     await asyncio.sleep(0.05)
 
     async with AsyncSessionLocal() as fresh:
-        inv = await fresh.get(Invoice, invoice_id)
+        inv = await fresh.get(Charge, charge_id)
         assert inv is not None
         assert inv.status == "failed"
         assert "cancel" in (inv.failure_reason or "").lower()
@@ -412,7 +412,7 @@ async def test_webhook_failed_marks_invoice_failed(
 
 
 # ---------------------------------------------------------------------------
-# /payments/return + /payments/invoices
+# /payments/return + /payments/invoices (charges list)
 # ---------------------------------------------------------------------------
 
 
@@ -420,7 +420,7 @@ async def test_return_url_redirects_to_frontend_with_status(
     client: AsyncClient,
 ) -> None:
     """The browser-facing return URL 302s to the frontend's billing-return
-    page, carrying the invoice status as a query param."""
+    page, carrying the charge status as a query param."""
     response = await client.get(
         "/api/v1/payments/return?transId=TX-XYZ&refId=not-a-uuid",
         follow_redirects=False,
@@ -432,7 +432,9 @@ async def test_return_url_redirects_to_frontend_with_status(
     )
 
 
-async def test_invoices_requires_auth(client: AsyncClient) -> None:
+async def test_charges_requires_auth(client: AsyncClient) -> None:
+    # Endpoint URL stays `/payments/invoices` (the customer-facing UI labels
+    # this as "Faktury"); only the model + response-schema names changed.
     assert (await client.get("/api/v1/payments/invoices")).status_code == 401
 
 

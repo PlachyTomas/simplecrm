@@ -7,6 +7,7 @@ so Alembic autogenerate can see them. Always add new models here.
 from app.db.models.activity import Activity
 from app.db.models.auth_action_token import AuthActionToken
 from app.db.models.billing_settings import BillingSettings
+from app.db.models.charge import Charge
 from app.db.models.company import Company
 from app.db.models.contact import Contact
 from app.db.models.deal import Deal
@@ -20,6 +21,9 @@ from app.db.models.enums import (
 )
 from app.db.models.invitation import Invitation
 from app.db.models.invoice import Invoice
+from app.db.models.invoice_audit_log import InvoiceAuditLog
+from app.db.models.invoice_counter import InvoiceCounter
+from app.db.models.invoice_line import InvoiceLine
 from app.db.models.organization import Organization
 from app.db.models.ownership_history import OwnershipHistory
 from app.db.models.payment_method import PaymentMethod
@@ -38,11 +42,15 @@ __all__ = [
     "ActivityType",
     "AuthActionToken",
     "BillingSettings",
+    "Charge",
     "Company",
     "Contact",
     "Deal",
     "Invitation",
     "Invoice",
+    "InvoiceAuditLog",
+    "InvoiceCounter",
+    "InvoiceLine",
     "Organization",
     "OwnershipChangeReason",
     "OwnershipHistory",

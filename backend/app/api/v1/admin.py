@@ -31,7 +31,7 @@ from app.db import get_db
 from app.db.models import (
     Activity,
     BillingSettings,
-    Invoice,
+    Charge,
     Organization,
     Subscription,
     User,
@@ -55,7 +55,7 @@ from app.schemas.billing import (
     SubscriptionOut,
     SubscriptionStatus,
 )
-from app.schemas.payments import InvoiceList, InvoiceOut
+from app.schemas.payments import ChargeList, ChargeOut
 from app.services import billing
 
 logger = logging.getLogger(__name__)
@@ -452,7 +452,7 @@ async def update_billing_settings(
 
 @router.get(
     "/organizations/{org_id}/invoices",
-    response_model=InvoiceList,
+    response_model=ChargeList,
 )
 async def list_org_invoices(
     org_id: uuid.UUID,
@@ -460,26 +460,22 @@ async def list_org_invoices(
     offset: int = Query(0, ge=0),
     _admin: User = Depends(require_super_admin),
     session: AsyncSession = Depends(get_db),
-) -> InvoiceList:
+) -> ChargeList:
     """Founder-facing invoice list for one org.
 
     Mirrors the customer-facing `GET /payments/invoices` shape but
     skips the `require_role(admin)` org-membership check — super-admin
     operates across orgs.
     """
-    base = select(Invoice).where(Invoice.organization_id == org_id)
+    base = select(Charge).where(Charge.organization_id == org_id)
     total = (await session.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
     rows = (
-        (
-            await session.execute(
-                base.order_by(Invoice.created_at.desc()).limit(limit).offset(offset)
-            )
-        )
+        (await session.execute(base.order_by(Charge.created_at.desc()).limit(limit).offset(offset)))
         .scalars()
         .all()
     )
-    return InvoiceList(
-        items=[InvoiceOut.model_validate(r) for r in rows],
+    return ChargeList(
+        items=[ChargeOut.model_validate(r) for r in rows],
         total=total,
     )
 

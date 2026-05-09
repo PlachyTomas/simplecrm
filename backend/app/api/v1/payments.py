@@ -45,7 +45,7 @@ from app.core.config import get_settings
 from app.core.deps import require_org_membership, require_role
 from app.db import get_db
 from app.db.models import (
-    Invoice,
+    Charge,
     Organization,
     PaymentMethod,
     User,
@@ -53,9 +53,9 @@ from app.db.models import (
     WebhookEvent,
 )
 from app.schemas.payments import (
+    ChargeList,
+    ChargeOut,
     InitialPaymentInitIn,
-    InvoiceList,
-    InvoiceOut,
     PaymentInitOut,
     SeatChangeInitIn,
     SeatChangeInitOut,
@@ -90,7 +90,7 @@ async def initial_payment_init(
 ) -> PaymentInitOut:
     """Customer is moving from trial → paid plan.
 
-    Creates an `Invoice(kind=initial, status=pending)`, asks ComGate
+    Creates a `Charge(kind=initial, status=pending)`, asks ComGate
     for a hosted-payment-page URL, returns it for the frontend to
     redirect to. The webhook lands later and promotes to active.
     """
@@ -113,7 +113,7 @@ async def initial_payment_init(
         )
     amount_minor = sub.seat_count * plan.price_per_user_minor
 
-    invoice = Invoice(
+    charge = Charge(
         organization_id=org_id,
         kind="initial",
         amount_minor=amount_minor,
@@ -121,7 +121,7 @@ async def initial_payment_init(
         status="pending",
         seats=sub.seat_count,
     )
-    session.add(invoice)
+    session.add(charge)
     await session.flush()
 
     org = await session.get(Organization, org_id)
@@ -130,7 +130,7 @@ async def initial_payment_init(
         created = await comgate.create_initial_payment(
             amount_minor=amount_minor,
             currency=plan.currency,
-            ref_id=str(invoice.id),
+            ref_id=str(charge.id),
             label=label,
             email=user.email,
         )
@@ -142,12 +142,12 @@ async def initial_payment_init(
             detail="Platební brána není dostupná, zkuste to prosím za chvíli.",
         ) from exc
 
-    invoice.comgate_trans_id = created.trans_id
+    charge.comgate_trans_id = created.trans_id
     await session.commit()
 
     return PaymentInitOut(
+        charge_id=charge.id,
         redirect_url=created.redirect_url,
-        invoice_id=invoice.id,
         amount_minor=amount_minor,
         currency=plan.currency,
     )
@@ -220,7 +220,7 @@ async def seat_change_init(
             detail="Computed proration was zero; nothing to charge.",
         )
 
-    invoice = Invoice(
+    charge = Charge(
         organization_id=org_id,
         kind="seat_upgrade",
         amount_minor=amount_minor,
@@ -230,7 +230,7 @@ async def seat_change_init(
         period_starts_at=sub.current_period_starts_at,
         period_ends_at=sub.current_period_ends_at,
     )
-    session.add(invoice)
+    session.add(charge)
     await session.flush()
 
     label = f"SimpleCRM navýšení na {payload.seat_count} uživatelů"
@@ -239,7 +239,7 @@ async def seat_change_init(
             initial_trans_id=payment_method.comgate_initial_trans_id,
             amount_minor=amount_minor,
             currency=sub.plan.currency,
-            ref_id=str(invoice.id),
+            ref_id=str(charge.id),
             label=label,
         )
     except ComGateError as exc:
@@ -250,19 +250,19 @@ async def seat_change_init(
             detail="Platební brána odmítla transakci. Zkontrolujte uloženou kartu.",
         ) from exc
 
-    invoice.comgate_trans_id = result.trans_id
+    charge.comgate_trans_id = result.trans_id
     await session.commit()
 
     return SeatChangeInitOut(
         status="accepted",
-        invoice_id=invoice.id,
+        charge_id=charge.id,
         amount_minor=amount_minor,
         currency=sub.plan.currency,
     )
 
 
 # ---------------------------------------------------------------------------
-# Browser return + invoice list
+# Browser return + charge list
 # ---------------------------------------------------------------------------
 
 
@@ -276,20 +276,20 @@ async def payment_return(
     complete (or cancel) the hosted-payment page.
 
     We don't trust this for billing state — that's the webhook's job.
-    Read the invoice if we know its ID, then 302 the customer to the
+    Read the charge if we know its ID, then 302 the customer to the
     frontend's billing-return route with whatever status we can see.
     """
     settings = get_settings()
     target_status: str = "pending"
     if refId:
         try:
-            invoice_id = uuid.UUID(refId)
+            charge_id = uuid.UUID(refId)
         except ValueError:
-            invoice_id = None
-        if invoice_id is not None:
-            invoice = await session.get(Invoice, invoice_id)
-            if invoice is not None:
-                target_status = invoice.status
+            charge_id = None
+        if charge_id is not None:
+            charge = await session.get(Charge, charge_id)
+            if charge is not None:
+                target_status = charge.status
 
     # frontend_success_redirect is e.g. "http://localhost:5173/app";
     # peel off any path so we land on /app/billing/return.
@@ -307,31 +307,27 @@ async def payment_return(
 
 @router.get(
     "/invoices",
-    response_model=InvoiceList,
+    response_model=ChargeList,
     dependencies=[Depends(require_org_membership)],
 )
-async def list_invoices(
+async def list_charges(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     user: User = Depends(require_role(UserRole.admin)),
     session: AsyncSession = Depends(get_db),
-) -> InvoiceList:
+) -> ChargeList:
     if user.organization_id is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
-    base = select(Invoice).where(Invoice.organization_id == user.organization_id)
+    base = select(Charge).where(Charge.organization_id == user.organization_id)
     total = (await session.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
     rows = (
-        (
-            await session.execute(
-                base.order_by(Invoice.created_at.desc()).limit(limit).offset(offset)
-            )
-        )
+        (await session.execute(base.order_by(Charge.created_at.desc()).limit(limit).offset(offset)))
         .scalars()
         .all()
     )
-    return InvoiceList(
-        items=[InvoiceOut.model_validate(r) for r in rows],
+    return ChargeList(
+        items=[ChargeOut.model_validate(r) for r in rows],
         total=total,
     )
 
@@ -353,10 +349,10 @@ async def comgate_webhook(
     1. Verify the HMAC-SHA256 signature on the raw request body.
     2. Dedupe via `webhook_events.comgate_event_id` — re-deliveries
        silently 204.
-    3. Parse the payload, look up the matching Invoice via `refId`
-       (which we set to the Invoice ID at create-time).
+    3. Parse the payload, look up the matching Charge via `refId`
+       (which we set to the Charge ID at create-time).
     4. Dispatch to the appropriate `services/billing.apply_*_success`
-       or `mark_charge_failed` based on Invoice.kind + payload status.
+       or `mark_charge_failed` based on Charge.kind + payload status.
 
     Returns 204 on every successful processing path (including dedupes
     and known-bad inputs that we've decided to swallow). Returns 4xx
@@ -399,27 +395,27 @@ async def comgate_webhook(
         return
 
     try:
-        invoice_id = uuid.UUID(str(ref_id))
+        charge_id = uuid.UUID(str(ref_id))
     except ValueError:
         event.processed_at = datetime.now(tz=UTC)
         await session.commit()
         logger.warning("ComGate webhook refId not a UUID: %s", ref_id)
         return
 
-    invoice = await session.get(Invoice, invoice_id)
-    if invoice is None:
+    charge = await session.get(Charge, charge_id)
+    if charge is None:
         event.processed_at = datetime.now(tz=UTC)
         await session.commit()
         logger.warning(
-            "ComGate webhook for unknown invoice %s (transId=%s)",
-            invoice_id,
+            "ComGate webhook for unknown charge %s (transId=%s)",
+            charge_id,
             trans_id,
         )
         return
 
-    # Avoid double-processing if the same invoice somehow gets two
+    # Avoid double-processing if the same charge somehow gets two
     # webhooks (e.g. ComGate event_id changed between retries).
-    if invoice.status in {"paid", "failed", "refunded"}:
+    if charge.status in {"paid", "failed", "refunded"}:
         event.processed_at = datetime.now(tz=UTC)
         await session.commit()
         return
@@ -430,14 +426,14 @@ async def comgate_webhook(
     if succeeded:
         await _dispatch_success(
             session,
-            invoice=invoice,
+            charge=charge,
             comgate_trans_id=trans_id,
             comgate=comgate,
         )
     else:
         await _dispatch_failure(
             session,
-            invoice=invoice,
+            charge=charge,
             comgate_trans_id=trans_id,
             failure_reason=str(payload.get("message") or cg_status or "FAILED"),
         )
@@ -449,21 +445,18 @@ async def comgate_webhook(
 async def _dispatch_success(
     session: AsyncSession,
     *,
-    invoice: Invoice,
+    charge: Charge,
     comgate_trans_id: str,
     comgate: ComGateClient,
 ) -> None:
     """Route a successful payment into the right billing funnel."""
-    org_id = invoice.organization_id
-    invoice.status = "paid"
-    invoice.paid_at = datetime.now(tz=UTC)
+    org_id = charge.organization_id
+    charge.status = "paid"
+    charge.paid_at = datetime.now(tz=UTC)
 
-    if invoice.kind == "initial":
-        # The plan_code lives on the invoice's eventual subscription
-        # — we look it up via the seat-count delta + plan price baseline.
-        # Simpler: the customer's chosen plan was already written to
-        # `Subscription.plan_id` by `choose_plan` before this webhook
-        # could land. Use that.
+    if charge.kind == "initial":
+        # The plan_code lives on the org's subscription — chosen by the
+        # customer in `choose_plan` before the webhook lands.
         sub = await billing.get_current_subscription(session, org_id)
         await billing.apply_initial_payment_success(
             session,
@@ -489,37 +482,37 @@ async def _dispatch_success(
             )
         else:
             existing.comgate_initial_trans_id = comgate_trans_id
-    elif invoice.kind == "seat_upgrade":
+    elif charge.kind == "seat_upgrade":
         await billing.apply_seat_charge_success(
             session,
             org_id=org_id,
-            new_seat_count=invoice.seats or 0,
-            charge_amount_minor=invoice.amount_minor,
+            new_seat_count=charge.seats or 0,
+            charge_amount_minor=charge.amount_minor,
             comgate_trans_id=comgate_trans_id,
         )
-    elif invoice.kind == "renewal":
+    elif charge.kind == "renewal":
         await billing.apply_renewal_success(
             session,
             org_id=org_id,
             comgate_trans_id=comgate_trans_id,
         )
     else:
-        logger.warning("Unknown invoice.kind=%r for %s", invoice.kind, invoice.id)
+        logger.warning("Unknown charge.kind=%r for %s", charge.kind, charge.id)
 
 
 async def _dispatch_failure(
     session: AsyncSession,
     *,
-    invoice: Invoice,
+    charge: Charge,
     comgate_trans_id: str,
     failure_reason: str,
 ) -> None:
-    """Mark the invoice failed + delegate dunning to billing service."""
-    invoice.status = "failed"
-    invoice.failure_reason = failure_reason[:500]
+    """Mark the charge failed + delegate dunning to billing service."""
+    charge.status = "failed"
+    charge.failure_reason = failure_reason[:500]
     await billing.mark_charge_failed(
         session,
-        org_id=invoice.organization_id,
-        kind=invoice.kind,
+        org_id=charge.organization_id,
+        kind=charge.kind,
         failure_reason=failure_reason,
     )

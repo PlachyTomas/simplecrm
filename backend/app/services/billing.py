@@ -497,7 +497,7 @@ async def extend_trial(
 # ---------------------------------------------------------------------------
 #
 # These are the funnels invoked from the ComGate webhook handler in
-# `api/v1/payments`. They land in three flavors mirroring the Invoice
+# `api/v1/payments`. They land in three flavors mirroring the Charge
 # `kind` values:
 #
 #   - `apply_initial_payment_success` for the customer's first paid
@@ -508,7 +508,7 @@ async def extend_trial(
 # `mark_charge_failed` covers all three failure paths.
 #
 # Each function takes the comgate_trans_id so the audit trail can point
-# back at the merchant-portal record. The Invoice row is written by the
+# back at the merchant-portal record. The Charge row is written by the
 # webhook handler before calling these (so a DB-fail mid-apply leaves a
 # breadcrumb for the recovery job).
 
@@ -582,7 +582,7 @@ async def apply_initial_payment_success(
     Promotes status to 'active', anchors the period at now, syncs
     contracted_seat_count to whatever the customer was sitting at
     when they paid (their trial-time seat-slider play is now their
-    paid baseline). The Invoice row is updated by the webhook caller.
+    paid baseline). The Charge row is updated by the webhook caller.
     """
     if plan_code not in {"monthly", "annual"}:
         raise BillingError(f"plan_code must be 'monthly' or 'annual', got {plan_code!r}")

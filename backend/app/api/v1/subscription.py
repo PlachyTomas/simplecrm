@@ -162,7 +162,7 @@ async def choose_plan(
 
     .. deprecated::
         Prefer ``POST /api/v1/payments/initial-payment-init`` — that
-        endpoint creates an Invoice + ComGate hosted-payment URL and
+        endpoint creates a Charge + ComGate hosted-payment URL and
         returns ``{redirect_url}``. This endpoint is kept for backwards
         compatibility while the frontend migrates; new code should not
         call it. Sets ``status='pending_activation'`` and emails the

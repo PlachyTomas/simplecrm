@@ -23,8 +23,8 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 
 from app.db.models import (
+    Charge,
     Company,
-    Invoice,
     PaymentMethod,
     Subscription,
     User,
@@ -161,7 +161,7 @@ async def run_recurring_charges() -> int:
 
     The ComGate webhook handler eventually lands the success/failure
     via `apply_renewal_success` / `mark_charge_failed` — this job just
-    triggers the request and writes a pending Invoice as a breadcrumb.
+    triggers the request and writes a pending Charge as a breadcrumb.
 
     Returns the number of charge attempts initiated (useful for tests).
     """
@@ -197,7 +197,7 @@ async def run_recurring_charges() -> int:
                 continue
             amount_minor = price * sub.seat_count
 
-            invoice = Invoice(
+            charge = Charge(
                 organization_id=sub.organization_id,
                 kind="renewal",
                 amount_minor=amount_minor,
@@ -207,7 +207,7 @@ async def run_recurring_charges() -> int:
                 period_starts_at=sub.current_period_starts_at,
                 period_ends_at=sub.current_period_ends_at,
             )
-            session.add(invoice)
+            session.add(charge)
             await session.flush()
 
             label = f"SimpleCRM {sub.plan.display_name_cs} – obnovení"
@@ -216,13 +216,13 @@ async def run_recurring_charges() -> int:
                     initial_trans_id=payment_method.comgate_initial_trans_id,
                     amount_minor=amount_minor,
                     currency=sub.plan.currency,
-                    ref_id=str(invoice.id),
+                    ref_id=str(charge.id),
                     label=label,
                 )
-                invoice.comgate_trans_id = result.trans_id
+                charge.comgate_trans_id = result.trans_id
                 attempts += 1
             except ComGateError as exc:
-                # Mark the invoice failed inline; the dunning logic in
+                # Mark the charge failed inline; the dunning logic in
                 # `mark_charge_failed` would normally fire via webhook
                 # but a transport-level rejection never produces one.
                 logger.warning(
@@ -230,8 +230,8 @@ async def run_recurring_charges() -> int:
                     sub.organization_id,
                     exc,
                 )
-                invoice.status = "failed"
-                invoice.failure_reason = str(exc)[:500]
+                charge.status = "failed"
+                charge.failure_reason = str(exc)[:500]
                 await billing.mark_charge_failed(
                     session,
                     org_id=sub.organization_id,

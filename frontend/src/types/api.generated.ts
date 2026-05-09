@@ -1321,7 +1321,7 @@ export interface paths {
          *
          *     .. deprecated::
          *         Prefer ``POST /api/v1/payments/initial-payment-init`` — that
-         *         endpoint creates an Invoice + ComGate hosted-payment URL and
+         *         endpoint creates a Charge + ComGate hosted-payment URL and
          *         returns ``{redirect_url}``. This endpoint is kept for backwards
          *         compatibility while the frontend migrates; new code should not
          *         call it. Sets ``status='pending_activation'`` and emails the
@@ -1498,7 +1498,7 @@ export interface paths {
          * Initial Payment Init
          * @description Customer is moving from trial → paid plan.
          *
-         *     Creates an `Invoice(kind=initial, status=pending)`, asks ComGate
+         *     Creates a `Charge(kind=initial, status=pending)`, asks ComGate
          *     for a hosted-payment-page URL, returns it for the frontend to
          *     redirect to. The webhook lands later and promotes to active.
          */
@@ -1547,7 +1547,7 @@ export interface paths {
          *     complete (or cancel) the hosted-payment page.
          *
          *     We don't trust this for billing state — that's the webhook's job.
-         *     Read the invoice if we know its ID, then 302 the customer to the
+         *     Read the charge if we know its ID, then 302 the customer to the
          *     frontend's billing-return route with whatever status we can see.
          */
         get: operations["payment_return_api_v1_payments_return_get"];
@@ -1566,8 +1566,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Invoices */
-        get: operations["list_invoices_api_v1_payments_invoices_get"];
+        /** List Charges */
+        get: operations["list_charges_api_v1_payments_invoices_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1592,10 +1592,10 @@ export interface paths {
          *     1. Verify the HMAC-SHA256 signature on the raw request body.
          *     2. Dedupe via `webhook_events.comgate_event_id` — re-deliveries
          *        silently 204.
-         *     3. Parse the payload, look up the matching Invoice via `refId`
-         *        (which we set to the Invoice ID at create-time).
+         *     3. Parse the payload, look up the matching Charge via `refId`
+         *        (which we set to the Charge ID at create-time).
          *     4. Dispatch to the appropriate `services/billing.apply_*_success`
-         *        or `mark_charge_failed` based on Invoice.kind + payload status.
+         *        or `mark_charge_failed` based on Charge.kind + payload status.
          *
          *     Returns 204 on every successful processing path (including dedupes
          *     and known-bad inputs that we've decided to swallow). Returns 4xx
@@ -2230,6 +2230,56 @@ export interface components {
              */
             plan_code: "monthly" | "annual";
         };
+        /** ChargeList */
+        ChargeList: {
+            /** Items */
+            items: components["schemas"]["ChargeOut"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * ChargeOut
+         * @description Serialized ComGate charge attempt (renamed from `InvoiceOut`).
+         *
+         *     The Czech-law tax-invoice schema is `InvoiceOut` in the `invoicing`
+         *     schema module — distinct concept, distinct shape.
+         */
+        ChargeOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "initial" | "renewal" | "seat_upgrade";
+            /** Amount Minor */
+            amount_minor: number;
+            /** Currency */
+            currency: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "paid" | "failed" | "refunded";
+            /** Seats */
+            seats?: number | null;
+            /** Period Starts At */
+            period_starts_at?: string | null;
+            /** Period Ends At */
+            period_ends_at?: string | null;
+            /** Failure Reason */
+            failure_reason?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Paid At */
+            paid_at?: string | null;
+        };
         /** ChoosePlanIn */
         ChoosePlanIn: {
             /**
@@ -2863,50 +2913,6 @@ export interface components {
             /** Name */
             name: string;
         };
-        /** InvoiceList */
-        InvoiceList: {
-            /** Items */
-            items: components["schemas"]["InvoiceOut"][];
-            /** Total */
-            total: number;
-        };
-        /** InvoiceOut */
-        InvoiceOut: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "initial" | "renewal" | "seat_upgrade";
-            /** Amount Minor */
-            amount_minor: number;
-            /** Currency */
-            currency: string;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "pending" | "paid" | "failed" | "refunded";
-            /** Seats */
-            seats?: number | null;
-            /** Period Starts At */
-            period_starts_at?: string | null;
-            /** Period Ends At */
-            period_ends_at?: string | null;
-            /** Failure Reason */
-            failure_reason?: string | null;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Paid At */
-            paid_at?: string | null;
-        };
         /**
          * KpiSummary
          * @description Reports snapshot for the caller (and their visibility scope).
@@ -3326,17 +3332,17 @@ export interface components {
          * @description Response for any `*-init` endpoint that creates a ComGate payment.
          *
          *     `redirect_url` is the ComGate hosted-page URL the frontend should
-         *     `window.location` to. `invoice_id` lets the frontend poll for
+         *     `window.location` to. `charge_id` lets the frontend poll for
          *     completion if it doesn't want to wait for the return-URL.
          */
         PaymentInitOut: {
             /** Redirect Url */
             redirect_url: string;
             /**
-             * Invoice Id
+             * Charge Id
              * Format: uuid
              */
-            invoice_id: string;
+            charge_id: string;
             /** Amount Minor */
             amount_minor: number;
             /** Currency */
@@ -3620,7 +3626,7 @@ export interface components {
          * @description Response for `POST /payments/seat-change-init`.
          *
          *     `status='accepted'`: ComGate took the charge for processing; the
-         *     final outcome lands via webhook. `invoice_id` lets the frontend
+         *     final outcome lands via webhook. `charge_id` lets the frontend
          *     poll `GET /payments/invoices/{id}` for the terminal state.
          */
         SeatChangeInitOut: {
@@ -3630,10 +3636,10 @@ export interface components {
              */
             status: "accepted";
             /**
-             * Invoice Id
+             * Charge Id
              * Format: uuid
              */
-            invoice_id: string;
+            charge_id: string;
             /** Amount Minor */
             amount_minor: number;
             /** Currency */
@@ -7054,7 +7060,7 @@ export interface operations {
             };
         };
     };
-    list_invoices_api_v1_payments_invoices_get: {
+    list_charges_api_v1_payments_invoices_get: {
         parameters: {
             query?: {
                 limit?: number;
@@ -7072,7 +7078,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvoiceList"];
+                    "application/json": components["schemas"]["ChargeList"];
                 };
             };
             /** @description Validation Error */
@@ -7502,7 +7508,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvoiceList"];
+                    "application/json": components["schemas"]["ChargeList"];
                 };
             };
             /** @description Validation Error */
