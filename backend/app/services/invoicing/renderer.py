@@ -29,11 +29,12 @@ accountant doesn't need are omitted to keep the document small.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+import pydyf
 from babel.dates import format_date
 from babel.numbers import format_currency, format_decimal
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -124,6 +125,29 @@ _jinja_env = Environment(
 
 
 # --------------------------------------------------------------------------- #
+# PDF date pinning
+# --------------------------------------------------------------------------- #
+
+
+def _pin_pdf_dates(when: datetime) -> Any:
+    """Return a WeasyPrint `finisher` callable that overwrites the
+    PDF's CreationDate / ModDate with `when`.
+
+    PDF Date format per § 7.9.4 of the spec: `D:YYYYMMDDHHmmSS+00'00'`.
+    Without this finisher, WeasyPrint stamps `datetime.now()` and two
+    renders moments apart byte-differ — breaking the integrity check
+    that the storage layer relies on.
+    """
+    pdf_date_str = when.astimezone(UTC).strftime("D:%Y%m%d%H%M%S+00'00'")
+
+    def _finisher(_document: object, pdf: object) -> None:
+        pdf.info["CreationDate"] = pydyf.String(pdf_date_str)  # type: ignore[attr-defined]
+        pdf.info["ModDate"] = pydyf.String(pdf_date_str)  # type: ignore[attr-defined]
+
+    return _finisher
+
+
+# --------------------------------------------------------------------------- #
 # Renderer
 # --------------------------------------------------------------------------- #
 
@@ -134,9 +158,11 @@ class InvoiceRenderer:
     def render_pdf(self, invoice: Invoice, lines: Iterable[InvoiceLine]) -> bytes:
         """Render `invoice` to a PDF/A-2b byte string.
 
-        `pdf_creation_date=invoice.issued_at` keeps two renders of the
-        same already-issued invoice byte-identical. The base_url points
-        at the templates directory so the @font-face TTFs resolve.
+        Determinism is enforced by a finisher that pins ``CreationDate``
+        and ``ModDate`` to ``invoice.issued_at``. Without the finisher,
+        WeasyPrint stamps ``datetime.now()`` into the PDF trailer and
+        two renders moments apart would byte-differ — invalidating the
+        stored ``pdf_sha256`` on every read.
         """
         sorted_lines = sorted(lines, key=lambda line_: line_.position)
         html = _jinja_env.get_template("invoice.html.j2").render(
@@ -148,9 +174,7 @@ class InvoiceRenderer:
             fmt_date=_fmt_date_cs,
         )
         weasy_html = HTML(string=html, base_url=str(_TEMPLATES_DIR))
-        # `pdf_creation_date` keeps the byte stream stable across renders
-        # of the same already-issued invoice.
-        pdf: bytes = weasy_html.write_pdf(pdf_creation_date=invoice.issued_at)
+        pdf: bytes = weasy_html.write_pdf(finisher=_pin_pdf_dates(invoice.issued_at))
         return pdf
 
     def render_isdoc(self, invoice: Invoice, lines: Iterable[InvoiceLine]) -> bytes:

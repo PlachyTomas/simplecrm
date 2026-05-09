@@ -1,121 +1,60 @@
-# Resume: INVOICES_TASK.md commit #5
+# Resume: INVOICES_TASK.md commit #6
 
-**Last completed:** *feat(invoicing): InvoiceStorage with S3 + local fallback and hash verification* (commit #4).
+**Last completed:** *feat(invoicing): InvoiceService orchestrator and InvoiceMailer* (commit #5).
 
 ## State at session end
 
-- Migration head: `1a5b9f76b1ee` (unchanged from commits #2–4).
-- New module `app/services/invoicing/storage.py` with `InvoiceStorage`, `StorageResult`, `IntegrityError`. Two backends:
-  - **S3** when `settings.s3_endpoint_url` + `s3_bucket_invoices` are configured. boto3 lazy-imported; Hetzner-friendly `Config(s3={"addressing_style": "path"}, signature_version="s3v4")`. SHA-256 stored as object metadata for belt-and-suspenders integrity.
-  - **Local** otherwise. Writes under `invoice_storage_local_root` (default `var/invoices/`). One-time WARNING log on first use.
-- 6 new settings in `app/core/config.py`: `s3_endpoint_url`, `s3_bucket_invoices`, `s3_access_key_id`, `s3_secret_access_key`, `s3_region` (default `fsn1`), `invoice_storage_local_root`.
-- Object key scheme: `invoices/{year}/{organization_id}/{number}.{pdf|isdoc.xml}`.
-- 7 new tests in `tests/services/test_invoicing_storage.py` covering: PDF round-trip, ISDOC round-trip, key scoping by year+org, on-disk tampering → `IntegrityError`, recorded-hash mismatch → same error, missing key → `FileNotFoundError`, idempotent re-store of same bytes.
-- Backend suite: **414 passed** (407 → 414). mypy strict, ruff lint+format clean. **Six commits ahead of `origin/main`.**
+- Migration head: `1a5b9f76b1ee` (no schema changes since #2).
+- New modules in `app/services/invoicing/`:
+  - `numbering.py` — `allocate_invoice_number(session, year)` returning `(seq, number, variable_symbol)` under a per-year `pg_advisory_xact_lock`.
+  - `service.py` — `InvoiceService` with `issue_for_charge`, `issue_manual`, `mark_paid`, `void`, `issue_credit_note`. Idempotent issuance (existing invoice for charge_id → returned as-is). Validates `BillingSettings` issuer fields are non-empty before issuance (`InvoiceIssuerNotConfiguredError`). Credit notes can't exceed the original total (`CreditNoteExceedsOriginalError`). Czech declension helper `_user_word(n)` for proper "uživatel/uživatelé/uživatelů" line descriptions.
+  - `mailer.py` — `InvoiceMailer.send` renders the BillingSettings Jinja2 subject/body templates with invoice context, fetches + hash-verifies the stored PDF before send (logs `send_failed` audit on transport error), writes `sent_at` + `sent_to_email` + `sent` audit row.
+- **Renderer determinism upgrade**: `render_pdf` now uses a WeasyPrint `finisher` callable that pins `CreationDate` and `ModDate` in the PDF info dict to `invoice.issued_at`. The previous `pdf_creation_date=…` kwarg was silently ignored (WeasyPrint 63 doesn't accept it as a top-level option) — determinism only "worked" by accident because two consecutive renders happened in the same wall-clock second. Now load-bearing.
+- 9 new tests in `tests/services/test_invoicing_service.py`:
+  - rejects when issuer not configured
+  - happy-path issuance with full audit trail (`allocated`, `pdf_stored`, `issued`)
+  - idempotency on webhook replay (same id, same number, no second render)
+  - manual issuance with custom lines
+  - mark_paid records audit + sets paid_at
+  - void leaves PDF in storage + adds `voided` audit
+  - credit note creates separate row, original untouched
+  - over-credit rejected
+  - mailer round-trips, writes `sent` audit + `sent_at`/`sent_to_email`
+- Backend suite: **423 passed** (414 → 423). mypy strict + ruff clean. **Seven commits ahead of `origin/main`.**
 
-## Next: commit #5 — `feat(invoicing): InvoiceService orchestrator and InvoiceMailer`
+## Next: commit #6 — `feat(invoicing): wire issuance into ComGate webhook charge-paid path`
 
-This is the brain. Wires the renderer (#3) + storage (#4) into a transactional issuance flow that also writes audit-log entries.
+Hook the orchestrator into the existing webhook so paid charges automatically issue invoices.
 
-### `app/services/invoicing/service.py`
-
-```python
-class InvoiceService:
-    async def issue_for_charge(self, session, charge: Charge,
-                               by_admin_id: uuid.UUID | None = None) -> Invoice:
-        """Auto-issue path. Called from the ComGate webhook (commit #6)
-        when a charge transitions to `paid`. Idempotent: if an invoice
-        already exists for this charge, returns it without re-rendering."""
-
-    async def issue_manual(self, session, *, org_id: uuid.UUID,
-                           lines: list[ManualLineIn], note: str | None,
-                           by_admin_id: uuid.UUID,
-                           taxable_supply_date: date | None = None,
-                           due_at: date | None = None) -> Invoice:
-        """Founder-driven. Used for refunds, comp orgs, custom corrections."""
-
-    async def mark_paid(self, session, invoice_id: uuid.UUID,
-                        paid_at: datetime | None,
-                        by_admin_id: uuid.UUID) -> Invoice: ...
-
-    async def void(self, session, invoice_id: uuid.UUID, reason: str,
-                   by_admin_id: uuid.UUID) -> Invoice: ...
-
-    async def issue_credit_note(self, session, *,
-                                 original_invoice_id: uuid.UUID,
-                                 lines: list[ManualLineIn], reason: str,
-                                 by_admin_id: uuid.UUID) -> Invoice: ...
-```
-
-Algorithm for `issue_for_charge`:
-1. Idempotency: `SELECT FROM invoices WHERE charge_id = :charge_id LIMIT 1`. If exists, return it.
-2. Validate `BillingSettings` issuer fields are non-empty (the founder must have configured them via the super-admin UI). Otherwise raise `InvoiceIssuerNotConfiguredError`. Tests should cover this.
-3. Allocate a number under `pg_advisory_xact_lock` for the year (use the helper from commit #1's tests as a pattern; promote to `app/services/invoicing/numbering.py`).
-4. Build the `Invoice` row with `status='draft'` initially, snapshot issuer + customer, derive lines from the charge (one line per `Charge.kind`: monthly/annual subscription, seat upgrade, etc.). Compute totals.
-5. Render PDF + ISDOC via `InvoiceRenderer`.
-6. Store both via `InvoiceStorage`.
-7. Set `pdf_*`, `isdoc_*` columns on the invoice; flip `status='issued'`.
-8. Write `InvoiceAuditLog` rows: `allocated`, `issued`, `pdf_stored`.
-9. Return.
-
-### `app/services/invoicing/numbering.py`
-
-Promote the advisory-lock allocator from the test file into a real helper. Used by `issue_for_charge` and `issue_manual` and `issue_credit_note`.
-
-```python
-async def allocate_invoice_number(session, year: int) -> tuple[int, str, str]:
-    """Returns (sequence_in_year, number, variable_symbol)."""
-```
-
-### `app/services/invoicing/mailer.py`
-
-```python
-class InvoiceMailer:
-    async def send(self, session, invoice: Invoice,
-                   override_to: str | None = None) -> None:
-        """Render BillingSettings.invoice_email_{subject,body}_template
-        as Jinja2, attach the PDF (fetched via InvoiceStorage), send via
-        services/email.send_email, write `sent` audit log + sent_at row."""
-```
-
-Reuses the existing `services/email.py` stub (still log-only). The tax invoice's PDF gets attached as `Faktura-{number}.pdf`.
-
-### Tests
-
-- `test_invoicing_service.py` (or split per file):
-  - issue_for_charge happy path (creates an Invoice in `issued` state with PDF stored, audit log entries present)
-  - issue_for_charge idempotency (re-fired webhook returns existing invoice, no second rendering)
-  - issue_for_charge raises `InvoiceIssuerNotConfiguredError` when BillingSettings is bare
-  - mark_paid sets paid_at + writes `paid` audit log
-  - void sets status, writes `voided` audit log, leaves PDF in storage
-  - issue_credit_note creates a separate row, original is untouched, |credit_total| ≤ original_total
-  - mailer sends via the stub, writes `sent` audit log + sent_at on row
+### Files to touch
+- `backend/app/api/v1/payments.py`
+  - In `_dispatch_success` (after `charge.status = "paid"` is set), call `await InvoiceService().issue_for_charge(session, charge, by_admin_id=None)`. Wrap in try/except — if invoice issuance fails (e.g. issuer not configured), log a `WARNING` but don't break the webhook (the charge is still paid; the invoice can be issued manually later from the super-admin UI).
+  - The orchestrator's idempotency check makes the webhook safe to re-fire.
+  - Skip issuance for comp orgs — check `subscription.is_comp` and short-circuit. Already-paid charges shouldn't have invoices either; the existing `if charge.status in {"paid", "failed", ...}` early-return covers webhook replay correctly.
+- `backend/tests/api/v1/test_payments.py` — add a test that the webhook handler creates the invoice row alongside flipping the charge to `paid`. Need to seed BillingSettings with valid issuer fields (use the helper from test_invoicing_service.py — promote it to a conftest if needed).
 
 ### Watch out for
+- The webhook flow runs inside its own session (per the `payments.py` handler). The orchestrator's `await session.flush()` calls write into the same transaction — good. The final `await session.commit()` at the end of the webhook handler commits everything atomically.
+- `subscription.is_comp` check needs a SQL load — the charge has `organization_id` but not `is_comp`. Pull `Subscription` row first.
+- `enterprise` org with override price — already handled by `compute_seat_proration` upstream; the orchestrator's `_build_lines_for_charge` derives unit price from `charge.amount_minor // seats`, which is the post-override value. No change needed.
+- The renderer warning about `Ignored fill:#000000` is from the QR Platba SVG — harmless, but spamming. Worth quieting in a follow-up.
 
-- The `Invoice` model's immutability trigger blocks UPDATE on guarded columns once `status != 'draft'`. The orchestrator must set `pdf_*`/`isdoc_*` BEFORE flipping to `issued`, or the trigger will reject the update. Build the row in `draft`, write storage, set the storage columns, THEN flip to `issued` in one final UPDATE.
-- Charge.kind → invoice line description mapping is in Czech. Helper:
-  - `initial` → `SimpleCRM, plán {Měsíční|Roční}, {N} uživatelů, období {start} – {end}`
-  - `renewal` → same shape
-  - `seat_upgrade` → `SimpleCRM, navýšení o {N} uživatelů, období {start} – {end}`
-- `BillingSettings.is_vat_payer=True` path: line items get DPH 21 %, totals split into `subtotal_minor` + `vat_amount_minor`. When False, `vat_amount_minor=0`, `vat_rate_percent=0.00`.
-- The audit log INSERTs need to be inside the orchestrator's transaction (so a renderer crash mid-issuance doesn't leave orphan log entries).
-
-### How to start commit #5
+### How to start commit #6
 
 1. `cd backend && uv run alembic current` — head is `1a5b9f76b1ee`.
-2. `cd backend && uv run pytest -q` — confirms 414 green.
-3. Read `BillingSettings` model + `services/email.py` stub for context.
-4. Write `numbering.py` first (small, has a clean unit test).
-5. Write `service.py` orchestrator. The idempotency check + draft→issued→storage→flip pattern is the load-bearing logic.
-6. Write `mailer.py`.
-7. Tests, gates, commit, update RESUME for commit #6 (webhook integration).
+2. `cd backend && uv run pytest -q` — confirms 423 green.
+3. Read `app/api/v1/payments.py:_dispatch_success` for the hook point.
+4. Add the call + comp-org skip + try/except. Don't forget BillingSettings issuer-fields validation can raise — log + continue, don't 500 the webhook.
+5. Test: seed an org+sub+charge, fire the webhook, assert both `Charge.status='paid'` and an Invoice row was created with the correct `charge_id`.
+6. Gates, commit, update RESUME.
 
-## Carryover from commits #1–4
+## Carryover from commits #1–5
 
 - Endpoint URL `/api/v1/payments/invoices` intentionally not renamed.
 - `invoice_audit_log` REVOKE deferred (triggers cover protection).
-- BillingSettings issuer columns are empty by default — orchestrator must validate before issuance.
+- BillingSettings issuer columns must be filled in via UI before issuance.
 - WeasyPrint pinned `>=63.0,<64`; bumping breaks already-stored `pdf_sha256`.
-- Renderer ships ~1 MB of TTFs in the repo (Inter + JetBrains Mono).
-- S3 path is implemented but not exercised by tests; configure Hetzner bucket + run an integration test before flipping `s3_endpoint_url` in production.
+- ~1 MB of TTFs in repo (Inter + JetBrains Mono).
+- S3 path implemented but not exercised by tests; configure Hetzner bucket + integration test before flipping `s3_endpoint_url`.
+- WeasyPrint emits a `Ignored fill:#000000` warning for the QR SVG. Cosmetic; noisy in CI.
+- The orchestrator's `_require_issuer_configured` falls back to `seller_ico` (the legacy column name kept for compatibility); the snapshot also uses `billing.seller_ico`. **Inconsistency**: snapshot fields are named `issuer_*` but `BillingSettings` still has `seller_ico` and `seller_iban`. Worth a follow-up rename for consistency, but not blocking.

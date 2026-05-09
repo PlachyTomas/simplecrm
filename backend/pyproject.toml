@@ -141,6 +141,7 @@ module = [
     "qrplatba", "qrplatba.*",
     "lxml", "lxml.*",
     "boto3", "boto3.*", "botocore", "botocore.*",
+    "pydyf", "pydyf.*",
 ]
 ignore_missing_imports = true
 
