@@ -38,8 +38,10 @@ export function Sparkline({ buckets, width = 80, height = 24, ariaLabel }: Spark
     })
     .join(" ");
 
-  const lastY = height - ((values[values.length - 1] - min) / span) * height;
-  const firstY = height - ((values[0] - min) / span) * height;
+  // `buckets.length >= 2` guard above guarantees these indices exist; the
+  // non-null assertions are needed under `noUncheckedIndexedAccess`.
+  const lastY = height - ((values[values.length - 1]! - min) / span) * height;
+  const firstY = height - ((values[0]! - min) / span) * height;
   const trendingUp = lastY <= firstY;
 
   return (

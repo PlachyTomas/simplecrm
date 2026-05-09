@@ -29,7 +29,8 @@ const STAGE_PALETTE = [
 
 export function stageColor(orderIndex: number, fallback?: string | null): string {
   if (orderIndex >= 0 && orderIndex < STAGE_PALETTE.length) {
-    return STAGE_PALETTE[orderIndex];
+    // bounds checked above; non-null satisfies noUncheckedIndexedAccess.
+    return STAGE_PALETTE[orderIndex]!;
   }
   return fallback ?? "#71717A"; // zinc-500
 }

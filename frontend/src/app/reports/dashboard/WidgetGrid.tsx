@@ -11,6 +11,8 @@ import {
   Responsive as ResponsiveGridLayout,
   useContainerWidth,
   type Layout,
+  type LayoutItem,
+  type ResponsiveLayouts,
 } from "react-grid-layout";
 
 import { useMediaQuery } from "@/lib/useMediaQuery";
@@ -50,16 +52,19 @@ interface WidgetGridProps {
 export function WidgetGrid({ config, isEditMode, onLayoutChange, renderWidget }: WidgetGridProps) {
   const isMobile = useMediaQuery("(max-width: 767px)");
   const { width, containerRef } = useContainerWidth();
+  // `widgets` is optional in the generated DashboardConfig — treat absence as
+  // an empty dashboard so we don't have to null-check at every callsite.
+  const widgets: WidgetEntry[] = useMemo(() => config.widgets ?? [], [config.widgets]);
 
-  const layouts = useMemo(() => {
-    const lg: Layout[] = config.widgets.map((w) => ({
+  const layouts = useMemo<ResponsiveLayouts<"lg" | "md">>(() => {
+    const lg: LayoutItem[] = widgets.map((w) => ({
       i: w.id,
       x: w.position.x,
       y: w.position.y,
       w: w.position.w,
       h: w.position.h,
     }));
-    const md: Layout[] = config.widgets.map((w) => ({
+    const md: LayoutItem[] = widgets.map((w) => ({
       i: w.id,
       x: Math.min(w.position.x, 5),
       y: w.position.y,
@@ -67,15 +72,15 @@ export function WidgetGrid({ config, isEditMode, onLayoutChange, renderWidget }:
       h: w.position.h,
     }));
     return { lg, md };
-  }, [config.widgets]);
+  }, [widgets]);
 
   const handleLayoutChange = useCallback(
-    (current: Layout[], all: { lg?: Layout[] }) => {
+    (current: Layout, all: ResponsiveLayouts<"lg" | "md">) => {
       // We only persist the desktop layout. Tablet layout is a clamped
       // view; mobile bypasses the grid library entirely.
       const lg = all.lg ?? current;
-      const byId = new Map(lg.map((l) => [l.i, l]));
-      const next = config.widgets.map((w) => {
+      const byId = new Map<string, LayoutItem>(lg.map((l) => [l.i, l]));
+      const next = widgets.map((w) => {
         const l = byId.get(w.id);
         if (!l) return w;
         return {
@@ -85,11 +90,11 @@ export function WidgetGrid({ config, isEditMode, onLayoutChange, renderWidget }:
       });
       onLayoutChange(next);
     },
-    [config.widgets, onLayoutChange],
+    [widgets, onLayoutChange],
   );
 
   if (isMobile) {
-    const sorted = [...config.widgets].sort((a, b) => {
+    const sorted = [...widgets].sort((a, b) => {
       if (a.position.y !== b.position.y) return a.position.y - b.position.y;
       return a.position.x - b.position.x;
     });
@@ -105,7 +110,11 @@ export function WidgetGrid({ config, isEditMode, onLayoutChange, renderWidget }:
   }
 
   return (
-    <div ref={containerRef}>
+    // RGL's `useContainerWidth` returns `RefObject<HTMLDivElement | null>`,
+    // which @types/react@18 treats as nominally distinct from the
+    // `RefObject<HTMLDivElement>` that `<div ref=...>` expects. The runtime
+    // shape is identical; cast to make the types line up.
+    <div ref={containerRef as React.RefObject<HTMLDivElement>}>
       <ResponsiveGridLayout
         className="layout"
         width={width}
@@ -115,13 +124,17 @@ export function WidgetGrid({ config, isEditMode, onLayoutChange, renderWidget }:
         rowHeight={ROW_HEIGHT}
         margin={[16, 16]}
         containerPadding={[0, 0]}
-        isDraggable={isEditMode}
-        isResizable={isEditMode}
-        draggableHandle=".widget-drag-handle"
+        dragConfig={{
+          enabled: isEditMode,
+          handle: ".widget-drag-handle",
+        }}
+        resizeConfig={{
+          enabled: isEditMode,
+          handles: ["se"],
+        }}
         onLayoutChange={handleLayoutChange}
-        resizeHandles={["se"]}
       >
-        {config.widgets.map((entry) => (
+        {widgets.map((entry) => (
           <div key={entry.id}>{renderWidget(entry)}</div>
         ))}
       </ResponsiveGridLayout>

@@ -101,7 +101,9 @@ function buildSubscription(opts: VariantOpts) {
     annual: { id: PLAN_ANNUAL, display: "Roční", interval: "annual" },
     enterprise: { id: PLAN_ENTERPRISE, display: "Enterprise", interval: "custom" },
   };
-  const p = planMap[opts.planCode];
+  // planMap is a literal record over a closed union of `opts.planCode`;
+  // index access is safe but noUncheckedIndexedAccess wants a non-null.
+  const p = planMap[opts.planCode]!;
   return {
     id: "sub-1",
     organization_id: ORG_ID,

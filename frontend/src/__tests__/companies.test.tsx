@@ -145,7 +145,9 @@ describe("Companies screens", () => {
     // jsdom renders both desktop and mobile lists — pick the first instance.
     const matches = await screen.findAllByText(/alza\.cz a\.s\./i);
     const user = userEvent.setup();
-    await user.click(matches[0]);
+    // findAllByText throws if no matches, so [0] is guaranteed; the
+    // non-null satisfies noUncheckedIndexedAccess.
+    await user.click(matches[0]!);
 
     await waitFor(() =>
       expect(screen.getByRole("heading", { level: 1, name: /alza\.cz/i })).toBeInTheDocument(),

@@ -138,8 +138,10 @@ export function DealDetailPage() {
     if (!window.confirm("Znovu otevřít tento obchod? Datum uzavření a důvod budou odstraněny."))
       return;
     try {
+      // `closed_at` isn't exposed on DealUpdate — the backend clears it
+      // automatically when the deal moves back into a non-terminal stage.
+      // We only need to wipe the lost_reason here.
       await updateDeal.mutateAsync({
-        closed_at: null,
         lost_reason: null,
       });
       toast.success("Obchod znovu otevřen.");

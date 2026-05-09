@@ -32,7 +32,7 @@ export function useExportCsv() {
         to: range.to,
         teamId: globalFilters.teamId ?? null,
         ownerUserId: globalFilters.ownerUserId ?? null,
-        widgets: config.widgets.map((w) => ({
+        widgets: (config.widgets ?? []).map((w) => ({
           type: (w.config as { type: string }).type,
           config: w.config as Record<string, unknown>,
         })),

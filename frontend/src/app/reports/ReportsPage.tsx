@@ -114,7 +114,7 @@ export function ReportsPage() {
     if (!working) return;
     setDraft({
       ...working,
-      widgets: working.widgets.filter((w) => w.id !== id),
+      widgets: (working.widgets ?? []).filter((w) => w.id !== id),
     });
   }
 
@@ -211,7 +211,7 @@ export function ReportsPage() {
           <DashboardSkeleton />
         ) : !working ? (
           <DashboardSkeleton />
-        ) : working.widgets.length === 0 ? (
+        ) : (working.widgets ?? []).length === 0 ? (
           <EmptyDashboard onEdit={() => setEditMode(true)} />
         ) : (
           <WidgetGrid

@@ -20,11 +20,13 @@ type PlanCode = "monthly" | "annual";
 
 type Step = 1 | 2 | 3;
 
-interface SubmitBody {
+// `apiFetch` accepts `Record<string, unknown>` for JSON bodies; the index
+// signature is required so a typed interface assigns cleanly.
+type SubmitBody = {
   name: string;
   seat_count: number;
   intended_plan_code: PlanCode;
-}
+} & Record<string, unknown>;
 
 /**
  * 3-step wizard for the freshly-signed-up user (post-Google OAuth) who

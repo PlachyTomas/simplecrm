@@ -155,8 +155,10 @@ function MobileDrawer({
       if (e.key !== "Tab") return;
       const focusables = node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
       if (focusables.length === 0) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
+      // length > 0 guard above guarantees both ends exist; non-null
+      // assertions satisfy noUncheckedIndexedAccess.
+      const first = focusables[0]!;
+      const last = focusables[focusables.length - 1]!;
       const active = document.activeElement as HTMLElement | null;
       if (e.shiftKey && (active === first || !node.contains(active))) {
         e.preventDefault();

@@ -119,7 +119,7 @@ export function BarChartWidget({
             formatter={(_v: unknown, _n: unknown, ctx: { payload?: { display?: string } }) =>
               ctx.payload?.display ?? "—"
             }
-            labelFormatter={(label: string) => label}
+            labelFormatter={(label) => String(label ?? "")}
           />
           <Bar dataKey="value" radius={4} barSize={16}>
             {data.map((d, i) => (

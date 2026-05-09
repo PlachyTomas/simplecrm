@@ -311,7 +311,9 @@ export function SettingsPage({ initialTab = "pipeline" }: SettingsPageProps = {}
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
 
-  const activeTabMeta = TABS.find((t) => t.key === activeTab) ?? TABS[0];
+  // TABS is a non-empty literal — index 0 always exists, but
+  // noUncheckedIndexedAccess forces a non-null assertion.
+  const activeTabMeta = TABS.find((t) => t.key === activeTab) ?? TABS[0]!;
   usePageTitle(`Nastavení — ${activeTabMeta.label}`);
 
   // Admins see the full Settings page. Non-admins with `can_invite=true`
@@ -355,7 +357,9 @@ export function SettingsPage({ initialTab = "pipeline" }: SettingsPageProps = {}
     const target = idx + dir;
     if (target < 0 || target >= stages.length) return;
     const newOrder = stages.map((s) => s.id);
-    [newOrder[idx], newOrder[target]] = [newOrder[target], newOrder[idx]];
+    // Both indices are within range (caller checks); the non-null assertions
+    // satisfy noUncheckedIndexedAccess on the tuple-swap shorthand.
+    [newOrder[idx], newOrder[target]] = [newOrder[target]!, newOrder[idx]!];
     setGlobalError(null);
     try {
       await reorder.mutateAsync(newOrder);
@@ -1509,15 +1513,17 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
     onError: (err) => {
       // Active org bumping above contracted_seat_count → backend 402s
       // with a redirect_endpoint pointing at /payments/seat-change-init.
-      // Kick off the prorated ComGate charge and forward the customer
-      // to the hosted page.
+      // Kick off the prorated ComGate charge; the call returns
+      // `accepted` while the webhook lands the actual outcome — we
+      // route to the billing-return page in `pending` state so the
+      // user sees a "processing…" panel until /subscription updates.
       if (isSeatUpgradePaymentRequired(err)) {
         setRedirecting(true);
         seatChangeInit.mutate(
           { seat_count: target },
           {
-            onSuccess: (init) => {
-              window.location.assign(init.redirect_url ?? "/app/billing/return?status=failed");
+            onSuccess: () => {
+              window.location.assign("/app/billing/return?status=pending");
             },
             onError: () => {
               setRedirecting(false);

@@ -7,7 +7,7 @@ import { useBillingSummary } from "@/components/billing/useBillingSummary";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
 import { useInitialPaymentInit } from "@/components/billing/usePayments";
 import { usePublicPlans } from "@/components/billing/usePublicPlans";
-import { type TrialExpiredPayload } from "@/lib/api";
+import { ApiError, apiFetch, type TrialExpiredPayload } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/usePageTitle";
 
@@ -383,8 +383,10 @@ function ContactEnterpriseDialog({
   }
 
   return (
+    // RefObject<T | null> vs RefObject<T> nominal mismatch; runtime shape
+    // is identical. Cast to satisfy @types/react@18's stricter `ref`.
     <dialog
-      ref={dialogRef}
+      ref={dialogRef as React.RefObject<HTMLDialogElement>}
       onClose={handleClose}
       className="backdrop:bg-bg/60 rounded-xl border border-border bg-surface p-0 text-text-primary shadow-lg backdrop:backdrop-blur-sm"
     >
