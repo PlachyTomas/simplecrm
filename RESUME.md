@@ -1,57 +1,82 @@
-# Resume: INVOICES_TASK.md commit #13
+# Resume: INVOICES_TASK.md commit #14
 
-**Last completed:** *feat(invoicing): archive integrity dashboard + weekly scheduler* — commit #12 of INVOICES_TASK.md.
+**Last completed:** *test(invoicing): consolidate cleanup helper + add canonical happy-path integration suite* — commit #13 of INVOICES_TASK.md.
 
 ## State at session end
 
-- 10 commits ahead of `origin/main` since the invoicing work began.
-- Backend: 452 tests, mypy strict, ruff format + check clean.
+- 11 commits ahead of `origin/main` since the invoicing work began.
+- Backend: 455 tests, mypy strict on `app/` clean, ruff check + format clean.
 - Frontend: 79 tests pass, lint clean, typecheck clean, `pnpm build` green.
-- New `app/services/invoicing/integrity.py` walks every issued invoice's stored bytes via `InvoiceStorage` (which already hash-verifies on read) and aggregates failures.
-- Two new admin endpoints: `POST /admin/invoices/integrity/check` (run now) and `GET /admin/invoices/integrity/last-run` (read most recent summary).
-- Weekly scheduler `integrity_check_scheduler` registered in `app/services/scheduler.py` and **wired into the FastAPI lifespan** in `app/main.py` along with the previously-stranded `renewal_draft_scheduler` (carryover resolved).
-- Frontend `IntegrityPanel` rendered above the InvoicesList in the admin Faktury tab — three stat cards (zkontrolováno / v pořádku / selhalo), failure list, "Spustit kontrolu" button.
-- 4 new backend tests in `tests/services/test_invoicing_integrity.py`: happy path, summary audit-row, deliberate hash-mismatch detection, latest-run ordering.
+- New `tests/conftest.py::wipe_invoicing_for_org(ids)` shared cleanup helper. Five test files (`test_invoices.py`, `test_admin_invoices.py`, `test_invoicing_service.py`, `test_invoicing_scheduler.py`, `test_invoicing_exporter.py`, `test_invoicing_integrity.py`) refactored to use it — net code reduction ~250 LoC.
+- New `tests/integration/test_invoicing_happy_path.py` with three end-to-end tests:
+  - paid webhook → auto-issued invoice → list + PDF endpoints + audit-log assertion
+  - replayed webhook → still exactly 1 invoice (idempotency at the invoice level)
+  - tampering with `total_minor` via raw SQL raises the immutability trigger
+- `test_payments.py` keeps its bespoke `_wipe_invoices_for_org(session, org_id)` helper because it's keyed differently (single org id, takes session) — separate cleanup model from the bulk-wipe one.
 
-## Next: commit #13 — `feat(invoicing): broader test suites`
+## Next: commit #14 — `docs(invoicing): operations runbook`
 
-Per INVOICES_TASK.md §10. Add cross-cutting integration tests that exercise the full happy path end-to-end. The unit-level service/storage/scheduler tests already exist (and pass) — what's missing is one or two tests that walk the whole pipeline:
+Per INVOICES_TASK.md §11. Single document `docs/invoicing.md` covering:
 
-1. **End-to-end happy path test** — POST to `/payments/initial-payment-init` (mocked ComGate), simulate the success webhook, assert the customer org has an issued Invoice with `pdf_object_key` set, audit log shows `issued` + `pdf_stored` + `pdf_verified`, the `/organizations/current/invoices` list returns it, the PDF stream returns valid `%PDF-` bytes.
-2. **Renewal flow test** — same but for a renewal: subscription with `current_period_ends_at` 1 day from now → `run_recurring_charges` creates a pending Charge → ComGate webhook flips it to `paid` → an Invoice is auto-issued for the renewal period.
-3. **Webhook idempotency test** — replay a `paid` webhook with the same `transId`, assert exactly ONE Invoice exists (no duplicates).
-4. **Trigger immutability** — try to UPDATE an issued invoice's total/issuer/customer fields via raw SQL, expect `IntegrityError` from the trigger.
+### Sections to write
 
-These already exist in scattered test files (`test_payments.py`, `test_invoicing_service.py`, `test_invoicing_models.py` for the trigger). The point of #13 is to **assemble them into one named "happy path" suite** so future contributors can find the canonical end-to-end flow at a glance + run it as a smoke check before deploys.
+1. **Overview** — what the invoicing module is + isn't (vs ComGate charges), where the legal authority comes from (§ 11 účetní zákona, § 29 ZDPH for DPH plátce).
+2. **For the founder (super-admin operations)** — daily workflow:
+   - "I want to issue an invoice manually" → /admin/faktury → Vystavit ručně
+   - "Customer wants a refund" → detail drawer → Vystavit dobropis
+   - "I'm doing year-end" → CSV export, PDF ZIP, full export
+   - "Something looks corrupted" → Spustit kontrolu integrity
+3. **For the customer** — what they see at /app/nastaveni/predplatne (Faktury card)
+4. **Architecture** — one diagram + brief module-by-module walkthrough:
+   - `Charge` (ComGate attempts) vs `Invoice` (legal docs)
+   - Sequencing via `InvoiceCounter` + `pg_advisory_xact_lock`
+   - Storage layer (S3 vs local fallback) + hash verification
+   - Triggers: immutability + audit-log append-only
+   - Schedulers: renewal-draft (daily 04:00), integrity (weekly)
+5. **Configuration** — what env vars / `BillingSettings` rows must be populated before issuance works (S3 creds, issuer fields)
+6. **Common operational issues** — known things that bite:
+   - WeasyPrint version pin (changing breaks stored hashes)
+   - "Invoice already paid" 409 + how to investigate
+   - Audit-log trigger blocks DELETE — disable-trigger pattern only for test cleanup
+   - Voided invoices stay in storage + exports (accountant requirement)
+7. **Czech compliance gotchas** — what gets the auditor angry:
+   - Gap-free yearly numbering (don't delete rows; void + re-issue if needed)
+   - Snapshot fields frozen at issuance (so a `BillingSettings` IBAN change doesn't retroactively rewrite invoices)
+   - VAT-payer toggle must match real registration status
 
-### Implementation outline
+### Watch-outs for #14
 
-- New file `backend/tests/integration/test_invoicing_happy_path.py` (create the `integration/` dir if absent — there's a precedent in `tests/services/`).
-- Reuse the cleanup helper from `_wipe_invoices_for_org` — promote it to `tests/conftest.py` first (long-overdue carryover).
-- The webhook idempotency test exists in some form in `test_payments.py`; replay against the **invoice** count, not just the charge.
-- Don't add new business logic in this commit — pure test consolidation.
+- This is a docs commit — should NOT touch code, models, schemas, or tests.
+- Live URLs (`grafana.internal/...`) should not appear unless they actually exist; we're not on Grafana.
+- Markdown lint (if there's a `markdownlint` config) — there isn't currently in this repo, so just write idiomatic CommonMark.
 
-### Optional secondary work for #13
+## What's done
 
-- The cleanup-helper carryover (now in 6 test files). Promote `_wipe_invoices_for_org` to `tests/conftest.py` as `wipe_invoicing_for_org(ids)` before adding the 7th test file.
-- Renaming `useInvoices` → `useCharges` in `usePayments.ts` (cosmetic; defer if test suite is heavy).
+| # | Commit | Summary |
+|---|---|---|
+| 1 | foundation | Charge rename + Invoice models + triggers |
+| 2 | issuer fields | BillingSettings extension |
+| 3 | renderer | WeasyPrint PDF + ISDOC XML |
+| 4 | storage | S3 + local fallback + hash verification |
+| 5 | service | InvoiceService orchestrator + InvoiceMailer |
+| 6 | webhook hook | Auto-issue on ComGate paid |
+| 7 | scheduler | Daily renewal-draft job |
+| 8 | customer UI | List/detail/PDF endpoints + Faktury sub-tab |
+| 9 | admin UI | Cross-org invoices browser + actions |
+| 10 | manual builders | Manual + credit-note modals |
+| 11 | year exports | CSV / PDF ZIP / full ZIP |
+| 12 | integrity | Walker + dashboard + weekly scheduler |
+| 13 | tests | Cleanup helper consolidation + happy-path integration suite |
+| 14 | **TODO** | docs/invoicing.md operations runbook |
 
-## Commit #14 still TODO
-
-- #14 — `docs/invoicing.md` accountant-facing operations doc (how to issue manually, how to read the integrity dashboard, what the year exports contain, ISDOC quirks)
-
-## Carryover (post-#12)
+## Carryover
 
 - `BillingSettings.seller_ico/seller_iban` legacy column names; snapshot uses `issuer_*`. Worth a follow-up rename.
-- `_wipe_invoices_for_org` cleanup pattern duplicated in 6 test files. Promote to `tests/conftest.py`.
 - `useInvoices` in `usePayments.ts` is misnamed — returns `ChargeList`. Rename to `useCharges`.
 - WeasyPrint emits `Ignored fill:#000000` warning per render (QR SVG). Cosmetic.
 - S3 storage path implemented but not exercised by tests.
-- `var/invoices/` host pollution from PDF-stream/exporter/integrity tests.
-- `api.generated.ts` regen lagging five commits (#8–#12). Worth running before #13 lands.
+- `var/invoices/` host pollution from PDF-stream/exporter/integrity/integration tests.
+- `api.generated.ts` regen lagging six commits (#8–#13). Worth running before #14 lands.
 - Hand-typed admin types in `frontend/src/admin/useAdminInvoices.ts` and `IntegrityPanel.tsx` should switch to generated types after regen.
 - `apiFetch` body argument is typed as `Record<string, unknown>`; the manual + credit-note hooks cast through `unknown`.
-
-## Resolved in #12
-
-- ~~Renewal-draft scheduler not auto-started in lifespan~~ → wired in `app/main.py` along with the new integrity scheduler.
+- Test-fixture `AsyncIterator` vs `AsyncGenerator` typing mypy noise across all test files (pre-existing; not blocking).

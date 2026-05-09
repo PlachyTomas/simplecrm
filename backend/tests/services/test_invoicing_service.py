@@ -16,7 +16,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
-from sqlalchemy import delete, select, update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -25,9 +25,7 @@ from app.db.models import (
     Charge,
     Invoice,
     InvoiceAuditLog,
-    InvoiceLine,
     Organization,
-    Subscription,
 )
 from app.db.session import AsyncSessionLocal
 from app.services.invoicing.mailer import InvoiceMailer
@@ -38,6 +36,7 @@ from app.services.invoicing.service import (
     ManualLineIn,
 )
 from app.services.invoicing.storage import InvoiceStorage
+from tests.conftest import wipe_invoicing_for_org
 
 # --------------------------------------------------------------------------- #
 # Helpers
@@ -104,39 +103,7 @@ async def cleanup_orgs() -> list[uuid.UUID]:
         yield ids
     finally:
         if ids:
-            await _teardown(ids)
-
-
-async def _teardown(ids: list[uuid.UUID]) -> None:
-    from sqlalchemy import text
-
-    async with AsyncSessionLocal() as s:
-        # Audit log triggers reject DELETE; disable + re-enable.
-        await s.execute(
-            text("ALTER TABLE invoice_audit_log DISABLE TRIGGER trg_invoice_audit_log_no_delete")
-        )
-        await s.execute(
-            delete(InvoiceAuditLog).where(
-                InvoiceAuditLog.invoice_id.in_(
-                    select(Invoice.id).where(Invoice.organization_id.in_(ids))
-                )
-            )
-        )
-        await s.execute(
-            text("ALTER TABLE invoice_audit_log ENABLE TRIGGER trg_invoice_audit_log_no_delete")
-        )
-        await s.execute(
-            delete(InvoiceLine).where(
-                InvoiceLine.invoice_id.in_(
-                    select(Invoice.id).where(Invoice.organization_id.in_(ids))
-                )
-            )
-        )
-        await s.execute(delete(Invoice).where(Invoice.organization_id.in_(ids)))
-        await s.execute(delete(Charge).where(Charge.organization_id.in_(ids)))
-        await s.execute(delete(Subscription).where(Subscription.organization_id.in_(ids)))
-        await s.execute(delete(Organization).where(Organization.id.in_(ids)))
-        await s.commit()
+            await wipe_invoicing_for_org(ids)
 
 
 def _local_storage(tmp_path: Path) -> InvoiceStorage:

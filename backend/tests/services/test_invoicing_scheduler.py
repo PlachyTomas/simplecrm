@@ -12,13 +12,11 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import delete, select, text, update
+from sqlalchemy import select, update
 
 from app.db.models import (
     BillingSettings,
     Invoice,
-    InvoiceAuditLog,
-    InvoiceLine,
     Organization,
     Plan,
     Subscription,
@@ -28,6 +26,7 @@ from app.services.scheduler import (
     RENEWAL_DRAFT_LEAD_DAYS,
     run_renewal_draft_sweep,
 )
+from tests.conftest import wipe_invoicing_for_org
 
 # --------------------------------------------------------------------------- #
 # Helpers
@@ -69,33 +68,7 @@ async def cleanup_orgs() -> list[uuid.UUID]:
         yield ids
     finally:
         if ids:
-            await _teardown(ids)
-
-
-async def _teardown(ids: list[uuid.UUID]) -> None:
-    async with AsyncSessionLocal() as s:
-        invoice_ids = (
-            (await s.execute(select(Invoice.id).where(Invoice.organization_id.in_(ids))))
-            .scalars()
-            .all()
-        )
-        if invoice_ids:
-            await s.execute(
-                text(
-                    "ALTER TABLE invoice_audit_log DISABLE TRIGGER trg_invoice_audit_log_no_delete"
-                )
-            )
-            await s.execute(
-                delete(InvoiceAuditLog).where(InvoiceAuditLog.invoice_id.in_(invoice_ids))
-            )
-            await s.execute(
-                text("ALTER TABLE invoice_audit_log ENABLE TRIGGER trg_invoice_audit_log_no_delete")
-            )
-            await s.execute(delete(InvoiceLine).where(InvoiceLine.invoice_id.in_(invoice_ids)))
-            await s.execute(delete(Invoice).where(Invoice.id.in_(invoice_ids)))
-        await s.execute(delete(Subscription).where(Subscription.organization_id.in_(ids)))
-        await s.execute(delete(Organization).where(Organization.id.in_(ids)))
-        await s.commit()
+            await wipe_invoicing_for_org(ids)
 
 
 @pytest.fixture(autouse=True)

@@ -8,15 +8,13 @@ import zipfile
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import delete, select, text, update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import (
     BillingSettings,
     Charge,
-    Invoice,
     InvoiceAuditLog,
-    InvoiceLine,
     Organization,
     Plan,
     Subscription,
@@ -31,6 +29,7 @@ from app.services.invoicing.exporter import (
 )
 from app.services.invoicing.service import InvoiceService
 from app.services.invoicing.storage import InvoiceStorage
+from tests.conftest import wipe_invoicing_for_org
 
 
 async def _configure_issuer(session: AsyncSession) -> None:
@@ -100,36 +99,7 @@ async def cleanup_orgs() -> list[uuid.UUID]:
         yield ids
     finally:
         if ids:
-            await _teardown(ids)
-
-
-async def _teardown(ids: list[uuid.UUID]) -> None:
-    async with AsyncSessionLocal() as s:
-        invoice_ids = (
-            (await s.execute(select(Invoice.id).where(Invoice.organization_id.in_(ids))))
-            .scalars()
-            .all()
-        )
-        await s.execute(
-            text("ALTER TABLE invoice_audit_log DISABLE TRIGGER trg_invoice_audit_log_no_delete")
-        )
-        if invoice_ids:
-            await s.execute(
-                delete(InvoiceAuditLog).where(InvoiceAuditLog.invoice_id.in_(invoice_ids))
-            )
-        # Also wipe the export_run rows (invoice_id NULL) created in this test run.
-        await s.execute(delete(InvoiceAuditLog).where(InvoiceAuditLog.invoice_id.is_(None)))
-        await s.execute(
-            text("ALTER TABLE invoice_audit_log ENABLE TRIGGER trg_invoice_audit_log_no_delete")
-        )
-        if invoice_ids:
-            await s.execute(delete(InvoiceLine).where(InvoiceLine.invoice_id.in_(invoice_ids)))
-            await s.execute(delete(Invoice).where(Invoice.id.in_(invoice_ids)))
-        await s.execute(delete(Subscription).where(Subscription.organization_id.in_(ids)))
-        await s.execute(delete(Charge).where(Charge.organization_id.in_(ids)))
-        await s.execute(delete(User).where(User.organization_id.in_(ids)))
-        await s.execute(delete(Organization).where(Organization.id.in_(ids)))
-        await s.commit()
+            await wipe_invoicing_for_org(ids)
 
 
 # --------------------------------------------------------------------------- #
