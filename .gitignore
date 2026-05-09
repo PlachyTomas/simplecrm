@@ -1,6 +1,11 @@
 # Docker dev volumes — none of these should be committed
 postgres-data/
 
+# Local fallback for InvoiceStorage (commit #4 of INVOICES_TASK.md).
+# Tests + dev servers write rendered PDF/ISDOC archives here when S3
+# isn't configured. Real production storage is the Hetzner bucket.
+backend/var/
+
 # Environment files — secrets never committed
 .env
 .env.local

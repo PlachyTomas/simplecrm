@@ -499,6 +499,39 @@ async def _dispatch_success(
     else:
         logger.warning("Unknown charge.kind=%r for %s", charge.kind, charge.id)
 
+    # Auto-issue a tax invoice for this charge. Idempotent — re-fired
+    # webhooks return the existing invoice, so the early-return guard
+    # in `comgate_webhook` is the primary deduplication, and the
+    # orchestrator's check is the safety net.
+    #
+    # Comp organizations don't get invoices (they pay nothing). The
+    # webhook flow shouldn't even land here for a comp org because
+    # ComGate isn't billing them, but we double-check defensively.
+    sub_for_invoicing = await billing.get_current_subscription(session, org_id)
+    if not sub_for_invoicing.is_comp:
+        from app.services.invoicing.service import (
+            InvoiceIssuerNotConfiguredError,
+            InvoiceService,
+        )
+
+        try:
+            await InvoiceService().issue_for_charge(session, charge)
+        except InvoiceIssuerNotConfiguredError as exc:
+            # The founder hasn't filled in their issuer details yet.
+            # Don't 500 the webhook — the charge is still legitimately
+            # paid; the founder can issue the invoice manually from
+            # the super-admin UI once BillingSettings is configured.
+            logger.warning("Skipping auto-issuance for charge %s: %s", charge.id, exc)
+        except Exception:
+            # Any other failure (renderer crash, storage outage) shouldn't
+            # mask the fact that the customer paid. Log loudly, the founder
+            # can manually issue later.
+            logger.exception(
+                "Auto-issuance failed for charge %s; will require manual "
+                "issuance from /admin/faktury",
+                charge.id,
+            )
+
 
 async def _dispatch_failure(
     session: AsyncSession,

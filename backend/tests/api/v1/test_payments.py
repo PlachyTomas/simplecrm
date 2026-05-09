@@ -27,7 +27,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
 from app.db.models import (
+    BillingSettings,
     Charge,
+    Invoice,
+    InvoiceAuditLog,
+    InvoiceLine,
     Organization,
     PaymentMethod,
     Plan,
@@ -37,6 +41,39 @@ from app.db.models import (
     WebhookEvent,
 )
 from app.db.session import AsyncSessionLocal
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+async def _wipe_invoices_for_org(session: AsyncSession, org_id) -> None:
+    """Delete invoices + lines + audit-log rows for an org so the
+    cascading Organization DELETE in test cleanup doesn't trip the FK
+    constraint to invoice_audit_log. The audit-log trigger rejects
+    DELETE unconditionally, so we disable it for the cleanup window.
+    """
+    from sqlalchemy import text
+
+    invoice_ids = (
+        (await session.execute(select(Invoice.id).where(Invoice.organization_id == org_id)))
+        .scalars()
+        .all()
+    )
+    if not invoice_ids:
+        return
+    await session.execute(
+        text("ALTER TABLE invoice_audit_log DISABLE TRIGGER trg_invoice_audit_log_no_delete")
+    )
+    await session.execute(
+        delete(InvoiceAuditLog).where(InvoiceAuditLog.invoice_id.in_(invoice_ids))
+    )
+    await session.execute(
+        text("ALTER TABLE invoice_audit_log ENABLE TRIGGER trg_invoice_audit_log_no_delete")
+    )
+    await session.execute(delete(InvoiceLine).where(InvoiceLine.invoice_id.in_(invoice_ids)))
+    await session.execute(delete(Invoice).where(Invoice.id.in_(invoice_ids)))
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -70,9 +107,27 @@ async def owned_payments_emails() -> AsyncIterator[list[str]]:
     yield tracked
     async with AsyncSessionLocal() as session:
         if tracked:
+            # Some webhook tests auto-issue invoices; wipe those first so
+            # the cascading Organization delete doesn't trip the
+            # invoice_audit_log FK.
+            stale_org_ids = (
+                (
+                    await session.execute(
+                        select(Organization.id).where(
+                            Organization.name.in_(("Payments Test Org", "Auto-Issue Test"))
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            for org_id in stale_org_ids:
+                await _wipe_invoices_for_org(session, org_id)
             await session.execute(delete(User).where(User.email.in_(tracked)))
             await session.execute(
-                delete(Organization).where(Organization.name == "Payments Test Org")
+                delete(Organization).where(
+                    Organization.name.in_(("Payments Test Org", "Auto-Issue Test"))
+                )
             )
             await session.commit()
 
@@ -255,8 +310,124 @@ async def test_webhook_initial_paid_promotes_to_active(
         assert inv.status == "paid"
         assert inv.paid_at is not None
 
-        # Cleanup: org-cascade does the heavy lifting; webhook_event
-        # has no org FK so wipe it manually.
+        # Cleanup: invoice rows (auto-issued by the webhook) need to
+        # come down before the org cascades; audit-log trigger blocks
+        # DELETE so we go through the helper that disables it. webhook_
+        # event has no org FK so wipe it manually.
+        await _wipe_invoices_for_org(fresh, org_id)
+        await fresh.execute(delete(Organization).where(Organization.id == org_id))
+        await fresh.execute(delete(WebhookEvent).where(WebhookEvent.comgate_event_id == trans_id))
+        await fresh.commit()
+
+
+# ---------------------------------------------------------------------------
+# Webhook auto-issues a tax invoice
+# ---------------------------------------------------------------------------
+
+
+async def test_webhook_paid_charge_auto_issues_tax_invoice(
+    client: AsyncClient,
+    owned_payments_emails: list[str],
+    tmp_path,
+) -> None:
+    """When a PAID webhook lands on a non-comp org with BillingSettings
+    issuer fields configured, the orchestrator auto-issues a tax invoice
+    inside the same transaction. Re-delivery returns the same invoice
+    (no duplicate issuance, courtesy of the webhook-event dedup + the
+    orchestrator's own idempotency check)."""
+    from sqlalchemy import update
+
+    # Configure issuer fields on the singleton — required for issuance
+    # to pass validation. Other tests in this file don't care about
+    # these values, so we just set them and don't bother resetting.
+    async with AsyncSessionLocal() as setup:
+        await setup.execute(
+            update(BillingSettings).values(
+                seller_iban="CZ6508000000192000145399",
+                seller_ico="12345678",
+                issuer_name="Tomáš Test OSVČ",
+                issuer_address_street="Testovací 1",
+                issuer_address_city="Praha",
+                issuer_address_zip="100 00",
+                issuer_register_text="Zapsán v živnostenském rejstříku",
+            )
+        )
+        await setup.commit()
+
+    trans_id = f"WEBHOOK-INV-{uuid.uuid4().hex[:12]}"
+    async with AsyncSessionLocal() as setup:
+        org = Organization(name="Auto-Issue Test")
+        setup.add(org)
+        await setup.flush()
+        email = f"auto-{uuid.uuid4().hex[:8]}@ex.cz"
+        owned_payments_emails.append(email)
+        setup.add(User(email=email, name="A", role=UserRole.admin, organization_id=org.id))
+        monthly_plan_id = (
+            await setup.execute(select(Plan.id).where(Plan.code == "monthly"))
+        ).scalar_one()
+        setup.add(
+            Subscription(
+                organization_id=org.id,
+                plan_id=monthly_plan_id,
+                status="trialing",
+                started_at=datetime.now(tz=UTC),
+                seat_count=1,
+                contracted_seat_count=1,
+            )
+        )
+        charge = Charge(
+            organization_id=org.id,
+            kind="initial",
+            amount_minor=99000,
+            currency="CZK",
+            status="pending",
+            seats=1,
+            comgate_trans_id=trans_id,
+        )
+        setup.add(charge)
+        await setup.commit()
+        charge_id = charge.id
+        org_id = org.id
+
+    body = json.dumps({"transId": trans_id, "status": "PAID", "refId": str(charge_id)}).encode()
+    response = await client.post(
+        "/api/v1/payments/webhook",
+        content=body,
+        headers={
+            "content-type": "application/json",
+            "x-comgate-signature": _sign(body),
+        },
+    )
+    assert response.status_code == 204, response.text
+
+    async with AsyncSessionLocal() as fresh:
+        invoices = (
+            (await fresh.execute(select(Invoice).where(Invoice.charge_id == charge_id)))
+            .scalars()
+            .all()
+        )
+        assert len(invoices) == 1, "exactly one invoice issued for the paid charge"
+        invoice = invoices[0]
+        assert invoice.status == "issued"
+        assert invoice.organization_id == org_id
+        assert invoice.total_minor == 99000
+        assert invoice.pdf_object_key is not None
+        assert invoice.pdf_sha256 is not None
+
+        # Cleanup: drop invoice rows + audit log entries before the
+        # cascading org delete (audit log triggers reject DELETE; disable
+        # the trigger for the cleanup window).
+        from sqlalchemy import text
+
+        await fresh.execute(
+            text("ALTER TABLE invoice_audit_log DISABLE TRIGGER trg_invoice_audit_log_no_delete")
+        )
+        await fresh.execute(delete(InvoiceAuditLog).where(InvoiceAuditLog.invoice_id == invoice.id))
+        await fresh.execute(
+            text("ALTER TABLE invoice_audit_log ENABLE TRIGGER trg_invoice_audit_log_no_delete")
+        )
+        await fresh.execute(delete(InvoiceLine).where(InvoiceLine.invoice_id == invoice.id))
+        await fresh.execute(delete(Invoice).where(Invoice.id == invoice.id))
         await fresh.execute(delete(Organization).where(Organization.id == org_id))
         await fresh.execute(delete(WebhookEvent).where(WebhookEvent.comgate_event_id == trans_id))
         await fresh.commit()
@@ -334,9 +505,9 @@ async def test_webhook_double_delivery_is_idempotent(
         assert sub.seat_count == 50
         assert sub.contracted_seat_count == 50
 
-        # Cleanup: delete the org and let ON DELETE CASCADE wipe
-        # subscription / charge / payment_method. webhook_event has no
-        # org FK so it needs its own delete.
+        # Cleanup: wipe auto-issued invoices first (audit-log trigger
+        # blocks DELETE without the helper), then cascade the org.
+        await _wipe_invoices_for_org(fresh, org_id)
         await fresh.execute(delete(Organization).where(Organization.id == org_id))
         await fresh.execute(delete(WebhookEvent).where(WebhookEvent.comgate_event_id == trans_id))
         await fresh.commit()

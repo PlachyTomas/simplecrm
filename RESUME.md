@@ -1,60 +1,83 @@
-# Resume: INVOICES_TASK.md commit #6
+# Resume: INVOICES_TASK.md commit #7
 
-**Last completed:** *feat(invoicing): InvoiceService orchestrator and InvoiceMailer* (commit #5).
+**Last completed:** *feat(invoicing): wire issuance into ComGate webhook charge-paid path* (commit #6).
 
 ## State at session end
 
 - Migration head: `1a5b9f76b1ee` (no schema changes since #2).
-- New modules in `app/services/invoicing/`:
-  - `numbering.py` — `allocate_invoice_number(session, year)` returning `(seq, number, variable_symbol)` under a per-year `pg_advisory_xact_lock`.
-  - `service.py` — `InvoiceService` with `issue_for_charge`, `issue_manual`, `mark_paid`, `void`, `issue_credit_note`. Idempotent issuance (existing invoice for charge_id → returned as-is). Validates `BillingSettings` issuer fields are non-empty before issuance (`InvoiceIssuerNotConfiguredError`). Credit notes can't exceed the original total (`CreditNoteExceedsOriginalError`). Czech declension helper `_user_word(n)` for proper "uživatel/uživatelé/uživatelů" line descriptions.
-  - `mailer.py` — `InvoiceMailer.send` renders the BillingSettings Jinja2 subject/body templates with invoice context, fetches + hash-verifies the stored PDF before send (logs `send_failed` audit on transport error), writes `sent_at` + `sent_to_email` + `sent` audit row.
-- **Renderer determinism upgrade**: `render_pdf` now uses a WeasyPrint `finisher` callable that pins `CreationDate` and `ModDate` in the PDF info dict to `invoice.issued_at`. The previous `pdf_creation_date=…` kwarg was silently ignored (WeasyPrint 63 doesn't accept it as a top-level option) — determinism only "worked" by accident because two consecutive renders happened in the same wall-clock second. Now load-bearing.
-- 9 new tests in `tests/services/test_invoicing_service.py`:
-  - rejects when issuer not configured
-  - happy-path issuance with full audit trail (`allocated`, `pdf_stored`, `issued`)
-  - idempotency on webhook replay (same id, same number, no second render)
-  - manual issuance with custom lines
-  - mark_paid records audit + sets paid_at
-  - void leaves PDF in storage + adds `voided` audit
-  - credit note creates separate row, original untouched
-  - over-credit rejected
-  - mailer round-trips, writes `sent` audit + `sent_at`/`sent_to_email`
-- Backend suite: **423 passed** (414 → 423). mypy strict + ruff clean. **Seven commits ahead of `origin/main`.**
+- `app/api/v1/payments.py:_dispatch_success` now calls `InvoiceService().issue_for_charge(session, charge)` after the billing-service `apply_*_success` runs. Comp orgs are skipped (defensive — comp subs shouldn't reach the webhook, but double-check). `InvoiceIssuerNotConfiguredError` is logged at WARNING and swallowed (the webhook stays a 204; the founder issues manually later). Any other exception from the orchestrator is `logger.exception`'d and swallowed for the same reason — a renderer crash shouldn't mask the fact that the customer paid.
+- Test cleanup helper `_wipe_invoices_for_org(session, org_id)` in `tests/api/v1/test_payments.py` disables the `trg_invoice_audit_log_no_delete` trigger, deletes audit-log + line + invoice rows for an org, re-enables the trigger. Used in 3 places: the new test, the existing `test_webhook_initial_paid_promotes_to_active`, the seat-upgrade test, and the autouse `owned_payments_emails` fixture.
+- 1 new test `test_webhook_paid_charge_auto_issues_tax_invoice` covers: configure issuer fields, fire a PAID webhook for a fresh org's initial charge, assert `Invoice.charge_id` matches + status='issued' + total_minor=99000 + pdf_object_key non-NULL.
+- Backend suite: **424 passed** (423 → 424). Three commits ahead of `origin/main` after this commit lands.
 
-## Next: commit #6 — `feat(invoicing): wire issuance into ComGate webhook charge-paid path`
+## Next: commit #7 — `feat(invoicing): add daily renewal-draft scheduler job`
 
-Hook the orchestrator into the existing webhook so paid charges automatically issue invoices.
+A scheduled job runs at 04:00 Europe/Prague: finds active subscriptions where `current_period_ends_at` is within the next 7 days, generates the next-period invoice with `status='draft'`, queues it for super-admin review. The operator confirms and "issues" via UI before the renewal charge fires.
 
 ### Files to touch
-- `backend/app/api/v1/payments.py`
-  - In `_dispatch_success` (after `charge.status = "paid"` is set), call `await InvoiceService().issue_for_charge(session, charge, by_admin_id=None)`. Wrap in try/except — if invoice issuance fails (e.g. issuer not configured), log a `WARNING` but don't break the webhook (the charge is still paid; the invoice can be issued manually later from the super-admin UI).
-  - The orchestrator's idempotency check makes the webhook safe to re-fire.
-  - Skip issuance for comp orgs — check `subscription.is_comp` and short-circuit. Already-paid charges shouldn't have invoices either; the existing `if charge.status in {"paid", "failed", ...}` early-return covers webhook replay correctly.
-- `backend/tests/api/v1/test_payments.py` — add a test that the webhook handler creates the invoice row alongside flipping the charge to `paid`. Need to seed BillingSettings with valid issuer fields (use the helper from test_invoicing_service.py — promote it to a conftest if needed).
+
+- `backend/app/services/scheduler.py` — add a new APScheduler job. The existing scheduler module already has a `recurring_renewal_charges` job that runs at 03:00 and triggers ComGate charges; this new one runs at 04:00 (one hour later, after the recurring job would have caught any failed renewals overnight) and just creates draft invoices.
+
+```python
+async def daily_invoice_renewal_drafts(*, now: datetime | None = None) -> int:
+    """For each active sub with current_period_ends_at within 7 days,
+    create a status='draft' Invoice projecting the next period's
+    charge. Returns the number of drafts created."""
+```
+
+The job should be idempotent — if a draft already exists for the next-period invoice (matched on `subscription_id` + `taxable_supply_date`), skip. Add a uniqueness pre-check rather than relying on the unique constraint, because the existing `(year, sequence_in_year)` constraint doesn't apply to drafts that haven't been numbered yet.
+
+Wait — actually, **drafts shouldn't consume sequence numbers**. The `allocate_invoice_number` helper bumps the counter; if the founder later voids the draft, the number is gone. Per the prompt §3, "If issuance fails after allocation, write a `voided` invoice record holding that number — never reuse" — so the founder voiding a draft would leave a voided number.
+
+Better: drafts get a placeholder number like `DRAFT-{uuid.uuid4().hex[:8]}` that the issue endpoint replaces with the real `YYYY-NNNN` at the moment the founder confirms. **This is a design change from commit #5**'s assumption that drafts have real numbers. Audit:
+- `Invoice.number` column is `String(16) UNIQUE NOT NULL` — placeholder fits but uniqueness must hold. UUID-based prefixes work.
+- `Invoice.year`, `sequence_in_year`, `variable_symbol` are NOT NULL. For drafts we'd need to set them to something. Maybe `year=current_year`, `sequence_in_year=0`, `variable_symbol='DRAFT-...'`. But `(year, sequence_in_year)` is unique — multiple drafts with `seq=0` would collide.
+- **Cleanest design for #7**: drafts allocate real numbers. If the founder discards a draft, we mark it voided and the number is consumed. The §3 rule already says voided numbers are fine. The cost is wasted numbers, which is acceptable for an alpha; it's also what Fakturoid does.
+
+OK — drafts get real numbers. The scheduler reuses `InvoiceService.issue_for_charge`-style flow but stops at `status='draft'` (no PDF render, no storage). Or write a new method `prepare_renewal_draft(sub)` that builds the row + lines but doesn't render.
+
+Concretely:
+
+```python
+async def prepare_renewal_draft(self, session, *, subscription: Subscription) -> Invoice:
+    """Build the next-period draft invoice for `subscription`. Allocates
+    a number, snapshots issuer + customer, builds lines from the
+    subscription's plan + seat count + period bounds, returns the
+    Invoice row in status='draft'. No PDF render."""
+```
+
+Then `daily_invoice_renewal_drafts` iterates and calls `prepare_renewal_draft`. The super-admin UI (commit #9-10) will render+store on confirm via a "Vystavit" button that calls `InvoiceService.issue_draft(invoice_id)` (yet another new method).
+
+### Tests
+
+- `test_invoicing_scheduler.py`:
+  - drafts are created for subs ending within 7 days
+  - subs ending 8+ days out are skipped
+  - subs that already have a draft for the same period are skipped (idempotency)
+  - comp subs are skipped
+  - returns the count
 
 ### Watch out for
-- The webhook flow runs inside its own session (per the `payments.py` handler). The orchestrator's `await session.flush()` calls write into the same transaction — good. The final `await session.commit()` at the end of the webhook handler commits everything atomically.
-- `subscription.is_comp` check needs a SQL load — the charge has `organization_id` but not `is_comp`. Pull `Subscription` row first.
-- `enterprise` org with override price — already handled by `compute_seat_proration` upstream; the orchestrator's `_build_lines_for_charge` derives unit price from `charge.amount_minor // seats`, which is the post-override value. No change needed.
-- The renderer warning about `Ignored fill:#000000` is from the QR Platba SVG — harmless, but spamming. Worth quieting in a follow-up.
 
-### How to start commit #6
+- The job must use a fresh `AsyncSessionLocal()` (existing pattern in `scheduler.py`).
+- APScheduler's `AsyncIOScheduler` triggers must be wrapped in `asyncio.run_coroutine_threadsafe` or similar — see how the existing renewal-charges job is registered.
+- `subscription.current_period_ends_at` can be NULL (comp subs, freshly-created trials). Filter those out.
+
+### How to start commit #7
 
 1. `cd backend && uv run alembic current` — head is `1a5b9f76b1ee`.
-2. `cd backend && uv run pytest -q` — confirms 423 green.
-3. Read `app/api/v1/payments.py:_dispatch_success` for the hook point.
-4. Add the call + comp-org skip + try/except. Don't forget BillingSettings issuer-fields validation can raise — log + continue, don't 500 the webhook.
-5. Test: seed an org+sub+charge, fire the webhook, assert both `Charge.status='paid'` and an Invoice row was created with the correct `charge_id`.
-6. Gates, commit, update RESUME.
+2. Read `app/services/scheduler.py` for the existing job-registration pattern + how it iterates subs.
+3. Add `prepare_renewal_draft` to `InvoiceService` first (small, easy to test in isolation).
+4. Then the scheduler job that calls it.
+5. Tests, gates, commit, update RESUME.
 
-## Carryover from commits #1–5
+## Carryover from commits #1–6
 
-- Endpoint URL `/api/v1/payments/invoices` intentionally not renamed.
+- Endpoint URL `/api/v1/payments/invoices` not renamed.
 - `invoice_audit_log` REVOKE deferred (triggers cover protection).
-- BillingSettings issuer columns must be filled in via UI before issuance.
+- BillingSettings `seller_ico` / `seller_iban` are the legacy column names; snapshot fields use `issuer_*`. Worth a follow-up rename for consistency.
 - WeasyPrint pinned `>=63.0,<64`; bumping breaks already-stored `pdf_sha256`.
-- ~1 MB of TTFs in repo (Inter + JetBrains Mono).
-- S3 path implemented but not exercised by tests; configure Hetzner bucket + integration test before flipping `s3_endpoint_url`.
-- WeasyPrint emits a `Ignored fill:#000000` warning for the QR SVG. Cosmetic; noisy in CI.
-- The orchestrator's `_require_issuer_configured` falls back to `seller_ico` (the legacy column name kept for compatibility); the snapshot also uses `billing.seller_ico`. **Inconsistency**: snapshot fields are named `issuer_*` but `BillingSettings` still has `seller_ico` and `seller_iban`. Worth a follow-up rename for consistency, but not blocking.
+- WeasyPrint emits a `Ignored fill:#000000` warning per render (QR SVG). Cosmetic.
+- S3 storage path implemented but not exercised by tests; configure Hetzner bucket + integration test before flipping `s3_endpoint_url`.
+- The webhook now writes invoice rows + ~3 audit-log entries on every paid charge. The autouse `_wipe_invoices_for_org` cleanup helper in `test_payments.py` keeps the dev DB tidy. CI fresh DB → no impact.
+- **Important inconsistency for the scheduler**: `BillingSettings` is a singleton, so the issuer fields are global. If the scheduler runs while issuer fields are still empty, `prepare_renewal_draft` should still succeed (drafts don't validate strict issuer config — only issuance does). This means the founder can have draft invoices waiting + still need to configure their billing details before clicking "Issue".
