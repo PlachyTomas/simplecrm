@@ -1778,6 +1778,14 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
         />
       </label>
 
+      <LiveSeatCostPreview
+        targetValid={targetValid}
+        target={target}
+        currentSeatCount={sub.seat_count}
+        perUserMinor={sub.effective_price_per_user_minor}
+        planCode={sub.plan.code}
+      />
+
       {needsToDeactivate ? (
         <div className="border-warning/40 mt-4 rounded-md border bg-warning-subtle p-4">
           <p className="text-sm font-medium text-text-primary">
@@ -1858,6 +1866,60 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
   );
 }
 
+function LiveSeatCostPreview({
+  targetValid,
+  target,
+  currentSeatCount,
+  perUserMinor,
+  planCode,
+}: {
+  targetValid: boolean;
+  target: number;
+  currentSeatCount: number;
+  perUserMinor: number | null;
+  planCode: string;
+}) {
+  // Live preview while the admin is typing a new target. Recomputes from
+  // `target × per-user × interval-multiplier` so they see what the next
+  // bill will look like before committing. Skipped when the per-user
+  // price isn't surfaced (trial / enterprise / comp orgs sit outside
+  // the published ladder).
+  if (!targetValid) return null;
+  if (perUserMinor == null) return null;
+  if (planCode !== "monthly" && planCode !== "annual") return null;
+  const isAnnual = planCode === "annual";
+  const periodLabel = isAnnual ? "rok" : "měsíc";
+  const multiplier = isAnnual ? 12 : 1;
+  const newTotal = perUserMinor * multiplier * target;
+  const oldTotal = perUserMinor * multiplier * currentSeatCount;
+  const delta = newTotal - oldTotal;
+  const unchanged = target === currentSeatCount;
+  return (
+    <div
+      className="mt-3 rounded-md border border-border-subtle bg-surface-overlay px-3 py-2.5 text-sm"
+      data-testid="seat-cost-preview"
+    >
+      <p className="text-text-secondary">
+        Nový náklad:{" "}
+        <span className="font-semibold tabular-nums text-text-primary">
+          {formatCzkMinor(newTotal)}
+        </span>{" "}
+        / {periodLabel}
+        {!unchanged ? (
+          <>
+            {" ("}
+            <span className={delta > 0 ? "text-warning" : "text-success"}>
+              {delta > 0 ? "+" : "−"}
+              {formatCzkMinor(Math.abs(delta))} / {periodLabel}
+            </span>
+            {")"}
+          </>
+        ) : null}
+      </p>
+    </div>
+  );
+}
+
 function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
   const { accessToken } = useAuth();
   const qc = useQueryClient();
@@ -1912,6 +1974,19 @@ function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
   const isTrial = sub.plan.code === "trial";
   const switchTakesEffect = isTrial ? "po skončení zkušební doby" : "při dalším zúčtovacím období";
 
+  // Published price ladder: 99 Kč / month vs 999 Kč / year. Mirrors
+  // `compute_savings` on the backend. We render both the percent and
+  // the absolute koruna amount the org would save this year on its
+  // current seat count.
+  const MONTHLY_PER_USER_MINOR = 9900;
+  const ANNUAL_PER_USER_MINOR = 99900;
+  const annualSavingsMinor =
+    Math.max(0, MONTHLY_PER_USER_MINOR * 12 - ANNUAL_PER_USER_MINOR) * sub.seat_count;
+  const annualSubtitle =
+    annualSavingsMinor > 0
+      ? `Účtováno jednou ročně, ušetříte 16 % — ${formatCzkMinor(annualSavingsMinor)} / rok`
+      : "Účtováno jednou ročně, ušetříte 16 %";
+
   return (
     <form onSubmit={onSubmit} className="rounded-lg border border-border bg-surface p-6">
       <header>
@@ -1936,7 +2011,7 @@ function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
         <IntervalRadio
           code="annual"
           title="Roční"
-          subtitle="Účtováno jednou ročně, ušetříte 16 %"
+          subtitle={annualSubtitle}
           selected={target === "annual"}
           onSelect={() => setTarget("annual")}
         />

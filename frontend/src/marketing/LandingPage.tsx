@@ -490,7 +490,7 @@ function Pricing() {
             to={SIGNUP_PATH}
             className="mt-8 inline-flex h-11 w-full items-center justify-center rounded-md border border-border bg-surface-overlay px-5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-elevated"
           >
-            Začít zdarma
+            Vyzkoušet 30 dní zdarma
           </Link>
         </article>
 
