@@ -2,6 +2,7 @@ import { Crown, Handshake, Target, Trophy, Workflow } from "lucide-react";
 import { useMemo } from "react";
 
 import { type KpiSummary, useKpiSummary } from "@/app/dashboard/useKpi";
+import { InviteTeammatesCard } from "@/app/dashboard/InviteTeammatesCard";
 import { useLeaderboard, useVelocity } from "@/app/reports/useReports";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { KpiCard } from "@/components/ui/KpiCard";
@@ -209,6 +210,8 @@ export function DashboardPage() {
           hint="Součet vyhraných obchodů"
         />
       </section>
+
+      <InviteTeammatesCard />
 
       {user.role === "admin" ||
       user.role === "manager" ||

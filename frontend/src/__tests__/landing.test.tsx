@@ -29,10 +29,10 @@ describe("Landing page", () => {
     expect(screen.getByRole("heading", { level: 2, name: /Časté otázky/i })).toBeInTheDocument();
     // The price per user appears on the paid tier card.
     expect(screen.getByText(/99 Kč/)).toBeInTheDocument();
-    // Google CTA points at backend login endpoint.
+    // Trial CTAs route into the signup form (which itself offers email + Google).
     const ctas = screen.getAllByRole("link", { name: /Vyzkoušet 30 dní zdarma|Vyzkoušet zdarma/i });
     expect(ctas.length).toBeGreaterThan(0);
-    expect(ctas[0]).toHaveAttribute("href", expect.stringContaining("/api/v1/auth/google/login"));
+    expect(ctas[0]).toHaveAttribute("href", "/signup");
   });
 
   it("expands and collapses an FAQ entry", async () => {

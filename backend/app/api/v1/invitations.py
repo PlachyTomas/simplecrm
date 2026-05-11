@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import require_can_invite
+from app.core.security import sign_invite_token
 from app.db import get_db
 from app.db.models import Invitation, User
 from app.schemas.invitation import (
@@ -25,6 +26,24 @@ from app.services.invitations import (
     create_invitation,
     revoke_invitation,
 )
+
+
+def _serialize_invitation(inv: Invitation) -> InvitationOut:
+    return InvitationOut(
+        id=inv.id,
+        organization_id=inv.organization_id,
+        email=inv.email,
+        role=inv.role,
+        team_id=inv.team_id,
+        can_invite=inv.can_invite,
+        invited_by_user_id=inv.invited_by_user_id,
+        expires_at=inv.expires_at,
+        accepted_at=inv.accepted_at,
+        revoked_at=inv.revoked_at,
+        created_at=inv.created_at,
+        invite_url=build_invite_link(sign_invite_token(inv.token_jti)),
+    )
+
 
 router = APIRouter(prefix="/invitations", tags=["invitations"])
 
@@ -51,7 +70,7 @@ async def list_invitations(
     )
     rows = (await session.execute(stmt)).scalars().all()
     return Page[InvitationOut](
-        items=[InvitationOut.model_validate(inv) for inv in rows],
+        items=[_serialize_invitation(inv) for inv in rows],
         total=total,
         limit=pagination.limit,
         offset=pagination.offset,
@@ -103,7 +122,7 @@ async def create(
     await session.refresh(issued.invitation)
 
     return InvitationCreated(
-        invitation=InvitationOut.model_validate(issued.invitation),
+        invitation=_serialize_invitation(issued.invitation),
         invite_url=build_invite_link(issued.token),
     )
 

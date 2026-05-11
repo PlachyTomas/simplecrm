@@ -29,6 +29,10 @@ class InvitationOut(BaseModel):
     accepted_at: datetime | None = None
     revoked_at: datetime | None = None
     created_at: datetime
+    # Acceptance URL recomputed from the invite's `token_jti` on every
+    # serialization. Surfaced so an admin who closed the create-modal can
+    # still copy the link off the listing view.
+    invite_url: str
 
 
 class InvitationCreated(BaseModel):

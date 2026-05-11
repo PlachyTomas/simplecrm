@@ -3550,6 +3550,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Invite Url */
+            invite_url: string;
         };
         /**
          * InvitationPreview

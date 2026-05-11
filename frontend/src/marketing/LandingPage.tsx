@@ -16,7 +16,6 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 
-import { API_BASE_URL } from "@/lib/api";
 import { ThemeToggle } from "@/lib/ThemeToggle";
 import { cn } from "@/lib/utils";
 import { openCookieSettings } from "@/marketing/cookie-consent-controls";
@@ -25,7 +24,7 @@ import { AresDemoSection } from "@/marketing/AresDemoSection";
 import { InteractivePipeline } from "@/marketing/InteractivePipeline";
 import { ReportsDemoSection } from "@/marketing/ReportsDemoSection";
 
-const GOOGLE_LOGIN_URL = `${API_BASE_URL}/api/v1/auth/google/login`;
+const SIGNUP_PATH = "/signup";
 const PRICE_PER_USER_CZK = 99;
 
 type NavLink =
@@ -131,12 +130,12 @@ export function Nav() {
           >
             Přihlásit se
           </Link>
-          <a
-            href={GOOGLE_LOGIN_URL}
+          <Link
+            to={SIGNUP_PATH}
             className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-3 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover sm:px-5"
           >
             Vyzkoušet zdarma
-          </a>
+          </Link>
           <button
             ref={triggerRef}
             type="button"
@@ -269,12 +268,13 @@ function MobileDrawer({
       </nav>
       <div className="flex items-center justify-between gap-3 border-t border-border-subtle px-4 py-4">
         <ThemeToggle variant="compact" />
-        <a
-          href={GOOGLE_LOGIN_URL}
+        <Link
+          to={SIGNUP_PATH}
+          onClick={onClose}
           className="inline-flex h-10 flex-1 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
         >
           Vyzkoušet zdarma
-        </a>
+        </Link>
       </div>
     </div>,
     document.body,
@@ -308,12 +308,12 @@ function Hero() {
         </p>
 
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <a
-            href={GOOGLE_LOGIN_URL}
+          <Link
+            to={SIGNUP_PATH}
             className="inline-flex h-12 items-center justify-center rounded-md bg-accent px-6 text-base font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
           >
             Vyzkoušet 30 dní zdarma
-          </a>
+          </Link>
           <a
             href="#funkce"
             className="inline-flex h-12 items-center justify-center rounded-md border border-border bg-surface-overlay px-6 text-base font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
@@ -486,12 +486,12 @@ function Pricing() {
               </li>
             ))}
           </ul>
-          <a
-            href={GOOGLE_LOGIN_URL}
+          <Link
+            to={SIGNUP_PATH}
             className="mt-8 inline-flex h-11 w-full items-center justify-center rounded-md border border-border bg-surface-overlay px-5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-elevated"
           >
             Začít zdarma
-          </a>
+          </Link>
         </article>
 
         <article className="rounded-xl border-2 border-accent bg-surface p-8 shadow-md">
@@ -518,12 +518,12 @@ function Pricing() {
               </li>
             ))}
           </ul>
-          <a
-            href={GOOGLE_LOGIN_URL}
+          <Link
+            to={SIGNUP_PATH}
             className="mt-8 inline-flex h-11 w-full items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
           >
             Vyzkoušet 30 dní zdarma
-          </a>
+          </Link>
         </article>
       </div>
     </section>

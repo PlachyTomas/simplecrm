@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -79,6 +79,13 @@ export function SignupPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-bg px-4">
+      <Link
+        to="/"
+        className="absolute left-4 top-4 inline-flex h-10 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary"
+      >
+        <ArrowLeft size={16} strokeWidth={1.75} aria-hidden />
+        Zpět na úvod
+      </Link>
       <div className="absolute right-4 top-4">
         <ThemeToggle variant="compact" />
       </div>
