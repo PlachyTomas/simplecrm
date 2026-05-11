@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -13,11 +14,37 @@ from app.services.scheduler import (
     scheduler,
 )
 
+_startup_logger = logging.getLogger("simplecrm.startup")
+
+
+def _log_go_live_warnings(settings: object) -> None:
+    """Loud startup warnings for configuration that's safe in dev but
+    catastrophic in production. Surfaces them as ERROR-level logs so a
+    standard monitoring filter notices, even though the app boots fine.
+    """
+    s = settings  # narrowed by the caller
+    test_mode = getattr(s, "comgate_test_mode", False)
+    if test_mode:
+        _startup_logger.error(
+            "ComGate is running in TEST MODE — every `create` call carries "
+            "`test=true`. If this is the production deployment, set "
+            "COMGATE_TEST_MODE=false in the environment before opening "
+            "signups."
+        )
+    if not getattr(s, "smtp_host", ""):
+        _startup_logger.error(
+            "SMTP_HOST is not set — outbound email (invoices, feedback, "
+            "verification, password reset) will log instead of deliver. "
+            "If this is production, configure the Zoho SMTP block from "
+            "docs/TODO.md."
+        )
+
 
 @asynccontextmanager
 async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # Start background jobs on boot, stop them on shutdown. Tests use
     # `create_app` indirectly and patch the scheduler before dispatch.
+    _log_go_live_warnings(get_settings())
     scheduler.start()
     recurring_charge_scheduler.start()
     renewal_draft_scheduler.start()

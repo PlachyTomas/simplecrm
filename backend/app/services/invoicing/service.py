@@ -521,10 +521,15 @@ class InvoiceService:
             )
             if part
         )
-        # Org has no structured address fields yet — use just the name.
-        # Commit #10's customer-search UI will let the founder fill in
-        # billing addresses per-org; until then snapshot is name-only.
-        customer_address = organization.name
+        # Snapshot the customer billing address from the org's structured
+        # fields when available (populated via ARES or the org-settings
+        # form). Falls back to just the org name so we never block a
+        # legitimate invoice when the founder hasn't filled in the form
+        # — go-live audit (Q2) flagged that org-side address collection
+        # is an open UI gap; the data model is already in place.
+        zip_city = f"{organization.address_zip or ''} {organization.address_city or ''}".strip()
+        customer_address_parts = [organization.address_street, zip_city]
+        customer_address = "\n".join(p for p in customer_address_parts if p) or organization.name
 
         invoice = Invoice(
             organization_id=organization.id,
@@ -550,9 +555,9 @@ class InvoiceService:
             issuer_is_vat_payer=billing.is_vat_payer,
             customer_name=organization.name,
             customer_address=customer_address,
-            customer_ico=getattr(organization, "ico", None),
-            customer_dic=None,
-            customer_email=None,
+            customer_ico=organization.ico,
+            customer_dic=organization.dic,
+            customer_email=organization.billing_email,
             currency=currency,
             subtotal_minor=subtotal,
             vat_amount_minor=vat_total,
