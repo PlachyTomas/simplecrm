@@ -36,8 +36,8 @@ export function KontaktPage() {
                 {LEGAL_ENTITY.email}
               </a>
               <p className="mt-1 text-xs text-text-tertiary">
-                Pro obchodní dotazy, technickou podporu i reklamace. Odpovídáme zpravidla
-                v pracovní dny do několika hodin.
+                Pro obchodní dotazy, technickou podporu i reklamace. Odpovídáme zpravidla v pracovní
+                dny do několika hodin.
               </p>
             </div>
           </li>
@@ -54,14 +54,11 @@ export function KontaktPage() {
       <Section title="Reklamace a podpora">
         <p>
           Reklamace přijímáme výhradně písemně na{" "}
-          <a
-            href={`mailto:${LEGAL_ENTITY.email}`}
-            className="underline hover:text-text-primary"
-          >
+          <a href={`mailto:${LEGAL_ENTITY.email}`} className="underline hover:text-text-primary">
             {LEGAL_ENTITY.email}
           </a>
-          . Vyřízení proběhne do 30 dnů od doručení reklamace. Postup, definice
-          vad služby a práva z vadného plnění upravuje{" "}
+          . Vyřízení proběhne do 30 dnů od doručení reklamace. Postup, definice vad služby a práva z
+          vadného plnění upravuje{" "}
           <Link to="/obchodni-podminky#cl-10" className="underline hover:text-text-primary">
             čl. 10 Obchodních podmínek
           </Link>
@@ -72,26 +69,17 @@ export function KontaktPage() {
       <Section title="Právní stránky">
         <ul className="grid gap-2 sm:grid-cols-2">
           <li>
-            <Link
-              to="/obchodni-podminky"
-              className="underline hover:text-text-primary"
-            >
+            <Link to="/obchodni-podminky" className="underline hover:text-text-primary">
               Obchodní podmínky
             </Link>
           </li>
           <li>
-            <Link
-              to="/ochrana-osobnich-udaju"
-              className="underline hover:text-text-primary"
-            >
+            <Link to="/ochrana-osobnich-udaju" className="underline hover:text-text-primary">
               Ochrana osobních údajů
             </Link>
           </li>
           <li>
-            <Link
-              to="/zpracovatelska-smlouva"
-              className="underline hover:text-text-primary"
-            >
+            <Link to="/zpracovatelska-smlouva" className="underline hover:text-text-primary">
               Zpracovatelská smlouva (DPA)
             </Link>
           </li>

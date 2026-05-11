@@ -11,9 +11,9 @@ export function OchranaOsobnichUdajuPage() {
       effectiveDate={LEGAL_EFFECTIVE_DATE}
       lead={
         <p>
-          Tyto zásady popisují, jakým způsobem zpracováváme osobní údaje uživatelů služby
-          SimpleCRM. Splňují požadavky čl. 13 a 14 obecného nařízení o ochraně osobních
-          údajů (GDPR) a metodiky Úřadu pro ochranu osobních údajů (ÚOOÚ).
+          Tyto zásady popisují, jakým způsobem zpracováváme osobní údaje uživatelů služby SimpleCRM.
+          Splňují požadavky čl. 13 a 14 obecného nařízení o ochraně osobních údajů (GDPR) a metodiky
+          Úřadu pro ochranu osobních údajů (ÚOOÚ).
         </p>
       }
     >
@@ -25,10 +25,7 @@ export function OchranaOsobnichUdajuPage() {
           <p className="mt-1 text-xs text-text-tertiary">{LEGAL_ENTITY.registryClause}</p>
           <p className="mt-2">
             Kontakt:{" "}
-            <a
-              href={`mailto:${LEGAL_ENTITY.email}`}
-              className="underline hover:text-text-primary"
-            >
+            <a href={`mailto:${LEGAL_ENTITY.email}`} className="underline hover:text-text-primary">
               {LEGAL_ENTITY.email}
             </a>
             .
@@ -48,9 +45,7 @@ export function OchranaOsobnichUdajuPage() {
             <dt className="text-text-tertiary">Účel:</dt>
             <dd>plnění smlouvy, fakturace</dd>
             <dt className="text-text-tertiary">Právní základ:</dt>
-            <dd>
-              čl. 6 odst. 1 písm. b) GDPR (smlouva), čl. 6 odst. 1 písm. c) GDPR (účetnictví)
-            </dd>
+            <dd>čl. 6 odst. 1 písm. b) GDPR (smlouva), čl. 6 odst. 1 písm. c) GDPR (účetnictví)</dd>
             <dt className="text-text-tertiary">Doba uchování:</dt>
             <dd>po dobu trvání smlouvy + 10 let (zákon č. 563/1991 Sb.)</dd>
           </dl>
@@ -58,9 +53,7 @@ export function OchranaOsobnichUdajuPage() {
 
         <article className="rounded-md border border-border-subtle bg-surface-overlay p-4">
           <h3 className="font-semibold text-text-primary">b) Údaje o užívání služby</h3>
-          <p className="mt-1 text-xs text-text-tertiary">
-            IP adresa, log-in, akce v aplikaci
-          </p>
+          <p className="mt-1 text-xs text-text-tertiary">IP adresa, log-in, akce v aplikaci</p>
           <dl className="mt-2 grid gap-1 text-sm sm:grid-cols-[10rem_1fr]">
             <dt className="text-text-tertiary">Účel:</dt>
             <dd>zabezpečení, audit, technická podpora</dd>
@@ -79,8 +72,8 @@ export function OchranaOsobnichUdajuPage() {
             <dd>zasílání obchodních sdělení o našich službách</dd>
             <dt className="text-text-tertiary">Právní základ:</dt>
             <dd>
-              čl. 6 odst. 1 písm. f) GDPR (oprávněný zájem u stávajících zákazníků dle § 7
-              zák. č. 480/2004 Sb.); souhlas u ostatních
+              čl. 6 odst. 1 písm. f) GDPR (oprávněný zájem u stávajících zákazníků dle § 7 zák. č.
+              480/2004 Sb.); souhlas u ostatních
             </dd>
             <dt className="text-text-tertiary">Doba uchování:</dt>
             <dd>do odvolání souhlasu / odhlášení</dd>
@@ -126,10 +119,7 @@ export function OchranaOsobnichUdajuPage() {
         </ul>
         <p>
           Pro uplatnění práv kontaktujte:{" "}
-          <a
-            href={`mailto:${LEGAL_ENTITY.email}`}
-            className="underline hover:text-text-primary"
-          >
+          <a href={`mailto:${LEGAL_ENTITY.email}`} className="underline hover:text-text-primary">
             {LEGAL_ENTITY.email}
           </a>
           .
@@ -138,15 +128,15 @@ export function OchranaOsobnichUdajuPage() {
 
       <Section id="zabezpeceni" title="5. Zabezpečení">
         <p>
-          Údaje jsou chráněny šifrovaným přenosem (HTTPS/TLS), šifrovaným úložištěm,
-          dvoufaktorovým ověřením administrátorských přístupů a pravidelnými zálohami.
+          Údaje jsou chráněny šifrovaným přenosem (HTTPS/TLS), šifrovaným úložištěm, dvoufaktorovým
+          ověřením administrátorských přístupů a pravidelnými zálohami.
         </p>
       </Section>
 
       <Section id="zpracovatel" title="6. Zpracování údajů v CRM (postavení zpracovatele)">
         <p>
-          Pokud nahráváte do SimpleCRM osobní údaje svých zákazníků, jsme v postavení
-          zpracovatele dle čl. 28 GDPR. Vztah řídí samostatná{" "}
+          Pokud nahráváte do SimpleCRM osobní údaje svých zákazníků, jsme v postavení zpracovatele
+          dle čl. 28 GDPR. Vztah řídí samostatná{" "}
           <Link to="/zpracovatelska-smlouva" className="underline hover:text-text-primary">
             Smlouva o zpracování osobních údajů (DPA)
           </Link>
@@ -160,8 +150,8 @@ export function OchranaOsobnichUdajuPage() {
 
       <Section id="aktualnost" title="7. Aktuálnost">
         <p>
-          Tyto zásady jsou účinné od {LEGAL_EFFECTIVE_DATE}. Aktuální verze je vždy zveřejněna
-          na simplecrm.cz/ochrana-osobnich-udaju.
+          Tyto zásady jsou účinné od {LEGAL_EFFECTIVE_DATE}. Aktuální verze je vždy zveřejněna na
+          simplecrm.cz/ochrana-osobnich-udaju.
         </p>
       </Section>
     </LegalPageLayout>

@@ -30,9 +30,7 @@ export function LegalPageLayout({ title, lead, effectiveDate, children }: LegalP
           ) : null}
           {lead ? <div className="mt-4 text-base text-text-secondary">{lead}</div> : null}
         </header>
-        <div className="mt-8 space-y-6 text-sm leading-relaxed text-text-secondary">
-          {children}
-        </div>
+        <div className="mt-8 space-y-6 text-sm leading-relaxed text-text-secondary">{children}</div>
       </main>
       <Footer />
     </div>

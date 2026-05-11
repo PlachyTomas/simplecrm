@@ -15,8 +15,8 @@ export function PredplatnePage() {
       title="Předplatné a platby"
       lead={
         <p>
-          Tato stránka shrnuje, jak funguje předplatné a opakované platby v SimpleCRM. Plné
-          podmínky najdete v{" "}
+          Tato stránka shrnuje, jak funguje předplatné a opakované platby v SimpleCRM. Plné podmínky
+          najdete v{" "}
           <Link to="/obchodni-podminky#cl-6" className="underline hover:text-text-primary">
             čl. 6 Obchodních podmínek
           </Link>
@@ -27,28 +27,23 @@ export function PredplatnePage() {
       <Section id="trial" title="Bezplatné 30denní vyzkoušení">
         <p>
           Po skončení 30denního zkušebního období můžete pokračovat zaplacením předplatného.
-          <strong> Předplatné se neaktivuje automaticky</strong> — bez výslovného potvrzení
-          žádné prostředky nestrhneme.
+          <strong> Předplatné se neaktivuje automaticky</strong> — bez výslovného potvrzení žádné
+          prostředky nestrhneme.
         </p>
       </Section>
 
-      <Section
-        id="opakovane"
-        title="Opakované platby (automatické obnovení)"
-      >
+      <Section id="opakovane" title="Opakované platby (automatické obnovení)">
         <p>Pokud zvolíte automatické obnovení, platí toto:</p>
         <ul className="space-y-2">
           <SubscribeBullet>
-            Z vaší platební karty pravidelně strhneme částku odpovídající vašemu plánu (99 Kč
-            × počet uživatelů × měsíc).
+            Z vaší platební karty pravidelně strhneme částku odpovídající vašemu plánu (99 Kč ×
+            počet uživatelů × měsíc).
           </SubscribeBullet>
           <SubscribeBullet>
             Stržení probíhá vždy první den nového zúčtovacího období.
           </SubscribeBullet>
           <SubscribeBullet>Platby trvají do doby, než je zrušíte.</SubscribeBullet>
-          <SubscribeBullet>
-            O každé platbě dostanete e-mail s daňovým dokladem.
-          </SubscribeBullet>
+          <SubscribeBullet>O každé platbě dostanete e-mail s daňovým dokladem.</SubscribeBullet>
           <SubscribeBullet>
             O jakékoli změně ceny vás informujeme e-mailem alespoň 30 dní předem.
           </SubscribeBullet>
@@ -64,25 +59,22 @@ export function PredplatnePage() {
           </li>
           <li>
             Nebo e-mailem na{" "}
-            <a
-              href={`mailto:${LEGAL_ENTITY.email}`}
-              className="underline hover:text-text-primary"
-            >
+            <a href={`mailto:${LEGAL_ENTITY.email}`} className="underline hover:text-text-primary">
               {LEGAL_ENTITY.email}
             </a>
             , nejpozději 1 pracovní den před stržením další platby.
           </li>
         </ol>
         <p>
-          Zrušení automatických plateb neukončí vaše předplatné — služba pojede do konce
-          zaplaceného období. Pro úplné ukončení smlouvy zrušte účet v administraci.
+          Zrušení automatických plateb neukončí vaše předplatné — služba pojede do konce zaplaceného
+          období. Pro úplné ukončení smlouvy zrušte účet v administraci.
         </p>
       </Section>
 
       <Section id="zabezpeceni" title="Zabezpečení plateb">
         <p>
-          Platební údaje zpracovává <strong>Comgate, a.s.</strong> dle standardu PCI-DSS Level
-          1. Comgate je přímým členem karetních asociací Visa a Mastercard (Principal member).
+          Platební údaje zpracovává <strong>Comgate, a.s.</strong> dle standardu PCI-DSS Level 1.
+          Comgate je přímým členem karetních asociací Visa a Mastercard (Principal member).
           SimpleCRM nikdy nemá přístup k číslu vaší karty.
         </p>
         <p className="text-xs text-text-tertiary">{COMGATE_INFO.legalText}</p>

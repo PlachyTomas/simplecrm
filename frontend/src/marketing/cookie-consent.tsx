@@ -32,10 +32,7 @@ function loadConsent(): StoredConsent | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredConsent;
-    if (
-      parsed.decision !== "all" &&
-      parsed.decision !== "essential"
-    ) {
+    if (parsed.decision !== "all" && parsed.decision !== "essential") {
       return null;
     }
     return parsed;
@@ -83,7 +80,10 @@ export function CookieConsent() {
   }, []);
 
   const persist = useCallback(
-    (decision: Decision, flags: { analytics: boolean; preferences: boolean; marketing: boolean }) => {
+    (
+      decision: Decision,
+      flags: { analytics: boolean; preferences: boolean; marketing: boolean },
+    ) => {
       saveConsent({
         decision,
         analytics: flags.analytics,
@@ -164,9 +164,9 @@ function BannerView({ onAcceptAll, onRejectAll, onOpenSettings }: BannerViewProp
   return (
     <>
       <p className="mt-2 text-sm text-text-secondary">
-        Tento web používá cookies. Nezbytné cookies používáme pro správné fungování webu.
-        S vaším souhlasem budeme používat i analytické a preferenční cookies pro zlepšování
-        naší služby. Podrobné nastavení můžete kdykoli změnit. Více informací v{" "}
+        Tento web používá cookies. Nezbytné cookies používáme pro správné fungování webu. S vaším
+        souhlasem budeme používat i analytické a preferenční cookies pro zlepšování naší služby.
+        Podrobné nastavení můžete kdykoli změnit. Více informací v{" "}
         <Link to="/cookies" className="underline">
           Zásadách používání cookies
         </Link>
@@ -203,8 +203,8 @@ function SettingsView(props: SettingsViewProps) {
   return (
     <>
       <p className="mt-2 text-sm text-text-secondary">
-        Vyberte si, které kategorie cookies chcete povolit. Tlačítka „Přijmout vše" a
-        „Odmítnout vše" jsou rovnocenná.
+        Vyberte si, které kategorie cookies chcete povolit. Tlačítka „Přijmout vše" a „Odmítnout
+        vše" jsou rovnocenná.
       </p>
       <div className="mt-4 space-y-3">
         <Category
@@ -295,7 +295,7 @@ function ConsentButton({ onClick, variant, children }: ConsentButtonProps) {
         "inline-flex h-10 items-center justify-center rounded-md px-5 text-sm font-medium transition-colors duration-fast",
         variant === "primary"
           ? "bg-accent text-text-on-accent hover:bg-accent-hover"
-          : "border border-border bg-bg text-text-primary hover:bg-bg-subtle",
+          : "hover:bg-bg-subtle border border-border bg-bg text-text-primary",
       )}
     >
       {children}

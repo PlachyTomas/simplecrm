@@ -10,17 +10,17 @@ export function CookiesPage() {
       effectiveDate={LEGAL_EFFECTIVE_DATE}
       lead={
         <p>
-          Tato stránka vysvětluje, jaké cookies a podobné technologie SimpleCRM používá a jak
-          můžete spravovat svůj souhlas. Od 1. 1. 2022 platí v ČR opt-in režim podle § 89
-          odst. 3 zákona č. 127/2005 Sb., o elektronických komunikacích.
+          Tato stránka vysvětluje, jaké cookies a podobné technologie SimpleCRM používá a jak můžete
+          spravovat svůj souhlas. Od 1. 1. 2022 platí v ČR opt-in režim podle § 89 odst. 3 zákona č.
+          127/2005 Sb., o elektronických komunikacích.
         </p>
       }
     >
       <Section id="co-jsou" title="1. Co jsou cookies">
         <p>
           Cookies jsou malé textové soubory, které se ukládají do vašeho zařízení při návštěvě
-          webové stránky. Slouží k zapamatování si vašeho stavu (např. přihlášení) nebo
-          k měření návštěvnosti.
+          webové stránky. Slouží k zapamatování si vašeho stavu (např. přihlášení) nebo k měření
+          návštěvnosti.
         </p>
       </Section>
 
@@ -32,8 +32,8 @@ export function CookiesPage() {
           </p>
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>
-              <code className="rounded bg-surface-overlay px-1 py-0.5 text-xs">session</code>{" "}
-              — udržení přihlášení, doba: 1 hodina
+              <code className="rounded bg-surface-overlay px-1 py-0.5 text-xs">session</code> —
+              udržení přihlášení, doba: 1 hodina
             </li>
             <li>
               <code className="rounded bg-surface-overlay px-1 py-0.5 text-xs">
@@ -56,8 +56,8 @@ export function CookiesPage() {
         <article>
           <h3 className="font-semibold text-text-primary">c) Preferenční cookies (souhlas)</h3>
           <p>
-            Slouží k zapamatování si vašich preferencí (zvolené téma vzhledu). Bez souhlasu
-            nejsou uloženy.
+            Slouží k zapamatování si vašich preferencí (zvolené téma vzhledu). Bez souhlasu nejsou
+            uloženy.
           </p>
         </article>
 
@@ -69,9 +69,9 @@ export function CookiesPage() {
 
       <Section id="sprava" title="3. Jak souhlas spravovat">
         <p>
-          Své preference můžete kdykoli změnit kliknutím na tlačítko níže nebo na odkaz
-          „Nastavení cookies" v patičce webu. Předzaškrtnuté checkboxy nepoužíváme; tlačítka
-          „Přijmout vše" a „Odmítnout vše" jsou v souladu se stanovisky ÚOOÚ rovnocenná.
+          Své preference můžete kdykoli změnit kliknutím na tlačítko níže nebo na odkaz „Nastavení
+          cookies" v patičce webu. Předzaškrtnuté checkboxy nepoužíváme; tlačítka „Přijmout vše" a
+          „Odmítnout vše" jsou v souladu se stanovisky ÚOOÚ rovnocenná.
         </p>
         <p>
           <button
@@ -86,12 +86,9 @@ export function CookiesPage() {
 
       <Section id="doba" title="4. Doba uchování a další informace">
         <p>
-          Konkrétní doby uchování jsou uvedeny u jednotlivých cookies výše. Pro otázky se
-          obraťte na podporu — viz{" "}
-          <a
-            href="/kontakt"
-            className="underline hover:text-text-primary"
-          >
+          Konkrétní doby uchování jsou uvedeny u jednotlivých cookies výše. Pro otázky se obraťte na
+          podporu — viz{" "}
+          <a href="/kontakt" className="underline hover:text-text-primary">
             Kontakt
           </a>
           .

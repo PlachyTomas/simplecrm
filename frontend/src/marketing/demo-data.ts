@@ -62,8 +62,8 @@ export const DEMO_SALES: DemoSalesperson[] = [
 // Tuned so the team-leaderboard's default ranking is Praha > Brno >
 // Bratislava. The sort is by total won-deal value descending (see
 // InteractivePipeline.tsx). Won totals:
-//   Praha (u-1 + u-2):  90 000 + 168 000 = 258 000 Kč
-//   Brno  (u-3 + u-4):  95 000 +  70 000 = 165 000 Kč
+//   Praha (u-2):       168 000 Kč
+//   Brno  (u-3):        95 000 Kč
 //   Bratislava (u-6):   80 000 Kč
 export const DEMO_DEALS_INITIAL: DemoDeal[] = [
   // Nový lead
@@ -83,17 +83,9 @@ export const DEMO_DEALS_INITIAL: DemoDeal[] = [
     stage_id: "stg-new",
     owner_id: "u-3",
   },
-  {
-    id: "d-3",
-    name: "Migrace dat",
-    company: "Heureka",
-    value: 75_000,
-    stage_id: "stg-new",
-    owner_id: "u-5",
-  },
   // Osloveno
   {
-    id: "d-4",
+    id: "d-3",
     name: "Konzultace",
     company: "Notino",
     value: 60_000,
@@ -101,73 +93,25 @@ export const DEMO_DEALS_INITIAL: DemoDeal[] = [
     owner_id: "u-2",
   },
   {
-    id: "d-5",
+    id: "d-4",
     name: "Demo CRM",
     company: "Lidl ČR",
     value: 95_000,
     stage_id: "stg-contact",
     owner_id: "u-4",
   },
-  {
-    id: "d-6",
-    name: "Pilotní nasazení",
-    company: "Slevomat",
-    value: 48_000,
-    stage_id: "stg-contact",
-    owner_id: "u-1",
-  },
   // Jednání
   {
-    id: "d-7",
-    name: "Servis 2026",
-    company: "Mattoni",
-    value: 125_000,
-    stage_id: "stg-negotiation",
-    owner_id: "u-3",
-  },
-  {
-    id: "d-8",
-    name: "Roční podpora",
-    company: "Kofola",
-    value: 88_000,
-    stage_id: "stg-negotiation",
-    owner_id: "u-6",
-  },
-  {
-    id: "d-9",
+    id: "d-5",
     name: "Integrace ERP",
     company: "Asseco",
     value: 210_000,
     stage_id: "stg-negotiation",
     owner_id: "u-2",
   },
-  {
-    id: "d-10",
-    name: "Rozšíření licencí",
-    company: "Dáme jídlo",
-    value: 64_000,
-    stage_id: "stg-negotiation",
-    owner_id: "u-4",
-  },
-  {
-    id: "d-11",
-    name: "Renewal Q3",
-    company: "Alza.sk",
-    value: 132_000,
-    stage_id: "stg-negotiation",
-    owner_id: "u-5",
-  },
   // Vyhráno — totals tuned for Praha > Brno > Bratislava ranking.
   {
-    id: "d-12",
-    name: "Školení O2",
-    company: "O2 Czech",
-    value: 90_000,
-    stage_id: "stg-won",
-    owner_id: "u-1",
-  },
-  {
-    id: "d-13",
+    id: "d-6",
     name: "Roční podpora Heureka",
     company: "Heureka.cz",
     value: 168_000,
@@ -175,7 +119,7 @@ export const DEMO_DEALS_INITIAL: DemoDeal[] = [
     owner_id: "u-2",
   },
   {
-    id: "d-14",
+    id: "d-7",
     name: "Audit Brno",
     company: "Albert ČR",
     value: 95_000,
@@ -183,15 +127,7 @@ export const DEMO_DEALS_INITIAL: DemoDeal[] = [
     owner_id: "u-3",
   },
   {
-    id: "d-15",
-    name: "Implementace Brno",
-    company: "Globus",
-    value: 70_000,
-    stage_id: "stg-won",
-    owner_id: "u-4",
-  },
-  {
-    id: "d-16",
+    id: "d-8",
     name: "Konzultace SK",
     company: "Tatra banka",
     value: 80_000,

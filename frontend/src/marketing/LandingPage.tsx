@@ -21,6 +21,7 @@ import { ThemeToggle } from "@/lib/ThemeToggle";
 import { cn } from "@/lib/utils";
 import { openCookieSettings } from "@/marketing/cookie-consent-controls";
 import { COMGATE_INFO, LEGAL_ENTITY } from "@/marketing/legal-entity";
+import { AresDemoSection } from "@/marketing/AresDemoSection";
 import { InteractivePipeline } from "@/marketing/InteractivePipeline";
 import { ReportsDemoSection } from "@/marketing/ReportsDemoSection";
 
@@ -669,11 +670,11 @@ export function Footer() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
               Právní informace
             </h3>
-            <nav aria-label="Patička – právní informace" className="mt-3 flex flex-col gap-2 text-xs">
-              <Link
-                to="/obchodni-podminky"
-                className="text-text-secondary hover:text-text-primary"
-              >
+            <nav
+              aria-label="Patička – právní informace"
+              className="mt-3 flex flex-col gap-2 text-xs"
+            >
+              <Link to="/obchodni-podminky" className="text-text-secondary hover:text-text-primary">
                 Obchodní podmínky
               </Link>
               <Link
@@ -733,9 +734,7 @@ export function Footer() {
           </p>
         </div>
 
-        <p className="mt-6 text-xs text-text-tertiary">
-          © {new Date().getFullYear()} SimpleCRM
-        </p>
+        <p className="mt-6 text-xs text-text-tertiary">© {new Date().getFullYear()} SimpleCRM</p>
       </div>
     </footer>
   );
@@ -764,6 +763,7 @@ export function LandingPage() {
       <main>
         <Hero />
         <Differentiators />
+        <AresDemoSection />
         <HowItWorks />
         <ReportsDemoSection />
         <Pricing />
