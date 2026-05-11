@@ -84,8 +84,9 @@ function PendingPanel() {
     <div>
       <h1 className="text-2xl font-semibold text-text-primary">Zpracováváme vaši platbu.</h1>
       <p className="mt-3 text-sm text-text-secondary">
-        Banka nám platbu potvrdí během několika sekund. Stránku můžete nechat otevřenou nebo se za
-        chvíli vrátit do Fakturace.
+        U platby kartou trvá potvrzení obvykle pár vteřin. U bankovního převodu může trvat až
+        několik hodin, než nám banka přijetí potvrdí — předplatné se aktivuje automaticky a fakturu
+        vám pošleme e-mailem v okamžiku, kdy se platba spáruje.
       </p>
     </div>
   );
