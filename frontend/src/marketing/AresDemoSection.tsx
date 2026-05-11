@@ -1,15 +1,18 @@
 /**
  * Landing-page interactive demo for the ARES IČO autofill.
  *
- * The real lookup endpoint sits behind auth (see
- * `app/api/v1/companies.py::lookup_registry`), so this demo can't call it
- * from the public marketing page. Instead it ships a curated fixture and
- * simulates the request/response timing so a visitor can feel the actual
- * UX: paste an 8-digit IČO, watch the form fields fill in.
+ * Calls the public ARES REST API directly from the browser. ARES sets
+ * `access-control-allow-origin: *`, so we don't need a backend proxy.
+ * The marketing page can't use our own `/api/v1/companies/lookup-registry`
+ * because that endpoint is auth-gated; this is the next-best thing and
+ * keeps the demo using *real* data so visitors can paste their own IČO.
  *
- * The dataset is illustrative — it mirrors what the production modal
- * (`AddCompanyModal`) renders on a real ARES hit. Three preset chips let
- * a visitor try the flow without typing.
+ * Parsing mirrors `backend/app/services/business_registry.py::_parse_ares_payload`
+ * so the visual fill matches what production renders. The exception is
+ * `pravniForma` — ARES returns a numeric code (e.g. "121"); the production
+ * modal stores the raw code, but for the marketing demo we look up a
+ * human-readable label from a small table of common Czech forms, falling
+ * back to "Právní forma {code}" for codes outside the table.
  */
 
 import { Building2, Check, RefreshCcw, Sparkles } from "lucide-react";
@@ -25,47 +28,129 @@ interface AresRecord {
   legal_form: string;
 }
 
-// Curated, well-known Czech companies. Data is illustrative for the demo.
-const FIXTURE: Record<string, AresRecord> = {
-  "27082440": {
-    ico: "27082440",
-    name: "Alza.cz a.s.",
-    dic: "CZ27082440",
-    address_street: "Jankovcova 1522/53",
-    address_city: "Praha 7",
-    address_zip: "170 00",
-    legal_form: "Akciová společnost",
-  },
-  "25892533": {
-    ico: "25892533",
-    name: "Notino, s.r.o.",
-    dic: "CZ25892533",
-    address_street: "Londýnské náměstí 881/6",
-    address_city: "Brno",
-    address_zip: "639 00",
-    legal_form: "Společnost s ručením omezeným",
-  },
-  "26168685": {
-    ico: "26168685",
-    name: "Heureka Group a.s.",
-    dic: "CZ26168685",
-    address_street: "Karolinská 706/3",
-    address_city: "Praha 8",
-    address_zip: "186 00",
-    legal_form: "Akciová společnost",
-  },
+const ARES_URL = "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty";
+const REQUEST_TIMEOUT_MS = 8_000;
+const DEBOUNCE_MS = 350;
+
+// Czech business-registry legal-form codes. Covers the long tail of small
+// businesses you'd realistically meet on a CRM landing page. Anything not
+// listed falls back to "Právní forma {code}" so users still see *something*.
+const LEGAL_FORM_LABELS: Record<string, string> = {
+  "100": "Podnikající fyzická osoba",
+  "101": "Samostatně hospodařící rolník",
+  "102": "Podnikající fyzická osoba",
+  "111": "Veřejná obchodní společnost",
+  "112": "Společnost s ručením omezeným",
+  "113": "Komanditní společnost",
+  "117": "Nadace",
+  "118": "Nadační fond",
+  "121": "Akciová společnost",
+  "122": "Obecně prospěšná společnost",
+  "141": "Obecně prospěšná společnost",
+  "145": "Společenství vlastníků jednotek",
+  "161": "Ústav",
+  "201": "Zemědělské družstvo",
+  "205": "Družstvo",
+  "211": "Družstevní podnik zemědělský",
+  "301": "Státní podnik",
+  "302": "Národní podnik",
+  "325": "Organizační složka státu",
+  "331": "Příspěvková organizace",
+  "352": "Správa železniční dopravní cesty",
+  "361": "Veřejnoprávní instituce",
+  "421": "Zahraniční osoba",
+  "422": "Organizační složka zahraniční osoby",
+  "501": "Odštěpný závod",
+  "601": "Vysoká škola",
+  "641": "Školská právnická osoba",
+  "661": "Veřejná výzkumná instituce",
+  "706": "Spolek",
+  "721": "Církevní organizace",
+  "731": "Organizační jednotka sdružení",
+  "736": "Pobočný spolek",
+  "741": "Stavovská organizace",
+  "745": "Nadace",
+  "751": "Nadační fond",
+  "761": "Honební společenstvo",
+  "771": "Zájmové sdružení právnických osob",
+  "801": "Obec",
+  "804": "Kraj",
+  "811": "Městská část",
+  "907": "Zahraniční politická strana",
 };
+
+function labelLegalForm(code: string | undefined): string {
+  if (!code) return "";
+  return LEGAL_FORM_LABELS[code] ?? `Právní forma ${code}`;
+}
 
 const PRESETS: { ico: string; label: string }[] = [
   { ico: "27082440", label: "Alza.cz" },
-  { ico: "25892533", label: "Notino" },
-  { ico: "26168685", label: "Heureka" },
+  { ico: "26168685", label: "Seznam.cz" },
+  { ico: "27604977", label: "Google ČR" },
 ];
 
-type LookupState = "empty" | "typing" | "loading" | "success" | "not_found";
+type LookupState = "empty" | "typing" | "loading" | "success" | "not_found" | "error";
 
-const DEBOUNCE_MS = 250;
-const FAKE_LATENCY_MS = 600;
+interface AresApiResponse {
+  ico?: unknown;
+  obchodniJmeno?: unknown;
+  dic?: unknown;
+  pravniForma?: unknown;
+  sidlo?: unknown;
+}
+
+interface AresSidlo {
+  nazevUlice?: unknown;
+  cisloDomovni?: unknown;
+  cisloOrientacni?: unknown;
+  nazevObce?: unknown;
+  psc?: unknown;
+}
+
+function asString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function formatStreet(sidlo: AresSidlo): string {
+  const ulice = asString(sidlo.nazevUlice);
+  const dom = sidlo.cisloDomovni;
+  const ori = sidlo.cisloOrientacni;
+  const parts: string[] = [];
+  if (ulice) parts.push(ulice);
+  if (typeof dom === "number") {
+    parts.push(typeof ori === "number" ? `${dom}/${ori}` : String(dom));
+  }
+  return parts.join(" ");
+}
+
+function formatPsc(psc: unknown): string {
+  if (typeof psc === "number") {
+    const padded = psc.toString().padStart(5, "0");
+    return `${padded.slice(0, 3)} ${padded.slice(3)}`;
+  }
+  if (typeof psc === "string" && /^\d{5}$/.test(psc)) {
+    return `${psc.slice(0, 3)} ${psc.slice(3)}`;
+  }
+  return "";
+}
+
+function parseAres(payload: AresApiResponse): AresRecord | null {
+  const ico = asString(payload.ico);
+  const name = asString(payload.obchodniJmeno);
+  if (!ico || !name) return null;
+  const sidlo: AresSidlo =
+    payload.sidlo && typeof payload.sidlo === "object" ? (payload.sidlo as AresSidlo) : {};
+  return {
+    ico,
+    name,
+    dic: asString(payload.dic),
+    address_street: formatStreet(sidlo),
+    address_city: asString(sidlo.nazevObce),
+    address_zip: formatPsc(sidlo.psc),
+    legal_form: labelLegalForm(asString(payload.pravniForma)),
+  };
+}
 
 export function AresDemoSection() {
   const [ico, setIco] = useState("");
@@ -87,26 +172,46 @@ export function AresDemoSection() {
 
     const queryId = ++latestQueryRef.current;
     setState("loading");
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
     const debounce = window.setTimeout(() => {
-      const latency = window.setTimeout(() => {
-        if (queryId !== latestQueryRef.current) return;
-        const hit = FIXTURE[ico];
-        if (hit && hit.ico) {
-          setResult(hit);
+      fetch(`${ARES_URL}/${ico}`, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      })
+        .then(async (res) => {
+          if (queryId !== latestQueryRef.current) return;
+          if (res.status === 404) {
+            setResult(null);
+            setState("not_found");
+            return;
+          }
+          if (!res.ok) throw new Error(`ARES HTTP ${res.status}`);
+          const payload = (await res.json()) as AresApiResponse;
+          const parsed = parseAres(payload);
+          if (!parsed) {
+            setResult(null);
+            setState("error");
+            return;
+          }
+          setResult(parsed);
           setState("success");
-        } else {
+        })
+        .catch((err: unknown) => {
+          if (queryId !== latestQueryRef.current) return;
+          if (err instanceof DOMException && err.name === "AbortError") return;
           setResult(null);
-          setState("not_found");
-        }
-      }, FAKE_LATENCY_MS);
-
-      // Cancellation token for the latency timer.
-      latestQueryRef.current = queryId;
-      return () => window.clearTimeout(latency);
+          setState("error");
+        })
+        .finally(() => window.clearTimeout(timeout));
     }, DEBOUNCE_MS);
 
-    return () => window.clearTimeout(debounce);
+    return () => {
+      window.clearTimeout(debounce);
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
   }, [ico]);
 
   const icoLength = ico.length;
@@ -194,12 +299,17 @@ export function AresDemoSection() {
             ) : null}
             {state === "not_found" ? (
               <p className="mt-3 text-xs text-warning" role="alert">
-                IČO {ico} v ukázce není. Zkuste jedno z přednastavených.
+                IČO {ico} jsme v ARES nenašli. Zkontrolujte zadání.
+              </p>
+            ) : null}
+            {state === "error" ? (
+              <p className="mt-3 text-xs text-danger" role="alert">
+                ARES momentálně neodpovídá. Zkuste to za chvíli znovu.
               </p>
             ) : null}
 
             <p className="mt-5 text-xs font-medium uppercase tracking-wider text-text-tertiary">
-              Vyzkoušet ukázku
+              Vyzkoušet
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {PRESETS.map((preset) => (
@@ -233,8 +343,16 @@ export function AresDemoSection() {
               </div>
             </div>
             <p className="mt-5 text-xs text-text-tertiary">
-              Skutečná aplikace volá veřejný rejstřík ARES živě. Tahle ukázka pracuje s pevnou sadou
-              dat, ať to funguje i bez přihlášení.
+              Data jdou živě z veřejného rejstříku ARES (
+              <a
+                href="https://ares.gov.cz"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="underline hover:text-text-secondary"
+              >
+                ares.gov.cz
+              </a>
+              ). V aplikaci to funguje stejně — jen rovnou přidáte firmu do CRM.
             </p>
           </div>
         </div>
