@@ -116,10 +116,12 @@ async def test_submit_feedback_without_attachment_dispatches_email(
         headers={"Authorization": f"Bearer {user_token}"},
     )
     assert response.status_code == 202, response.text
-    assert response.json() == {"delivered": True, "recipient": "simplecrm@seznam.cz"}
+    assert response.json() == {"delivered": True, "recipient": "info@simplecrm.cz"}
     assert len(captured) == 1
     msg = captured[0]
-    assert msg.to == "simplecrm@seznam.cz"
+    assert msg.to == "info@simplecrm.cz"
+    # Feedback notifications go out from the info send-as identity.
+    assert msg.sender_role == "info"
     assert "[BUG]" in msg.subject
     assert "Pipeline kanban" in msg.subject
     assert msg.reply_to == "reporter@feedback.cz"

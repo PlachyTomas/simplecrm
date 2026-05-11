@@ -4,15 +4,15 @@ Renders the BillingSettings Jinja2 templates with invoice context,
 attaches the stored PDF (fetched + hash-verified), sends via
 `services/email.send_email`, writes a `sent` audit-log entry.
 
-The existing `services/email.py` is still a stub — the message lands in
-the application log rather than a real inbox. Switching to a real
-provider is a one-file change in commit follow-up; this module's
-contract doesn't change.
+When SMTP credentials are configured the email actually goes out from
+`SMTP_FROM_INVOICES` (faktury@simplecrm.cz by default); otherwise the
+underlying `send_email` falls back to a structured log.
 """
 
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from datetime import UTC, datetime
 
@@ -21,7 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import BillingSettings, Invoice, InvoiceAuditLog
-from app.services.email import Email, send_email
+from app.services.email import Email, EmailAttachment, send_email
 from app.services.invoicing.renderer import (
     _fmt_date_cs,
     _fmt_money_cs,
@@ -76,11 +76,22 @@ class InvoiceMailer:
         subject = Template(billing.invoice_email_subject_template).render(**ctx)
         body = Template(billing.invoice_email_body_template).render(**ctx)
 
-        message = Email(to=recipient, subject=subject, body=body)
-        # The current send_email stub logs at INFO; when SES/Resend lands,
-        # this call grows an `attachments` argument carrying `pdf_bytes`.
-        # For now we just include the byte length in the audit payload so
-        # operators can confirm the right artifact was queued.
+        # Slugify the invoice number for the attachment filename so a
+        # customer's mail client doesn't choke on the raw `2026/00042`
+        # form; the original number stays inside the PDF + audit log.
+        safe_number = re.sub(r"[^A-Za-z0-9_.-]+", "-", invoice.number).strip("-") or "invoice"
+        attachment = EmailAttachment(
+            filename=f"faktura-{safe_number}.pdf",
+            content_type="application/pdf",
+            content=pdf_bytes,
+        )
+        message = Email(
+            to=recipient,
+            subject=subject,
+            body=body,
+            attachments=(attachment,),
+            sender_role="invoices",
+        )
         try:
             await send_email(message)
         except Exception as exc:

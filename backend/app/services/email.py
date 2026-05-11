@@ -17,10 +17,18 @@ import smtplib
 import ssl
 from dataclasses import dataclass, field
 from email.message import EmailMessage
+from typing import Literal
 
 from app.core.config import get_settings
 
 logger = logging.getLogger("simplecrm.email")
+
+
+# Which Zoho send-as identity to use as `From:`. The split lets the
+# customer see invoices coming from a billing inbox while system /
+# feedback notifications come from the general info inbox — same SMTP
+# account, two surfaces.
+SenderRole = Literal["invoices", "info"]
 
 
 @dataclass(frozen=True)
@@ -45,6 +53,10 @@ class Email:
     # founder can hit Reply and land on the reporting user's inbox.
     reply_to: str | None = None
     attachments: tuple[EmailAttachment, ...] = field(default_factory=tuple)
+    # Picks which Zoho send-as identity supplies the `From:` header.
+    # Defaults to "info" since everything except customer-facing
+    # invoices should come from info@simplecrm.cz.
+    sender_role: SenderRole = "info"
 
 
 def build_freed_company_email(
@@ -152,12 +164,23 @@ def _build_mime(message: Email, *, sender: str) -> EmailMessage:
     return msg
 
 
+def _resolve_sender(role: SenderRole) -> str:
+    """Pick the configured send-as identity for `role`, falling back to
+    `smtp_username` when the role-specific override is empty. Returning
+    an empty string would land an unsendable message; the fallback keeps
+    misconfigured environments at least producing valid envelopes.
+    """
+    settings = get_settings()
+    role_value = settings.smtp_from_invoices if role == "invoices" else settings.smtp_from_info
+    return role_value or settings.smtp_username
+
+
 def _send_via_smtp(message: Email) -> None:
     """Blocking SMTP send. Called via `asyncio.to_thread` so the event
     loop isn't blocked on slow handshakes.
     """
     settings = get_settings()
-    sender = settings.smtp_from or settings.smtp_username
+    sender = _resolve_sender(message.sender_role)
     mime = _build_mime(message, sender=sender)
 
     context = ssl.create_default_context()

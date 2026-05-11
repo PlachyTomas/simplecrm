@@ -57,28 +57,37 @@ class Settings(BaseSettings):
     comgate_test_mode: bool = True
     comgate_return_url: str = "http://localhost:8000/api/v1/payments/return"
 
-    # SMTP delivery. When `smtp_host` is empty the email service falls
-    # back to logging payloads (`app.services.email.send_email`) — that
-    # keeps dev/test working without secrets. Set all of these in prod
-    # to actually deliver verification + feedback emails.
+    # Zoho Mail SMTP — single account, two send-as identities:
+    #   * faktury@simplecrm.cz for invoice delivery (PDF attached)
+    #   * info@simplecrm.cz   for everything else (feedback, verification,
+    #                          password reset, freed-company digest, etc.)
+    # Both identities are added in Zoho Mail Admin → Send-As; SMTP
+    # auth still uses the primary account credentials in `smtp_username`
+    # / `smtp_password`. Defaults point at the EU data center because
+    # the rest of the stack is hosted in Hetzner FSN1.
     #
-    # Seznam SMTP defaults: smtp.seznam.cz, port 465 with SSL on, login
-    # with the account's app password (NOT the regular password).
-    smtp_host: str = ""
+    # When `smtp_host` is empty the email service falls back to logging
+    # payloads (`app.services.email.send_email`) — that keeps dev/test
+    # working without secrets.
+    smtp_host: str = "smtp.zoho.eu"
     smtp_port: int = 465
     smtp_username: str = ""
     smtp_password: str = ""
-    # Some providers (Seznam) sit on implicit TLS; others (Mailgun) want
-    # STARTTLS. Pick exactly one.
+    # Zoho's port 465 is implicit-TLS; STARTTLS sits on 587. Pick exactly
+    # one based on the chosen port.
     smtp_use_ssl: bool = True
     smtp_use_starttls: bool = False
-    # `From:` header. If unset, falls back to `smtp_username`.
-    smtp_from: str = ""
+
+    # `From:` headers per sender role. Falls back to `smtp_username`
+    # when unset so a misconfigured deployment still produces a valid
+    # message instead of a "From: " blank.
+    smtp_from_invoices: str = "faktury@simplecrm.cz"
+    smtp_from_info: str = "info@simplecrm.cz"
 
     # Inbox the /api/v1/feedback endpoint forwards bug reports and
-    # improvement suggestions to. Founder's email — overridable per
-    # environment.
-    feedback_recipient_email: str = "simplecrm@seznam.cz"
+    # improvement suggestions to. By default we send the notification to
+    # the same info@ mailbox that signs it.
+    feedback_recipient_email: str = "info@simplecrm.cz"
 
     # Tax-invoice archival storage (commit #4 of INVOICES_TASK.md).
     # When `s3_endpoint_url` is set, the storage layer writes invoice
