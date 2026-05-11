@@ -203,7 +203,7 @@ describe("TrialExpiredGate", () => {
     expect(screen.getByRole("button", { name: /^Pokračovat na platbu$/i })).toBeDisabled();
   });
 
-  it("enables the primary CTA after selecting annual and shows the dynamic savings caption", async () => {
+  it("enables the primary CTA after selecting annual + ticking recurring-payment consent", async () => {
     setupFetch({ userCount: 8 });
     renderGate();
     const annualCard = await screen.findByRole("radio", { name: /Roční/i });
@@ -212,6 +212,9 @@ describe("TrialExpiredGate", () => {
     );
     fireEvent.click(annualCard);
     expect(annualCard).toHaveAttribute("aria-checked", "true");
+    // After selecting a plan the CTA is still gated on the consent checkbox.
+    expect(screen.getByRole("button", { name: /^Pokračovat na platbu$/i })).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox", { name: /Souhlasím s opakovanými platbami/i }));
     expect(screen.getByRole("button", { name: /^Pokračovat na platbu$/i })).toBeEnabled();
   });
 
@@ -237,6 +240,7 @@ describe("TrialExpiredGate", () => {
       renderGate();
       const annualCard = await screen.findByRole("radio", { name: /Roční/i });
       fireEvent.click(annualCard);
+      fireEvent.click(screen.getByRole("checkbox", { name: /Souhlasím s opakovanými platbami/i }));
       fireEvent.click(screen.getByRole("button", { name: /^Pokračovat na platbu$/i }));
       await waitFor(() => expect(choosePlanCalls).toHaveLength(1));
       expect(choosePlanCalls[0]?.body).toEqual({ plan_code: "annual" });
@@ -258,6 +262,7 @@ describe("TrialExpiredGate", () => {
     renderGate();
     const monthlyCard = await screen.findByRole("radio", { name: /Měsíční/i });
     fireEvent.click(monthlyCard);
+    fireEvent.click(screen.getByRole("checkbox", { name: /Souhlasím s opakovanými platbami/i }));
     fireEvent.click(screen.getByRole("button", { name: /^Pokračovat na platbu$/i }));
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent(/Platební brána není dostupná/i),

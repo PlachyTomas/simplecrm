@@ -1,0 +1,53 @@
+/**
+ * Statutory identification of the SimpleCRM operator.
+ *
+ * Required by § 435 OZ (every page reachable via dálkový přístup must show
+ * jméno, sídlo, IČO, údaj o zápisu) and by Comgate's onboarding checklist.
+ * Edit here to update every legal page, footer, contact page, and DPA at once.
+ *
+ * Fields prefixed with TODO_ are placeholders the founder must fill in before
+ * the site goes live. `isReady` flips to true once every TODO_ is replaced.
+ */
+
+export const LEGAL_ENTITY = {
+  fullName: "Tomáš Plachý",
+  address: "Lidická 55, Brno 602 00",
+  ico: "06437541",
+  registryClause:
+    "Fyzická osoba zapsaná v živnostenském rejstříku, evidenční úřad: Magistrát města Brna.",
+  /**
+   * Single kontaktní e-mail — slouží zároveň pro obchodní dotazy,
+   * technickou podporu i reklamace. Bez telefonního kontaktu (vědomé
+   * rozhodnutí provozovatele); ComGate náležitosti e-shopu doporučují
+   * uvádět i telefon, proto k tomu před spuštěním zvážit alternativu.
+   */
+  email: "simplecrm@seznam.cz",
+  // Číslo bankovního účtu se na veřejných stránkách nezobrazuje — invoice
+  // šablony a ComGate onboarding ho čerpají z backend env `BANK_ACCOUNT`.
+} as const;
+
+/** Comgate operator block — texts mandated by Comgate's "loga-a-udaje-na-webu" doc. */
+export const COMGATE_INFO = {
+  legalText:
+    "Online platby pro nás zajišťuje platební brána Comgate. Poskytovatel služby, společnost Comgate a.s. je licencovaná Platební instituce působící pod dohledem České národní banky. Platby probíhající skrze platební bránu jsou plně zabezpečeny a veškeré informace jsou šifrovány. Další informace a kontakty na www.comgate.eu.",
+  contact: {
+    name: "Comgate, a.s.",
+    address: "Gočárova třída 1754/48b, 500 02 Hradec Králové",
+    email: "platby-podpora@comgate.cz",
+    phone: "+420 228 224 267",
+  },
+} as const;
+
+/** Effective date stamped onto VOP / Privacy / DPA / Cookies pages. */
+export const LEGAL_EFFECTIVE_DATE = "10.05.2026";
+
+/** True once every TODO_ value above has been replaced. Footer / Kontakt page use this to surface a build-time warning to the founder during development. */
+export const isLegalEntityReady = (): boolean => {
+  const values = [
+    LEGAL_ENTITY.address,
+    LEGAL_ENTITY.ico,
+    LEGAL_ENTITY.registryClause,
+    LEGAL_EFFECTIVE_DATE,
+  ];
+  return !values.some((v) => v.includes("TODO_"));
+};

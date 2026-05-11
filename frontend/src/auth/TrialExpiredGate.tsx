@@ -5,6 +5,7 @@ import { formatCzkMinor } from "@/components/billing/format";
 import { PriceDisplay } from "@/components/billing/PriceDisplay";
 import { useBillingSummary } from "@/components/billing/useBillingSummary";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
+import { RecurringPaymentConsent } from "@/components/billing/RecurringPaymentConsent";
 import { useInitialPaymentInit } from "@/components/billing/usePayments";
 import { usePublicPlans } from "@/components/billing/usePublicPlans";
 import { ApiError, apiFetch, type TrialExpiredPayload } from "@/lib/api";
@@ -35,6 +36,7 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
   const initPayment = useInitialPaymentInit();
 
   const [selected, setSelected] = useState<PlanCode | null>(null);
+  const [recurringConsent, setRecurringConsent] = useState(false);
   const [submitted] = useState(false); // legacy "thank-you" panel kept for shape; no longer flipped
   const [error, setError] = useState<string | null>(null);
   const contactDialogRef = useRef<HTMLDialogElement | null>(null);
@@ -51,6 +53,10 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
 
   function onSubmitChoosePlan() {
     if (!selected || !accessToken) return;
+    if (!recurringConsent) {
+      setError("Pro pokračování je nutné potvrdit souhlas s opakovanými platbami.");
+      return;
+    }
     setError(null);
     initPayment.mutate(
       { plan_code: selected },
@@ -135,6 +141,18 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
               />
             </div>
 
+            <div className="mt-6">
+              <RecurringPaymentConsent
+                selected={selected}
+                checked={recurringConsent}
+                onChange={(v) => {
+                  setRecurringConsent(v);
+                  if (v) setError(null);
+                }}
+                disabled={submitting}
+              />
+            </div>
+
             <button
               type="button"
               onClick={openContactModal}
@@ -156,7 +174,7 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
               <button
                 type="button"
                 onClick={() => void onSubmitChoosePlan()}
-                disabled={!selected || submitting}
+                disabled={!selected || submitting || !recurringConsent}
                 className="inline-flex h-11 items-center justify-center rounded-md bg-accent px-6 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting ? "Přesměrování…" : "Pokračovat na platbu"}

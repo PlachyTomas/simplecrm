@@ -314,6 +314,8 @@ describe("Billing settings page", () => {
     );
     const annualCard = screen.getByRole("radio", { name: /Roční/i });
     expect(annualCard).toHaveAttribute("aria-checked", "true");
+    // Card-on-File consent is required by Visa/MC + Comgate; tick before submit.
+    fireEvent.click(screen.getByRole("checkbox", { name: /Souhlasím s opakovanými platbami/i }));
     fireEvent.click(screen.getByRole("button", { name: /^Pokračovat na platbu$/i }));
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]?.body).toEqual({ plan_code: "annual" });

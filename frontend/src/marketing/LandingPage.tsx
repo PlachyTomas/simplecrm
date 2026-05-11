@@ -19,6 +19,8 @@ import { Link } from "react-router-dom";
 import { API_BASE_URL } from "@/lib/api";
 import { ThemeToggle } from "@/lib/ThemeToggle";
 import { cn } from "@/lib/utils";
+import { openCookieSettings } from "@/marketing/cookie-consent-controls";
+import { COMGATE_INFO, LEGAL_ENTITY } from "@/marketing/legal-entity";
 import { InteractivePipeline } from "@/marketing/InteractivePipeline";
 import { ReportsDemoSection } from "@/marketing/ReportsDemoSection";
 
@@ -33,6 +35,7 @@ const NAV_LINKS: NavLink[] = [
   { kind: "anchor", href: "#funkce", label: "Funkce" },
   { kind: "route", to: "/cenik", label: "Ceník" },
   { kind: "anchor", href: "#faq", label: "FAQ" },
+  { kind: "route", to: "/kontakt", label: "Kontakt" },
 ];
 
 export function Nav() {
@@ -573,36 +576,133 @@ export function Footer() {
   return (
     <footer className="border-t border-border-subtle">
       <div className="mx-auto max-w-[1200px] px-4 py-10 md:px-8">
-        <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
-          <div className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-highlight text-text-on-accent"
-            >
-              <Sparkles size={18} strokeWidth={1.75} />
-            </span>
-            <span className="text-sm font-semibold">SimpleCRM</span>
-          </div>
-          <nav aria-label="Patička" className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            <a href="#funkce" className="text-text-secondary hover:text-text-primary">
-              Funkce
-            </a>
-            <Link to="/cenik" className="text-text-secondary hover:text-text-primary">
-              Ceník
+        <div className="grid gap-8 md:grid-cols-4">
+          <div className="md:col-span-1">
+            <Link to="/" className="flex items-center gap-2" aria-label="SimpleCRM">
+              <span
+                aria-hidden
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-highlight text-text-on-accent"
+              >
+                <Sparkles size={18} strokeWidth={1.75} />
+              </span>
+              <span className="text-sm font-semibold">SimpleCRM</span>
             </Link>
-            <a href="#faq" className="text-text-secondary hover:text-text-primary">
-              FAQ
-            </a>
+            <p className="mt-3 text-xs text-text-tertiary">
+              Jednoduché české CRM pro firmy do 30 obchodníků.
+            </p>
+          </div>
+
+          <div className="md:col-span-1">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+              Provozovatel
+            </h3>
+            <address className="mt-3 text-xs not-italic leading-relaxed text-text-secondary">
+              {LEGAL_ENTITY.fullName}
+              <br />
+              {LEGAL_ENTITY.address}
+              <br />
+              IČO: {LEGAL_ENTITY.ico}
+              <br />
+              <span className="text-text-tertiary">{LEGAL_ENTITY.registryClause}</span>
+            </address>
             <a
-              href="mailto:podpora@simplecrm.cz"
-              className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary"
+              href={`mailto:${LEGAL_ENTITY.email}`}
+              className="mt-3 inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary"
             >
-              <Mail size={14} strokeWidth={1.75} /> podpora@simplecrm.cz
+              <Mail size={12} strokeWidth={1.75} /> {LEGAL_ENTITY.email}
             </a>
-          </nav>
+          </div>
+
+          <div className="md:col-span-1">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+              Produkt
+            </h3>
+            <nav aria-label="Patička – produkt" className="mt-3 flex flex-col gap-2 text-xs">
+              <Link to="/" className="text-text-secondary hover:text-text-primary">
+                Úvod
+              </Link>
+              <Link to="/cenik" className="text-text-secondary hover:text-text-primary">
+                Ceník
+              </Link>
+              <Link to="/predplatne" className="text-text-secondary hover:text-text-primary">
+                Předplatné a platby
+              </Link>
+              <Link to="/kontakt" className="text-text-secondary hover:text-text-primary">
+                Kontakt
+              </Link>
+            </nav>
+          </div>
+
+          <div className="md:col-span-1">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+              Právní informace
+            </h3>
+            <nav aria-label="Patička – právní informace" className="mt-3 flex flex-col gap-2 text-xs">
+              <Link
+                to="/obchodni-podminky"
+                className="text-text-secondary hover:text-text-primary"
+              >
+                Obchodní podmínky
+              </Link>
+              <Link
+                to="/ochrana-osobnich-udaju"
+                className="text-text-secondary hover:text-text-primary"
+              >
+                Ochrana osobních údajů
+              </Link>
+              <Link
+                to="/zpracovatelska-smlouva"
+                className="text-text-secondary hover:text-text-primary"
+              >
+                Zpracovatelská smlouva (DPA)
+              </Link>
+              <Link to="/cookies" className="text-text-secondary hover:text-text-primary">
+                Cookies
+              </Link>
+              <button
+                type="button"
+                onClick={() => openCookieSettings()}
+                className="text-left text-text-secondary hover:text-text-primary"
+              >
+                Nastavení cookies
+              </button>
+            </nav>
+          </div>
         </div>
+
+        <div className="mt-8 border-t border-border-subtle pt-6">
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+              Platební metody
+            </span>
+            <span className="inline-flex items-center rounded border border-border-subtle bg-surface-overlay px-2 py-1 text-xs font-semibold text-text-secondary">
+              VISA
+            </span>
+            <span className="inline-flex items-center rounded border border-border-subtle bg-surface-overlay px-2 py-1 text-xs font-semibold text-text-secondary">
+              Mastercard
+            </span>
+            <span className="inline-flex items-center rounded border border-border-subtle bg-surface-overlay px-2 py-1 text-xs font-semibold text-text-secondary">
+              Apple Pay
+            </span>
+            <span className="inline-flex items-center rounded border border-border-subtle bg-surface-overlay px-2 py-1 text-xs font-semibold text-text-secondary">
+              Google Pay
+            </span>
+            <a
+              href="https://www.comgate.eu"
+              target="_blank"
+              rel="noreferrer noopener"
+              className="inline-flex items-center rounded border border-border-subtle bg-surface-overlay px-2 py-1 text-xs font-semibold text-text-secondary hover:text-text-primary"
+            >
+              Comgate
+            </a>
+          </div>
+          <p className="mt-4 max-w-3xl text-xs leading-relaxed text-text-tertiary">
+            {COMGATE_INFO.legalText}
+          </p>
+        </div>
+
         <p className="mt-6 text-xs text-text-tertiary">
-          © {new Date().getFullYear()} SimpleCRM · Ochrana osobních údajů · Obchodní podmínky
+          © {new Date().getFullYear()} SimpleCRM
         </p>
       </div>
     </footer>

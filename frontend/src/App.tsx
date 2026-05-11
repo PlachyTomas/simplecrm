@@ -24,7 +24,14 @@ import { queryClient } from "@/lib/queryClient";
 import { ThemeProvider } from "@/lib/theme";
 import { ToastProvider } from "@/lib/toast";
 import { CenikPage } from "@/marketing/CenikPage";
+import { CookieConsent } from "@/marketing/cookie-consent";
 import { LandingPage } from "@/marketing/LandingPage";
+import { CookiesPage } from "@/marketing/legal/CookiesPage";
+import { KontaktPage } from "@/marketing/legal/KontaktPage";
+import { ObchodniPodminkyPage } from "@/marketing/legal/ObchodniPodminkyPage";
+import { OchranaOsobnichUdajuPage } from "@/marketing/legal/OchranaOsobnichUdajuPage";
+import { PredplatnePage } from "@/marketing/legal/PredplatnePage";
+import { ZpracovatelskaSmlouvaPage } from "@/marketing/legal/ZpracovatelskaSmlouvaPage";
 import { NotFoundPage } from "@/marketing/NotFoundPage";
 import { AcceptInvitePage } from "@/onboarding/AcceptInvitePage";
 import { CreateOrgPage } from "@/onboarding/CreateOrgPage";
@@ -36,6 +43,12 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/cenik" element={<CenikPage />} />
+      <Route path="/kontakt" element={<KontaktPage />} />
+      <Route path="/obchodni-podminky" element={<ObchodniPodminkyPage />} />
+      <Route path="/ochrana-osobnich-udaju" element={<OchranaOsobnichUdajuPage />} />
+      <Route path="/zpracovatelska-smlouva" element={<ZpracovatelskaSmlouvaPage />} />
+      <Route path="/cookies" element={<CookiesPage />} />
+      <Route path="/predplatne" element={<PredplatnePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
@@ -93,6 +106,7 @@ export function App() {
           <AuthProvider>
             <BrowserRouter>
               <AppRoutes />
+              <CookieConsent />
             </BrowserRouter>
           </AuthProvider>
         </QueryClientProvider>

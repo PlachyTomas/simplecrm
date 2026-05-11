@@ -18,6 +18,7 @@ import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { formatCzkMinor } from "@/components/billing/format";
 import { PriceDisplay } from "@/components/billing/PriceDisplay";
+import { RecurringPaymentConsent } from "@/components/billing/RecurringPaymentConsent";
 import { useBillingSummary } from "@/components/billing/useBillingSummary";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
 import { usePublicPlans } from "@/components/billing/usePublicPlans";
@@ -1351,6 +1352,7 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
   const plans = usePublicPlans();
   const summary = useBillingSummary();
   const [selected, setSelected] = useState<PlanCode | null>(preselect);
+  const [recurringConsent, setRecurringConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const monthlyPlan = plans.data?.find((p) => p.code === "monthly");
@@ -1365,6 +1367,14 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!selected || initPayment.isPending) return;
+    // Visa/Mastercard + Comgate Card-on-File rule — the customer must
+    // explicitly accept the recurring-charge terms at the same click that
+    // initiates the first charge. Static T&Cs page is not enough; this
+    // checkbox is the moment of consent for risk-review purposes.
+    if (!recurringConsent) {
+      setError("Pro pokračování je nutné potvrdit souhlas s opakovanými platbami.");
+      return;
+    }
     setError(null);
     initPayment.mutate(
       { plan_code: selected },
@@ -1439,6 +1449,18 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
           />
         </div>
 
+        <div className="mt-6">
+          <RecurringPaymentConsent
+            selected={selected}
+            checked={recurringConsent}
+            onChange={(v) => {
+              setRecurringConsent(v);
+              if (v) setError(null);
+            }}
+            disabled={submitting}
+          />
+        </div>
+
         {error ? (
           <p
             role="alert"
@@ -1459,7 +1481,7 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
           </button>
           <button
             type="submit"
-            disabled={!selected || submitting}
+            disabled={!selected || submitting || !recurringConsent}
             className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? "Přesměrování…" : "Pokračovat na platbu"}
