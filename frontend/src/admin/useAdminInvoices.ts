@@ -158,9 +158,7 @@ export function useAdminInvoiceDetail(invoiceId: string | null) {
   });
 }
 
-function useInvoiceAction<TBody extends Record<string, unknown>>(
-  endpoint: (id: string) => string,
-) {
+function useInvoiceAction<TBody extends Record<string, unknown>>(endpoint: (id: string) => string) {
   const { accessToken } = useAuth();
   const qc = useQueryClient();
   return useMutation({

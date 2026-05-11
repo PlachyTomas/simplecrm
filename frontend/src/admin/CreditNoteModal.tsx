@@ -122,9 +122,7 @@ export function CreditNoteModal({ parent, onClose, onIssued }: CreditNoteModalPr
                       <input
                         type="text"
                         value={line.unit_label ?? ""}
-                        onChange={(e) =>
-                          updateLine(idx, { unit_label: e.target.value || null })
-                        }
+                        onChange={(e) => updateLine(idx, { unit_label: e.target.value || null })}
                         className="w-16 rounded border border-border bg-bg px-2 py-1 text-sm"
                       />
                     </td>
@@ -175,7 +173,7 @@ export function CreditNoteModal({ parent, onClose, onIssued }: CreditNoteModalPr
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-border bg-bg px-4 py-1.5 text-sm hover:bg-bg-elevated"
+            className="hover:bg-bg-elevated rounded-md border border-border bg-bg px-4 py-1.5 text-sm"
           >
             Zrušit
           </button>

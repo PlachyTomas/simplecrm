@@ -1127,7 +1127,8 @@ function TaxInvoicesCard() {
     downloadPdf.mutate(
       { id: row.id, number: row.number },
       {
-        onError: () => setError("Stažení PDF se nezdařilo. Zkuste to znovu nebo kontaktujte podporu."),
+        onError: () =>
+          setError("Stažení PDF se nezdařilo. Zkuste to znovu nebo kontaktujte podporu."),
       },
     );
   }
@@ -1189,7 +1190,7 @@ function TaxInvoicesCard() {
                     onClick={() => onDownload(inv)}
                     disabled={downloadPdf.isPending}
                     aria-label={`Stáhnout PDF faktury ${inv.number}`}
-                    className="inline-flex items-center justify-center rounded-md border border-border bg-bg p-1.5 text-text-secondary transition hover:bg-bg-elevated hover:text-text-primary disabled:cursor-wait disabled:opacity-50"
+                    className="hover:bg-bg-elevated inline-flex items-center justify-center rounded-md border border-border bg-bg p-1.5 text-text-secondary transition hover:text-text-primary disabled:cursor-wait disabled:opacity-50"
                   >
                     <Download className="size-4" aria-hidden="true" />
                   </button>

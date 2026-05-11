@@ -632,7 +632,23 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Move Deal Stage */
+        /**
+         * Move Deal Stage
+         * @description Drag-and-drop endpoint for the kanban board.
+         *
+         *     Syncs `closed_at` and `lost_reason` to the destination stage's type:
+         *       * Drag into a `won` stage  → set `closed_at = now`, clear lost_reason,
+         *         refresh the company's last_order_at + ownership_expires_at (matches
+         *         `mark-won` semantics; otherwise the deal would be invisible from
+         *         the board's won-window filter).
+         *       * Drag into a `lost` stage → set `closed_at = now` so the deal is
+         *         marked terminal. `lost_reason` is left as-is — drag has no UI for
+         *         capturing it; the founder can edit via the deal detail page.
+         *       * Drag into an `open` stage → clear `closed_at` and `lost_reason`
+         *         ("reopen"). Without this, dragging a won deal back to an earlier
+         *         stage would leave `closed_at` set, and the board's visibility
+         *         filter would hide the row.
+         */
         post: operations["move_deal_stage_api_v1_deals__deal_id__move_stage_post"];
         delete?: never;
         options?: never;
@@ -717,6 +733,69 @@ export interface paths {
         post?: never;
         /** Revoke */
         delete: operations["revoke_api_v1_invitations__invitation_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/current/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List My Invoices
+         * @description Paginated list of the caller's organization's tax invoices.
+         *     Drafts are excluded from the customer surface — those are the
+         *     founder's review queue.
+         */
+        get: operations["list_my_invoices_api_v1_organizations_current_invoices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/current/invoices/{invoice_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get My Invoice */
+        get: operations["get_my_invoice_api_v1_organizations_current_invoices__invoice_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/current/invoices/{invoice_id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get My Invoice Pdf
+         * @description Stream the archived PDF, hash-verified.
+         *
+         *     503 (rather than 200 with corrupted bytes) when the stored bytes
+         *     fail integrity verification — the customer should know something
+         *     is wrong rather than silently file a tampered document.
+         */
+        get: operations["get_my_invoice_pdf_api_v1_organizations_current_invoices__invoice_id__pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1901,6 +1980,236 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Invoices
+         * @description Cross-org invoice list with filter chain.
+         *
+         *     Filters compose with AND semantics. `q` matches against invoice
+         *     number OR customer_name (ILIKE substring); useful for the search box
+         *     in the admin UI.
+         */
+        get: operations["list_invoices_api_v1_admin_invoices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/invoices/{invoice_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Invoice Detail */
+        get: operations["get_invoice_detail_api_v1_admin_invoices__invoice_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/invoices/{invoice_id}/mark-paid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark Paid */
+        post: operations["mark_paid_api_v1_admin_invoices__invoice_id__mark_paid_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/invoices/{invoice_id}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Void Invoice */
+        post: operations["void_invoice_api_v1_admin_invoices__invoice_id__void_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/invoices/{invoice_id}/credit-note": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue Credit Note
+         * @description Issue a credit-note row referencing this invoice. Returns the
+         *     detail of the **new credit-note** invoice (not the original).
+         */
+        post: operations["issue_credit_note_api_v1_admin_invoices__invoice_id__credit_note_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/invoices/manual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue Manual Invoice
+         * @description Founder-driven issuance — no ComGate charge involved. Used for
+         *     refunds, comp-org back-charges, and one-off corrections.
+         */
+        post: operations["issue_manual_invoice_api_v1_admin_invoices_manual_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/invoices/{invoice_id}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send Invoice */
+        post: operations["send_invoice_api_v1_admin_invoices__invoice_id__send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/invoices/export/csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Year Csv */
+        get: operations["export_year_csv_api_v1_admin_invoices_export_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/invoices/export/pdfs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Year Pdf Zip */
+        get: operations["export_year_pdf_zip_api_v1_admin_invoices_export_pdfs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/invoices/export/full": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Year Full */
+        get: operations["export_year_full_api_v1_admin_invoices_export_full_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/invoices/integrity/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Integrity Check
+         * @description Walk every issued invoice's stored bytes and verify hashes.
+         *
+         *     Synchronous — finishes within the request. Acceptable at our scale
+         *     (sub-second per invoice). If we ever take more than a few seconds,
+         *     move to a background job + a status-poll endpoint.
+         */
+        post: operations["run_integrity_check_api_v1_admin_invoices_integrity_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/invoices/integrity/last-run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Last Integrity Run
+         * @description Return the most recent integrity-check run summary, or null if
+         *     no run has happened yet.
+         */
+        get: operations["get_last_integrity_run_api_v1_admin_invoices_integrity_last_run_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1997,6 +2306,319 @@ export interface components {
             created_at: string;
             actor?: components["schemas"]["AdminActivityActor"] | null;
         };
+        /** AdminCreditNoteIn */
+        AdminCreditNoteIn: {
+            /** Reason */
+            reason: string;
+            /** Lines */
+            lines: components["schemas"]["AdminCreditNoteLineIn"][];
+        };
+        /** AdminCreditNoteLineIn */
+        AdminCreditNoteLineIn: {
+            /** Description */
+            description: string;
+            /** Quantity */
+            quantity: number | string;
+            /**
+             * Unit Price Minor
+             * @description Must be ≤ 0 for a credit
+             */
+            unit_price_minor: number;
+            /** Unit Label */
+            unit_label?: string | null;
+            /** Vat Rate Percent */
+            vat_rate_percent?: number | string | null;
+        };
+        /** AdminIntegrityFailure */
+        AdminIntegrityFailure: {
+            /**
+             * Invoice Id
+             * Format: uuid
+             */
+            invoice_id: string;
+            /** Invoice Number */
+            invoice_number: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "pdf" | "isdoc";
+            /** Error */
+            error: string;
+        };
+        /** AdminIntegrityRunOut */
+        AdminIntegrityRunOut: {
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Checked */
+            checked: number;
+            /** Ok */
+            ok: number;
+            /** Failed */
+            failed: number;
+            /** Failures */
+            failures: components["schemas"]["AdminIntegrityFailure"][];
+            /** Created At */
+            created_at?: string | null;
+        };
+        /** AdminInvoiceAuditEntry */
+        AdminInvoiceAuditEntry: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Event */
+            event: string;
+            /** Actor User Id */
+            actor_user_id: string | null;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** AdminInvoiceDetail */
+        AdminInvoiceDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /** Organization Name */
+            organization_name: string;
+            /** Subscription Id */
+            subscription_id: string | null;
+            /** Charge Id */
+            charge_id: string | null;
+            /** Number */
+            number: string;
+            /** Variable Symbol */
+            variable_symbol: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "invoice" | "credit_note" | "proforma";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "issued" | "paid" | "overdue" | "voided";
+            /** Related Invoice Id */
+            related_invoice_id: string | null;
+            /**
+             * Issued At
+             * Format: date-time
+             */
+            issued_at: string;
+            /**
+             * Taxable Supply Date
+             * Format: date
+             */
+            taxable_supply_date: string;
+            /**
+             * Due At
+             * Format: date
+             */
+            due_at: string;
+            /** Paid At */
+            paid_at: string | null;
+            /** Issuer Name */
+            issuer_name: string;
+            /** Issuer Address */
+            issuer_address: string;
+            /** Issuer Ico */
+            issuer_ico: string;
+            /** Issuer Dic */
+            issuer_dic: string | null;
+            /** Issuer Iban */
+            issuer_iban: string;
+            /** Issuer Account Domestic */
+            issuer_account_domestic: string | null;
+            /** Issuer Register Text */
+            issuer_register_text: string;
+            /** Issuer Is Vat Payer */
+            issuer_is_vat_payer: boolean;
+            /** Customer Name */
+            customer_name: string;
+            /** Customer Address */
+            customer_address: string;
+            /** Customer Ico */
+            customer_ico: string | null;
+            /** Customer Dic */
+            customer_dic: string | null;
+            /** Customer Email */
+            customer_email: string | null;
+            /** Currency */
+            currency: string;
+            /** Subtotal Minor */
+            subtotal_minor: number;
+            /** Vat Amount Minor */
+            vat_amount_minor: number;
+            /** Total Minor */
+            total_minor: number;
+            /** Vat Rate Percent */
+            vat_rate_percent: string;
+            /** Payment Method */
+            payment_method: string;
+            /** Note */
+            note: string | null;
+            /** Sent At */
+            sent_at: string | null;
+            /** Sent To Email */
+            sent_to_email: string | null;
+            /** Pdf Object Key */
+            pdf_object_key: string | null;
+            /** Pdf Sha256 */
+            pdf_sha256: string | null;
+            /** Pdf Size Bytes */
+            pdf_size_bytes: number | null;
+            /** Isdoc Object Key */
+            isdoc_object_key: string | null;
+            /** Isdoc Sha256 */
+            isdoc_sha256: string | null;
+            /** Lines */
+            lines: components["schemas"]["AdminInvoiceLine"][];
+            /** Audit Log */
+            audit_log: components["schemas"]["AdminInvoiceAuditEntry"][];
+        };
+        /** AdminInvoiceLine */
+        AdminInvoiceLine: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Position */
+            position: number;
+            /** Description */
+            description: string;
+            /** Quantity */
+            quantity: string;
+            /** Unit Label */
+            unit_label: string | null;
+            /** Unit Price Minor */
+            unit_price_minor: number;
+            /** Vat Rate Percent */
+            vat_rate_percent: string;
+            /** Line Subtotal Minor */
+            line_subtotal_minor: number;
+            /** Line Vat Minor */
+            line_vat_minor: number;
+            /** Line Total Minor */
+            line_total_minor: number;
+        };
+        /** AdminInvoiceList */
+        AdminInvoiceList: {
+            /** Items */
+            items: components["schemas"]["AdminInvoiceListItem"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * AdminInvoiceListItem
+         * @description Compact row for the admin list table — adds organization name +
+         *     customer name to what the customer-facing list shows so the founder
+         *     can pivot across orgs without an extra fetch.
+         */
+        AdminInvoiceListItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /** Organization Name */
+            organization_name: string;
+            /** Number */
+            number: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "invoice" | "credit_note" | "proforma";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "issued" | "paid" | "overdue" | "voided";
+            /**
+             * Issued At
+             * Format: date-time
+             */
+            issued_at: string;
+            /**
+             * Due At
+             * Format: date
+             */
+            due_at: string;
+            /** Paid At */
+            paid_at: string | null;
+            /** Sent At */
+            sent_at: string | null;
+            /** Customer Name */
+            customer_name: string;
+            /** Currency */
+            currency: string;
+            /** Total Minor */
+            total_minor: number;
+            /** Related Invoice Id */
+            related_invoice_id: string | null;
+        };
+        /** AdminManualInvoiceIn */
+        AdminManualInvoiceIn: {
+            /**
+             * Org Id
+             * Format: uuid
+             */
+            org_id: string;
+            /** Lines */
+            lines: components["schemas"]["AdminManualLineIn"][];
+            /** Note */
+            note?: string | null;
+            /** Taxable Supply Date */
+            taxable_supply_date?: string | null;
+            /** Due At */
+            due_at?: string | null;
+        };
+        /** AdminManualLineIn */
+        AdminManualLineIn: {
+            /** Description */
+            description: string;
+            /** Quantity */
+            quantity: number | string;
+            /** Unit Price Minor */
+            unit_price_minor: number;
+            /** Unit Label */
+            unit_label?: string | null;
+            /** Vat Rate Percent */
+            vat_rate_percent?: number | string | null;
+        };
+        /** AdminMarkPaidIn */
+        AdminMarkPaidIn: {
+            /**
+             * Paid At
+             * @description When the payment was received. NULL → server-side now().
+             */
+            paid_at?: string | null;
+        };
         /** AdminOrgList */
         AdminOrgList: {
             /** Items */
@@ -2060,6 +2682,19 @@ export interface components {
             is_super_admin: boolean;
             /** Last Login At */
             last_login_at: string | null;
+        };
+        /** AdminSendIn */
+        AdminSendIn: {
+            /**
+             * Override To
+             * @description Override the invoice's recorded customer email.
+             */
+            override_to?: string | null;
+        };
+        /** AdminVoidIn */
+        AdminVoidIn: {
+            /** Reason */
+            reason: string;
         };
         /**
          * AuthSuccessResponse
@@ -3888,6 +4523,164 @@ export interface components {
             /** Access Status */
             access_status: string;
         };
+        /**
+         * TaxInvoiceDetailOut
+         * @description Full invoice payload for the detail drawer. Includes line items
+         *     + customer snapshot + payment instructions. Issuer fields are
+         *     omitted from the customer surface for the same reason as in the
+         *     list — the customer cares about *their* details + the total.
+         */
+        TaxInvoiceDetailOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Number */
+            number: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "invoice" | "credit_note" | "proforma";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "issued" | "paid" | "overdue" | "voided";
+            /**
+             * Issued At
+             * Format: date-time
+             */
+            issued_at: string;
+            /**
+             * Due At
+             * Format: date
+             */
+            due_at: string;
+            /** Paid At */
+            paid_at: string | null;
+            /** Sent At */
+            sent_at: string | null;
+            /** Currency */
+            currency: string;
+            /** Subtotal Minor */
+            subtotal_minor: number;
+            /** Vat Amount Minor */
+            vat_amount_minor: number;
+            /** Total Minor */
+            total_minor: number;
+            /** Related Invoice Id */
+            related_invoice_id: string | null;
+            /** Customer Name */
+            customer_name: string;
+            /** Customer Address */
+            customer_address: string;
+            /** Customer Ico */
+            customer_ico: string | null;
+            /** Customer Dic */
+            customer_dic: string | null;
+            /**
+             * Taxable Supply Date
+             * Format: date
+             */
+            taxable_supply_date: string;
+            /** Variable Symbol */
+            variable_symbol: string;
+            /** Payment Method */
+            payment_method: string;
+            /** Note */
+            note: string | null;
+            /** Issuer Iban */
+            issuer_iban: string;
+            /** Issuer Account Domestic */
+            issuer_account_domestic: string | null;
+            /** Lines */
+            lines: components["schemas"]["TaxInvoiceLineOut"][];
+        };
+        /** TaxInvoiceLineOut */
+        TaxInvoiceLineOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Position */
+            position: number;
+            /** Description */
+            description: string;
+            /** Quantity */
+            quantity: string;
+            /** Unit Label */
+            unit_label: string | null;
+            /** Unit Price Minor */
+            unit_price_minor: number;
+            /** Vat Rate Percent */
+            vat_rate_percent: string;
+            /** Line Subtotal Minor */
+            line_subtotal_minor: number;
+            /** Line Vat Minor */
+            line_vat_minor: number;
+            /** Line Total Minor */
+            line_total_minor: number;
+        };
+        /** TaxInvoiceList */
+        TaxInvoiceList: {
+            /** Items */
+            items: components["schemas"]["TaxInvoiceOut"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * TaxInvoiceOut
+         * @description Compact summary for the customer-facing list. Omits the issuer
+         *     snapshot fields (the customer doesn't need to see SimpleCRM's IČO
+         *     in every row) and the storage keys (those are an implementation
+         *     detail of the PDF stream endpoint).
+         */
+        TaxInvoiceOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Number */
+            number: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "invoice" | "credit_note" | "proforma";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "issued" | "paid" | "overdue" | "voided";
+            /**
+             * Issued At
+             * Format: date-time
+             */
+            issued_at: string;
+            /**
+             * Due At
+             * Format: date
+             */
+            due_at: string;
+            /** Paid At */
+            paid_at: string | null;
+            /** Sent At */
+            sent_at: string | null;
+            /** Currency */
+            currency: string;
+            /** Subtotal Minor */
+            subtotal_minor: number;
+            /** Vat Amount Minor */
+            vat_amount_minor: number;
+            /** Total Minor */
+            total_minor: number;
+            /** Related Invoice Id */
+            related_invoice_id: string | null;
+        };
         /** TeamCreate */
         TeamCreate: {
             /** Name */
@@ -5606,6 +6399,100 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_invoices_api_v1_organizations_current_invoices_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaxInvoiceList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_my_invoice_api_v1_organizations_current_invoices__invoice_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaxInvoiceDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_my_invoice_pdf_api_v1_organizations_current_invoices__invoice_id__pdf_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
             };
             /** @description Validation Error */
             422: {
@@ -7616,6 +8503,382 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_invoices_api_v1_admin_invoices_get: {
+        parameters: {
+            query?: {
+                year?: number | null;
+                status?: string[] | null;
+                kind?: string | null;
+                org_id?: string | null;
+                date_from?: string | null;
+                date_to?: string | null;
+                q?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminInvoiceList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_invoice_detail_api_v1_admin_invoices__invoice_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminInvoiceDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_paid_api_v1_admin_invoices__invoice_id__mark_paid_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminMarkPaidIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminInvoiceDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    void_invoice_api_v1_admin_invoices__invoice_id__void_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminVoidIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminInvoiceDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    issue_credit_note_api_v1_admin_invoices__invoice_id__credit_note_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminCreditNoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminInvoiceDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    issue_manual_invoice_api_v1_admin_invoices_manual_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminManualInvoiceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminInvoiceDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_invoice_api_v1_admin_invoices__invoice_id__send_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminSendIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminInvoiceDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_year_csv_api_v1_admin_invoices_export_csv_get: {
+        parameters: {
+            query: {
+                year: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_year_pdf_zip_api_v1_admin_invoices_export_pdfs_get: {
+        parameters: {
+            query: {
+                year: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_year_full_api_v1_admin_invoices_export_full_get: {
+        parameters: {
+            query: {
+                year: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_integrity_check_api_v1_admin_invoices_integrity_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminIntegrityRunOut"];
+                };
+            };
+        };
+    };
+    get_last_integrity_run_api_v1_admin_invoices_integrity_last_run_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminIntegrityRunOut"] | null;
                 };
             };
         };

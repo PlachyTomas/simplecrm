@@ -79,7 +79,7 @@ export function InvoicesList({ selectedInvoiceId, onSelect }: InvoicesListProps)
             }}
             disabled={exportCsv.isPending}
             title={`Export ${exportYear} – CSV`}
-            className="rounded-md border border-border bg-bg px-3 py-1.5 text-xs hover:bg-bg-elevated disabled:opacity-50"
+            className="hover:bg-bg-elevated rounded-md border border-border bg-bg px-3 py-1.5 text-xs disabled:opacity-50"
           >
             {exportCsv.isPending ? "Stahuji…" : `CSV ${exportYear}`}
           </button>
@@ -92,7 +92,7 @@ export function InvoicesList({ selectedInvoiceId, onSelect }: InvoicesListProps)
               });
             }}
             disabled={exportPdfZip.isPending}
-            className="rounded-md border border-border bg-bg px-3 py-1.5 text-xs hover:bg-bg-elevated disabled:opacity-50"
+            className="hover:bg-bg-elevated rounded-md border border-border bg-bg px-3 py-1.5 text-xs disabled:opacity-50"
           >
             {exportPdfZip.isPending ? "Stahuji…" : `PDF ZIP ${exportYear}`}
           </button>
@@ -105,7 +105,7 @@ export function InvoicesList({ selectedInvoiceId, onSelect }: InvoicesListProps)
               });
             }}
             disabled={exportFull.isPending}
-            className="rounded-md border border-border bg-bg px-3 py-1.5 text-xs hover:bg-bg-elevated disabled:opacity-50"
+            className="hover:bg-bg-elevated rounded-md border border-border bg-bg px-3 py-1.5 text-xs disabled:opacity-50"
           >
             {exportFull.isPending ? "Stahuji…" : `Úplný ${exportYear}`}
           </button>
@@ -152,7 +152,7 @@ export function InvoicesList({ selectedInvoiceId, onSelect }: InvoicesListProps)
                 className={cn(
                   "rounded-full border px-3 py-1 text-xs transition",
                   active
-                    ? "border-accent bg-accent/10 text-accent"
+                    ? "bg-accent/10 border-accent text-accent"
                     : "border-border bg-bg text-text-secondary hover:text-text-primary",
                 )}
               >
@@ -194,7 +194,7 @@ export function InvoicesList({ selectedInvoiceId, onSelect }: InvoicesListProps)
                     key={row.id}
                     onClick={() => onSelect(row.id)}
                     className={cn(
-                      "cursor-pointer border-b border-border-subtle transition hover:bg-bg-elevated",
+                      "hover:bg-bg-elevated cursor-pointer border-b border-border-subtle transition",
                       isSelected && "bg-accent/5",
                     )}
                   >

@@ -166,7 +166,7 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
             type="button"
             onClick={handleMarkPaid}
             disabled={inv.status === "paid" || inv.status === "voided" || markPaid.isPending}
-            className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs hover:bg-bg-elevated disabled:cursor-not-allowed disabled:opacity-50"
+            className="hover:bg-bg-elevated rounded-md border border-border bg-surface px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
           >
             Označit jako zaplaceno
           </button>
@@ -174,7 +174,7 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
             type="button"
             onClick={handleSend}
             disabled={inv.status === "draft" || sendInvoice.isPending}
-            className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs hover:bg-bg-elevated disabled:cursor-not-allowed disabled:opacity-50"
+            className="hover:bg-bg-elevated rounded-md border border-border bg-surface px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
           >
             Odeslat
           </button>
@@ -201,7 +201,7 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
           <button
             type="button"
             onClick={() => setCreditOpen(true)}
-            className="self-start rounded-md border border-border bg-surface px-3 py-1.5 text-xs hover:bg-bg-elevated"
+            className="hover:bg-bg-elevated self-start rounded-md border border-border bg-surface px-3 py-1.5 text-xs"
           >
             Vystavit dobropis
           </button>
@@ -259,10 +259,7 @@ function AuditLogTimeline({ entries }: { entries: AdminInvoiceAuditEntry[] }) {
       <h4 className="mb-2 text-sm font-medium text-text-secondary">Audit log</h4>
       <ol className="space-y-2">
         {entries.map((entry) => (
-          <li
-            key={entry.id}
-            className="rounded-md border border-border bg-bg px-3 py-2 text-xs"
-          >
+          <li key={entry.id} className="rounded-md border border-border bg-bg px-3 py-2 text-xs">
             <div className="flex items-center justify-between">
               <span className="font-medium text-text-primary">
                 {EVENT_LABEL[entry.event] ?? entry.event}

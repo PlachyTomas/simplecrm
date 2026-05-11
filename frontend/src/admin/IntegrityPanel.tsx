@@ -27,10 +27,9 @@ function useLatestIntegrityRun() {
     staleTime: 30 * 1000,
     queryFn: async () => {
       try {
-        return await apiFetch<IntegrityRunOut | null>(
-          "/api/v1/admin/invoices/integrity/last-run",
-          { token: accessToken },
-        );
+        return await apiFetch<IntegrityRunOut | null>("/api/v1/admin/invoices/integrity/last-run", {
+          token: accessToken,
+        });
       } catch (err) {
         if (err instanceof ApiError) return null;
         throw err;
@@ -91,16 +90,21 @@ export function IntegrityPanel() {
         <div className="mt-4 space-y-3">
           <div className="grid grid-cols-3 gap-3 text-center">
             <Stat label="Zkontrolováno" value={data.checked} />
-            <Stat label="V pořádku" value={data.ok} tone={data.ok === data.checked ? "ok" : "neutral"} />
+            <Stat
+              label="V pořádku"
+              value={data.ok}
+              tone={data.ok === data.checked ? "ok" : "neutral"}
+            />
             <Stat label="Selhalo" value={data.failed} tone={data.failed > 0 ? "danger" : "ok"} />
           </div>
           {data.created_at ? (
             <p className="text-xs text-text-tertiary">
-              Poslední běh: {formatLocalDateTime(data.created_at)} (run_id: {data.run_id.slice(0, 8)}…)
+              Poslední běh: {formatLocalDateTime(data.created_at)} (run_id:{" "}
+              {data.run_id.slice(0, 8)}…)
             </p>
           ) : null}
           {data.failures.length > 0 ? (
-            <ul className="space-y-1 rounded-md border border-danger-subtle bg-danger-subtle/30 p-3 text-xs">
+            <ul className="bg-danger-subtle/30 space-y-1 rounded-md border border-danger-subtle p-3 text-xs">
               {data.failures.map((f, idx) => (
                 <li key={`${f.invoice_id}-${f.kind}-${idx}`}>
                   <span className="font-medium">{f.invoice_number}</span>{" "}
@@ -127,11 +131,7 @@ interface StatProps {
 
 function Stat({ label, value, tone = "neutral" }: StatProps) {
   const toneClass =
-    tone === "ok"
-      ? "text-success"
-      : tone === "danger"
-        ? "text-danger"
-        : "text-text-primary";
+    tone === "ok" ? "text-success" : tone === "danger" ? "text-danger" : "text-text-primary";
   return (
     <div className="rounded-md border border-border bg-bg p-3">
       <p className={`text-2xl font-semibold tabular-nums ${toneClass}`}>{value}</p>

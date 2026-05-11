@@ -1,10 +1,7 @@
 import { useMemo, useState } from "react";
 
 import { useAdminOrgList } from "@/admin/hooks";
-import {
-  type ManualLineDraft,
-  useIssueManualInvoice,
-} from "@/admin/useAdminInvoices";
+import { type ManualLineDraft, useIssueManualInvoice } from "@/admin/useAdminInvoices";
 import { formatCzkMinor } from "@/components/billing/format";
 
 interface ManualInvoiceModalProps {
@@ -142,7 +139,7 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
                             setOrgLabel(row.name);
                             setOrgQuery("");
                           }}
-                          className="block w-full px-3 py-2 text-left text-sm hover:bg-bg-elevated"
+                          className="hover:bg-bg-elevated block w-full px-3 py-2 text-left text-sm"
                         >
                           {row.name}
                         </button>
@@ -192,9 +189,7 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
                       <input
                         type="text"
                         value={line.unit_label ?? ""}
-                        onChange={(e) =>
-                          updateLine(idx, { unit_label: e.target.value || null })
-                        }
+                        onChange={(e) => updateLine(idx, { unit_label: e.target.value || null })}
                         className="w-16 rounded border border-border bg-bg px-2 py-1 text-sm"
                       />
                     </td>
@@ -265,9 +260,7 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
           <p className="rounded-md border border-border bg-bg px-3 py-2 text-sm">
             Mezisoučet:{" "}
             <span className="font-medium tabular-nums">{formatCzkMinor(subtotalMinor)}</span>{" "}
-            <span className="text-text-tertiary">
-              (DPH se dopočítá podle vašeho nastavení DPH)
-            </span>
+            <span className="text-text-tertiary">(DPH se dopočítá podle vašeho nastavení DPH)</span>
           </p>
         </div>
 
@@ -275,7 +268,7 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-border bg-bg px-4 py-1.5 text-sm hover:bg-bg-elevated"
+            className="hover:bg-bg-elevated rounded-md border border-border bg-bg px-4 py-1.5 text-sm"
           >
             Zrušit
           </button>
