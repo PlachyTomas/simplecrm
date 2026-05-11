@@ -14,7 +14,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { API_BASE_URL } from "@/lib/api";
 import { ThemeToggle } from "@/lib/ThemeToggle";
@@ -37,6 +37,38 @@ const NAV_LINKS: NavLink[] = [
   { kind: "anchor", href: "#faq", label: "FAQ" },
   { kind: "route", to: "/kontakt", label: "Kontakt" },
 ];
+
+/**
+ * On `/`, anchor hrefs let the browser smooth-scroll to the section
+ * natively. On any other route the same anchors point at sections that
+ * aren't mounted, so we navigate back to `/` with the hash and let
+ * LandingPage's hash-scroll effect handle the scroll after mount.
+ */
+function HashNavLink({
+  href,
+  className,
+  onClick,
+  children,
+}: {
+  href: string;
+  className: string;
+  onClick?: () => void;
+  children: React.ReactNode;
+}) {
+  const { pathname } = useLocation();
+  if (pathname === "/") {
+    return (
+      <a href={href} onClick={onClick} className={className}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link to={`/${href}`} onClick={onClick} className={className}>
+      {children}
+    </Link>
+  );
+}
 
 export function Nav() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -80,13 +112,13 @@ export function Nav() {
                 {link.label}
               </Link>
             ) : (
-              <a
+              <HashNavLink
                 key={link.href}
                 href={link.href}
                 className="text-sm text-text-secondary hover:text-text-primary"
               >
                 {link.label}
-              </a>
+              </HashNavLink>
             ),
           )}
         </nav>
@@ -216,14 +248,14 @@ function MobileDrawer({
               {link.label}
             </Link>
           ) : (
-            <a
+            <HashNavLink
               key={link.href}
               href={link.href}
               onClick={onClose}
               className="rounded-md px-3 py-3 text-base font-medium text-text-primary transition-colors duration-fast hover:bg-surface-overlay"
             >
               {link.label}
-            </a>
+            </HashNavLink>
           ),
         )}
         <Link
@@ -710,6 +742,22 @@ export function Footer() {
 }
 
 export function LandingPage() {
+  const { hash } = useLocation();
+
+  // SPA navigation that lands here with a hash (e.g. /kontakt → /#funkce)
+  // doesn't fire the browser's native anchor scroll. Do it manually after
+  // mount. Two rAFs because heavy children (InteractivePipeline,
+  // ReportsDemoSection) finish layout on the second frame, and a final
+  // 60ms retry covers slower paints.
+  useEffect(() => {
+    if (!hash) return;
+    const id = hash.slice(1);
+    const scroll = () => document.getElementById(id)?.scrollIntoView({ block: "start" });
+    requestAnimationFrame(() => requestAnimationFrame(scroll));
+    const fallback = window.setTimeout(scroll, 60);
+    return () => window.clearTimeout(fallback);
+  }, [hash]);
+
   return (
     <div className="min-h-screen bg-bg text-text-primary">
       <Nav />
