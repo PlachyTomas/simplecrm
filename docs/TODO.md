@@ -67,3 +67,76 @@ Claude Zone here:
   applies `pending_plan_id`, `pending_seat_count`, and
   `pending_user_deactivations` automatically. Today the super-admin Aktivovat
   path is the only apply route — fine for the no-Stripe phase.
+
+---
+
+## ComGate go-live audit follow-ups (from docs/prompts/COMGATE_GO_LIVE_AUDIT.md)
+
+Fixed in-session — see commits ahead of origin/main:
+- Q4: duplicate "Začít zdarma" landing CTA replaced with the canonical
+  "Vyzkoušet 30 dní zdarma".
+- Q5: live cost preview as admin edits seat count; annual-savings now
+  shows both % and absolute Kč in Settings → Organizace.
+- Q1 copy fix: bank-transfer pending state on /app/billing/return no
+  longer claims "pár vteřin"; tells the user it may take hours and the
+  invoice will arrive on settle.
+- Q2 (partial): invoice service now snapshots the org's real ICO / DIČ
+  / structured address into the invoice instead of just the name. Still
+  needs a UI so the founder can edit those fields — see open-question
+  below.
+- Q12: startup log now emits ERROR-level warnings when
+  `COMGATE_TEST_MODE=true` or `SMTP_HOST` is empty, so a misconfigured
+  prod deploy is loud in monitoring.
+
+Open audit findings (need separate work):
+- **Q2 (UI gap):** the `Organization` model carries `ico` / `dic` /
+  `address_street` / `address_city` / `address_zip` / `legal_form` /
+  `billing_email`, but there is NO settings form to fill them in. The
+  invoice service now reads them when populated (fallback: org name
+  only), but until we add the UI, every newly issued invoice will be
+  missing IČO/address. Recommended: extend
+  `frontend/src/app/settings/SettingsPage.tsx::OrganizationSection`
+  with an "Údaje pro fakturaci" sub-form that takes IČO + ARES autofill
+  (reuse `useLookupRegistry`) + manual edit for DIČ / billing-email.
+  Must NOT block the trial — admin only sees a soft warning ("Faktura
+  bude bez IČO; doplňte před první platbou") when fields are empty.
+- **Q3 (UI verification):** trial-expiry pay-gate logic in
+  `is_app_access_allowed` is correct — fresh trials lock immediately
+  at period end, past-due paying orgs get the 7-day grace. Salespeople
+  hit the same gate via `require_active_trial_or_subscription` on
+  every PROTECTED_DEPS router, so the lockout is org-wide. **Not
+  separately verified end-to-end on production** — recommend running
+  through the dev `_freeze_trial` super-admin helper before launch
+  with a salesperson account to confirm the gate fires for them too.
+- **Q7 (ISDOC delivery):** the invoice mailer attaches the PDF only.
+  ISDOC XML is generated + stored under `invoice.isdoc_object_key` but
+  never attached to the customer email. Czech B2B convention is to
+  bundle both. Low priority — add a second `EmailAttachment` only if a
+  customer asks for it.
+- **Q10 (refunds):** there's no customer-facing or admin refund flow.
+  `Charge.status` enum supports `"refunded"` but no endpoint calls
+  `ComGateClient` (which DOES have `refund` mapped on `_Endpoints`).
+  Refunds today happen via the ComGate portal manually + a
+  super-admin-issued credit note. Fine for v1 since refunds are rare;
+  build the flow when the first dispute lands.
+- **Q11 (locale):** CZK + Czech UI/PDF only. Frontend has no language
+  switcher, no English email templates. Fine for the CZ-only launch.
+- **Q13 (audit log completeness):** every payment-state transition is
+  audited via `BillingAuditLog` (subscription_chose_plan, activate,
+  cancel_self_serve, seat_*_) and via `WebhookEvent` for the raw
+  ComGate payloads. **Not separately stress-tested** — recommend
+  running through the production smoke test in `docs/comgate-setup.md`
+  §6 and confirming every state change writes a row.
+
+Production env checklist (matches `docs/comgate-setup.md` §7):
+- [ ] `COMGATE_TEST_MODE=false` (startup log now warns when true)
+- [ ] `COMGATE_MERCHANT_ID` + `COMGATE_SECRET` = production values
+- [ ] `COMGATE_RETURN_URL=https://app.simplecrm.cz/app/billing/return`
+- [ ] Production webhook URL registered in ComGate portal
+- [ ] `SMTP_HOST` + `SMTP_USERNAME` + `SMTP_PASSWORD` set per the Zoho
+      block above
+- [ ] DNS for `simplecrm.cz` includes MX/SPF/DKIM/DMARC for Zoho EU
+- [ ] BillingSettings row has issuer details populated (IČO, IBAN,
+      address) — without these the auto-issuance skips with a warning
+- [ ] Run an end-to-end smoke test with sandbox creds first, then a
+      £1 real-money test in production
