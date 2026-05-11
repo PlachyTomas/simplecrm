@@ -1,17 +1,39 @@
 """Email notifications.
 
-MVP ships a stub backend that logs messages instead of sending real
-SMTP. The interface (`build_freed_company_email` + `send_email`) is
-shaped so the eventual switch to a real provider (Mailgun, Resend,
-Hetzner SMTP) is a one-module change — callers stay unchanged.
+`send_email` dispatches through stdlib smtplib when the SMTP settings
+(`smtp_host` + credentials) are configured; otherwise it logs the
+payload — same behavior as before the SMTP integration landed, kept
+deliberately so dev/test don't need credentials to pass.
+
+The interface (`build_*_email` + `send_email`) was shaped so the
+eventual provider swap is a one-module change. Callers stay unchanged.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from dataclasses import dataclass
+import smtplib
+import ssl
+from dataclasses import dataclass, field
+from email.message import EmailMessage
+
+from app.core.config import get_settings
 
 logger = logging.getLogger("simplecrm.email")
+
+
+@dataclass(frozen=True)
+class EmailAttachment:
+    """Binary attachment for a transactional email.
+
+    `content_type` is checked at the API boundary; here it's plumbed
+    straight onto the MIME part. `filename` is what the recipient sees.
+    """
+
+    filename: str
+    content_type: str
+    content: bytes
 
 
 @dataclass(frozen=True)
@@ -19,6 +41,10 @@ class Email:
     to: str
     subject: str
     body: str
+    # Optional Reply-To override. Used by the feedback endpoint so the
+    # founder can hit Reply and land on the reporting user's inbox.
+    reply_to: str | None = None
+    attachments: tuple[EmailAttachment, ...] = field(default_factory=tuple)
 
 
 def build_freed_company_email(
@@ -105,13 +131,92 @@ def build_password_reset_email(*, recipient: str, name: str, link: str) -> Email
     return Email(to=recipient, subject=subject, body=body)
 
 
-async def send_email(message: Email) -> None:
-    """Dispatch an email. Stub: logs structured fields at INFO level.
+def _build_mime(message: Email, *, sender: str) -> EmailMessage:
+    msg = EmailMessage()
+    msg["From"] = sender
+    msg["To"] = message.to
+    msg["Subject"] = message.subject
+    if message.reply_to:
+        msg["Reply-To"] = message.reply_to
+    msg.set_content(message.body)
+    for att in message.attachments:
+        maintype, _, subtype = att.content_type.partition("/")
+        if not maintype or not subtype:
+            maintype, subtype = "application", "octet-stream"
+        msg.add_attachment(
+            att.content,
+            maintype=maintype,
+            subtype=subtype,
+            filename=att.filename,
+        )
+    return msg
 
-    Until a real provider is wired up, dev/test extracts the verification
-    or reset link from the structured logs (`extra.link` if present, else
-    parse out of `extra.body`).
+
+def _send_via_smtp(message: Email) -> None:
+    """Blocking SMTP send. Called via `asyncio.to_thread` so the event
+    loop isn't blocked on slow handshakes.
     """
+    settings = get_settings()
+    sender = settings.smtp_from or settings.smtp_username
+    mime = _build_mime(message, sender=sender)
+
+    context = ssl.create_default_context()
+    if settings.smtp_use_ssl:
+        with smtplib.SMTP_SSL(
+            host=settings.smtp_host,
+            port=settings.smtp_port,
+            context=context,
+            timeout=15,
+        ) as client:
+            if settings.smtp_username:
+                client.login(settings.smtp_username, settings.smtp_password)
+            client.send_message(mime)
+        return
+
+    with smtplib.SMTP(host=settings.smtp_host, port=settings.smtp_port, timeout=15) as client:
+        if settings.smtp_use_starttls:
+            client.starttls(context=context)
+        if settings.smtp_username:
+            client.login(settings.smtp_username, settings.smtp_password)
+        client.send_message(mime)
+
+
+async def send_email(message: Email) -> None:
+    """Dispatch an email. Goes through real SMTP when configured; logs
+    a structured payload otherwise.
+
+    The log fallback is deliberately preserved so existing tests +
+    dev workflows (where SMTP credentials aren't set) keep working —
+    the verification-link extraction in `app/services/email_auth.py`
+    relies on it.
+    """
+    settings = get_settings()
+    if settings.smtp_host:
+        try:
+            await asyncio.to_thread(_send_via_smtp, message)
+            logger.info(
+                "email.send.smtp",
+                extra={
+                    "to": message.to,
+                    "subject": message.subject,
+                    "attachments": len(message.attachments),
+                },
+            )
+            return
+        except (smtplib.SMTPException, OSError, ssl.SSLError) as exc:
+            # Don't let a transient SMTP outage break user-facing actions
+            # (e.g. an invite still records correctly even if the email
+            # didn't go out). Log loudly so monitoring can pick it up.
+            logger.error(
+                "email.send.smtp.failed",
+                extra={
+                    "to": message.to,
+                    "subject": message.subject,
+                    "error": repr(exc),
+                },
+            )
+            return
+
     # Pull out the first http(s) URL in the body, if any, so dev can
     # `docker compose logs backend | grep email.send` and copy-paste the
     # link without needing to inspect the body.
@@ -129,5 +234,6 @@ async def send_email(message: Email) -> None:
             "subject": message.subject,
             "body_preview": message.body[:80],
             "link": link,
+            "attachments": len(message.attachments),
         },
     )

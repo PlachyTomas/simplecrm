@@ -57,6 +57,29 @@ class Settings(BaseSettings):
     comgate_test_mode: bool = True
     comgate_return_url: str = "http://localhost:8000/api/v1/payments/return"
 
+    # SMTP delivery. When `smtp_host` is empty the email service falls
+    # back to logging payloads (`app.services.email.send_email`) — that
+    # keeps dev/test working without secrets. Set all of these in prod
+    # to actually deliver verification + feedback emails.
+    #
+    # Seznam SMTP defaults: smtp.seznam.cz, port 465 with SSL on, login
+    # with the account's app password (NOT the regular password).
+    smtp_host: str = ""
+    smtp_port: int = 465
+    smtp_username: str = ""
+    smtp_password: str = ""
+    # Some providers (Seznam) sit on implicit TLS; others (Mailgun) want
+    # STARTTLS. Pick exactly one.
+    smtp_use_ssl: bool = True
+    smtp_use_starttls: bool = False
+    # `From:` header. If unset, falls back to `smtp_username`.
+    smtp_from: str = ""
+
+    # Inbox the /api/v1/feedback endpoint forwards bug reports and
+    # improvement suggestions to. Founder's email — overridable per
+    # environment.
+    feedback_recipient_email: str = "simplecrm@seznam.cz"
+
     # Tax-invoice archival storage (commit #4 of INVOICES_TASK.md).
     # When `s3_endpoint_url` is set, the storage layer writes invoice
     # PDFs/ISDOCs to a Hetzner Object Storage bucket via the S3 API.

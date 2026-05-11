@@ -10,6 +10,7 @@ import { ContactsPage } from "@/app/contacts/ContactsPage";
 import { DashboardPage } from "@/app/dashboard/DashboardPage";
 import { DealDetailPage } from "@/app/deals/DealDetailPage";
 import { DealsListPage } from "@/app/deals/DealsListPage";
+import { FeedbackPage } from "@/app/feedback/FeedbackPage";
 import { PipelinePage } from "@/app/pipeline/PipelinePage";
 import { ReportsPage } from "@/app/reports/ReportsPage";
 import { SettingsPage } from "@/app/settings/SettingsPage";
@@ -82,6 +83,7 @@ export function AppRoutes() {
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="nastaveni/predplatne" element={<SettingsPage initialTab="billing" />} />
+        <Route path="feedback" element={<FeedbackPage />} />
         <Route path="billing/return" element={<BillingReturnPage />} />
         <Route path="more" element={<MorePage />} />
       </Route>

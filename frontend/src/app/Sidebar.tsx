@@ -5,6 +5,7 @@ import {
   Home,
   LineChart,
   LogOut,
+  MessageSquare,
   Settings,
   Users,
   Workflow,
@@ -30,7 +31,10 @@ const PRIMARY_ITEMS: NavItem[] = [
   { to: "/app/reports", label: "Reporty", icon: LineChart },
 ];
 
-const SECONDARY_ITEMS: NavItem[] = [{ to: "/app/settings", label: "Nastavení", icon: Settings }];
+const SECONDARY_ITEMS: NavItem[] = [
+  { to: "/app/settings", label: "Nastavení", icon: Settings },
+  { to: "/app/feedback", label: "Zpětná vazba", icon: MessageSquare },
+];
 
 function linkClass({ isActive }: { isActive: boolean }): string {
   return cn(

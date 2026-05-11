@@ -9,6 +9,7 @@ from app.api.v1 import (
     contacts,
     data_export,
     deals,
+    feedback,
     health,
     invitations,
     invoices,
@@ -48,6 +49,9 @@ api_router.include_router(onboarding.router)
 # able to walk away with their data, even after the trial expires. Auth
 # is still required (handler-level `Depends(get_current_user)`).
 api_router.include_router(data_export.router)
+# Feedback (bug reports / improvements). Auth-only — a user without an
+# org or with an expired trial still needs to reach the founder.
+api_router.include_router(feedback.router)
 api_router.include_router(organizations.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(companies.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(contacts.router, dependencies=PROTECTED_DEPS)

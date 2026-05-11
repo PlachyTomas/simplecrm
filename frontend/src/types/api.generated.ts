@@ -437,6 +437,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Feedback */
+        post: operations["submit_feedback_api_v1_feedback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/current": {
         parameters: {
             query?: never;
@@ -2874,6 +2891,16 @@ export interface components {
             /** Deals */
             deals: components["schemas"]["DealOut"][];
         };
+        /** Body_submit_feedback_api_v1_feedback_post */
+        Body_submit_feedback_api_v1_feedback_post: {
+            kind: components["schemas"]["FeedbackKind"];
+            /** Caption */
+            caption: string;
+            /** Body */
+            body: string;
+            /** Attachments */
+            attachments?: string[] | null;
+        };
         /**
          * CancelSelfServeIn
          * @description Body for `POST /subscription/cancel`. Optional free-form reason
@@ -3433,6 +3460,22 @@ export interface components {
             /** Days */
             days: number;
         };
+        /**
+         * FeedbackAccepted
+         * @description Returned on a successful submission. Deliberately minimal — there
+         *     is no server-side record to surface back; the email is the artifact.
+         */
+        FeedbackAccepted: {
+            /** Delivered */
+            delivered: boolean;
+            /** Recipient */
+            recipient: string;
+        };
+        /**
+         * FeedbackKind
+         * @enum {string}
+         */
+        FeedbackKind: "bug" | "improvement";
         /** GlobalFilters */
         GlobalFilters: {
             dateRange?: components["schemas"]["DateRangeFilter"];
@@ -5568,6 +5611,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_feedback_api_v1_feedback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_submit_feedback_api_v1_feedback_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackAccepted"];
                 };
             };
             /** @description Validation Error */
