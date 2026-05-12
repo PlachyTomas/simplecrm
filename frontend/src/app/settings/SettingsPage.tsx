@@ -10,6 +10,7 @@ import {
   useReorderStages,
   useUpdateStage,
 } from "@/app/settings/usePipelineSettings";
+import { InvoiceDetailsCard } from "@/app/settings/InvoiceDetailsCard";
 import { InvitationsSection } from "@/app/settings/InvitationsSection";
 import { TeamsSection } from "@/app/settings/TeamsSection";
 import { UsersSection } from "@/app/settings/UsersSection";
@@ -1658,6 +1659,7 @@ function OrganizationSection() {
 
   return (
     <div className="space-y-6">
+      <InvoiceDetailsCard />
       <SeatCountCard sub={sub} activeUserCount={activeUsers.length} activeUsers={activeUsers} />
       <BillingIntervalCard sub={sub} />
     </div>

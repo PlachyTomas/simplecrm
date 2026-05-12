@@ -21,6 +21,11 @@ class OrganizationUpdate(BaseModel):
     address_city: str | None = Field(default=None, max_length=120)
     address_zip: str | None = Field(default=None, max_length=12)
     legal_form: str | None = Field(default=None, max_length=120)
+    # Distinct legal/billing name (e.g., "Acme s.r.o.") when the org's
+    # day-to-day `name` ("Acme team") shouldn't appear on the invoice.
+    # Pass an empty string to clear an override and fall back to `name`.
+    billing_name: str | None = Field(default=None, max_length=200)
+    billing_email: str | None = Field(default=None, max_length=320)
     show_leaderboard_to_salespeople: bool | None = None
     # Auto-release window for companies. Bounded to 1..3650 (one day to ten
     # years) — anything wider than ten years would render the auto-release
@@ -39,6 +44,8 @@ class OrganizationOut(BaseModel):
     address_city: str | None = None
     address_zip: str | None = None
     legal_form: str | None = None
+    billing_name: str | None = None
+    billing_email: str | None = None
     locale: str
     currency: str
     trial_ends_at: datetime

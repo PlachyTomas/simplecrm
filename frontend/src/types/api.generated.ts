@@ -3892,6 +3892,10 @@ export interface components {
             address_zip?: string | null;
             /** Legal Form */
             legal_form?: string | null;
+            /** Billing Name */
+            billing_name?: string | null;
+            /** Billing Email */
+            billing_email?: string | null;
             /** Locale */
             locale: string;
             /** Currency */
@@ -3956,6 +3960,10 @@ export interface components {
             address_zip?: string | null;
             /** Legal Form */
             legal_form?: string | null;
+            /** Billing Name */
+            billing_name?: string | null;
+            /** Billing Email */
+            billing_email?: string | null;
             /** Show Leaderboard To Salespeople */
             show_leaderboard_to_salespeople?: boolean | null;
             /** Ownership Window Days */

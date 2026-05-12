@@ -522,14 +522,19 @@ class InvoiceService:
             if part
         )
         # Snapshot the customer billing address from the org's structured
-        # fields when available (populated via ARES or the org-settings
-        # form). Falls back to just the org name so we never block a
-        # legitimate invoice when the founder hasn't filled in the form
-        # — go-live audit (Q2) flagged that org-side address collection
-        # is an open UI gap; the data model is already in place.
+        # fields (populated via ARES autofill or the Settings → Organizace
+        # form). Empty when the founder hasn't filled in the form yet —
+        # the invoice still renders, but with a blank address, which is
+        # the correct signal to the customer to complete their billing
+        # details (rather than the org name appearing where the address
+        # should be, as it did before the Settings form landed).
         zip_city = f"{organization.address_zip or ''} {organization.address_city or ''}".strip()
         customer_address_parts = [organization.address_street, zip_city]
-        customer_address = "\n".join(p for p in customer_address_parts if p) or organization.name
+        customer_address = "\n".join(p for p in customer_address_parts if p)
+        # Distinct legal name override for invoices. Falls back to the org
+        # display name when unset — so existing orgs (no billing_name set)
+        # keep producing identical invoices to before.
+        customer_invoice_name = organization.billing_name or organization.name
 
         invoice = Invoice(
             organization_id=organization.id,
@@ -553,7 +558,7 @@ class InvoiceService:
             issuer_account_domestic=billing.issuer_account_domestic,
             issuer_register_text=billing.issuer_register_text,
             issuer_is_vat_payer=billing.is_vat_payer,
-            customer_name=organization.name,
+            customer_name=customer_invoice_name,
             customer_address=customer_address,
             customer_ico=organization.ico,
             customer_dic=organization.dic,

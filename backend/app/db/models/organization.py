@@ -50,6 +50,11 @@ class Organization(Base):
     locale: Mapped[str] = mapped_column(String(16), default="cs-CZ", nullable=False)
     currency: Mapped[str] = mapped_column(String(3), default="CZK", nullable=False)
 
+    # Distinct legal/billing name for tax invoices when it differs from
+    # `name` (which is the day-to-day display label). Common case: the org
+    # signs up as "Acme team" but invoices must read "Acme s.r.o.". When
+    # null, the invoice generator falls back to `name`.
+    billing_name: Mapped[str | None] = mapped_column(String(200))
     billing_email: Mapped[str | None] = mapped_column(String(320))
     stripe_customer_id: Mapped[str | None] = mapped_column(String(64))
 

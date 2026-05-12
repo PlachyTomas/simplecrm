@@ -185,6 +185,54 @@ async def test_issue_for_charge_creates_issued_invoice_with_audit_trail(
         assert set(events) >= {"allocated", "pdf_stored", "issued"}
 
 
+async def test_issue_for_charge_uses_billing_name_when_set(
+    cleanup_orgs: list[uuid.UUID], tmp_path: Path
+) -> None:
+    """When an org has filled in `billing_name` (legal name override
+    typically from ARES), the issued invoice's `customer_name` MUST be
+    the override and not the day-to-day org `name`. Falls back to `name`
+    when `billing_name` is null — see the no-override branch below."""
+    async with AsyncSessionLocal() as s:
+        await _configure_issuer(s)
+    async with AsyncSessionLocal() as s:
+        org, charge = await _make_org_and_charge(s)
+        org.billing_name = "Alza.cz a.s."
+        org.address_street = "Jankovcova 1522/53"
+        org.address_city = "Praha"
+        org.address_zip = "17000"
+        await s.commit()
+        cleanup_orgs.append(org.id)
+
+    async with AsyncSessionLocal() as s:
+        svc = InvoiceService(storage=_local_storage(tmp_path))
+        invoice = await svc.issue_for_charge(s, charge)
+        await s.commit()
+        assert invoice.customer_name == "Alza.cz a.s."
+        # Address still snapshotted from the structured fields.
+        assert "Jankovcova 1522/53" in invoice.customer_address
+        assert "Praha" in invoice.customer_address
+
+
+async def test_issue_for_charge_falls_back_to_org_name_when_billing_name_unset(
+    cleanup_orgs: list[uuid.UUID], tmp_path: Path
+) -> None:
+    """Existing orgs with no `billing_name` keep producing invoices with
+    `customer_name == organization.name` — the override is opt-in."""
+    async with AsyncSessionLocal() as s:
+        await _configure_issuer(s)
+    async with AsyncSessionLocal() as s:
+        org, charge = await _make_org_and_charge(s)
+        assert org.billing_name is None
+        cleanup_orgs.append(org.id)
+        org_name = org.name
+
+    async with AsyncSessionLocal() as s:
+        svc = InvoiceService(storage=_local_storage(tmp_path))
+        invoice = await svc.issue_for_charge(s, charge)
+        await s.commit()
+        assert invoice.customer_name == org_name
+
+
 async def test_issue_for_charge_is_idempotent_on_webhook_replay(
     cleanup_orgs: list[uuid.UUID], tmp_path: Path
 ) -> None:

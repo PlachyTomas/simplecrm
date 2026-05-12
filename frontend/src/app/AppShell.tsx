@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Settings, Sparkles } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
+import { InvoiceDetailsNudge } from "@/app/InvoiceDetailsNudge";
 import { MobileTabBar } from "@/app/MobileTabBar";
 import { Sidebar } from "@/app/Sidebar";
 import { TrialBanner } from "@/app/TrialBanner";
@@ -83,6 +84,7 @@ export function AppShell() {
         )}
       >
         <UnverifiedEmailBanner />
+        <InvoiceDetailsNudge />
         <TrialBanner daysRemaining={daysRemaining} endsOn={trialEndsAt} />
         <header className="bg-bg/90 sticky top-0 z-30 border-b border-border-subtle backdrop-blur">
           <div className="flex h-16 items-center justify-between gap-3 px-4 md:px-8">
