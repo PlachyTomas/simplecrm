@@ -850,6 +850,71 @@ function BillingSection() {
   );
 }
 
+/**
+ * Renders the "paid through" date range for the current subscription.
+ * Trialing → "Zkušební doba: start – end"; active/past_due → "Předplaceno: start – end"
+ * with a renewal hint; canceled → "Předplaceno do: end"; pending_activation
+ * → waiting copy already handled by the parent so we render nothing.
+ * Comp + enterprise opt out at the call site.
+ */
+function PaidThroughBlock({ sub }: { sub: SubscriptionOut | null | undefined }) {
+  if (!sub) return null;
+  if (sub.is_comp) return null;
+  if (sub.plan?.code === "enterprise") return null;
+  if (sub.status === "pending_activation") return null;
+
+  const start = sub.current_period_starts_at ?? sub.started_at;
+  const end = sub.current_period_ends_at;
+  const startLabel = formatCsDate(start);
+  const endLabel = formatCsDate(end);
+  if (!endLabel) return null;
+
+  const isTrial = sub.status === "trialing";
+  const isActive = sub.status === "active";
+  const isPastDue = sub.status === "past_due";
+  const isCanceled = sub.status === "canceled";
+
+  const heading = isTrial ? "Zkušební doba" : isCanceled ? "Předplaceno do" : "Předplacené období";
+
+  return (
+    <div
+      data-testid="paid-through-block"
+      className="mt-4 rounded-md border border-border-subtle bg-surface-overlay p-4 text-sm"
+    >
+      <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">{heading}</p>
+      <p className="mt-1 tabular-nums text-text-primary">
+        {isCanceled ? (
+          <span className="font-medium">{endLabel}</span>
+        ) : (
+          <>
+            <span className="font-medium">{startLabel ?? "—"}</span>
+            <span className="mx-2 text-text-tertiary">–</span>
+            <span className="font-medium">{endLabel}</span>
+          </>
+        )}
+      </p>
+      {isTrial ? (
+        <p className="mt-2 text-xs text-text-tertiary">
+          Po skončení zkušebky vám zašleme fakturu se splatností v den ukončení zkoušky. Po úhradě
+          se vaše předplatné automaticky aktivuje.
+        </p>
+      ) : isActive ? (
+        <p className="mt-2 text-xs text-text-tertiary">
+          Po skončení období se předplatné automaticky obnoví z uložené karty.
+        </p>
+      ) : isPastDue ? (
+        <p className="mt-2 text-xs text-warning">
+          Platba se nezdařila. Prodloužení období se opakuje — případně aktualizujte kartu.
+        </p>
+      ) : isCanceled ? (
+        <p className="mt-2 text-xs text-text-tertiary">
+          Předplatné je zrušené. Po tomto datu se vaší organizaci zablokuje přístup.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 interface CurrentPlanCardProps {
   sub: SubscriptionOut | null | undefined;
   onChangePlan: () => void;
@@ -893,6 +958,8 @@ function CurrentPlanCard({ sub, onChangePlan }: CurrentPlanCardProps) {
           {pill.label}
         </span>
       </div>
+
+      <PaidThroughBlock sub={sub} />
 
       {showPrice && effective !== null ? (
         <div className="mt-4">

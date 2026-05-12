@@ -321,6 +321,33 @@ describe("Billing settings page", () => {
     expect(calls[0]?.body).toEqual({ plan_code: "annual" });
   });
 
+  it("trialing → paid-through block shows Zkušební doba range + invoice copy", async () => {
+    setupFetch({ status: "trialing", planCode: "trial" });
+    renderBillingTab();
+    await waitFor(() => expect(screen.getByTestId("paid-through-block")).toBeInTheDocument());
+    const block = screen.getByTestId("paid-through-block");
+    expect(block).toHaveTextContent(/Zkušební doba/);
+    expect(block).toHaveTextContent(/zašleme fakturu se splatností v den ukončení zkoušky/i);
+  });
+
+  it("active → paid-through block shows Předplacené období + auto-renew hint", async () => {
+    setupFetch({ status: "active", planCode: "monthly" });
+    renderBillingTab();
+    await waitFor(() => expect(screen.getByTestId("paid-through-block")).toBeInTheDocument());
+    const block = screen.getByTestId("paid-through-block");
+    expect(block).toHaveTextContent(/Předplacené období/);
+    expect(block).toHaveTextContent(/automaticky obnoví/i);
+  });
+
+  it("comp → paid-through block is hidden (special terms)", async () => {
+    setupFetch({ status: "active", planCode: "monthly", isComp: true });
+    renderBillingTab();
+    await waitFor(() =>
+      expect(screen.getByText(/Vaše organizace má speciální podmínky/i)).toBeInTheDocument(),
+    );
+    expect(screen.queryByTestId("paid-through-block")).toBeNull();
+  });
+
   it("Změnit plán modal opens without preselect from the main button", async () => {
     setupFetch({ status: "trialing", planCode: "trial" });
     renderBillingTab();
