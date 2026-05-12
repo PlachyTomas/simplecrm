@@ -44,6 +44,10 @@ htmlcov/
 
 # Claude Code local overrides (per-machine permission allowlists)
 .claude/settings.local.json
+# Claude Code runtime artefacts (session locks, task scratchpads).
+# settings.json + skills/ are still committed; only ephemeral state here.
+.claude/scheduled_tasks.lock
+.claude/tasks/
 
 # OS
 .DS_Store
