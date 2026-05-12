@@ -29,6 +29,7 @@ build/
 .vite/
 coverage/
 *.tsbuildinfo
+docs/screenshots/
 
 # Python build artifacts
 *.egg-info/
