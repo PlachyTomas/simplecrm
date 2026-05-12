@@ -136,7 +136,11 @@ echo "[start-local] syncing backend deps + running migrations..."
 (cd backend && uv sync --quiet && uv run alembic upgrade head)
 
 echo "[start-local] starting backend on :$BACKEND_PORT (logs: $LOG_DIR/backend.log)"
-(cd backend && uv run uvicorn app.main:app --reload --port "$BACKEND_PORT") \
+# Ensure CORS allows whichever frontend port we picked. Pydantic-settings
+# reads list[str] env vars as JSON, hence the bracketed quoted form.
+BACKEND_CORS="[\"http://localhost:$FRONTEND_PORT\"]"
+(cd backend && CORS_ORIGINS="$BACKEND_CORS" \
+  uv run uvicorn app.main:app --reload --port "$BACKEND_PORT") \
   >"$LOG_DIR/backend.log" 2>&1 &
 BACKEND_PID=$!
 
