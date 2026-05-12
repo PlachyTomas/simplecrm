@@ -19,6 +19,20 @@ from app.db.session import AsyncSessionLocal
 from app.main import app
 
 
+@pytest.fixture(autouse=True)
+def _block_real_smtp(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Belt-and-suspenders: never fire real outbound mail during tests.
+
+    The dev `.env` may carry real Zoho credentials so the operator can
+    smoke-test invoice delivery locally. Without this fixture every
+    paid-charge webhook test would push a real (bouncing) email through
+    Zoho and pollute the sending-reputation audit. We bypass the
+    `_send_via_smtp` worker so the `send_email` log-fallback path is
+    effectively the only outcome.
+    """
+    monkeypatch.setattr("app.services.email._send_via_smtp", lambda _msg: None)
+
+
 @pytest.fixture
 async def client() -> AsyncIterator[AsyncClient]:
     transport = ASGITransport(app=app)

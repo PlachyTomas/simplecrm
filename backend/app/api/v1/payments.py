@@ -509,13 +509,15 @@ async def _dispatch_success(
     # ComGate isn't billing them, but we double-check defensively.
     sub_for_invoicing = await billing.get_current_subscription(session, org_id)
     if not sub_for_invoicing.is_comp:
+        from app.services.invoicing.mailer import InvoiceMailer, InvoiceMailerError
         from app.services.invoicing.service import (
             InvoiceIssuerNotConfiguredError,
             InvoiceService,
         )
 
+        issued_invoice = None
         try:
-            await InvoiceService().issue_for_charge(session, charge)
+            issued_invoice = await InvoiceService().issue_for_charge(session, charge)
         except InvoiceIssuerNotConfiguredError as exc:
             # The founder hasn't filled in their issuer details yet.
             # Don't 500 the webhook — the charge is still legitimately
@@ -531,6 +533,58 @@ async def _dispatch_success(
                 "issuance from /admin/faktury",
                 charge.id,
             )
+
+        # Auto-email the customer their daňový doklad. Czech B2B law
+        # requires the buyer to receive an invoice regardless of payment
+        # instrument (card or bank transfer), so we don't wait for the
+        # super-admin to press "Odeslat" in /admin/faktury — the customer
+        # is supposed to get the PDF in their inbox right after paying.
+        #
+        # Idempotent at the natural level: `invoice.sent_at` is bumped on
+        # success, so a re-fired webhook would re-send. The early dedup
+        # in `comgate_webhook` already drops duplicates, so re-sends only
+        # happen if a previous send raised; that's the intended retry.
+        if issued_invoice is not None:
+            recipient = issued_invoice.customer_email
+            if not recipient:
+                # Org didn't set a billing_email — fall back to any admin
+                # in the org. We pick the earliest-created admin to be
+                # deterministic across re-fires.
+                fallback_admin = (
+                    await session.execute(
+                        select(User)
+                        .where(
+                            User.organization_id == org_id,
+                            User.role == UserRole.admin,
+                        )
+                        .order_by(User.created_at.asc())
+                        .limit(1)
+                    )
+                ).scalar_one_or_none()
+                if fallback_admin is not None:
+                    recipient = fallback_admin.email
+            if recipient:
+                try:
+                    await InvoiceMailer().send(session, issued_invoice, override_to=recipient)
+                except InvoiceMailerError as exc:
+                    # SMTP outage, malformed template, etc. The PDF is
+                    # archived — the founder can resend from /admin/faktury.
+                    logger.warning(
+                        "Auto-send failed for invoice %s: %s",
+                        issued_invoice.number,
+                        exc,
+                    )
+                except Exception:
+                    logger.exception(
+                        "Unexpected error auto-sending invoice %s",
+                        issued_invoice.number,
+                    )
+            else:
+                logger.warning(
+                    "Invoice %s issued without a recipient — no billing_email "
+                    "on the org and no admin found. Resend manually.",
+                    issued_invoice.number,
+                )
 
 
 async def _dispatch_failure(

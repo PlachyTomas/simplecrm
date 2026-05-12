@@ -100,7 +100,7 @@ class Settings(BaseSettings):
     s3_access_key_id: str = ""
     s3_secret_access_key: str = ""
     s3_region: str = "fsn1"  # Hetzner Falkenstein default
-    invoice_storage_local_root: str = "var/invoices"
+    invoice_storage_local_root: str = "var"
 
 
 @lru_cache

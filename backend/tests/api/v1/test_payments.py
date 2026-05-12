@@ -433,6 +433,108 @@ async def test_webhook_paid_charge_auto_issues_tax_invoice(
         await fresh.commit()
 
 
+async def test_webhook_paid_charge_auto_emails_invoice(
+    client: AsyncClient,
+    owned_payments_emails: list[str],
+) -> None:
+    """After auto-issuance the orchestrator emails the customer their
+    daňový doklad. Czech B2B law requires the buyer to receive an
+    invoice regardless of payment instrument, so the founder shouldn't
+    have to manually press "Odeslat" in /admin/faktury after every
+    successful card charge.
+
+    With no `billing_email` on the org, the auto-send falls back to the
+    earliest-created admin's email. `_block_real_smtp` autouse fixture
+    bypasses smtplib — we assert `invoice.sent_at` + `sent_to_email`
+    instead of inspecting a real outbox.
+    """
+    from sqlalchemy import update
+
+    async with AsyncSessionLocal() as setup:
+        await setup.execute(
+            update(BillingSettings).values(
+                seller_iban="CZ6508000000192000145399",
+                seller_ico="12345678",
+                issuer_name="Tomáš Test OSVČ",
+                issuer_address_street="Testovací 1",
+                issuer_address_city="Praha",
+                issuer_address_zip="100 00",
+                issuer_register_text="Zapsán v živnostenském rejstříku",
+            )
+        )
+        await setup.commit()
+
+    trans_id = f"WEBHOOK-AUTOMAIL-{uuid.uuid4().hex[:12]}"
+    async with AsyncSessionLocal() as setup:
+        org = Organization(name="Auto-Mail Test")  # billing_email left None
+        setup.add(org)
+        await setup.flush()
+        admin_email = f"admin-{uuid.uuid4().hex[:8]}@ex.cz"
+        owned_payments_emails.append(admin_email)
+        setup.add(
+            User(email=admin_email, name="Admin", role=UserRole.admin, organization_id=org.id)
+        )
+        monthly_plan_id = (
+            await setup.execute(select(Plan.id).where(Plan.code == "monthly"))
+        ).scalar_one()
+        setup.add(
+            Subscription(
+                organization_id=org.id,
+                plan_id=monthly_plan_id,
+                status="trialing",
+                started_at=datetime.now(tz=UTC),
+                seat_count=1,
+                contracted_seat_count=1,
+            )
+        )
+        charge = Charge(
+            organization_id=org.id,
+            kind="initial",
+            amount_minor=99000,
+            currency="CZK",
+            status="pending",
+            seats=1,
+            comgate_trans_id=trans_id,
+        )
+        setup.add(charge)
+        await setup.commit()
+        charge_id = charge.id
+        org_id = org.id
+
+    body = json.dumps({"transId": trans_id, "status": "PAID", "refId": str(charge_id)}).encode()
+    response = await client.post(
+        "/api/v1/payments/webhook",
+        content=body,
+        headers={"content-type": "application/json", "x-comgate-signature": _sign(body)},
+    )
+    assert response.status_code == 204, response.text
+
+    async with AsyncSessionLocal() as fresh:
+        invoice = (
+            await fresh.execute(select(Invoice).where(Invoice.charge_id == charge_id))
+        ).scalar_one()
+        assert invoice.sent_at is not None, "auto-send should populate sent_at"
+        assert invoice.sent_to_email == admin_email, (
+            "with no billing_email on the org, should fall back to admin"
+        )
+
+        # Cleanup
+        from sqlalchemy import text
+
+        await fresh.execute(
+            text("ALTER TABLE invoice_audit_log DISABLE TRIGGER trg_invoice_audit_log_no_delete")
+        )
+        await fresh.execute(delete(InvoiceAuditLog).where(InvoiceAuditLog.invoice_id == invoice.id))
+        await fresh.execute(
+            text("ALTER TABLE invoice_audit_log ENABLE TRIGGER trg_invoice_audit_log_no_delete")
+        )
+        await fresh.execute(delete(InvoiceLine).where(InvoiceLine.invoice_id == invoice.id))
+        await fresh.execute(delete(Invoice).where(Invoice.id == invoice.id))
+        await fresh.execute(delete(Organization).where(Organization.id == org_id))
+        await fresh.execute(delete(WebhookEvent).where(WebhookEvent.comgate_event_id == trans_id))
+        await fresh.commit()
+
+
 # ---------------------------------------------------------------------------
 # Webhook idempotency
 # ---------------------------------------------------------------------------
