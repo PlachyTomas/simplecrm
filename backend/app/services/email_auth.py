@@ -71,10 +71,6 @@ class OAuthOnlyAccountError(EmailAuthError):
     """Login attempt against an account that has no password_hash."""
 
 
-class EmailNotVerifiedError(EmailAuthError):
-    """Login attempt against an account whose email isn't verified yet."""
-
-
 class TokenCooldownError(EmailAuthError):
     """A new token was requested within the cooldown window."""
 
@@ -214,13 +210,20 @@ async def signup_email_user(
     password: str,
     name: str,
     link_builder: LinkBuilder,
-) -> None:
+) -> User | None:
     """Sign up a new user (or start the link-a-password flow for a Google user).
 
     `link_builder` is a callable `(signed_token: str) -> str` provided by the
     route layer; it builds the absolute URL that goes into the verification
     email. Keeping URL construction at the route layer means this service
     has zero dependency on `app/api/...`.
+
+    Returns the freshly created `User` for a brand-new signup so the route
+    can mint a session and log them in immediately — we no longer block on
+    email verification, just nudge with an in-app banner. Returns `None` for
+    the Google-only-linking case: the password isn't persisted until the
+    verify link is clicked (defends against a stranger overwriting a pending
+    password), so we have nothing to log in.
 
     Raises:
         WeakPasswordError: password fails strength rules.
@@ -238,8 +241,6 @@ async def signup_email_user(
         raise EmailAlreadyRegisteredError()
 
     if existing is None:
-        # Fresh signup. Persist the password right away; the user can't log
-        # in until email_verified flips, so an unverified row is harmless.
         user = User(
             email=normalized_email,
             name=name,
@@ -250,6 +251,7 @@ async def signup_email_user(
         )
         session.add(user)
         await session.flush()
+        is_new_user = True
     else:
         # Google-only user re-signing-up with a password. We do NOT persist
         # the password here — anyone who knew the email could otherwise
@@ -257,6 +259,7 @@ async def signup_email_user(
         # password as a parameter and write it then, after proving inbox
         # ownership.
         user = existing
+        is_new_user = False
 
     await _enforce_cooldown(session, user_id=user.id, purpose=PURPOSE_VERIFY_EMAIL)
     signed = await _issue_action_token(
@@ -271,6 +274,14 @@ async def signup_email_user(
             link=link_builder(signed),
         )
     )
+
+    if is_new_user:
+        # Refresh so the route can build CurrentUser without a second round-
+        # trip. A brand-new user has no organization yet — the frontend's
+        # ProtectedRoute routes them to /onboarding/create-org.
+        await session.refresh(user, attribute_names=["organization"])
+        return user
+    return None
 
 
 async def resend_verification(
@@ -374,11 +385,14 @@ async def consume_verification_token(
 async def authenticate_email_user(session: AsyncSession, *, email: str, password: str) -> User:
     """Validate an email/password pair and return the user.
 
+    Email verification is *not* required to log in — unverified users are
+    let through with an in-app banner. We will revisit human verification
+    later; gating login on a working email pipeline blocks signup whenever
+    SMTP misbehaves, which is the bug this change is undoing.
+
     Raises:
         InvalidCredentialsError: no user, or wrong password.
         OAuthOnlyAccountError: user exists but has no password_hash.
-        EmailNotVerifiedError: user exists with password but email_verified
-            is False (so the verify step can't be skipped).
     """
     user = await _get_user_by_email(session, email)
     if user is None or not user.is_active:
@@ -387,8 +401,6 @@ async def authenticate_email_user(session: AsyncSession, *, email: str, password
         raise OAuthOnlyAccountError()
     if not verify_password(password, user.password_hash):
         raise InvalidCredentialsError()
-    if not user.email_verified:
-        raise EmailNotVerifiedError()
     user.last_login_at = _now()
     await session.flush()
     # Refresh organization so the route can build CurrentUser without a
@@ -475,7 +487,6 @@ __all__ = [
     "ActionTokenError",
     "EmailAlreadyRegisteredError",
     "EmailAuthError",
-    "EmailNotVerifiedError",
     "InvalidCredentialsError",
     "OAuthOnlyAccountError",
     "PasswordRequiredError",

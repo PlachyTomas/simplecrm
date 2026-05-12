@@ -34,6 +34,10 @@ class CurrentUser(BaseModel):
     # on /admin. Exposed on /auth/me so the frontend doesn't need a probe
     # request to figure out who can see the admin surface.
     is_super_admin: bool = False
+    # False for users who registered with email+password and haven't clicked
+    # the verification link yet. We no longer block login on this — the
+    # frontend shows a banner with a "resend verification email" CTA.
+    email_verified: bool = False
     # Nullable until the user finishes the create-org step on first login.
     # Frontend `ProtectedRoute` reads this and routes to /onboarding/create-org
     # when null instead of attempting any org-scoped queries.

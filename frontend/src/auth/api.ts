@@ -44,8 +44,19 @@ export function authErrorMessage(body: unknown): string | null {
   return typeof detail.message === "string" ? detail.message : null;
 }
 
+/** Result shape for `POST /auth/signup`.
+ *
+ * Brand-new users are auto-logged-in (`access_token` set, `detail`
+ * undefined). The Google-only-linking path still returns a 202 with only
+ * `detail` set — in that case `access_token` is undefined and the page
+ * keeps showing the "check your email" panel.
+ */
+export type SignupResponse =
+  | (AuthSuccessResponse & { detail?: undefined })
+  | { detail: string; access_token?: undefined };
+
 export function signup(body: { email: string; password: string; name: string }) {
-  return apiFetch<{ detail: string }>("/api/v1/auth/signup", {
+  return apiFetch<SignupResponse>("/api/v1/auth/signup", {
     method: "POST",
     body,
   });

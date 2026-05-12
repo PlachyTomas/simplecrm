@@ -208,13 +208,18 @@ async def send_email(message: Email) -> None:
     """Dispatch an email. Goes through real SMTP when configured; logs
     a structured payload otherwise.
 
-    The log fallback is deliberately preserved so existing tests +
-    dev workflows (where SMTP credentials aren't set) keep working —
-    the verification-link extraction in `app/services/email_auth.py`
-    relies on it.
+    Credentials gate: SMTP is only attempted when host + username + password
+    are *all* set. Until recently we attempted SMTP whenever `smtp_host` was
+    truthy, but the default value is `smtp.zoho.eu` — so a deployment that
+    forgot to set `SMTP_USERNAME`/`SMTP_PASSWORD` was connecting to Zoho,
+    skipping `login()`, and getting silently rejected at `send_message`.
+    Symptom: signup emails never arrive. Requiring all three up front falls
+    back to the log-link path instead, which keeps dev usable and makes a
+    prod misconfig visible (the verification link shows up in the logs).
     """
     settings = get_settings()
-    if settings.smtp_host:
+    smtp_configured = bool(settings.smtp_host and settings.smtp_username and settings.smtp_password)
+    if smtp_configured:
         try:
             await asyncio.to_thread(_send_via_smtp, message)
             logger.info(
@@ -229,12 +234,14 @@ async def send_email(message: Email) -> None:
         except (smtplib.SMTPException, OSError, ssl.SSLError) as exc:
             # Don't let a transient SMTP outage break user-facing actions
             # (e.g. an invite still records correctly even if the email
-            # didn't go out). Log loudly so monitoring can pick it up.
+            # didn't go out). Log loudly — include the exception class name
+            # so monitoring can alert on the failure mode at a glance.
             logger.error(
                 "email.send.smtp.failed",
                 extra={
                     "to": message.to,
                     "subject": message.subject,
+                    "error_type": type(exc).__name__,
                     "error": repr(exc),
                 },
             )

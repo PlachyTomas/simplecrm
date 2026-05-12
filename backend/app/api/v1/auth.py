@@ -54,7 +54,6 @@ from app.services.auth import (
 from app.services.email_auth import (
     ActionTokenError,
     EmailAlreadyRegisteredError,
-    EmailNotVerifiedError,
     InvalidCredentialsError,
     OAuthOnlyAccountError,
     PasswordRequiredError,
@@ -402,23 +401,29 @@ async def _issue_session(
     )
 
 
-@router.post("/signup", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/signup")
 async def signup(
     body: SignupRequest,
+    response: Response,
     session: AsyncSession = Depends(get_db),
-) -> dict[str, str]:
-    """Start an email-signup flow. The user must click the verification link
-    we email them before they can log in.
+) -> AuthSuccessResponse | dict[str, str]:
+    """Start an email-signup flow.
 
-    For a brand-new email, this creates a User row with the password hash
-    set but `email_verified=False`. For an email that already belongs to a
-    Google-only user, it sends a "verify to add a password" link without
-    touching the row — the password is written when the verify link is
-    consumed (so a stranger who knows your email can't overwrite a pending
-    password).
+    For a brand-new email this creates the User and immediately mints a
+    session — verification is no longer a hard gate, it surfaces as an
+    in-app banner the user can dismiss once they click the verification
+    link. Returns the same `AuthSuccessResponse` shape as `/login` so the
+    frontend can drop the user into the app right away.
+
+    For an email that already belongs to a Google-only user, we still send
+    a "verify to add a password" link without touching the row — the
+    password is written when the link is consumed (so a stranger who knows
+    your email can't overwrite a pending password). In that case the
+    response stays a 202 with `detail`, and the frontend keeps showing the
+    "check your email" panel.
     """
     try:
-        await signup_email_user(
+        user = await signup_email_user(
             session,
             email=body.email,
             password=body.password,
@@ -437,7 +442,12 @@ async def signup(
         ) from exc
     except TokenCooldownError as exc:
         raise _cooldown_response(exc) from exc
-    return {"detail": "Verification email sent."}
+    if user is None:
+        # Google-only-linking path: no session is issued until the verify
+        # link is consumed (consume writes the password).
+        response.status_code = status.HTTP_202_ACCEPTED
+        return {"detail": "Verification email sent."}
+    return await _issue_session(session, response, user)
 
 
 @router.post("/verify-email/check", response_model=TokenCheckResponse)
@@ -522,8 +532,8 @@ async def login(
 
     Returns 401 with `code=oauth_only_account` when the email belongs to a
     Google-only user; the frontend renders a "use Google to sign in" CTA.
-    Returns 403 with `code=email_not_verified` when the user signed up but
-    hasn't clicked the verification link yet, with a 'resend' affordance.
+    Unverified emails are *not* rejected — the user is logged in and the
+    app shows a "verify your email" banner instead.
     """
     try:
         user = await authenticate_email_user(session, email=body.email, password=body.password)
@@ -536,11 +546,6 @@ async def login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"code": "oauth_only_account"},
-        ) from exc
-    except EmailNotVerifiedError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"code": "email_not_verified"},
         ) from exc
     return await _issue_session(session, response, user)
 

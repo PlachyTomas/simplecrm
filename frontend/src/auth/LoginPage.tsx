@@ -2,7 +2,7 @@ import { ArrowLeft, Sparkles } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { authErrorCode, login, resendVerification } from "@/auth/api";
+import { authErrorCode, login } from "@/auth/api";
 import { useAuth } from "@/auth/useAuth";
 import { ApiError, API_BASE_URL } from "@/lib/api";
 import { ThemeToggle } from "@/lib/ThemeToggle";
@@ -13,7 +13,6 @@ const GOOGLE_LOGIN_PATH = "/api/v1/auth/google/login";
 interface ErrorState {
   message: string;
   showGoogleCta?: boolean;
-  showResendCta?: boolean;
 }
 
 export function LoginPage() {
@@ -24,12 +23,10 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<ErrorState | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [resendInfo, setResendInfo] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setResendInfo(null);
     setSubmitting(true);
     try {
       const res = await login({ email, password });
@@ -44,12 +41,6 @@ export function LoginPage() {
               "Tento e-mail je registrován přes Google. Použijte prosím přihlášení přes Google.",
             showGoogleCta: true,
           });
-        } else if (code === "email_not_verified") {
-          setError({
-            message:
-              "Váš e-mail ještě není ověřený. Zkontrolujte schránku, nebo si nechte zaslat nový odkaz.",
-            showResendCta: true,
-          });
         } else {
           setError({ message: "Nesprávný e-mail nebo heslo." });
         }
@@ -58,23 +49,6 @@ export function LoginPage() {
       }
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function handleResend() {
-    setResendInfo(null);
-    try {
-      await resendVerification(email);
-      setResendInfo("Nový ověřovací e-mail jsme vám právě odeslali.");
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 429) {
-        const retryAfter =
-          (err.body as { detail?: { retry_after_seconds?: number } } | undefined)?.detail
-            ?.retry_after_seconds ?? 60;
-        setResendInfo(`Počkejte prosím ${retryAfter} s před dalším pokusem.`);
-      } else {
-        setResendInfo("Odeslání se nezdařilo. Zkuste to prosím za chvíli.");
-      }
     }
   }
 
@@ -131,15 +105,6 @@ export function LoginPage() {
           {error ? (
             <div role="alert" className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger">
               <p>{error.message}</p>
-              {error.showResendCta ? (
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  className="mt-2 text-sm font-medium underline"
-                >
-                  Odeslat nový ověřovací e-mail
-                </button>
-              ) : null}
               {error.showGoogleCta ? (
                 <a
                   href={`${API_BASE_URL}${GOOGLE_LOGIN_PATH}`}
@@ -149,11 +114,6 @@ export function LoginPage() {
                 </a>
               ) : null}
             </div>
-          ) : null}
-          {resendInfo ? (
-            <p className="bg-bg-subtle rounded-md px-3 py-2 text-sm text-text-secondary">
-              {resendInfo}
-            </p>
           ) : null}
 
           <button

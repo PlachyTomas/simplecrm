@@ -52,7 +52,7 @@ async def cleanup_emails() -> AsyncIterator[list[str]]:
 # --------------------------------------------------------------------------- #
 
 
-async def test_signup_creates_unverified_user_and_action_token(
+async def test_signup_creates_unverified_user_and_logs_them_in(
     client: AsyncClient, cleanup_emails: list[str]
 ) -> None:
     email = _unique_email()
@@ -62,12 +62,20 @@ async def test_signup_creates_unverified_user_and_action_token(
         "/api/v1/auth/signup",
         json={"email": email, "password": "correcthorsebattery1", "name": "Newbie"},
     )
-    assert response.status_code == 202
+    # New users are auto-logged-in; verification surfaces as an in-app
+    # banner rather than a hard gate.
+    assert response.status_code == 200
+    body = response.json()
+    assert "access_token" in body
+    assert body["user"]["email"] == email
+    assert body["user"]["email_verified"] is False
+    assert REFRESH_COOKIE_NAME in response.cookies
 
     async with AsyncSessionLocal() as s:
         user = (await s.execute(select(User).where(User.email == email))).scalar_one()
         assert user.password_hash is not None
         assert user.email_verified is False
+        # The verification token is still issued so the emailed link works.
         token_count = (
             await s.execute(select(AuthActionToken).where(AuthActionToken.user_id == user.id))
         ).all()
@@ -91,12 +99,12 @@ async def test_signup_rejects_duplicate_registered_email(
     email = _unique_email()
     cleanup_emails.append(email)
 
-    # First signup succeeds
+    # First signup succeeds and logs the user in
     first = await client.post(
         "/api/v1/auth/signup",
         json={"email": email, "password": "correcthorsebattery1", "name": "Newbie"},
     )
-    assert first.status_code == 202
+    assert first.status_code == 200
 
     # Second signup with the same email → 409
     second = await client.post(
@@ -117,7 +125,8 @@ async def _signup_and_get_token(client: AsyncClient, email: str, password: str) 
         "/api/v1/auth/signup",
         json={"email": email, "password": password, "name": "Newbie"},
     )
-    assert response.status_code == 202
+    # Signup now auto-logs the user in (200) for brand-new emails.
+    assert response.status_code == 200
     async with AsyncSessionLocal() as s:
         user = (await s.execute(select(User).where(User.email == email))).scalar_one()
         token_row = (
@@ -194,17 +203,21 @@ async def test_login_succeeds_after_verification(
     assert REFRESH_COOKIE_NAME in response.cookies
 
 
-async def test_login_rejects_unverified_user(
-    client: AsyncClient, cleanup_emails: list[str]
-) -> None:
+async def test_login_allows_unverified_user(client: AsyncClient, cleanup_emails: list[str]) -> None:
+    """An unverified email is no longer a hard gate — the user logs in and
+    sees an in-app "verify your email" banner. This guarantees signup keeps
+    working even when SMTP is misconfigured."""
     email = _unique_email()
     password = "correcthorsebattery1"
     cleanup_emails.append(email)
     await _signup_and_get_token(client, email, password)
 
     response = await client.post("/api/v1/auth/login", json={"email": email, "password": password})
-    assert response.status_code == 403
-    assert response.json()["detail"]["code"] == "email_not_verified"
+    assert response.status_code == 200
+    body = response.json()
+    assert "access_token" in body
+    assert body["user"]["email_verified"] is False
+    assert REFRESH_COOKIE_NAME in response.cookies
 
 
 async def test_login_rejects_wrong_password(client: AsyncClient, cleanup_emails: list[str]) -> None:

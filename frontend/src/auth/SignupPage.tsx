@@ -1,8 +1,9 @@
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { type FormEvent, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { authErrorCode, authErrorMessage, resendVerification, signup } from "@/auth/api";
+import { useAuth } from "@/auth/useAuth";
 import { ApiError, API_BASE_URL } from "@/lib/api";
 import { ThemeToggle } from "@/lib/ThemeToggle";
 import { usePageTitle } from "@/lib/usePageTitle";
@@ -16,6 +17,8 @@ type Phase =
 
 export function SignupPage() {
   usePageTitle("Registrace");
+  const navigate = useNavigate();
+  const { setAccessToken } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,7 +31,16 @@ export function SignupPage() {
     setPhase({ kind: "form" });
     setSubmitting(true);
     try {
-      await signup({ email, password, name });
+      const res = await signup({ email, password, name });
+      // Brand-new signups now come back with a session — drop the user
+      // into the app and let the "verify your email" banner do the rest.
+      // The Google-only-linking branch still returns just `detail`, in
+      // which case we keep the existing "check your email" panel.
+      if (res.access_token) {
+        setAccessToken(res.access_token);
+        navigate("/app");
+        return;
+      }
       setPhase({ kind: "sent", email });
     } catch (err) {
       if (err instanceof ApiError) {

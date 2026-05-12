@@ -168,15 +168,20 @@ export interface paths {
         put?: never;
         /**
          * Signup
-         * @description Start an email-signup flow. The user must click the verification link
-         *     we email them before they can log in.
+         * @description Start an email-signup flow.
          *
-         *     For a brand-new email, this creates a User row with the password hash
-         *     set but `email_verified=False`. For an email that already belongs to a
-         *     Google-only user, it sends a "verify to add a password" link without
-         *     touching the row — the password is written when the verify link is
-         *     consumed (so a stranger who knows your email can't overwrite a pending
-         *     password).
+         *     For a brand-new email this creates the User and immediately mints a
+         *     session — verification is no longer a hard gate, it surfaces as an
+         *     in-app banner the user can dismiss once they click the verification
+         *     link. Returns the same `AuthSuccessResponse` shape as `/login` so the
+         *     frontend can drop the user into the app right away.
+         *
+         *     For an email that already belongs to a Google-only user, we still send
+         *     a "verify to add a password" link without touching the row — the
+         *     password is written when the link is consumed (so a stranger who knows
+         *     your email can't overwrite a pending password). In that case the
+         *     response stays a 202 with `detail`, and the frontend keeps showing the
+         *     "check your email" panel.
          */
         post: operations["signup_api_v1_auth_signup_post"];
         delete?: never;
@@ -271,8 +276,8 @@ export interface paths {
          *
          *     Returns 401 with `code=oauth_only_account` when the email belongs to a
          *     Google-only user; the frontend renders a "use Google to sign in" CTA.
-         *     Returns 403 with `code=email_not_verified` when the user signed up but
-         *     hasn't clicked the verification link yet, with a 'resend' affordance.
+         *     Unverified emails are *not* rejected — the user is logged in and the
+         *     app shows a "verify your email" banner instead.
          */
         post: operations["login_api_v1_auth_login_post"];
         delete?: never;
@@ -3273,6 +3278,11 @@ export interface components {
              * @default false
              */
             is_super_admin: boolean;
+            /**
+             * Email Verified
+             * @default false
+             */
+            email_verified: boolean;
             organization?: components["schemas"]["OrganizationSummary"] | null;
         };
         /**
@@ -5239,12 +5249,12 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            202: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
+                    "application/json": components["schemas"]["AuthSuccessResponse"] | {
                         [key: string]: string;
                     };
                 };

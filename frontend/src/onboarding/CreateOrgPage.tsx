@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, Building2, Check, Sparkles, Users } from "lucide
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { UnverifiedEmailBanner } from "@/auth/UnverifiedEmailBanner";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { formatCzkMinor } from "@/components/billing/format";
@@ -122,87 +123,90 @@ export function CreateOrgPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-bg px-4 py-8">
-      <div className="absolute right-4 top-4 flex items-center gap-3">
-        <ThemeToggle variant="compact" />
-        <button
-          type="button"
-          onClick={() => {
-            clearAuth();
-            navigate("/login");
-          }}
-          className="text-xs text-text-tertiary hover:text-text-primary"
-        >
-          Odhlásit se
-        </button>
-      </div>
-      <main
-        aria-labelledby="create-org-title"
-        className="w-full max-w-2xl rounded-lg border border-border bg-surface p-6 shadow-md sm:p-8"
-      >
-        <div
-          aria-hidden
-          className="mx-auto mb-5 inline-flex h-12 w-12 items-center justify-center rounded-md bg-highlight text-text-on-accent"
-        >
-          <Sparkles size={24} strokeWidth={1.75} />
+    <div className="relative flex min-h-screen flex-col bg-bg">
+      <UnverifiedEmailBanner />
+      <div className="relative flex flex-1 items-center justify-center px-4 py-8">
+        <div className="absolute right-4 top-4 flex items-center gap-3">
+          <ThemeToggle variant="compact" />
+          <button
+            type="button"
+            onClick={() => {
+              clearAuth();
+              navigate("/login");
+            }}
+            className="text-xs text-text-tertiary hover:text-text-primary"
+          >
+            Odhlásit se
+          </button>
         </div>
-        <h1 id="create-org-title" className="text-center text-2xl font-semibold">
-          Vytvořte si organizaci
-        </h1>
-        <StepDots step={step} />
+        <main
+          aria-labelledby="create-org-title"
+          className="w-full max-w-2xl rounded-lg border border-border bg-surface p-6 shadow-md sm:p-8"
+        >
+          <div
+            aria-hidden
+            className="mx-auto mb-5 inline-flex h-12 w-12 items-center justify-center rounded-md bg-highlight text-text-on-accent"
+          >
+            <Sparkles size={24} strokeWidth={1.75} />
+          </div>
+          <h1 id="create-org-title" className="text-center text-2xl font-semibold">
+            Vytvořte si organizaci
+          </h1>
+          <StepDots step={step} />
 
-        <form onSubmit={onSubmit} className="mt-6 space-y-5">
-          {step === 1 ? (
-            <NameStep name={name} setName={setName} />
-          ) : step === 2 ? (
-            <SeatsStep seatCount={seatCount} setSeatCount={setSeatCount} planCode={planCode} />
-          ) : (
-            <PlanStep seatCount={seatCount} planCode={planCode} setPlanCode={setPlanCode} />
-          )}
+          <form onSubmit={onSubmit} className="mt-6 space-y-5">
+            {step === 1 ? (
+              <NameStep name={name} setName={setName} />
+            ) : step === 2 ? (
+              <SeatsStep seatCount={seatCount} setSeatCount={setSeatCount} planCode={planCode} />
+            ) : (
+              <PlanStep seatCount={seatCount} planCode={planCode} setPlanCode={setPlanCode} />
+            )}
 
-          {error ? (
-            <p role="alert" className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger">
-              {error}
-            </p>
-          ) : null}
+            {error ? (
+              <p role="alert" className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger">
+                {error}
+              </p>
+            ) : null}
 
-          <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={goBack}
-              disabled={step === 1 || mutation.isPending}
-              className="inline-flex h-10 items-center gap-1.5 rounded-md bg-transparent px-3 text-sm font-medium text-text-secondary hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-30"
-            >
-              <ArrowLeft size={16} strokeWidth={1.75} />
-              Zpět
-            </button>
-            {step < 3 ? (
+            <div className="flex items-center justify-between gap-3">
               <button
                 type="button"
-                onClick={goNext}
-                className="inline-flex h-10 items-center gap-1.5 rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
+                onClick={goBack}
+                disabled={step === 1 || mutation.isPending}
+                className="inline-flex h-10 items-center gap-1.5 rounded-md bg-transparent px-3 text-sm font-medium text-text-secondary hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-30"
               >
-                Pokračovat
-                <ArrowRight size={16} strokeWidth={1.75} />
+                <ArrowLeft size={16} strokeWidth={1.75} />
+                Zpět
               </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={mutation.isPending}
-                className="inline-flex h-10 items-center gap-1.5 rounded-md bg-accent px-6 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <Check size={16} strokeWidth={2} />
-                {mutation.isPending ? "Vytvářím…" : "Vytvořit organizaci"}
-              </button>
-            )}
-          </div>
-        </form>
+              {step < 3 ? (
+                <button
+                  type="button"
+                  onClick={goNext}
+                  className="inline-flex h-10 items-center gap-1.5 rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
+                >
+                  Pokračovat
+                  <ArrowRight size={16} strokeWidth={1.75} />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={mutation.isPending}
+                  className="inline-flex h-10 items-center gap-1.5 rounded-md bg-accent px-6 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Check size={16} strokeWidth={2} />
+                  {mutation.isPending ? "Vytvářím…" : "Vytvořit organizaci"}
+                </button>
+              )}
+            </div>
+          </form>
 
-        <p className="mt-6 text-center text-xs text-text-tertiary">
-          Pozvánka od kolegů? Použijte odkaz, který vám přišel e-mailem, místo zakládání nové
-          organizace.
-        </p>
-      </main>
+          <p className="mt-6 text-center text-xs text-text-tertiary">
+            Pozvánka od kolegů? Použijte odkaz, který vám přišel e-mailem, místo zakládání nové
+            organizace.
+          </p>
+        </main>
+      </div>
     </div>
   );
 }
