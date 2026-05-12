@@ -148,12 +148,55 @@ def _pin_pdf_dates(when: datetime) -> Any:
 
 
 # --------------------------------------------------------------------------- #
+# Warmup
+# --------------------------------------------------------------------------- #
+
+
+_WARMUP_HTML = """\
+<!doctype html>
+<html lang="cs"><head><meta charset="utf-8"><style>
+@page { size: A4; margin: 20mm; }
+body { font-family: sans-serif; font-size: 10pt; }
+</style></head><body>
+<p>Žďár nad Sázavou — 1 234,56 Kč</p>
+</body></html>
+"""
+
+
+def _render_warmup_pdf() -> None:
+    """Render a tiny inline-CSS PDF and discard it.
+
+    The point isn't the bytes — it's the side-effects: fontconfig builds
+    its in-memory cache, Pango populates its shape-plan cache, and
+    fonttools loads the system sans-serif font into RAM. The Czech-glyph
+    string in the body ensures the diacritics path warms too, since the
+    real invoice template uses Czech text. Without this, the first real
+    render in a fresh process byte-differs from every subsequent one.
+    """
+    HTML(string=_WARMUP_HTML, base_url=str(_TEMPLATES_DIR)).write_pdf()
+
+
+# --------------------------------------------------------------------------- #
 # Renderer
 # --------------------------------------------------------------------------- #
 
 
 class InvoiceRenderer:
     """Stateless renderer; safe to instantiate per request or cache."""
+
+    # Process-wide flag tracking whether WeasyPrint's font / fontconfig
+    # state has been warmed. The very first PDF render in a fresh process
+    # produces byte-different output from every subsequent render — by 1
+    # or 2 bytes in a font subset stream, with the direction of the
+    # difference itself non-deterministic across process restarts. The
+    # culprit is fontconfig + Pango's lazy initialization on first call:
+    # things like the system-wide font cache lookup, glyph fallback
+    # discovery, and Harfbuzz shape-plan cache all populate during the
+    # first render and stay populated for the rest of the process. We
+    # warm them up once at module load (see `_warm_renderer` below); after
+    # that every `render_pdf` call is byte-identical for the same input,
+    # which `storage.py`'s `pdf_sha256` integrity check requires.
+    _warmed = False
 
     def render_pdf(self, invoice: Invoice, lines: Iterable[InvoiceLine]) -> bytes:
         """Render `invoice` to a PDF/A-2b byte string.
@@ -164,6 +207,7 @@ class InvoiceRenderer:
         two renders moments apart would byte-differ — invalidating the
         stored ``pdf_sha256`` on every read.
         """
+        self._ensure_warm()
         sorted_lines = sorted(lines, key=lambda line_: line_.position)
         html = _jinja_env.get_template("invoice.html.j2").render(
             invoice=invoice,
@@ -176,6 +220,15 @@ class InvoiceRenderer:
         weasy_html = HTML(string=html, base_url=str(_TEMPLATES_DIR))
         pdf: bytes = weasy_html.write_pdf(finisher=_pin_pdf_dates(invoice.issued_at))
         return pdf
+
+    @classmethod
+    def _ensure_warm(cls) -> None:
+        """Render a throwaway PDF once per process so font / fontconfig
+        caches are populated. See the `_warmed` docstring for why."""
+        if cls._warmed:
+            return
+        cls._warmed = True  # set first so a failed warmup doesn't loop
+        _render_warmup_pdf()
 
     def render_isdoc(self, invoice: Invoice, lines: Iterable[InvoiceLine]) -> bytes:
         """Render `invoice` to an ISDOC 6.0.1 XML byte string."""
