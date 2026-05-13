@@ -12,6 +12,7 @@ import {
 } from "@/app/settings/usePipelineSettings";
 import { InvoiceDetailsCard } from "@/app/settings/InvoiceDetailsCard";
 import { InvitationsSection } from "@/app/settings/InvitationsSection";
+import { BlockedCompaniesSection } from "@/app/settings/BlockedCompaniesSection";
 import { TeamsSection } from "@/app/settings/TeamsSection";
 import { UsersSection } from "@/app/settings/UsersSection";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
@@ -53,6 +54,7 @@ type SettingsTab =
   | "invitations"
   | "appearance"
   | "permissions"
+  | "blocked-companies"
   | "organization"
   | "billing"
   | "integrations";
@@ -87,6 +89,11 @@ const TABS: { key: SettingsTab; label: string; description: string }[] = [
     key: "permissions",
     label: "Oprávnění",
     description: "Pravidla, kdo a co může v aplikaci dělat.",
+  },
+  {
+    key: "blocked-companies",
+    label: "Blokovaná IČO",
+    description: "Seznam IČO, která obchodníci nemohou přidat jako firmu.",
   },
   {
     key: "organization",
@@ -435,6 +442,7 @@ export function SettingsPage({ initialTab = "pipeline" }: SettingsPageProps = {}
 
       {activeTab === "teams" ? <TeamsSection /> : null}
       {activeTab === "users" ? <UsersSection /> : null}
+      {activeTab === "blocked-companies" ? <BlockedCompaniesSection /> : null}
       {activeTab === "invitations" ? <InvitationsSection /> : null}
       {activeTab === "appearance" ? <AppearanceSection /> : null}
       {activeTab === "permissions" ? <PermissionsSection /> : null}

@@ -75,8 +75,7 @@ export function CompaniesListPage() {
   // params. We always carry a single sort spec (multi-column server sort
   // isn't supported and the UI never produces it).
   const sortSpec = sorting[0];
-  const sortKey: CompanySortKey =
-    (sortSpec && SORT_KEY_BY_COLUMN[sortSpec.id]) ?? "name";
+  const sortKey: CompanySortKey = (sortSpec && SORT_KEY_BY_COLUMN[sortSpec.id]) ?? "name";
   const sortOrder: "asc" | "desc" = sortSpec?.desc ? "desc" : "asc";
   const {
     data: companies,

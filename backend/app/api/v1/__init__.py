@@ -5,6 +5,7 @@ from app.api.v1 import (
     admin,
     admin_invoices,
     auth,
+    blocked_companies,
     companies,
     contacts,
     data_export,
@@ -67,6 +68,7 @@ api_router.include_router(reports_widgets.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(teams.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(users.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(activities.router, dependencies=PROTECTED_DEPS)
+api_router.include_router(blocked_companies.router, dependencies=PROTECTED_DEPS)
 # Subscription read + choose-plan + contact-enterprise — auth + org-membership
 # only, intentionally NOT trial-gated so a gated user can still escape the
 # gate by picking a plan.

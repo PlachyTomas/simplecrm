@@ -117,9 +117,7 @@ function DealCard({
       role="button"
       tabIndex={0}
       aria-label={
-        valueShown
-          ? `${deal.name} — ${formatMoney(deal.value, deal.currency, locale)}`
-          : deal.name
+        valueShown ? `${deal.name} — ${formatMoney(deal.value, deal.currency, locale)}` : deal.name
       }
       className={cn(
         "group/card relative cursor-grab select-none rounded-md border bg-surface px-3 py-2.5 shadow-sm transition-shadow duration-fast hover:shadow-md active:cursor-grabbing",
@@ -356,8 +354,7 @@ export function PipelinePage() {
       setWinningDealId(deal.id);
       celebrateWin(anchor);
       const valueShown = hasValue(deal.value);
-      const formattedValue =
-        valueShown && moneyFmt ? moneyFmt.format(Number(deal.value)) : null;
+      const formattedValue = valueShown && moneyFmt ? moneyFmt.format(Number(deal.value)) : null;
       setWinToast(
         formattedValue
           ? `🎉 Gratulujeme! Obchod ${deal.name} ve výši ${formattedValue} uzavřen.`
@@ -764,8 +761,7 @@ function DeleteConfirmDialog({
 }) {
   if (!deal) return null;
   const valueShown = hasValue(deal.value);
-  const formattedValue =
-    valueShown && moneyFmt ? moneyFmt.format(Number(deal.value)) : null;
+  const formattedValue = valueShown && moneyFmt ? moneyFmt.format(Number(deal.value)) : null;
   return (
     <div
       role="dialog"

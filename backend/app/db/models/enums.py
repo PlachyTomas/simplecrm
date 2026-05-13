@@ -31,6 +31,20 @@ class ActivityEntityType(StrEnum):
     organization = "organization"
 
 
+class BlockedCompanyReason(StrEnum):
+    """Why an IČO is on the org's blocked list.
+
+    Free-form note is on the row itself; this enum keeps reporting
+    buckets stable across orgs.
+    """
+
+    competitor = "competitor"
+    do_not_contact = "do_not_contact"
+    bankrupt = "bankrupt"
+    legal_issue = "legal_issue"
+    other = "other"
+
+
 class ActivityType(StrEnum):
     note = "note"
     stage_change = "stage_change"

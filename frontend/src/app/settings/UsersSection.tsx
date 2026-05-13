@@ -283,9 +283,7 @@ export function UsersSection() {
               onTeamChange={(teamId) => mutate(u.id, { team_id: teamId })}
               onCanInviteChange={(can_invite) => mutate(u.id, { can_invite })}
               onToggleActive={() => mutate(u.id, { is_active: !u.is_active })}
-              onCapChange={(max_owned_companies) =>
-                mutate(u.id, { max_owned_companies })
-              }
+              onCapChange={(max_owned_companies) => mutate(u.id, { max_owned_companies })}
               onCancelScheduledDeactivation={cancelQueueWithConfirm}
             />
           ))}

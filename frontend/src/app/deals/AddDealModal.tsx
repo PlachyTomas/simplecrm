@@ -185,10 +185,7 @@ export function AddDealModal({
   if (!open) return null;
 
   const newCompanyReady = showNewCompany && !!newCompany.name.trim();
-  const canSubmit =
-    !!form.name.trim() &&
-    !!form.stageId &&
-    (!!form.companyId || newCompanyReady);
+  const canSubmit = !!form.name.trim() && !!form.stageId && (!!form.companyId || newCompanyReady);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -254,23 +251,18 @@ export function AddDealModal({
     ? describeLookupError(newCompanyLookup.error, debouncedNewIco)
     : null;
   const newIcoLength = newCompany.ico.replace(/\D/g, "").length;
-  const newIcoLookupState:
-    | "empty"
-    | "typing"
-    | "loading"
-    | "success"
-    | "not_found"
-    | "error" = !newCompany.ico
-    ? "empty"
-    : !newIcoQuery
-      ? "typing"
-      : newCompanyLookup.isPending
-        ? "loading"
-        : newCompanyLookup.isError
-          ? newCompanyLookup.error instanceof ApiError && newCompanyLookup.error.status === 404
-            ? "not_found"
-            : "error"
-          : "success";
+  const newIcoLookupState: "empty" | "typing" | "loading" | "success" | "not_found" | "error" =
+    !newCompany.ico
+      ? "empty"
+      : !newIcoQuery
+        ? "typing"
+        : newCompanyLookup.isPending
+          ? "loading"
+          : newCompanyLookup.isError
+            ? newCompanyLookup.error instanceof ApiError && newCompanyLookup.error.status === 404
+              ? "not_found"
+              : "error"
+            : "success";
 
   return (
     <div

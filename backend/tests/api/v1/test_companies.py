@@ -815,9 +815,7 @@ async def test_company_create_respects_owner_cap(
     admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
     sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
     sales.max_owned_companies = 1
-    db_session.add(
-        Company(organization_id=org.id, name="Existing", owner_user_id=sales.id)
-    )
+    db_session.add(Company(organization_id=org.id, name="Existing", owner_user_id=sales.id))
     await db_session.commit()
 
     # Admin trying to assign one more company to the capped salesperson — 409.

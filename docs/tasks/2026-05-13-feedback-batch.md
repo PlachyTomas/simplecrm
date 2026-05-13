@@ -172,3 +172,12 @@ alembic migration.
   is enough until a customer asks for refresh).
 - Org-wide `default_max_owned_companies` setting (only per-user this
   pass).
+
+## Trimmed during implementation
+
+- Topic 7 (blocked-IČO): dropped the proposed `ares_address_*`
+  columns. Only `ares_name` is stored; the list view doesn't show an
+  address. Restore if/when a customer asks for the snapshot.
+- Topic 7: dropped the super-admin vs. org-admin duality. The
+  endpoints are org-admin only — that's the actual user story; super
+  admin can still inspect via psql if needed.

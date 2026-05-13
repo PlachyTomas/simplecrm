@@ -1395,6 +1395,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/blocked-companies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Blocked Companies */
+        get: operations["list_blocked_companies_api_v1_admin_blocked_companies_get"];
+        put?: never;
+        /** Create Blocked Company */
+        post: operations["create_blocked_company_api_v1_admin_blocked_companies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/blocked-companies/{blocked_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Blocked Company */
+        delete: operations["delete_blocked_company_api_v1_admin_blocked_companies__blocked_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/current/subscription": {
         parameters: {
             query?: never;
@@ -2896,6 +2931,45 @@ export interface components {
             /** Vat Rate Percent */
             vat_rate_percent: string;
         };
+        /** BlockedCompanyCreate */
+        BlockedCompanyCreate: {
+            /** Ico */
+            ico: string;
+            reason_category: components["schemas"]["BlockedCompanyReason"];
+            /** Note */
+            note?: string | null;
+        };
+        /** BlockedCompanyOut */
+        BlockedCompanyOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Ico */
+            ico: string;
+            reason_category: components["schemas"]["BlockedCompanyReason"];
+            /** Note */
+            note?: string | null;
+            /** Ares Name */
+            ares_name?: string | null;
+            /** Created By */
+            created_by?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * BlockedCompanyReason
+         * @description Why an IČO is on the org's blocked list.
+         *
+         *     Free-form note is on the row itself; this enum keeps reporting
+         *     buckets stable across orgs.
+         * @enum {string}
+         */
+        BlockedCompanyReason: "competitor" | "do_not_contact" | "bankrupt" | "legal_issue" | "other";
         /** BoardStage */
         BoardStage: {
             /**
@@ -4010,6 +4084,17 @@ export interface components {
         Page_ActivityOut_: {
             /** Items */
             items: components["schemas"]["ActivityOut"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** Page[BlockedCompanyOut] */
+        Page_BlockedCompanyOut_: {
+            /** Items */
+            items: components["schemas"]["BlockedCompanyOut"][];
             /** Total */
             total: number;
             /** Limit */
@@ -7823,6 +7908,100 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Page_ActivityOut_"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_blocked_companies_api_v1_admin_blocked_companies_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_BlockedCompanyOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_blocked_company_api_v1_admin_blocked_companies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlockedCompanyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlockedCompanyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_blocked_company_api_v1_admin_blocked_companies__blocked_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                blocked_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

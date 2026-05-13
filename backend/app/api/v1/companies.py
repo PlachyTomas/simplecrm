@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user, require_role
 from app.core.scoping import can_write_row, scope_by_owner
 from app.db import get_db
-from app.db.models import Company, User, UserRole
+from app.db.models import BlockedCompany, Company, User, UserRole
 from app.schemas.company import CompanyCreate, CompanyOut, CompanyUpdate
 from app.schemas.pagination import Page, PaginationParams
 from app.schemas.registry import RegistryLookupResult
@@ -64,8 +64,12 @@ async def _assert_owner_cap(
     target = await session.get(User, new_owner_id)
     if target is None or target.max_owned_companies is None:
         return
-    count_stmt = select(func.count()).select_from(Company).where(
-        Company.owner_user_id == new_owner_id,
+    count_stmt = (
+        select(func.count())
+        .select_from(Company)
+        .where(
+            Company.owner_user_id == new_owner_id,
+        )
     )
     if excluding_company_id is not None:
         count_stmt = count_stmt.where(Company.id != excluding_company_id)
@@ -144,9 +148,7 @@ async def list_companies(
     if ownership == "mine":
         base = base.where(Company.owner_user_id == user.id)
     elif ownership == "mine_and_unowned":
-        base = base.where(
-            (Company.owner_user_id == user.id) | (Company.owner_user_id.is_(None))
-        )
+        base = base.where((Company.owner_user_id == user.id) | (Company.owner_user_id.is_(None)))
     elif ownership == "unowned":
         base = base.where(Company.owner_user_id.is_(None))
 
@@ -256,6 +258,20 @@ async def create_company(
         )
     await _assert_owner_cap(session, owner_id)
 
+    # Block-list guard: the org admin keeps a per-IČO blocklist; we
+    # reject create with 409 ICO_BLOCKED when the new firma's IČO is on
+    # it. NULL IČO rows are always allowed (no blocklist to match).
+    if payload.ico:
+        block_stmt = select(BlockedCompany.id).where(
+            BlockedCompany.organization_id == user.organization_id,
+            BlockedCompany.ico == payload.ico,
+        )
+        if (await session.execute(block_stmt)).scalar_one_or_none() is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This IČO is on your organization's blocked list.",
+            )
+
     # Compute the ownership-release window from the org's setting. Falls
     # back to the model's column default (365) when the org row is missing
     # — only ever the case for legacy fixtures the test layer seeds
@@ -363,9 +379,7 @@ async def reassign_company_endpoint(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="new_owner_user_id does not exist in your organization",
         )
-    await _assert_owner_cap(
-        session, payload.new_owner_user_id, excluding_company_id=company.id
-    )
+    await _assert_owner_cap(session, payload.new_owner_user_id, excluding_company_id=company.id)
     await reassign_company(
         session,
         company=company,
