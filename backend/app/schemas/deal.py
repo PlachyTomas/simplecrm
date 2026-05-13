@@ -40,6 +40,10 @@ class DealMarkLost(BaseModel):
     lost_reason: str = Field(min_length=1, max_length=200)
 
 
+class DealPaymentUpdate(BaseModel):
+    paid: bool
+
+
 class DealOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -56,5 +60,7 @@ class DealOut(BaseModel):
     expected_close_date: date | None = None
     closed_at: datetime | None = None
     lost_reason: str | None = None
+    is_paid: bool = False
+    paid_at: datetime | None = None
     created_at: datetime
     updated_at: datetime

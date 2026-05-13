@@ -14,7 +14,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AddDealModal } from "@/app/deals/AddDealModal";
 import { MarkLostDialog } from "@/app/deals/MarkLostDialog";
-import { useMarkAnyDealLost, useMarkAnyDealWon } from "@/app/deals/useDealActions";
+import {
+  useMarkAnyDealLost,
+  useMarkAnyDealWon,
+  useToggleAnyDealPayment,
+} from "@/app/deals/useDealActions";
 import { useDeleteAnyDeal } from "@/app/deals/useDeals";
 import { stageColor } from "@/app/pipeline/colors";
 import {
@@ -74,11 +78,24 @@ interface DealCardProps {
   /** When this stage is "won" the win button hides — the deal is already there. */
   onWin?: (anchor: HTMLElement | null) => void;
   onLose?: () => void;
+  /** Provided only on cards in a won stage; toggles is_paid via the API. */
+  onTogglePaid?: (next: boolean) => void;
   winning?: boolean;
   losing?: boolean;
+  paymentPending?: boolean;
 }
 
-function DealCard({ deal, locale, dragging, onWin, onLose, winning, losing }: DealCardProps) {
+function DealCard({
+  deal,
+  locale,
+  dragging,
+  onWin,
+  onLose,
+  onTogglePaid,
+  winning,
+  losing,
+  paymentPending,
+}: DealCardProps) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: deal.id,
     data: { type: "deal", stageId: deal.stage_id },
@@ -105,7 +122,10 @@ function DealCard({ deal, locale, dragging, onWin, onLose, winning, losing }: De
           : deal.name
       }
       className={cn(
-        "group/card relative cursor-grab select-none rounded-md border border-border bg-surface px-3 py-2.5 shadow-sm transition-shadow duration-fast hover:shadow-md active:cursor-grabbing",
+        "group/card relative cursor-grab select-none rounded-md border bg-surface px-3 py-2.5 shadow-sm transition-shadow duration-fast hover:shadow-md active:cursor-grabbing",
+        // Soft-magenta outline on paid deals so the won column visually
+        // separates collected revenue from outstanding receivables.
+        deal.is_paid ? "border-brand-accent-border bg-brand-accent-subtle" : "border-border",
         "max-md:w-64 max-md:shrink-0 max-md:snap-start",
         dragging && "opacity-0",
       )}
@@ -115,6 +135,23 @@ function DealCard({ deal, locale, dragging, onWin, onLose, winning, losing }: De
         <p className="mt-1 font-mono text-xs tabular-nums text-text-secondary">
           {formatMoney(deal.value, deal.currency, locale)}
         </p>
+      ) : null}
+      {onTogglePaid ? (
+        <label
+          // Stop dnd-kit from kicking in when the user clicks the checkbox.
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          className="mt-2 inline-flex select-none items-center gap-2 text-xs text-text-secondary"
+        >
+          <input
+            type="checkbox"
+            checked={deal.is_paid}
+            disabled={paymentPending}
+            onChange={(e) => onTogglePaid(e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-border text-brand-accent focus:ring-brand-accent"
+          />
+          Zaplaceno
+        </label>
       ) : null}
       {onWin || onLose ? (
         <div className="mt-2 flex flex-wrap items-center gap-1.5 opacity-0 transition-opacity duration-fast focus-within:opacity-100 group-hover/card:opacity-100 max-md:opacity-100">
@@ -165,8 +202,10 @@ interface StageColumnProps {
   onAddDeal: (stageId: string) => void;
   onWinDeal: (deal: BoardDeal, anchor: HTMLElement | null) => void;
   onLoseDeal: (deal: BoardDeal) => void;
+  onTogglePayment: (deal: BoardDeal, next: boolean) => void;
   winningDealId: string | null;
   losingDealId: string | null;
+  payingDealId: string | null;
 }
 
 function StageColumn({
@@ -177,8 +216,10 @@ function StageColumn({
   onAddDeal,
   onWinDeal,
   onLoseDeal,
+  onTogglePayment,
   winningDealId,
   losingDealId,
+  payingDealId,
 }: StageColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
@@ -249,8 +290,12 @@ function StageColumn({
               dragging={draggingId === deal.id}
               onWin={stage.stage_type === "won" ? undefined : (anchor) => onWinDeal(deal, anchor)}
               onLose={stage.stage_type === "won" ? undefined : () => onLoseDeal(deal)}
+              onTogglePaid={
+                stage.stage_type === "won" ? (next) => onTogglePayment(deal, next) : undefined
+              }
               winning={winningDealId === deal.id}
               losing={losingDealId === deal.id}
+              paymentPending={payingDealId === deal.id}
             />
           ))
         )}
@@ -268,6 +313,7 @@ export function PipelinePage() {
   const moveMutation = useMoveDealStage();
   const winMutation = useMarkAnyDealWon();
   const loseMutation = useMarkAnyDealLost();
+  const paymentMutation = useToggleAnyDealPayment();
   const deleteMutation = useDeleteAnyDeal();
   const toast = useToast();
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
@@ -278,6 +324,7 @@ export function PipelinePage() {
   const [winningDealId, setWinningDealId] = useState<string | null>(null);
   const [winToast, setWinToast] = useState<string | null>(null);
   const [losingDealTarget, setLosingDealTarget] = useState<BoardDeal | null>(null);
+  const [payingDealId, setPayingDealId] = useState<string | null>(null);
   const [deletingDealTarget, setDeletingDealTarget] = useState<BoardDeal | null>(null);
 
   // Mouse: drag activates on a small movement (distance:6) so power users
@@ -329,6 +376,23 @@ export function PipelinePage() {
   const handleLoseDeal = useCallback((deal: BoardDeal) => {
     setLosingDealTarget(deal);
   }, []);
+
+  const handleTogglePayment = useCallback(
+    (deal: BoardDeal, next: boolean) => {
+      if (payingDealId) return;
+      setPayingDealId(deal.id);
+      paymentMutation.mutate(
+        { dealId: deal.id, paid: next },
+        {
+          onError: () => {
+            toast.error("Nepodařilo se uložit stav platby.");
+          },
+          onSettled: () => setPayingDealId(null),
+        },
+      );
+    },
+    [paymentMutation, payingDealId, toast],
+  );
 
   const handleConfirmLose = useCallback(
     (reason: string) => {
@@ -592,8 +656,10 @@ export function PipelinePage() {
                 }}
                 onWinDeal={handleWinDeal}
                 onLoseDeal={handleLoseDeal}
+                onTogglePayment={handleTogglePayment}
                 winningDealId={winningDealId}
                 losingDealId={losingDealTarget?.id ?? null}
+                payingDealId={payingDealId}
               />
             ))}
           </div>

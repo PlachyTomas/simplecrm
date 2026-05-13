@@ -720,6 +720,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/deals/{deal_id}/payment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update Deal Payment
+         * @description Toggle a won deal's paid/unpaid flag.
+         *
+         *     The UI exposes the checkbox on cards in the won column. Trying to
+         *     flip a deal that isn't in a won stage is a 409 — the flag only
+         *     carries meaning there and we'd rather force the caller to mark-won
+         *     first than have stale `is_paid=true` rows sitting in early stages.
+         */
+        post: operations["update_deal_payment_api_v1_deals__deal_id__payment_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invitations": {
         parameters: {
             query?: never;
@@ -3392,6 +3417,13 @@ export interface components {
             /** Lost Reason */
             lost_reason?: string | null;
             /**
+             * Is Paid
+             * @default false
+             */
+            is_paid: boolean;
+            /** Paid At */
+            paid_at?: string | null;
+            /**
              * Created At
              * Format: date-time
              */
@@ -3401,6 +3433,11 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** DealPaymentUpdate */
+        DealPaymentUpdate: {
+            /** Paid */
+            paid: boolean;
         };
         /** DealStageMove */
         DealStageMove: {
@@ -6390,6 +6427,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["DealMarkLost"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_deal_payment_api_v1_deals__deal_id__payment_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealPaymentUpdate"];
             };
         };
         responses: {

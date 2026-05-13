@@ -74,3 +74,19 @@ export function useMarkAnyDealLost() {
     },
   });
 }
+
+export function useToggleAnyDealPayment() {
+  const { accessToken } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation<DealOut, Error, { dealId: string; paid: boolean }>({
+    mutationFn: ({ dealId, paid }) =>
+      apiFetch<DealOut>(`/api/v1/deals/${dealId}/payment`, {
+        method: "POST",
+        token: accessToken,
+        body: { paid },
+      }),
+    onSuccess: (_data, { dealId }) => {
+      invalidateDealReadModels(queryClient, dealId);
+    },
+  });
+}

@@ -29,6 +29,7 @@ from app.schemas.deal import (
     DealCreate,
     DealMarkLost,
     DealOut,
+    DealPaymentUpdate,
     DealStageMove,
     DealUpdate,
 )
@@ -422,6 +423,49 @@ async def mark_deal_lost(
             },
         )
     )
+    await session.commit()
+    await session.refresh(deal)
+    return deal
+
+
+@router.post("/{deal_id}/payment", response_model=DealOut)
+async def update_deal_payment(
+    deal_id: uuid.UUID,
+    payload: DealPaymentUpdate,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Deal:
+    """Toggle a won deal's paid/unpaid flag.
+
+    The UI exposes the checkbox on cards in the won column. Trying to
+    flip a deal that isn't in a won stage is a 409 — the flag only
+    carries meaning there and we'd rather force the caller to mark-won
+    first than have stale `is_paid=true` rows sitting in early stages.
+    """
+    from datetime import UTC, datetime
+
+    deal = await _get_scoped(session, user, deal_id)
+    if not await can_write_row(session, user, deal.owner_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot update payment on deals outside your visibility scope",
+        )
+
+    stage = await session.get(Stage, deal.stage_id)
+    if stage is None or stage.stage_type is not StageType.won:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Payment status can only be set on deals in a won stage.",
+        )
+
+    if payload.paid:
+        if not deal.is_paid:
+            deal.paid_at = datetime.now(tz=UTC)
+        deal.is_paid = True
+    else:
+        deal.is_paid = False
+        deal.paid_at = None
+
     await session.commit()
     await session.refresh(deal)
     return deal

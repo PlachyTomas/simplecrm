@@ -112,6 +112,25 @@ async def get_default_pipeline_board(
         if deal.currency == org.currency:
             totals[key] += deal.value
 
+    def _order_deals(stage: Stage, items: list[Deal]) -> list[Deal]:
+        # Won column: unpaid first (so the salesperson sees what's still
+        # owed at the top), then paid deals ordered by paid_at desc so
+        # the most recently collected sit just below the unpaid pile.
+        # `paid_at` is NULL for unpaid rows; we coerce to closed_at so
+        # the unpaid block keeps the "freshest win at top" feel.
+        if stage.stage_type is StageType.won:
+            from datetime import UTC, datetime
+
+            sentinel = datetime.min.replace(tzinfo=UTC)
+            return sorted(
+                items,
+                key=lambda d: (
+                    d.is_paid,  # False (=unpaid) < True (=paid)
+                    -(d.paid_at or d.closed_at or sentinel).timestamp(),
+                ),
+            )
+        return sorted(items, key=lambda d: d.created_at, reverse=True)
+
     board_stages = [
         BoardStage(
             id=stage.id,
@@ -123,14 +142,7 @@ async def get_default_pipeline_board(
             deal_count=len(grouped[str(stage.id)]),
             total_value=totals[str(stage.id)],
             currency=org.currency,
-            deals=[
-                DealOut.model_validate(d)
-                for d in sorted(
-                    grouped[str(stage.id)],
-                    key=lambda d: d.created_at,
-                    reverse=True,
-                )
-            ],
+            deals=[DealOut.model_validate(d) for d in _order_deals(stage, grouped[str(stage.id)])],
         )
         for stage in sorted(pipeline.stages, key=lambda s: s.position)
     ]

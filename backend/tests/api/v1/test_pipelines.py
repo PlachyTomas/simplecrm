@@ -437,3 +437,75 @@ async def test_reorder_stages_rejects_foreign_ids(
         json={"stage_ids": bad_ids},
     )
     assert response.status_code == 400
+
+
+async def test_pipeline_board_won_column_orders_unpaid_first_then_paid_by_paid_at(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Won column: unpaid floats to top, paid sinks to bottom ordered by paid_at desc."""
+    from datetime import UTC, datetime, timedelta
+
+    org, user, stages = await _seed(db_session, owned_cleanup)
+    company = Company(organization_id=org.id, name="Co")
+    db_session.add(company)
+    await db_session.commit()
+
+    won_stage = next(s for s in stages if s.stage_type.value == "won")
+    now = datetime.now(tz=UTC)
+    db_session.add_all(
+        [
+            # Two unpaid (closed at different times) and two paid.
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                name="unpaid-fresh",
+                value=Decimal("0"),
+                currency="CZK",
+                closed_at=now - timedelta(days=1),
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                name="unpaid-old",
+                value=Decimal("0"),
+                currency="CZK",
+                closed_at=now - timedelta(days=10),
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                name="paid-yesterday",
+                value=Decimal("0"),
+                currency="CZK",
+                closed_at=now - timedelta(days=5),
+                is_paid=True,
+                paid_at=now - timedelta(days=1),
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                name="paid-week-ago",
+                value=Decimal("0"),
+                currency="CZK",
+                closed_at=now - timedelta(days=6),
+                is_paid=True,
+                paid_at=now - timedelta(days=7),
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get("/api/v1/pipelines/default/board", headers=_auth(user))
+    assert r.status_code == 200
+    won_col = next(s for s in r.json()["stages"] if s["stage_type"] == "won")
+    names = [d["name"] for d in won_col["deals"]]
+    assert names == [
+        "unpaid-fresh",
+        "unpaid-old",
+        "paid-yesterday",
+        "paid-week-ago",
+    ]

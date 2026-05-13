@@ -733,3 +733,105 @@ async def test_move_deal_stage_foreign_deal_returns_404(
         json={"stage_id": str(stage.id)},
     )
     assert response.status_code == 404  # visibility-first
+
+
+# payment toggle ----------------------------------------------------------
+
+
+async def _won_stage_for(session: AsyncSession, org_id: uuid.UUID) -> Stage:
+    from sqlalchemy import select as sql_select
+
+    from app.db.models import Pipeline
+    from app.db.models.enums import StageType
+
+    stmt = (
+        sql_select(Stage)
+        .join(Pipeline)
+        .where(Pipeline.organization_id == org_id, Stage.stage_type == StageType.won)
+    )
+    return (await session.execute(stmt)).scalar_one()
+
+
+async def test_payment_toggle_marks_paid_with_server_timestamp(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _open_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+    won = await _won_stage_for(db_session, org.id)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=won.id,
+        owner_user_id=admin.id,
+        name="Won deal",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    paid = await client.post(
+        f"/api/v1/deals/{deal.id}/payment", headers=_auth(admin), json={"paid": True}
+    )
+    assert paid.status_code == 200
+    body = paid.json()
+    assert body["is_paid"] is True
+    assert body["paid_at"] is not None
+
+    # Flipping back clears the timestamp.
+    unpaid = await client.post(
+        f"/api/v1/deals/{deal.id}/payment", headers=_auth(admin), json={"paid": False}
+    )
+    assert unpaid.status_code == 200
+    assert unpaid.json()["is_paid"] is False
+    assert unpaid.json()["paid_at"] is None
+
+
+async def test_payment_toggle_rejects_non_won_stage(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, open_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=open_stage.id,
+        owner_user_id=admin.id,
+        name="Still open",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    resp = await client.post(
+        f"/api/v1/deals/{deal.id}/payment", headers=_auth(admin), json={"paid": True}
+    )
+    assert resp.status_code == 409
+
+
+async def test_payment_toggle_blocked_for_foreign_deal(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _ = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    other = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    company = await _seed_company(db_session, org)
+    won = await _won_stage_for(db_session, org.id)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=won.id,
+        owner_user_id=other.id,
+        name="Theirs",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+    resp = await client.post(
+        f"/api/v1/deals/{deal.id}/payment", headers=_auth(sales), json={"paid": True}
+    )
+    assert resp.status_code == 404

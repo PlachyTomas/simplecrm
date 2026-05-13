@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -41,6 +42,7 @@ class Deal(Base):
         Index("ix_deals_stage_id", "stage_id"),
         Index("ix_deals_owner_user_id", "owner_user_id"),
         Index("ix_deals_expected_close_date", "expected_close_date"),
+        Index("ix_deals_is_paid_paid_at", "is_paid", "paid_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -82,6 +84,16 @@ class Deal(Base):
     expected_close_date: Mapped[date | None] = mapped_column(Date)
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     lost_reason: Mapped[str | None] = mapped_column(String(200))
+
+    # `is_paid` only carries meaning while the deal sits in a won stage —
+    # the UI surfaces the checkbox there only. The board endpoint reads it
+    # to sink paid deals to the bottom of the won column. `paid_at` is
+    # stamped from server `now()` when is_paid flips true, cleared when it
+    # flips back; never trusted from the client.
+    is_paid: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
+    )
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
