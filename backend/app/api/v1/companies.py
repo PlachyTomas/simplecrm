@@ -6,7 +6,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import func, nulls_last, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -58,6 +58,17 @@ async def _get_scoped(session: AsyncSession, user: User, company_id: uuid.UUID) 
     return company
 
 
+_SORT_COLUMNS = {
+    "name": Company.name,
+    "ownership_expires_at": Company.ownership_expires_at,
+    "last_order_at": Company.last_order_at,
+    # "Activity" doesn't have its own column yet — the closest proxy is the
+    # row's `updated_at`, which moves on any edit / freeing / reassign.
+    "last_activity_at": Company.updated_at,
+    "created_at": Company.created_at,
+}
+
+
 @router.get("", response_model=Page[CompanyOut])
 async def list_companies(
     pagination: PaginationParams = Depends(),
@@ -66,18 +77,60 @@ async def list_companies(
         max_length=120,
         description="Case-insensitive partial match on name or IČO.",
     ),
+    sort: str = Query(
+        default="name",
+        description=(
+            "Sort key. One of: name, ownership_expires_at, last_order_at, "
+            "last_activity_at, created_at."
+        ),
+    ),
+    order: str = Query(default="asc", pattern="^(asc|desc)$"),
+    ownership: str | None = Query(
+        default=None,
+        description=(
+            "Ownership filter: 'mine' (only my own), "
+            "'mine_and_unowned' (mine + pool), or 'unowned' (pool only)."
+        ),
+        pattern="^(mine|mine_and_unowned|unowned)$",
+    ),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Page[CompanyOut]:
+    if sort not in _SORT_COLUMNS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown sort key: {sort}",
+        )
+
     base = select(Company).where(Company.organization_id == user.organization_id)
     if search:
         pattern = f"%{search.strip()}%"
         base = base.where(Company.name.ilike(pattern) | Company.ico.ilike(pattern))
+
+    if ownership == "mine":
+        base = base.where(Company.owner_user_id == user.id)
+    elif ownership == "mine_and_unowned":
+        base = base.where(
+            (Company.owner_user_id == user.id) | (Company.owner_user_id.is_(None))
+        )
+    elif ownership == "unowned":
+        base = base.where(Company.owner_user_id.is_(None))
+
     scoped = await scope_by_owner(base, session=session, user=user, owner_col=Company.owner_user_id)
     count_stmt = select(func.count()).select_from(scoped.subquery())
     total = (await session.execute(count_stmt)).scalar_one()
 
-    items_stmt = scoped.order_by(Company.name).limit(pagination.limit).offset(pagination.offset)
+    sort_col = _SORT_COLUMNS[sort]
+    # The sortable timestamp columns can be NULL (no orders yet, etc.) —
+    # always push nulls to the bottom so the salesperson sees real data
+    # at the top regardless of asc/desc.
+    sort_expr = sort_col.asc() if order == "asc" else sort_col.desc()
+    if sort != "name":
+        sort_expr = nulls_last(sort_expr)
+    # Stable tiebreaker on name keeps pagination deterministic.
+    items_stmt = (
+        scoped.order_by(sort_expr, Company.name).limit(pagination.limit).offset(pagination.offset)
+    )
     items = (await session.execute(items_stmt)).scalars().all()
     return Page[CompanyOut](
         items=[CompanyOut.model_validate(c) for c in items],

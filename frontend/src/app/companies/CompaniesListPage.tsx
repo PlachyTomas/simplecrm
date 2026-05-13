@@ -21,7 +21,12 @@ import { useNavigate } from "react-router-dom";
 
 import { AddCompanyModal } from "@/app/companies/AddCompanyModal";
 import { OwnershipBadge } from "@/app/companies/OwnershipBadge";
-import { type CompanyOut, useCompanies } from "@/app/companies/useCompanies";
+import {
+  type CompanyOut,
+  type CompanyOwnershipFilter,
+  type CompanySortKey,
+  useCompanies,
+} from "@/app/companies/useCompanies";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -36,17 +41,43 @@ function pluralizeCompanies(n: number): string {
   return `${n} ${csNoun(n, "firma")}`;
 }
 
+// Sortable React Table column ids → backend sort keys. The list is
+// authoritative: any column not in this map renders without a sort
+// affordance.
+const SORT_KEY_BY_COLUMN: Record<string, CompanySortKey> = {
+  name: "name",
+  ownership_expires_at: "ownership_expires_at",
+  last_activity_at: "last_activity_at",
+  last_order_at: "last_order_at",
+  created_at: "created_at",
+};
+
+const OWNERSHIP_OPTIONS: { value: CompanyOwnershipFilter | "all"; label: string }[] = [
+  { value: "all", label: "Vše v mém týmu" },
+  { value: "mine_and_unowned", label: "Moje + nezabrané" },
+  { value: "mine", label: "Jen moje" },
+  { value: "unowned", label: "Jen nezabrané" },
+];
+
 export function CompaniesListPage() {
   usePageTitle("Firmy");
   const [modalOpen, setModalOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebouncedValue(searchInput, 300);
   const [page, setPage] = useState(0);
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "name", desc: false }]);
+  const [ownership, setOwnership] = useState<CompanyOwnershipFilter | "all">("all");
 
   const navigate = useNavigate();
   const { data: user } = useCurrentUser();
   const { data: usersPage } = useOrgUsers();
+  // Translate the React Table sort state into the backend's sort/order
+  // params. We always carry a single sort spec (multi-column server sort
+  // isn't supported and the UI never produces it).
+  const sortSpec = sorting[0];
+  const sortKey: CompanySortKey =
+    (sortSpec && SORT_KEY_BY_COLUMN[sortSpec.id]) ?? "name";
+  const sortOrder: "asc" | "desc" = sortSpec?.desc ? "desc" : "asc";
   const {
     data: companies,
     isPending,
@@ -56,6 +87,9 @@ export function CompaniesListPage() {
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
     search: debouncedSearch,
+    sort: sortKey,
+    order: sortOrder,
+    ownership: ownership === "all" ? undefined : ownership,
   });
 
   const locale = user?.organization?.locale;
@@ -127,13 +161,36 @@ export function CompaniesListPage() {
           );
         },
       }),
-      helper.accessor("address_city", {
-        header: "Město",
-        enableSorting: false,
-        cell: (info) => <span className="text-text-secondary">{info.getValue() ?? "—"}</span>,
+      helper.accessor("ownership_expires_at", {
+        id: "ownership_expires_at",
+        header: "Zámek vyprší",
+        cell: (info) => {
+          const value = info.getValue();
+          if (!value || !info.row.original.owner_user_id) {
+            return <span className="text-text-tertiary">—</span>;
+          }
+          return (
+            <span className="text-text-secondary">
+              {dateFmt ? dateFmt.format(new Date(value)) : value}
+            </span>
+          );
+        },
       }),
-      helper.accessor("created_at", {
-        header: "Založeno",
+      helper.accessor("last_order_at", {
+        id: "last_order_at",
+        header: "Poslední obchod",
+        cell: (info) => {
+          const value = info.getValue();
+          return (
+            <span className="text-text-secondary">
+              {value ? (dateFmt ? dateFmt.format(new Date(value)) : value) : "—"}
+            </span>
+          );
+        },
+      }),
+      helper.accessor("updated_at", {
+        id: "last_activity_at",
+        header: "Poslední aktivita",
         cell: (info) => (
           <span className="text-text-tertiary">
             {dateFmt ? dateFmt.format(new Date(info.getValue())) : info.getValue()}
@@ -149,6 +206,8 @@ export function CompaniesListPage() {
     state: { sorting },
     onSortingChange: setSorting,
     manualPagination: true,
+    manualSorting: true,
+    enableSortingRemoval: false,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
@@ -176,8 +235,8 @@ export function CompaniesListPage() {
         </button>
       </div>
 
-      <div className="mb-4">
-        <label className="relative block">
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <label className="relative block md:max-w-md md:flex-1">
           <span className="sr-only">Hledat firmu</span>
           <Search
             size={16}
@@ -193,9 +252,38 @@ export function CompaniesListPage() {
               setPage(0);
             }}
             placeholder="Hledat podle názvu nebo IČO…"
-            className="h-10 w-full rounded-md border border-border bg-surface-overlay pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none md:max-w-md"
+            className="h-10 w-full rounded-md border border-border bg-surface-overlay pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
           />
         </label>
+        <div
+          role="radiogroup"
+          aria-label="Filtr vlastnictví firem"
+          className="inline-flex flex-wrap gap-1 rounded-md border border-border bg-surface-overlay p-1"
+        >
+          {OWNERSHIP_OPTIONS.map((option) => {
+            const active = ownership === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => {
+                  setOwnership(option.value);
+                  setPage(0);
+                }}
+                className={cn(
+                  "rounded px-3 py-1.5 text-xs font-medium transition-colors duration-fast",
+                  active
+                    ? "bg-surface text-text-primary shadow-sm"
+                    : "text-text-secondary hover:text-text-primary",
+                )}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {isError ? (

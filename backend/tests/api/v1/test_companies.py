@@ -690,3 +690,116 @@ async def test_reassign_company_cross_org_rejected(
         json={"new_owner_user_id": str(foreign.id)},
     )
     assert response.status_code == 400
+
+
+# sort + ownership filter ---------------------------------------------------
+
+
+async def test_list_companies_sort_by_ownership_expires_at_asc(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    now = datetime.now(tz=UTC)
+    db_session.add_all(
+        [
+            Company(
+                organization_id=org.id,
+                name="ExpiresSoon",
+                owner_user_id=admin.id,
+                ownership_expires_at=now + timedelta(days=10),
+            ),
+            Company(
+                organization_id=org.id,
+                name="ExpiresLater",
+                owner_user_id=admin.id,
+                ownership_expires_at=now + timedelta(days=300),
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get(
+        "/api/v1/companies?sort=ownership_expires_at&order=asc",
+        headers=_auth(admin),
+    )
+    assert r.status_code == 200
+    names = [it["name"] for it in r.json()["items"]]
+    assert names == ["ExpiresSoon", "ExpiresLater"]
+
+
+async def test_list_companies_ownership_filter_mine(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    team = Team(organization_id=org.id, name="T")
+    db_session.add(team)
+    await db_session.commit()
+    await db_session.refresh(team)
+    me = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson, team_id=team.id)
+    mate = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson, team_id=team.id)
+    db_session.add_all(
+        [
+            Company(organization_id=org.id, name="Mine", owner_user_id=me.id),
+            Company(organization_id=org.id, name="Mate", owner_user_id=mate.id),
+            Company(organization_id=org.id, name="Pool", owner_user_id=None),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get("/api/v1/companies?ownership=mine", headers=_auth(me))
+    assert r.status_code == 200
+    assert {it["name"] for it in r.json()["items"]} == {"Mine"}
+
+
+async def test_list_companies_ownership_filter_mine_and_unowned(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    team = Team(organization_id=org.id, name="T")
+    db_session.add(team)
+    await db_session.commit()
+    await db_session.refresh(team)
+    me = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson, team_id=team.id)
+    mate = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson, team_id=team.id)
+    db_session.add_all(
+        [
+            Company(organization_id=org.id, name="Mine", owner_user_id=me.id),
+            Company(organization_id=org.id, name="Mate", owner_user_id=mate.id),
+            Company(organization_id=org.id, name="Pool", owner_user_id=None),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get("/api/v1/companies?ownership=mine_and_unowned", headers=_auth(me))
+    assert r.status_code == 200
+    assert {it["name"] for it in r.json()["items"]} == {"Mine", "Pool"}
+
+
+async def test_list_companies_ownership_filter_unowned(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    me = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    db_session.add_all(
+        [
+            Company(organization_id=org.id, name="Mine", owner_user_id=me.id),
+            Company(organization_id=org.id, name="Pool", owner_user_id=None),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get("/api/v1/companies?ownership=unowned", headers=_auth(me))
+    assert r.status_code == 200
+    assert {it["name"] for it in r.json()["items"]} == {"Pool"}
+
+
+async def test_list_companies_rejects_unknown_sort_key(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    r = await client.get("/api/v1/companies?sort=evil_drop_table", headers=_auth(admin))
+    assert r.status_code == 400
