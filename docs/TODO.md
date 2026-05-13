@@ -4,8 +4,20 @@ Setup real company email for invoices emailing.
 Implement feedback window into the app
 LEarn how to use super admin
 Implement invoices management
+What happens if I register new user but quit the app before finishing org setup?
 
-----
+===Feedback===
+
+- Admin může zadat seznam blokovaných ičo plus kategorie důvodu blokování pro všechny obchodníky (info se opět doplní z ARESU).
+- Seznam firem obchodník může seřadit podle toho kterým vyprší zamčení, podle data posledního obchodu či poslední aktivity, filtrovat jen své/své a nezabrané/jen nezabrané
+- Admin má možnost omezit max počet firem per obchodník individuálně v seznamu obchodníků
+- Upravit texty na landing page - "Od registrace k prvnímu obchodu za 5 minut" na 1 řádek, "Nic víc, nic míň." celé na 2. řádek nadpisu
+  Upravit text - registrace možná přes google i email
+  DDealy ve sloupci vyhráno mají checkbox Zaplaceno/nezaplaceno => po zaplacení změní outline na jemná magenta a posunou se na konec sloupce v pipeline
+  Hodnota dealu - pokud nevyplněno tak nezobrazovat (ne mít tam všude nuly)
+  Pokud přidávám deal do pipeline musím mít možnost přes ičo v tom samém kroku vytvořit novou firmu.
+
+---
 
 ## Finish the Zoho Mail SMTP setup (code is ready, ops not done)
 
@@ -44,10 +56,12 @@ sitting.
 4. **Coolify env vars** (Coolify UI → SimpleCRM service → Environment).
    Default `SMTP_HOST=smtp.zoho.eu`, `SMTP_PORT=465`, `SMTP_USE_SSL=true`
    are baked into the config — only the two below need setting:
+
    ```
    SMTP_USERNAME=<primary-mailbox>@simplecrm.cz
    SMTP_PASSWORD=<app password from step 2>
    ```
+
    Save → redeploy.
 
 5. **Smoke test** (post-deploy):
@@ -59,9 +73,10 @@ sitting.
    - Run `mail-tester.com` against both addresses; aim for 10/10. If a
      score is below 8, SPF/DKIM/DMARC alignment is the usual culprit.
 
-----
+---
 
 Claude Zone here:
+
 - After real Stripe is wired up: add a scheduled `process_period_rollovers()`
   job that walks subscriptions whose `current_period_ends_at` has passed and
   applies `pending_plan_id`, `pending_seat_count`, and
@@ -73,6 +88,7 @@ Claude Zone here:
 ## ComGate go-live audit follow-ups (from docs/prompts/COMGATE_GO_LIVE_AUDIT.md)
 
 Fixed in-session — see commits ahead of origin/main:
+
 - Q4: duplicate "Začít zdarma" landing CTA replaced with the canonical
   "Vyzkoušet 30 dní zdarma".
 - Q5: live cost preview as admin edits seat count; annual-savings now
@@ -89,6 +105,7 @@ Fixed in-session — see commits ahead of origin/main:
   prod deploy is loud in monitoring.
 
 Open audit findings (need separate work):
+
 - **Q2 (UI gap):** the `Organization` model carries `ico` / `dic` /
   `address_street` / `address_city` / `address_zip` / `legal_form` /
   `billing_email`, but there is NO settings form to fill them in. The
@@ -122,13 +139,14 @@ Open audit findings (need separate work):
 - **Q11 (locale):** CZK + Czech UI/PDF only. Frontend has no language
   switcher, no English email templates. Fine for the CZ-only launch.
 - **Q13 (audit log completeness):** every payment-state transition is
-  audited via `BillingAuditLog` (subscription_chose_plan, activate,
-  cancel_self_serve, seat_*_) and via `WebhookEvent` for the raw
+  audited via `BillingAuditLog` (subscription*chose_plan, activate,
+  cancel_self_serve, seat*\*\_) and via `WebhookEvent` for the raw
   ComGate payloads. **Not separately stress-tested** — recommend
   running through the production smoke test in `docs/comgate-setup.md`
   §6 and confirming every state change writes a row.
 
 Production env checklist (matches `docs/comgate-setup.md` §7):
+
 - [ ] `COMGATE_TEST_MODE=false` (startup log now warns when true)
 - [ ] `COMGATE_MERCHANT_ID` + `COMGATE_SECRET` = production values
 - [ ] `COMGATE_RETURN_URL=https://app.simplecrm.cz/app/billing/return`

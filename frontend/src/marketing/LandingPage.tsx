@@ -513,7 +513,7 @@ function Pricing() {
               "Všechno ze zkušební verze",
               "Neomezený počet uživatelů",
               "Export dat kdykoliv",
-              "Podpora v češtině, do 24 hodin",
+              "Podpora v češtině",
             ].map((item) => (
               <li key={item} className="flex items-start gap-2">
                 <Check size={16} strokeWidth={1.75} className="mt-0.5 text-accent" />
