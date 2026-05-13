@@ -296,11 +296,14 @@ function Hero() {
           Český CRM pro malé týmy
         </p>
         <h1 className="mx-auto max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
-          CRM pro{" "}
-          <span className="bg-[linear-gradient(transparent_82%,var(--color-brand-accent)_82%,var(--color-brand-accent)_94%,transparent_94%)] bg-no-repeat">
-            prodej
+          <span className="block">
+            CRM pro{" "}
+            <span className="bg-[linear-gradient(transparent_82%,var(--color-brand-accent)_82%,var(--color-brand-accent)_94%,transparent_94%)] bg-no-repeat">
+              prodej
+            </span>
+            .
           </span>
-          . Nic víc, nic míň.
+          <span className="block">Nic víc, nic míň.</span>
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-base text-text-secondary md:text-lg">
           Jednoduchý český CRM pro malé prodejní týmy. Funguje s ARES, automaticky vrací neaktivní
@@ -323,7 +326,7 @@ function Hero() {
         </div>
 
         <p className="mt-4 text-xs text-text-tertiary">
-          Žádná kreditní karta při registraci. Přihlášení přes Google.
+          Žádná kreditní karta při registraci. Registrace přes Google nebo e-mail.
         </p>
 
         <div className="mx-auto mt-16 max-w-5xl">
@@ -406,8 +409,8 @@ function HowItWorks() {
   const steps = [
     {
       icon: MousePointerClick,
-      title: "Zaregistrujte se přes Google",
-      body: "Jedno kliknutí. Během 30 sekund máte účet, svůj tým a 30 dní zdarma.",
+      title: "Zaregistrujte se přes Google nebo e-mail",
+      body: "Jedno kliknutí přes Google, nebo klasicky e-mailem. Za 30 sekund máte účet, svůj tým a 30 dní zdarma.",
     },
     {
       icon: Building2,
@@ -423,11 +426,11 @@ function HowItWorks() {
   return (
     <section className="bg-surface">
       <div className="mx-auto max-w-[1200px] px-4 py-16 md:px-8 md:py-24">
-        <div className="mx-auto max-w-2xl text-center">
+        <div className="mx-auto max-w-3xl text-center md:max-w-4xl">
           <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
             Jak to funguje
           </p>
-          <h2 className="mt-2 text-3xl font-bold md:text-4xl">
+          <h2 className="mt-2 text-3xl font-bold md:whitespace-nowrap md:text-4xl">
             Od registrace k prvnímu obchodu za 5 minut
           </h2>
         </div>
