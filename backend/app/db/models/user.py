@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, String, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Index, Integer, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -22,6 +22,10 @@ class User(Base):
     __table_args__ = (
         Index("ix_users_organization_id", "organization_id"),
         Index("ix_users_team_id", "team_id"),
+        CheckConstraint(
+            "max_owned_companies IS NULL OR max_owned_companies >= 0",
+            name="ck_users_max_owned_companies_nonneg",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -86,6 +90,12 @@ class User(Base):
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # Admin-set ceiling on company ownership. NULL = unlimited. Enforced
+    # in companies.py at every assignment path (create / update-owner /
+    # reassign). Distinct from `role` so a salesperson can have a tight
+    # cap while a manager has none without granting elevated permissions.
+    max_owned_companies: Mapped[int | None] = mapped_column(Integer)
 
     # Per-user widget layout + global filter state for the manager/admin
     # Reports page. Empty `{}` means "use the default layout from

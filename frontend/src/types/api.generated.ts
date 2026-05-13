@@ -4931,6 +4931,8 @@ export interface components {
             can_invite: boolean;
             /** Is Active */
             is_active: boolean;
+            /** Max Owned Companies */
+            max_owned_companies?: number | null;
             /** Last Login At */
             last_login_at?: string | null;
             /**
@@ -4953,6 +4955,8 @@ export interface components {
             can_invite?: boolean | null;
             /** Is Active */
             is_active?: boolean | null;
+            /** Max Owned Companies */
+            max_owned_companies?: number | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -5770,6 +5774,11 @@ export interface operations {
             query?: {
                 /** @description Case-insensitive partial match on name or IČO. */
                 search?: string | null;
+                /** @description Sort key. One of: name, ownership_expires_at, last_order_at, last_activity_at, created_at. */
+                sort?: string;
+                order?: string;
+                /** @description Ownership filter: 'mine' (only my own), 'mine_and_unowned' (mine + pool), or 'unowned' (pool only). */
+                ownership?: string | null;
                 limit?: number;
                 offset?: number;
             };

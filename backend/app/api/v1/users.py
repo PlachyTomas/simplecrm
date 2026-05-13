@@ -94,6 +94,10 @@ async def update_user(
         target.can_invite = data["can_invite"]
     if "is_active" in data and data["is_active"] is not None:
         target.is_active = data["is_active"]
+    if "max_owned_companies" in data:
+        # The schema preserves explicit None to clear the cap. The Field's
+        # `ge=0` already rejects negatives.
+        target.max_owned_companies = data["max_owned_companies"]
 
     await session.commit()
     await session.refresh(target)

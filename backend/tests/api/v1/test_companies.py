@@ -803,3 +803,97 @@ async def test_list_companies_rejects_unknown_sort_key(
     admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
     r = await client.get("/api/v1/companies?sort=evil_drop_table", headers=_auth(admin))
     assert r.status_code == 400
+
+
+# max_owned_companies cap --------------------------------------------------
+
+
+async def test_company_create_respects_owner_cap(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    sales.max_owned_companies = 1
+    db_session.add(
+        Company(organization_id=org.id, name="Existing", owner_user_id=sales.id)
+    )
+    await db_session.commit()
+
+    # Admin trying to assign one more company to the capped salesperson — 409.
+    resp = await client.post(
+        "/api/v1/companies",
+        headers=_auth(admin),
+        json={"name": "Over the cap", "owner_user_id": str(sales.id)},
+    )
+    assert resp.status_code == 409, resp.text
+    assert "cap" in resp.json()["detail"].lower()
+
+    # Unowned create stays fine.
+    pool = await client.post(
+        "/api/v1/companies",
+        headers=_auth(admin),
+        json={"name": "Into pool", "owner_user_id": None},
+    )
+    assert pool.status_code == 201, pool.text
+
+
+async def test_company_reassign_respects_owner_cap(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    capped = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    capped.max_owned_companies = 1
+    held = Company(organization_id=org.id, name="Held", owner_user_id=capped.id)
+    target = Company(organization_id=org.id, name="To move", owner_user_id=None)
+    db_session.add_all([held, target])
+    await db_session.commit()
+    await db_session.refresh(target)
+
+    resp = await client.post(
+        f"/api/v1/companies/{target.id}/reassign",
+        headers=_auth(admin),
+        json={"new_owner_user_id": str(capped.id)},
+    )
+    assert resp.status_code == 409, resp.text
+
+
+async def test_user_update_can_set_and_clear_cap(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    target = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+
+    # Set the cap.
+    r = await client.patch(
+        f"/api/v1/users/{target.id}",
+        headers=_auth(admin),
+        json={"max_owned_companies": 5},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["max_owned_companies"] == 5
+
+    # Clear it back to unlimited.
+    r = await client.patch(
+        f"/api/v1/users/{target.id}",
+        headers=_auth(admin),
+        json={"max_owned_companies": None},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["max_owned_companies"] is None
+
+
+async def test_user_update_rejects_negative_cap(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    target = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    r = await client.patch(
+        f"/api/v1/users/{target.id}",
+        headers=_auth(admin),
+        json={"max_owned_companies": -1},
+    )
+    assert r.status_code == 422

@@ -46,6 +46,40 @@ def get_registry_rate_limiter() -> RateLimiter:
     return _registry_rate_limiter
 
 
+async def _assert_owner_cap(
+    session: AsyncSession,
+    new_owner_id: uuid.UUID | None,
+    *,
+    excluding_company_id: uuid.UUID | None = None,
+) -> None:
+    """Reject the assignment if `new_owner_id` is already at their cap.
+
+    NULL `new_owner_id` (back to the pool) is always allowed.
+    `excluding_company_id` is the row being reassigned — its current
+    ownership doesn't count toward the new owner's tally because the
+    very next commit moves it.
+    """
+    if new_owner_id is None:
+        return
+    target = await session.get(User, new_owner_id)
+    if target is None or target.max_owned_companies is None:
+        return
+    count_stmt = select(func.count()).select_from(Company).where(
+        Company.owner_user_id == new_owner_id,
+    )
+    if excluding_company_id is not None:
+        count_stmt = count_stmt.where(Company.id != excluding_company_id)
+    current = (await session.execute(count_stmt)).scalar_one()
+    if current >= target.max_owned_companies:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Salesperson is at their company cap "
+                f"({target.max_owned_companies}); free or reassign one first."
+            ),
+        )
+
+
 async def _get_scoped(session: AsyncSession, user: User, company_id: uuid.UUID) -> Company:
     base = select(Company).where(
         Company.organization_id == user.organization_id,
@@ -220,6 +254,7 @@ async def create_company(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot assign ownership outside your visibility scope",
         )
+    await _assert_owner_cap(session, owner_id)
 
     # Compute the ownership-release window from the org's setting. Falls
     # back to the model's column default (365) when the org row is missing
@@ -269,6 +304,8 @@ async def update_company(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot reassign ownership outside your scope",
         )
+    if new_owner != company.owner_user_id:
+        await _assert_owner_cap(session, new_owner, excluding_company_id=company.id)
     for field, value in updates.items():
         setattr(company, field, value)
     try:
@@ -326,6 +363,9 @@ async def reassign_company_endpoint(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="new_owner_user_id does not exist in your organization",
         )
+    await _assert_owner_cap(
+        session, payload.new_owner_user_id, excluding_company_id=company.id
+    )
     await reassign_company(
         session,
         company=company,

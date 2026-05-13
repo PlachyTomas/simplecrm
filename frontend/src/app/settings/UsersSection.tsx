@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   type UserOut,
@@ -31,6 +31,7 @@ function UserRow({
   onTeamChange,
   onCanInviteChange,
   onToggleActive,
+  onCapChange,
   onCancelScheduledDeactivation,
 }: {
   u: UserOut;
@@ -42,8 +43,23 @@ function UserRow({
   onTeamChange: (teamId: string | null) => Promise<void>;
   onCanInviteChange: (next: boolean) => Promise<void>;
   onToggleActive: () => Promise<void>;
+  onCapChange: (next: number | null) => Promise<void>;
   onCancelScheduledDeactivation: () => void;
 }) {
+  // Local string state so the input can be empty while editing without
+  // immediately firing a PATCH. We commit on blur.
+  const [capDraft, setCapDraft] = useState<string>(
+    u.max_owned_companies != null ? String(u.max_owned_companies) : "",
+  );
+  // Re-sync from server data when it changes (e.g., after a successful
+  // PATCH or a polling refresh).
+  const lastSyncedCapRef = useRef<number | null | undefined>(u.max_owned_companies);
+  if (lastSyncedCapRef.current !== u.max_owned_companies) {
+    lastSyncedCapRef.current = u.max_owned_companies;
+    if ((u.max_owned_companies ?? null) !== (capDraft === "" ? null : Number(capDraft))) {
+      setCapDraft(u.max_owned_companies != null ? String(u.max_owned_companies) : "");
+    }
+  }
   // Admins always implicitly can invite — show the box as locked-on for them.
   const isAdmin = u.role === "admin";
   return (
@@ -99,6 +115,30 @@ function UserRow({
               ? "Administrátor může zvát vždy."
               : "Když je zaškrtnuto, smí tento uživatel posílat pozvánky."
           }
+        />
+      </td>
+      <td className="py-3 text-center">
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          aria-label={`Limit firem — ${u.email}`}
+          placeholder="∞"
+          value={capDraft}
+          onChange={(e) => setCapDraft(e.target.value)}
+          onBlur={() => {
+            const trimmed = capDraft.trim();
+            const next = trimmed === "" ? null : Number(trimmed);
+            // Reject NaN / negative numbers without committing.
+            if (next != null && (!Number.isFinite(next) || next < 0)) {
+              setCapDraft(u.max_owned_companies != null ? String(u.max_owned_companies) : "");
+              return;
+            }
+            if (next === (u.max_owned_companies ?? null)) return;
+            void onCapChange(next);
+          }}
+          className="w-16 rounded-md border border-border bg-surface px-2 py-1 text-center text-sm tabular-nums"
+          title="Maximální počet firem, které tento uživatel může současně vlastnit. Prázdné = bez limitu."
         />
       </td>
       <td className="py-3 text-right">
@@ -222,6 +262,12 @@ export function UsersSection() {
             <th className="py-2 font-medium">Role</th>
             <th className="py-2 font-medium">Tým</th>
             <th className="py-2 text-center font-medium">Smí zvát</th>
+            <th
+              className="py-2 text-center font-medium"
+              title="Maximální počet firem, které smí mít obchodník současně v držení. Prázdné = bez limitu."
+            >
+              Limit firem
+            </th>
             <th className="py-2 text-right font-medium">Aktivní</th>
           </tr>
         </thead>
@@ -237,6 +283,9 @@ export function UsersSection() {
               onTeamChange={(teamId) => mutate(u.id, { team_id: teamId })}
               onCanInviteChange={(can_invite) => mutate(u.id, { can_invite })}
               onToggleActive={() => mutate(u.id, { is_active: !u.is_active })}
+              onCapChange={(max_owned_companies) =>
+                mutate(u.id, { max_owned_companies })
+              }
               onCancelScheduledDeactivation={cancelQueueWithConfirm}
             />
           ))}
