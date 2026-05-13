@@ -29,22 +29,24 @@ Verification: playwright snapshot of `/` at desktop + mobile widths.
 
 ## 2. Hide zero deal value when unset
 
-Files: `backend/app/db/models/deal.py`, `backend/app/schemas/deal.py`,
-`backend/app/api/v1/deals.py`, `frontend/src/app/pipeline/PipelinePage.tsx`,
+Files: `frontend/src/app/pipeline/PipelinePage.tsx`,
 `frontend/src/app/deals/DealsListPage.tsx`,
-`frontend/src/app/deals/DealDetailPage.tsx`, alembic migration.
+`frontend/src/app/deals/DealDetailPage.tsx`.
 
-- Make `Deal.value` nullable (drop the `default=0`). Add a migration
-  that flips the column and converts any rows where `value = 0` to
-  `NULL` so existing zero-valued deals stop rendering "0 Kč".
-- Schemas: `DealCreate.value` / `DealUpdate.value` become
-  `Decimal | None`; `DealOut.value` becomes `Decimal | None`.
-- Pipeline card (`DealCard`): only render the money line when value is
-  non-null. Stage subtotal in the column header sums only deals with a
-  numeric value (already a sum, just skip nulls).
-- Deal list & detail: show `—` (or hide the row) when value is null.
-- `AddDealModal.handleSubmit`: when the value field is blank, send
-  `null` instead of `"0"`.
+UI-only treatment: treat `value === 0` as "unset" and hide the money
+line in the pipeline card, the value cell in the deals list, and the
+hero amount + "Hodnota" field on the deal detail page. The DB column
+keeps `default=0` so existing reports / aggregations / data export
+need no migration. The pipeline column subtotal continues to sum
+values; a column full of unset deals reads `0 Kč` total, which is
+the truthful answer.
+
+Rejected the nullable-column approach because it ripples into eight
+report widgets, the CSV exporter, and the pipeline totals
+accumulator — a lot of risk for an edge case (CRM deal whose value
+is genuinely zero) that doesn't come up in practice. Revisit only if
+a user files a ticket about wanting to track explicit zero-value
+deals separately from unset ones.
 
 ## 3. Paid/unpaid on won deals
 

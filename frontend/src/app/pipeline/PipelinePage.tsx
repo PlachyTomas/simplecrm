@@ -59,6 +59,14 @@ function formatMoney(value: string, currency: string, locale: string): string {
   }
 }
 
+// A deal with value 0 is treated as "value not yet entered" — we hide
+// the money line on the card / list / detail rather than render "0 Kč"
+// everywhere. See docs/tasks/2026-05-13-feedback-batch.md §2.
+function hasValue(value: string): boolean {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0;
+}
+
 interface DealCardProps {
   deal: BoardDeal;
   locale: string;
@@ -81,6 +89,8 @@ function DealCard({ deal, locale, dragging, onWin, onLose, winning, losing }: De
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : {};
 
+  const valueShown = hasValue(deal.value);
+
   return (
     <article
       ref={setNodeRef}
@@ -89,7 +99,11 @@ function DealCard({ deal, locale, dragging, onWin, onLose, winning, losing }: De
       {...attributes}
       role="button"
       tabIndex={0}
-      aria-label={`${deal.name} — ${formatMoney(deal.value, deal.currency, locale)}`}
+      aria-label={
+        valueShown
+          ? `${deal.name} — ${formatMoney(deal.value, deal.currency, locale)}`
+          : deal.name
+      }
       className={cn(
         "group/card relative cursor-grab select-none rounded-md border border-border bg-surface px-3 py-2.5 shadow-sm transition-shadow duration-fast hover:shadow-md active:cursor-grabbing",
         "max-md:w-64 max-md:shrink-0 max-md:snap-start",
@@ -97,9 +111,11 @@ function DealCard({ deal, locale, dragging, onWin, onLose, winning, losing }: De
       )}
     >
       <p className="truncate text-sm font-medium text-text-primary">{deal.name}</p>
-      <p className="mt-1 font-mono text-xs tabular-nums text-text-secondary">
-        {formatMoney(deal.value, deal.currency, locale)}
-      </p>
+      {valueShown ? (
+        <p className="mt-1 font-mono text-xs tabular-nums text-text-secondary">
+          {formatMoney(deal.value, deal.currency, locale)}
+        </p>
+      ) : null}
       {onWin || onLose ? (
         <div className="mt-2 flex flex-wrap items-center gap-1.5 opacity-0 transition-opacity duration-fast focus-within:opacity-100 group-hover/card:opacity-100 max-md:opacity-100">
           {onWin ? (
@@ -292,10 +308,14 @@ export function PipelinePage() {
       if (winningDealId) return;
       setWinningDealId(deal.id);
       celebrateWin(anchor);
-      const formattedValue = moneyFmt
-        ? moneyFmt.format(Number(deal.value))
-        : `${deal.value} ${deal.currency}`;
-      setWinToast(`🎉 Gratulujeme! Obchod ${deal.name} ve výši ${formattedValue} uzavřen.`);
+      const valueShown = hasValue(deal.value);
+      const formattedValue =
+        valueShown && moneyFmt ? moneyFmt.format(Number(deal.value)) : null;
+      setWinToast(
+        formattedValue
+          ? `🎉 Gratulujeme! Obchod ${deal.name} ve výši ${formattedValue} uzavřen.`
+          : `🎉 Gratulujeme! Obchod ${deal.name} uzavřen.`,
+      );
       winMutation.mutate(
         { dealId: deal.id },
         {
@@ -677,9 +697,9 @@ function DeleteConfirmDialog({
   moneyFmt: Intl.NumberFormat | null;
 }) {
   if (!deal) return null;
-  const formattedValue = moneyFmt
-    ? moneyFmt.format(Number(deal.value))
-    : `${deal.value} ${deal.currency}`;
+  const valueShown = hasValue(deal.value);
+  const formattedValue =
+    valueShown && moneyFmt ? moneyFmt.format(Number(deal.value)) : null;
   return (
     <div
       role="dialog"
@@ -695,8 +715,8 @@ function DeleteConfirmDialog({
           Smazat obchod?
         </h2>
         <p className="mt-2 text-sm text-text-secondary">
-          Smaže obchod <strong className="text-text-primary">{deal.name}</strong> ({formattedValue})
-          natrvalo. Akci nelze vrátit zpět.
+          Smaže obchod <strong className="text-text-primary">{deal.name}</strong>
+          {formattedValue ? ` (${formattedValue})` : ""} natrvalo. Akci nelze vrátit zpět.
         </p>
         <div className="mt-6 flex items-center justify-end gap-3">
           <button

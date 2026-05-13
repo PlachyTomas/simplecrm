@@ -170,7 +170,11 @@ export function DealsListPage() {
                     {companyName}
                   </td>
                   <td className="px-4 py-3 text-right text-sm tabular-nums text-text-primary">
-                    {formatMoney(deal.value, deal.currency, locale)}
+                    {Number(deal.value) > 0 ? (
+                      formatMoney(deal.value, deal.currency, locale)
+                    ) : (
+                      <span className="text-text-tertiary">—</span>
+                    )}
                   </td>
                   <td className="hidden px-4 py-3 text-sm md:table-cell">
                     {stage && stageDot ? (

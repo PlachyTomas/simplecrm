@@ -173,9 +173,11 @@ export function DealDetailPage() {
       <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">{deal.name}</h1>
-          <p className="mt-1 font-mono text-lg tabular-nums text-text-primary">
-            {Number.isNaN(value) ? `${deal.value} ${deal.currency}` : moneyFmt.format(value)}
-          </p>
+          {value > 0 ? (
+            <p className="mt-1 font-mono text-lg tabular-nums text-text-primary">
+              {Number.isNaN(value) ? `${deal.value} ${deal.currency}` : moneyFmt.format(value)}
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {!isClosed ? (
@@ -272,8 +274,10 @@ export function DealDetailPage() {
               />
             ) : Number.isNaN(value) ? (
               `${deal.value} ${deal.currency}`
-            ) : (
+            ) : value > 0 ? (
               moneyFmt.format(value)
+            ) : (
+              <span className="text-text-tertiary">—</span>
             )}
           </Field>
           <Field label="Firma">
