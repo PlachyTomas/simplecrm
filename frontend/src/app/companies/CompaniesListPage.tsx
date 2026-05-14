@@ -13,10 +13,12 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  LayoutGrid,
   Plus,
   Search,
+  Table2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { AddCompanyModal } from "@/app/companies/AddCompanyModal";
@@ -59,6 +61,16 @@ const OWNERSHIP_OPTIONS: { value: CompanyOwnershipFilter | "all"; label: string 
   { value: "unowned", label: "Jen nezabrané" },
 ];
 
+type ViewMode = "cards" | "table";
+
+const VIEW_MODE_STORAGE_KEY = "simplecrm.companies.viewMode";
+
+function readStoredViewMode(): ViewMode {
+  if (typeof window === "undefined") return "cards";
+  const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+  return stored === "table" ? "table" : "cards";
+}
+
 export function CompaniesListPage() {
   usePageTitle("Firmy");
   const [modalOpen, setModalOpen] = useState(false);
@@ -67,6 +79,12 @@ export function CompaniesListPage() {
   const [page, setPage] = useState(0);
   const [sorting, setSorting] = useState<SortingState>([{ id: "name", desc: false }]);
   const [ownership, setOwnership] = useState<CompanyOwnershipFilter | "all">("all");
+  const [viewMode, setViewMode] = useState<ViewMode>(readStoredViewMode);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
+  }, [viewMode]);
 
   const navigate = useNavigate();
   const { data: user } = useCurrentUser();
@@ -94,6 +112,10 @@ export function CompaniesListPage() {
   const locale = user?.organization?.locale;
   const dateFmt = useMemo(
     () => (locale ? new Intl.DateTimeFormat(locale, { dateStyle: "medium" }) : null),
+    [locale],
+  );
+  const shortDateFmt = useMemo(
+    () => (locale ? new Intl.DateTimeFormat(locale, { dateStyle: "short" }) : null),
     [locale],
   );
 
@@ -199,9 +221,180 @@ export function CompaniesListPage() {
     ];
   }, [dateFmt, usersById]);
 
+  // Dense Tabulka mode: classic data-grid with every relevant field
+  // visible at once, including phone/email pulled from the company's
+  // main contact (the alphabetically-first contact when no explicit
+  // pick has been set on the company detail page).
+  const tableColumns = useMemo(() => {
+    const helper = createColumnHelper<CompanyOut>();
+    const offset = page * PAGE_SIZE;
+    return [
+      helper.display({
+        id: "rownum",
+        header: "#",
+        cell: (info) => (
+          <span className="tabular-nums text-text-tertiary">{offset + info.row.index + 1}</span>
+        ),
+      }),
+      helper.accessor("name", {
+        header: "Název",
+        cell: (info) => {
+          const row = info.row.original;
+          return (
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-text-primary">{info.getValue()}</span>
+              <OwnershipBadge
+                ownershipExpiresAt={row.ownership_expires_at}
+                ownerUserId={row.owner_user_id}
+                compact
+              />
+            </div>
+          );
+        },
+      }),
+      helper.accessor("ico", {
+        header: "IČO",
+        enableSorting: false,
+        cell: (info) => (
+          <span className="font-mono text-text-secondary">{info.getValue() ?? "—"}</span>
+        ),
+      }),
+      helper.accessor("dic", {
+        header: "DIČ",
+        enableSorting: false,
+        cell: (info) => (
+          <span className="font-mono text-text-tertiary">{info.getValue() ?? "—"}</span>
+        ),
+      }),
+      helper.accessor("updated_at", {
+        id: "last_activity_at",
+        header: "Posl. akt.",
+        cell: (info) => (
+          <span className="tabular-nums text-text-tertiary">
+            {shortDateFmt ? shortDateFmt.format(new Date(info.getValue())) : info.getValue()}
+          </span>
+        ),
+      }),
+      helper.accessor("address_street", {
+        header: "Sídlo Ulice",
+        enableSorting: false,
+        cell: (info) => <span className="text-text-secondary">{info.getValue() ?? "—"}</span>,
+      }),
+      helper.accessor("address_city", {
+        header: "Sídlo Město",
+        enableSorting: false,
+        cell: (info) => <span className="text-text-secondary">{info.getValue() ?? "—"}</span>,
+      }),
+      helper.accessor("address_zip", {
+        header: "Sídlo PSČ",
+        enableSorting: false,
+        cell: (info) => (
+          <span className="font-mono text-text-tertiary">{info.getValue() ?? "—"}</span>
+        ),
+      }),
+      helper.display({
+        id: "phone",
+        header: "Telefon",
+        cell: (info) => {
+          const phone = info.row.original.main_contact?.phone;
+          return phone ? (
+            <a
+              href={`tel:${phone}`}
+              onClick={(e) => e.stopPropagation()}
+              className="font-mono text-accent hover:text-accent-hover"
+            >
+              {phone}
+            </a>
+          ) : (
+            <span className="text-text-tertiary">—</span>
+          );
+        },
+      }),
+      helper.display({
+        id: "email",
+        header: "Email",
+        cell: (info) => {
+          const email = info.row.original.main_contact?.email;
+          return email ? (
+            <a
+              href={`mailto:${email}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-accent hover:text-accent-hover"
+            >
+              {email}
+            </a>
+          ) : (
+            <span className="text-text-tertiary">—</span>
+          );
+        },
+      }),
+      helper.accessor("owner_user_id", {
+        header: "Vlastník",
+        enableSorting: false,
+        cell: (info) => {
+          const ownerId = info.getValue();
+          if (!ownerId) return <span className="text-text-tertiary">— pool</span>;
+          const owner = usersById.get(ownerId);
+          return <span className="text-text-secondary">{owner?.name ?? "—"}</span>;
+        },
+      }),
+      helper.accessor("ownership_expires_at", {
+        id: "ownership_expires_at",
+        header: "Zámek vyprší",
+        cell: (info) => {
+          const value = info.getValue();
+          if (!value || !info.row.original.owner_user_id) {
+            return <span className="text-text-tertiary">—</span>;
+          }
+          return (
+            <span className="tabular-nums text-text-secondary">
+              {shortDateFmt ? shortDateFmt.format(new Date(value)) : value}
+            </span>
+          );
+        },
+      }),
+      helper.accessor("last_order_at", {
+        id: "last_order_at",
+        header: "Posl. obchod",
+        cell: (info) => {
+          const value = info.getValue();
+          return (
+            <span className="tabular-nums text-text-secondary">
+              {value ? (shortDateFmt ? shortDateFmt.format(new Date(value)) : value) : "—"}
+            </span>
+          );
+        },
+      }),
+      helper.accessor("website", {
+        header: "Web",
+        enableSorting: false,
+        cell: (info) => {
+          const url = info.getValue();
+          if (!url) return <span className="text-text-tertiary">—</span>;
+          return (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="truncate text-accent hover:text-accent-hover"
+            >
+              {url.replace(/^https?:\/\//, "")}
+            </a>
+          );
+        },
+      }),
+      helper.accessor("legal_form", {
+        header: "Pr. forma",
+        enableSorting: false,
+        cell: (info) => <span className="text-text-tertiary">{info.getValue() ?? "—"}</span>,
+      }),
+    ];
+  }, [page, shortDateFmt, usersById]);
+
   const table = useReactTable({
     data: companies?.items ?? [],
-    columns,
+    columns: viewMode === "table" ? tableColumns : columns,
     state: { sorting },
     onSortingChange: setSorting,
     manualPagination: true,
@@ -283,6 +476,44 @@ export function CompaniesListPage() {
             );
           })}
         </div>
+        <div
+          role="radiogroup"
+          aria-label="Režim zobrazení"
+          className="hidden gap-1 rounded-md border border-border bg-surface-overlay p-1 md:inline-flex"
+        >
+          <button
+            type="button"
+            role="radio"
+            aria-checked={viewMode === "cards"}
+            aria-label="Karty"
+            title="Karty"
+            onClick={() => setViewMode("cards")}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors duration-fast",
+              viewMode === "cards"
+                ? "bg-surface text-text-primary shadow-sm"
+                : "text-text-secondary hover:text-text-primary",
+            )}
+          >
+            <LayoutGrid size={14} strokeWidth={1.75} aria-hidden /> Karty
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={viewMode === "table"}
+            aria-label="Tabulka"
+            title="Tabulka"
+            onClick={() => setViewMode("table")}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors duration-fast",
+              viewMode === "table"
+                ? "bg-surface text-text-primary shadow-sm"
+                : "text-text-secondary hover:text-text-primary",
+            )}
+          >
+            <Table2 size={14} strokeWidth={1.75} aria-hidden /> Tabulka
+          </button>
+        </div>
       </div>
 
       {isError ? (
@@ -358,78 +589,90 @@ export function CompaniesListPage() {
             })}
           </ul>
 
-          {/* Desktop: full table (≥768px) */}
-          <table className="hidden min-w-full divide-y divide-border-subtle md:table">
-            <thead>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    const sortState = header.column.getIsSorted();
-                    const canSort = header.column.getCanSort();
-                    return (
-                      <th
-                        key={header.id}
-                        scope="col"
-                        aria-sort={
-                          sortState === "asc"
-                            ? "ascending"
-                            : sortState === "desc"
-                              ? "descending"
-                              : canSort
-                                ? "none"
-                                : undefined
-                        }
-                        className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary"
-                      >
-                        {canSort ? (
-                          <button
-                            type="button"
-                            onClick={header.column.getToggleSortingHandler()}
-                            className="group inline-flex items-center gap-1 transition-colors duration-fast hover:text-text-primary"
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {sortState === "asc" ? (
-                              <ArrowUp size={12} strokeWidth={1.75} />
-                            ) : sortState === "desc" ? (
-                              <ArrowDown size={12} strokeWidth={1.75} />
-                            ) : (
-                              <ArrowUpDown
-                                size={12}
-                                strokeWidth={1.75}
-                                className="opacity-0 group-hover:opacity-100"
-                              />
-                            )}
-                          </button>
-                        ) : (
-                          flexRender(header.column.columnDef.header, header.getContext())
+          {/* Desktop: full table (≥768px). Tabulka mode adds horizontal
+              scroll + denser cell padding to fit all columns. */}
+          <div className={cn("hidden md:block", viewMode === "table" && "overflow-x-auto")}>
+            <table className="min-w-full divide-y divide-border-subtle">
+              <thead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const sortState = header.column.getIsSorted();
+                      const canSort = header.column.getCanSort();
+                      return (
+                        <th
+                          key={header.id}
+                          scope="col"
+                          aria-sort={
+                            sortState === "asc"
+                              ? "ascending"
+                              : sortState === "desc"
+                                ? "descending"
+                                : canSort
+                                  ? "none"
+                                  : undefined
+                          }
+                          className={cn(
+                            "whitespace-nowrap text-left font-medium uppercase tracking-wider text-text-tertiary",
+                            viewMode === "table" ? "px-2 py-1.5 text-[11px]" : "px-4 py-3 text-xs",
+                          )}
+                        >
+                          {canSort ? (
+                            <button
+                              type="button"
+                              onClick={header.column.getToggleSortingHandler()}
+                              className="group inline-flex items-center gap-1 transition-colors duration-fast hover:text-text-primary"
+                            >
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                              {sortState === "asc" ? (
+                                <ArrowUp size={12} strokeWidth={1.75} />
+                              ) : sortState === "desc" ? (
+                                <ArrowDown size={12} strokeWidth={1.75} />
+                              ) : (
+                                <ArrowUpDown
+                                  size={12}
+                                  strokeWidth={1.75}
+                                  className="opacity-0 group-hover:opacity-100"
+                                />
+                              )}
+                            </button>
+                          ) : (
+                            flexRender(header.column.columnDef.header, header.getContext())
+                          )}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </thead>
+              <tbody
+                className={cn(
+                  "divide-y divide-border-subtle",
+                  isFetching && "opacity-70 transition-opacity",
+                )}
+              >
+                {table.getRowModel().rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    onClick={() => navigate(`/app/companies/${row.original.id}`)}
+                    className="cursor-pointer transition-colors duration-fast hover:bg-surface-overlay"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td
+                        key={cell.id}
+                        className={cn(
+                          "whitespace-nowrap",
+                          viewMode === "table" ? "px-2 py-1.5 text-xs" : "px-4 py-3 text-sm",
                         )}
-                      </th>
-                    );
-                  })}
-                </tr>
-              ))}
-            </thead>
-            <tbody
-              className={cn(
-                "divide-y divide-border-subtle",
-                isFetching && "opacity-70 transition-opacity",
-              )}
-            >
-              {table.getRowModel().rows.map((row) => (
-                <tr
-                  key={row.id}
-                  onClick={() => navigate(`/app/companies/${row.original.id}`)}
-                  className="cursor-pointer transition-colors duration-fast hover:bg-surface-overlay"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-3 text-sm">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {pageCount > 1 ? (
             <div className="flex items-center justify-between border-t border-border-subtle px-4 py-3 text-sm text-text-tertiary">

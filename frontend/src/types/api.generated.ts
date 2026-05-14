@@ -3204,6 +3204,9 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /** Main Contact Id */
+            main_contact_id?: string | null;
+            main_contact?: components["schemas"]["ContactOut"] | null;
         };
         /** CompanyReassign */
         CompanyReassign: {
@@ -3235,6 +3238,8 @@ export interface components {
             note?: string | null;
             /** Owner User Id */
             owner_user_id?: string | null;
+            /** Main Contact Id */
+            main_contact_id?: string | null;
         };
         /** Comparison */
         Comparison: {

@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, Plus } from "lucide-react";
+import { ArrowLeft, ExternalLink, Plus, Star } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
@@ -90,10 +90,28 @@ function OverviewTab({ company, locale }: { company: CompanyOut; locale: string 
   );
 }
 
-function ContactsTab({ companyId }: { companyId: string }) {
+function ContactsTab({ company }: { company: CompanyOut }) {
   const [adding, setAdding] = useState(false);
   const navigate = useNavigate();
-  const { data, isPending, isError } = useContacts({ companyId, limit: 100 });
+  const toast = useToast();
+  const { data, isPending, isError } = useContacts({ companyId: company.id, limit: 100 });
+  const update = useUpdateCompany(company.id);
+
+  // The auto-fallback main_contact (set when main_contact_id is null but
+  // the company has at least one contact). We tag this row with
+  // "(automaticky)" so the user knows it wasn't an explicit pick.
+  const autoMainContactId =
+    company.main_contact_id == null ? (company.main_contact?.id ?? null) : null;
+
+  async function setMain(contactId: string) {
+    try {
+      await update.mutateAsync({ main_contact_id: contactId });
+      toast.success("Hlavní kontakt nastaven.");
+    } catch {
+      toast.error("Hlavní kontakt se nepodařilo nastavit.");
+    }
+  }
+
   if (isPending) {
     return <p className="text-sm text-text-tertiary">Načítání kontaktů…</p>;
   }
@@ -120,11 +138,36 @@ function ContactsTab({ companyId }: { companyId: string }) {
         <ul className="mt-4 divide-y divide-border-subtle">
           {data.items.map((c) => {
             const fullName = `${c.first_name} ${c.last_name}`.trim();
+            const isMain = company.main_contact_id === c.id;
+            const isAutoMain = !isMain && autoMainContactId === c.id;
+            const isHighlighted = isMain || isAutoMain;
             return (
-              <li key={c.id} className="py-3">
+              <li key={c.id} className="flex items-center gap-2 py-3">
+                <button
+                  type="button"
+                  aria-label={isHighlighted ? "Hlavní kontakt" : "Nastavit jako hlavní kontakt"}
+                  aria-pressed={isHighlighted}
+                  title={isHighlighted ? "Hlavní kontakt" : "Nastavit jako hlavní kontakt"}
+                  onClick={() => setMain(c.id)}
+                  disabled={update.isPending || isMain}
+                  className={cn(
+                    "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors duration-fast",
+                    isHighlighted
+                      ? "text-accent"
+                      : "text-text-tertiary hover:bg-surface-overlay hover:text-text-primary",
+                    update.isPending && "opacity-60",
+                  )}
+                >
+                  <Star
+                    size={16}
+                    strokeWidth={1.75}
+                    aria-hidden
+                    className={cn(isHighlighted && "fill-accent")}
+                  />
+                </button>
                 <Link
                   to={`/app/contacts/${c.id}`}
-                  className="flex items-center gap-3 text-sm text-text-primary hover:text-accent"
+                  className="flex flex-1 items-center gap-3 text-sm text-text-primary hover:text-accent"
                 >
                   <span
                     aria-hidden
@@ -133,7 +176,14 @@ function ContactsTab({ companyId }: { companyId: string }) {
                     {fullName.slice(0, 1).toUpperCase()}
                   </span>
                   <span className="flex-1">
-                    <span className="block font-medium">{fullName}</span>
+                    <span className="flex items-center gap-2">
+                      <span className="font-medium">{fullName}</span>
+                      {isAutoMain ? (
+                        <span className="text-[11px] uppercase tracking-wider text-text-tertiary">
+                          automaticky
+                        </span>
+                      ) : null}
+                    </span>
                     {c.position || c.email ? (
                       <span className="block text-xs text-text-tertiary">
                         {[c.position, c.email].filter(Boolean).join(" · ")}
@@ -150,7 +200,7 @@ function ContactsTab({ companyId }: { companyId: string }) {
         open={adding}
         onClose={() => setAdding(false)}
         onCreated={(id) => navigate(`/app/contacts/${id}`)}
-        forCompanyId={companyId}
+        forCompanyId={company.id}
       />
     </section>
   );
@@ -445,7 +495,7 @@ export function CompanyDetailPage() {
         {activeTab === "overview" ? (
           <OverviewTab company={company} locale={locale} />
         ) : activeTab === "contacts" ? (
-          <ContactsTab companyId={company.id} />
+          <ContactsTab company={company} />
         ) : activeTab === "deals" ? (
           <DealsTab companyId={company.id} locale={locale} />
         ) : activeTab === "activity" ? (

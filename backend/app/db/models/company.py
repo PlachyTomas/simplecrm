@@ -64,6 +64,16 @@ class Company(Base):
         ForeignKey("users.id", ondelete="SET NULL"),
     )
 
+    # Explicit pick for the "main contact" surfaced on the company list
+    # (Tabulka view pulls phone/email from this contact). NULL means
+    # "no explicit choice yet" — the API falls back to the alphabetically-
+    # first contact on read. ON DELETE SET NULL so deleting a contact
+    # doesn't dangle the FK.
+    main_contact_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("contacts.id", ondelete="SET NULL"),
+    )
+
     last_order_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Derived from created_at or last_order_at + 365 days, but stored as a

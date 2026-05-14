@@ -5,6 +5,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.contact import ContactOut
+
 
 class CompanyCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
@@ -30,6 +32,7 @@ class CompanyUpdate(BaseModel):
     website: str | None = Field(default=None, max_length=300)
     note: str | None = Field(default=None, max_length=2000)
     owner_user_id: uuid.UUID | None = None
+    main_contact_id: uuid.UUID | None = None
 
 
 class CompanyOut(BaseModel):
@@ -51,3 +54,8 @@ class CompanyOut(BaseModel):
     ownership_expires_at: datetime
     created_at: datetime
     updated_at: datetime
+    main_contact_id: uuid.UUID | None = None
+    # Resolved server-side: the explicitly-chosen main contact when set,
+    # otherwise the alphabetically-first contact on the company. Null
+    # when the company has no contacts at all.
+    main_contact: ContactOut | None = None

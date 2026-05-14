@@ -13,8 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user, require_role
 from app.core.scoping import can_write_row, scope_by_owner
 from app.db import get_db
-from app.db.models import BlockedCompany, Company, User, UserRole
+from app.db.models import BlockedCompany, Company, Contact, User, UserRole
 from app.schemas.company import CompanyCreate, CompanyOut, CompanyUpdate
+from app.schemas.contact import ContactOut
 from app.schemas.pagination import Page, PaginationParams
 from app.schemas.registry import RegistryLookupResult
 from app.services.business_registry import (
@@ -96,6 +97,99 @@ async def _get_scoped(session: AsyncSession, user: User, company_id: uuid.UUID) 
     return company
 
 
+async def _resolve_main_contacts(
+    session: AsyncSession, companies: list[Company]
+) -> dict[uuid.UUID, Contact | None]:
+    """For each company, return the contact to surface as `main_contact`.
+
+    Rule: if `main_contact_id` is set and the target still belongs to the
+    same company, that contact wins. Otherwise fall back to the
+    alphabetically-first contact (last_name, first_name) — matching the
+    contacts list endpoint's sort.
+
+    Issues two queries total (one for explicit picks, one DISTINCT ON
+    for fallbacks), so list responses remain O(1) round-trips regardless
+    of page size.
+    """
+    if not companies:
+        return {}
+
+    company_ids = [c.id for c in companies]
+    explicit_ids = [c.main_contact_id for c in companies if c.main_contact_id is not None]
+
+    explicit_by_id: dict[uuid.UUID, Contact] = {}
+    if explicit_ids:
+        rows = (
+            (await session.execute(select(Contact).where(Contact.id.in_(explicit_ids))))
+            .scalars()
+            .all()
+        )
+        explicit_by_id = {c.id: c for c in rows}
+
+    # DISTINCT ON (company_id) with a deterministic order picks one row
+    # per company — the first alphabetically.
+    fallback_stmt = (
+        select(Contact)
+        .where(Contact.company_id.in_(company_ids))
+        .order_by(Contact.company_id, Contact.last_name, Contact.first_name)
+        .distinct(Contact.company_id)
+    )
+    fallback_rows = (await session.execute(fallback_stmt)).scalars().all()
+    # Every row has `company_id` matching one of `company_ids` by the
+    # WHERE clause above, so the cast is safe.
+    fallback_by_company_id: dict[uuid.UUID, Contact] = {
+        c.company_id: c for c in fallback_rows if c.company_id is not None
+    }
+
+    resolved: dict[uuid.UUID, Contact | None] = {}
+    for company in companies:
+        if company.main_contact_id is not None:
+            explicit = explicit_by_id.get(company.main_contact_id)
+            # Stale pick: contact was moved to another company or
+            # deleted. Fall through to the alphabetically-first fallback.
+            if explicit is not None and explicit.company_id == company.id:
+                resolved[company.id] = explicit
+                continue
+        resolved[company.id] = fallback_by_company_id.get(company.id)
+    return resolved
+
+
+def _to_out(company: Company, main_contact: Contact | None) -> CompanyOut:
+    out = CompanyOut.model_validate(company)
+    out.main_contact = ContactOut.model_validate(main_contact) if main_contact else None
+    return out
+
+
+async def _build_out(session: AsyncSession, company: Company) -> CompanyOut:
+    resolved = await _resolve_main_contacts(session, [company])
+    return _to_out(company, resolved.get(company.id))
+
+
+async def _validate_main_contact_id(
+    session: AsyncSession,
+    user: User,
+    company: Company,
+    main_contact_id: uuid.UUID | None,
+) -> None:
+    """Reject a `main_contact_id` that doesn't belong to this company.
+
+    NULL is always allowed (clears the pick). Non-NULL must point at a
+    contact in the same org and already linked to this company.
+    """
+    if main_contact_id is None:
+        return
+    stmt = select(Contact).where(
+        Contact.id == main_contact_id,
+        Contact.organization_id == user.organization_id,
+    )
+    contact: Contact | None = (await session.execute(stmt)).scalar_one_or_none()
+    if contact is None or contact.company_id != company.id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="main_contact_id must reference a contact that belongs to this company",
+        )
+
+
 _SORT_COLUMNS = {
     "name": Company.name,
     "ownership_expires_at": Company.ownership_expires_at,
@@ -167,9 +261,10 @@ async def list_companies(
     items_stmt = (
         scoped.order_by(sort_expr, Company.name).limit(pagination.limit).offset(pagination.offset)
     )
-    items = (await session.execute(items_stmt)).scalars().all()
+    items = list((await session.execute(items_stmt)).scalars().all())
+    resolved = await _resolve_main_contacts(session, items)
     return Page[CompanyOut](
-        items=[CompanyOut.model_validate(c) for c in items],
+        items=[_to_out(c, resolved.get(c.id)) for c in items],
         total=total,
         limit=pagination.limit,
         offset=pagination.offset,
@@ -234,8 +329,9 @@ async def get_company(
     company_id: uuid.UUID,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Company:
-    return await _get_scoped(session, user, company_id)
+) -> CompanyOut:
+    company = await _get_scoped(session, user, company_id)
+    return await _build_out(session, company)
 
 
 @router.post("", response_model=CompanyOut, status_code=status.HTTP_201_CREATED)
@@ -243,7 +339,7 @@ async def create_company(
     payload: CompanyCreate,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Company:
+) -> CompanyOut:
     owner_id = payload.owner_user_id
     # Salespeople can only create rows owned by themselves (or unowned).
     if user.role is UserRole.salesperson and owner_id is not None and owner_id != user.id:
@@ -297,7 +393,7 @@ async def create_company(
             detail="Company with this IČO already exists in your organization",
         ) from exc
     await session.refresh(company)
-    return company
+    return await _build_out(session, company)
 
 
 @router.put("/{company_id}", response_model=CompanyOut)
@@ -306,7 +402,7 @@ async def update_company(
     payload: CompanyUpdate,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Company:
+) -> CompanyOut:
     company = await _get_scoped(session, user, company_id)
     if not await can_write_row(session, user, company.owner_user_id):
         raise HTTPException(
@@ -322,6 +418,8 @@ async def update_company(
         )
     if new_owner != company.owner_user_id:
         await _assert_owner_cap(session, new_owner, excluding_company_id=company.id)
+    if "main_contact_id" in updates:
+        await _validate_main_contact_id(session, user, company, updates["main_contact_id"])
     for field, value in updates.items():
         setattr(company, field, value)
     try:
@@ -333,7 +431,7 @@ async def update_company(
             detail="Company with this IČO already exists in your organization",
         ) from exc
     await session.refresh(company)
-    return company
+    return await _build_out(session, company)
 
 
 @router.delete("/{company_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -352,12 +450,12 @@ async def free_company(
     company_id: uuid.UUID,
     user: User = Depends(require_role(UserRole.manager)),
     session: AsyncSession = Depends(get_db),
-) -> Company:
+) -> CompanyOut:
     """Admin/manager-initiated release into the shared pool."""
     company = await _get_scoped(session, user, company_id)
     await free_single_company(session, company=company, released_by=user.id)
     await session.refresh(company)
-    return company
+    return await _build_out(session, company)
 
 
 @router.post("/{company_id}/reassign", response_model=CompanyOut)
@@ -366,7 +464,7 @@ async def reassign_company_endpoint(
     payload: CompanyReassign,
     user: User = Depends(require_role(UserRole.manager)),
     session: AsyncSession = Depends(get_db),
-) -> Company:
+) -> CompanyOut:
     """Transfer a company to a specific new owner (admin or manager)."""
     company = await _get_scoped(session, user, company_id)
     # New owner must be in the caller's org.
@@ -387,4 +485,4 @@ async def reassign_company_endpoint(
         released_by=user.id,
     )
     await session.refresh(company)
-    return company
+    return await _build_out(session, company)

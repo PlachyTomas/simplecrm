@@ -58,4 +58,7 @@ class Contact(Base):
     )
 
     organization: Mapped[Organization] = relationship()
-    company: Mapped[Company | None] = relationship()
+    # Disambiguate from `Company.main_contact_id` (the reverse-direction FK
+    # pointing at this table). Without `foreign_keys=`, SQLAlchemy can't
+    # pick which column joins Contact -> Company.
+    company: Mapped[Company | None] = relationship(foreign_keys=[company_id])

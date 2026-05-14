@@ -15,7 +15,7 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.db.models import Company, Organization, Team, User, UserRole
+from app.db.models import Company, Contact, Organization, Team, User, UserRole
 from app.db.session import AsyncSessionLocal
 
 
@@ -895,3 +895,220 @@ async def test_user_update_rejects_negative_cap(
         json={"max_owned_companies": -1},
     )
     assert r.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# main_contact resolution (list + detail)
+# ---------------------------------------------------------------------------
+
+
+async def test_company_main_contact_fallback_uses_alphabetically_first(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """With no explicit pick, the alphabetically-first contact wins."""
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = Company(organization_id=org.id, name="ACME", owner_user_id=admin.id)
+    db_session.add(company)
+    await db_session.commit()
+    db_session.add_all(
+        [
+            Contact(
+                organization_id=org.id,
+                company_id=company.id,
+                first_name="Petr",
+                last_name="Zorný",
+                phone="111",
+            ),
+            Contact(
+                organization_id=org.id,
+                company_id=company.id,
+                first_name="Anna",
+                last_name="Adámková",
+                phone="222",
+            ),
+            Contact(
+                organization_id=org.id,
+                company_id=company.id,
+                first_name="Karel",
+                last_name="Mareš",
+                phone="333",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    detail = await client.get(f"/api/v1/companies/{company.id}", headers=_auth(admin))
+    assert detail.status_code == 200, detail.text
+    body = detail.json()
+    assert body["main_contact_id"] is None
+    assert body["main_contact"] is not None
+    assert body["main_contact"]["last_name"] == "Adámková"
+    assert body["main_contact"]["phone"] == "222"
+
+    listed = await client.get("/api/v1/companies", headers=_auth(admin))
+    assert listed.status_code == 200
+    row = next(it for it in listed.json()["items"] if it["id"] == str(company.id))
+    assert row["main_contact"]["last_name"] == "Adámková"
+
+
+async def test_company_main_contact_explicit_wins_over_fallback(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = Company(organization_id=org.id, name="ACME", owner_user_id=admin.id)
+    db_session.add(company)
+    await db_session.commit()
+    first = Contact(
+        organization_id=org.id,
+        company_id=company.id,
+        first_name="Anna",
+        last_name="Adámková",
+    )
+    picked = Contact(
+        organization_id=org.id,
+        company_id=company.id,
+        first_name="Petr",
+        last_name="Zorný",
+        phone="999",
+    )
+    db_session.add_all([first, picked])
+    await db_session.commit()
+
+    r = await client.put(
+        f"/api/v1/companies/{company.id}",
+        headers=_auth(admin),
+        json={"main_contact_id": str(picked.id)},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["main_contact_id"] == str(picked.id)
+    assert body["main_contact"]["last_name"] == "Zorný"
+    assert body["main_contact"]["phone"] == "999"
+
+
+async def test_company_main_contact_update_rejects_cross_company(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company_a = Company(organization_id=org.id, name="A", owner_user_id=admin.id)
+    company_b = Company(organization_id=org.id, name="B", owner_user_id=admin.id)
+    db_session.add_all([company_a, company_b])
+    await db_session.commit()
+    foreign = Contact(
+        organization_id=org.id,
+        company_id=company_b.id,
+        first_name="X",
+        last_name="Y",
+    )
+    db_session.add(foreign)
+    await db_session.commit()
+
+    r = await client.put(
+        f"/api/v1/companies/{company_a.id}",
+        headers=_auth(admin),
+        json={"main_contact_id": str(foreign.id)},
+    )
+    assert r.status_code == 422
+
+
+async def test_company_main_contact_falls_back_when_chosen_contact_moved(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """If the chosen contact is later moved to another company, the
+    response falls back to the alphabetically-first remaining contact."""
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company_a = Company(organization_id=org.id, name="A", owner_user_id=admin.id)
+    company_b = Company(organization_id=org.id, name="B", owner_user_id=admin.id)
+    db_session.add_all([company_a, company_b])
+    await db_session.commit()
+    picked = Contact(
+        organization_id=org.id,
+        company_id=company_a.id,
+        first_name="Petr",
+        last_name="Zorný",
+    )
+    remaining = Contact(
+        organization_id=org.id,
+        company_id=company_a.id,
+        first_name="Anna",
+        last_name="Adámková",
+    )
+    db_session.add_all([picked, remaining])
+    await db_session.commit()
+
+    set_pick = await client.put(
+        f"/api/v1/companies/{company_a.id}",
+        headers=_auth(admin),
+        json={"main_contact_id": str(picked.id)},
+    )
+    assert set_pick.status_code == 200
+
+    move = await client.put(
+        f"/api/v1/contacts/{picked.id}",
+        headers=_auth(admin),
+        json={"company_id": str(company_b.id)},
+    )
+    assert move.status_code == 200
+
+    detail = await client.get(f"/api/v1/companies/{company_a.id}", headers=_auth(admin))
+    assert detail.status_code == 200
+    body = detail.json()
+    # The FK is still set (we don't auto-null it on move), but
+    # resolution falls through to the still-attached contact.
+    assert body["main_contact"]["last_name"] == "Adámková"
+
+
+async def test_company_main_contact_null_when_no_contacts(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = Company(organization_id=org.id, name="Empty", owner_user_id=admin.id)
+    db_session.add(company)
+    await db_session.commit()
+
+    detail = await client.get(f"/api/v1/companies/{company.id}", headers=_auth(admin))
+    assert detail.status_code == 200
+    body = detail.json()
+    assert body["main_contact_id"] is None
+    assert body["main_contact"] is None
+
+
+async def test_company_main_contact_set_null_clears_pick(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = Company(organization_id=org.id, name="C", owner_user_id=admin.id)
+    db_session.add(company)
+    await db_session.commit()
+    contact = Contact(
+        organization_id=org.id,
+        company_id=company.id,
+        first_name="Petr",
+        last_name="Zorný",
+    )
+    db_session.add(contact)
+    await db_session.commit()
+
+    pick = await client.put(
+        f"/api/v1/companies/{company.id}",
+        headers=_auth(admin),
+        json={"main_contact_id": str(contact.id)},
+    )
+    assert pick.status_code == 200
+    assert pick.json()["main_contact_id"] == str(contact.id)
+
+    clear = await client.put(
+        f"/api/v1/companies/{company.id}",
+        headers=_auth(admin),
+        json={"main_contact_id": None},
+    )
+    assert clear.status_code == 200
+    assert clear.json()["main_contact_id"] is None
+    # Fallback still resolves to the same (only) contact.
+    assert clear.json()["main_contact"]["id"] == str(contact.id)
