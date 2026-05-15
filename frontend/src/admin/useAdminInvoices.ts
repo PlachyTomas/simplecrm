@@ -205,6 +205,7 @@ export interface ManualInvoiceDraft {
   note: string | null;
   taxable_supply_date: string | null;
   due_at: string | null;
+  link_subscription: boolean;
 }
 
 export function useIssueManualInvoice() {

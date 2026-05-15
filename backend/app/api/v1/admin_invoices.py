@@ -334,6 +334,7 @@ async def issue_manual_invoice(
             note=body.note,
             taxable_supply_date=body.taxable_supply_date,
             due_at=body.due_at,
+            link_subscription=body.link_subscription,
             by_admin_id=admin.id,
         )
     except InvoiceIssuerNotConfiguredError as exc:

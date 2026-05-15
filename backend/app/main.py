@@ -9,6 +9,7 @@ from app.api.v1 import api_router
 from app.core.config import get_settings
 from app.services.scheduler import (
     integrity_check_scheduler,
+    overdue_invoice_scheduler,
     recurring_charge_scheduler,
     renewal_draft_scheduler,
     scheduler,
@@ -48,6 +49,7 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     scheduler.start()
     recurring_charge_scheduler.start()
     renewal_draft_scheduler.start()
+    overdue_invoice_scheduler.start()
     integrity_check_scheduler.start()
     try:
         yield
@@ -55,6 +57,7 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await scheduler.stop()
         await recurring_charge_scheduler.stop()
         await renewal_draft_scheduler.stop()
+        await overdue_invoice_scheduler.stop()
         await integrity_check_scheduler.stop()
 
 

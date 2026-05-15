@@ -26,6 +26,9 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
   const [lines, setLines] = useState<ManualLineDraft[]>([newLine()]);
   const [note, setNote] = useState("");
   const [dueAt, setDueAt] = useState("");
+  // Default true: most manual invoices in the bank-transfer flow are
+  // billing the org's subscription; refunds / one-offs uncheck it.
+  const [linkSubscription, setLinkSubscription] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const issue = useIssueManualInvoice();
@@ -71,6 +74,7 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
         note: note.trim() || null,
         taxable_supply_date: null,
         due_at: dueAt || null,
+        link_subscription: linkSubscription,
       },
       {
         onSuccess: (data) => onIssued(data.id),
@@ -256,6 +260,21 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
               />
             </div>
           </div>
+
+          <label className="flex items-start gap-2 rounded-md border border-border bg-bg px-3 py-2 text-sm">
+            <input
+              type="checkbox"
+              checked={linkSubscription}
+              onChange={(e) => setLinkSubscription(e.target.checked)}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              Propojit s předplatným zákazníka (po označení jako zaplacené prodlouží období)
+              <span className="block text-xs text-text-tertiary">
+                Odškrtněte u refundů, dobropisů a jednorázových oprav.
+              </span>
+            </span>
+          </label>
 
           <p className="rounded-md border border-border bg-bg px-3 py-2 text-sm">
             Mezisoučet:{" "}

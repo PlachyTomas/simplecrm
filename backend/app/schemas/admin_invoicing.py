@@ -170,6 +170,14 @@ class AdminManualInvoiceIn(BaseModel):
     note: str | None = Field(default=None, max_length=2000)
     taxable_supply_date: date | None = None
     due_at: date | None = None
+    link_subscription: bool = Field(
+        default=False,
+        description=(
+            "When true, the new invoice is linked to the org's subscription. "
+            "Once the founder marks the invoice paid, the subscription period "
+            "is extended automatically (bank-transfer flow)."
+        ),
+    )
 
 
 class AdminIntegrityFailure(BaseModel):

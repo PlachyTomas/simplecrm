@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -23,8 +24,12 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 
 from app.db.models import (
+    Activity,
+    ActivityEntityType,
+    ActivityType,
     Charge,
     Company,
+    Invoice,
     PaymentMethod,
     Subscription,
     User,
@@ -360,6 +365,104 @@ async def run_renewal_draft_sweep() -> int:
 
 
 renewal_draft_scheduler = _DailyRunner(hour=RENEWAL_DRAFT_HOUR, job=run_renewal_draft_sweep)
+
+
+# ---------------------------------------------------------------------------
+# Overdue-invoice → past_due sweep (bank-transfer / non-Comgate flow)
+# ---------------------------------------------------------------------------
+#
+# Runs daily at 05:00 Europe/Prague (after the renewal-draft job at 04:00).
+# Until ComGate is wired, paying customers are billed via bank transfer:
+#
+#   1. Founder issues an invoice (manual or renewal-draft) linked to the
+#      org's subscription.
+#   2. Founder marks it paid in /admin/faktury → subscription extends.
+#   3. If the customer doesn't pay by `due_at`, this job flips the
+#      subscription to `past_due`. The 7-day grace in
+#      `is_app_access_allowed` then runs out and the pay-gate locks.
+#
+# Symmetric to `mark_charge_failed`'s past_due flip in the Comgate path,
+# but driven by an unpaid invoice rather than a failed charge attempt.
+
+OVERDUE_PAST_DUE_HOUR = 5  # 05:00 local
+
+
+async def run_overdue_invoice_sweep() -> int:
+    """Find issued, subscription-linked invoices past their `due_at` and
+    flip the linked subscription to `past_due`.
+
+    Filters:
+      - kind='invoice' (skip credit notes + proformas)
+      - status='issued' (skip paid, voided, draft)
+      - subscription_id IS NOT NULL (manual one-offs without a sub stay
+        unenforced — they're typically refund-style entries)
+      - subscription.status NOT IN ('past_due', 'canceled') and
+        is_comp=False (don't double-flip; comp orgs don't lock out)
+      - due_at < today (Europe/Prague)
+
+    Idempotent: a sub already in past_due is filtered out; re-running
+    has no effect on the same overdue set. Returns the number of
+    subscriptions flipped (useful for tests + log inspection).
+
+    NOTE: `current_period_ends_at` is left untouched. The 7-day grace
+    in `is_app_access_allowed` measures from the period end, which is
+    what the customer actually contracted for — anchoring grace at the
+    detection moment would silently grant extra time.
+    """
+    today_local = datetime.now(tz=PRAGUE).date()
+    flipped = 0
+
+    async with AsyncSessionLocal() as session:
+        from sqlalchemy.orm import selectinload
+
+        overdue_stmt = (
+            select(Invoice, Subscription)
+            .join(Subscription, Subscription.id == Invoice.subscription_id)
+            .options(selectinload(Subscription.plan))
+            .where(Invoice.kind == "invoice")
+            .where(Invoice.status == "issued")
+            .where(Invoice.subscription_id.is_not(None))
+            .where(Invoice.due_at < today_local)
+            .where(Subscription.status.notin_(["past_due", "canceled"]))
+            .where(Subscription.is_comp.is_(False))
+        )
+        rows = (await session.execute(overdue_stmt)).all()
+
+        # An org may have multiple overdue invoices; collapse to one
+        # past_due flip per subscription.
+        seen_subs: set[uuid.UUID] = set()
+        for invoice, sub in rows:
+            if sub.id in seen_subs:
+                continue
+            seen_subs.add(sub.id)
+
+            now = datetime.now(tz=UTC)
+            sub.status = "past_due"
+            sub.last_charge_failed_at = now
+            session.add(
+                Activity(
+                    organization_id=sub.organization_id,
+                    entity_type=ActivityEntityType.organization,
+                    entity_id=sub.organization_id,
+                    user_id=None,
+                    activity_type=ActivityType.subscription_change,
+                    payload={
+                        "action": "overdue_invoice_past_due",
+                        "invoice_id": str(invoice.id),
+                        "invoice_number": invoice.number,
+                        "due_at": invoice.due_at.isoformat(),
+                    },
+                )
+            )
+            flipped += 1
+
+        await session.commit()
+
+    logger.info("overdue-invoice sweep completed: flipped=%d", flipped)
+    return flipped
+
+
+overdue_invoice_scheduler = _DailyRunner(hour=OVERDUE_PAST_DUE_HOUR, job=run_overdue_invoice_sweep)
 
 
 # ---------------------------------------------------------------------------

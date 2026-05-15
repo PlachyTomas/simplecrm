@@ -7,8 +7,9 @@ rewrite invoice history.
 
 Event values used by the orchestrator (commit #5):
   ``allocated`` | ``issued`` | ``pdf_stored`` | ``pdf_verified`` |
-  ``sent`` | ``send_failed`` | ``paid`` | ``voided`` |
-  ``credit_note_created`` | ``export_run`` | ``integrity_failure``
+  ``sent`` | ``send_failed`` | ``paid`` | ``subscription_extended`` |
+  ``voided`` | ``credit_note_created`` | ``export_run`` |
+  ``integrity_failure``
 
 ``invoice_id`` is nullable so cross-cutting events (year-export job
 runs, weekly archive integrity checks) can be logged without a

@@ -714,6 +714,79 @@ async def apply_renewal_success(
     return sub
 
 
+async def apply_manual_payment_success(
+    session: AsyncSession,
+    *,
+    org_id: uuid.UUID,
+    invoice_number: str,
+    paid_at: datetime,
+) -> Subscription | None:
+    """Sibling of `apply_renewal_success`/`apply_initial_payment_success`
+    for the bank-transfer flow.
+
+    Called from `InvoiceService.mark_paid` when an admin manually flags an
+    invoice paid. Extends the subscription's period so the customer's
+    pay-gate stays open. Returns the updated Subscription, or None if no
+    extension was applied (caller can audit the no-op).
+
+    Decisions:
+      - `is_comp=True`: skip — comp orgs don't run on a paid clock.
+      - `status='canceled'`: skip — reactivation is a separate admin
+        action (`activate_subscription`); a stray invoice payment must
+        not silently undo a hard cancel.
+      - `status in {'trialing','active','past_due','pending_activation'}`:
+        extend.
+      - Anchor the new period at `max(now, current_period_ends_at)` —
+        if the founder issued + paid a renewal invoice mid-period, the
+        unused tail rolls forward instead of being silently discarded.
+        (Differs from `apply_renewal_success` which anchors at `now`,
+        because the Comgate path only fires *after* the period has
+        elapsed; the manual path can fire any time.)
+      - Plan length comes from `_PLAN_PERIOD_MONTHS[plan.code]`. If the
+        plan is `enterprise`/`comp`/`trial` the function bails (those
+        don't have a fixed renewal interval).
+    """
+    sub = await get_current_subscription(session, org_id)
+    if sub.is_comp:
+        return None
+    if sub.status == "canceled":
+        return None
+
+    months = _PLAN_PERIOD_MONTHS.get(sub.plan.code)
+    if months is None:
+        return None
+
+    now = datetime.now(tz=UTC)
+    anchor = now
+    if sub.current_period_ends_at is not None and sub.current_period_ends_at > now:
+        anchor = sub.current_period_ends_at
+
+    sub.status = "active"
+    sub.canceled_at = None
+    sub.current_period_starts_at = now
+    sub.current_period_ends_at = _add_months(anchor, months)
+    sub.next_renewal_charge_at = sub.current_period_ends_at
+    sub.dunning_attempts = 0
+    sub.last_charge_failed_at = None
+
+    deactivated_ids = await _apply_queued_downsize(session, sub)
+
+    await _audit(
+        session,
+        organization_id=org_id,
+        user_id=None,
+        action="manual_payment_success",
+        payload={
+            "invoice_number": invoice_number,
+            "paid_at": paid_at.isoformat(),
+            "plan_code": sub.plan.code,
+            "period_ends_at": sub.current_period_ends_at.isoformat(),
+            "deactivated_user_ids": deactivated_ids,
+        },
+    )
+    return sub
+
+
 async def mark_charge_failed(
     session: AsyncSession,
     *,

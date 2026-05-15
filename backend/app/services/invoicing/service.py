@@ -178,16 +178,34 @@ class InvoiceService:
         by_admin_id: uuid.UUID,
         taxable_supply_date: date | None = None,
         due_at: date | None = None,
+        link_subscription: bool = False,
     ) -> Invoice:
         """Founder-driven issuance. Used for refunds, comp-org charges,
         bespoke corrections — anything where the ComGate flow doesn't
-        apply."""
+        apply.
+
+        When ``link_subscription=True`` and the org has a Subscription row,
+        the new invoice is linked to it. ``InvoiceService.mark_paid`` then
+        extends the subscription period — the bank-transfer pay-cycle.
+        """
         billing = await self._load_billing_settings(session)
         self._require_issuer_configured(billing)
 
         org = await session.get(Organization, org_id)
         if org is None:
             raise InvoiceServiceError(f"Unknown organization {org_id}")
+
+        subscription: Subscription | None = None
+        if link_subscription:
+            subscription = (
+                await session.execute(
+                    select(Subscription).where(Subscription.organization_id == org_id)
+                )
+            ).scalar_one_or_none()
+            if subscription is None:
+                raise InvoiceServiceError(
+                    f"Cannot link subscription — organization {org_id} has none"
+                )
 
         materialised = [
             self._materialise_line(li, billing, position=i + 1) for i, li in enumerate(lines_in)
@@ -199,7 +217,7 @@ class InvoiceService:
             billing=billing,
             lines=materialised,
             charge=None,
-            subscription=None,
+            subscription=subscription,
             note=note,
             taxable_supply_date=taxable_supply_date,
             due_at=due_at,
@@ -316,6 +334,38 @@ class InvoiceService:
             )
         )
         await session.flush()
+
+        # Bank-transfer flow: when the founder marks a regular invoice
+        # paid AND it's linked to a subscription, advance the subscription
+        # period the same way the Comgate webhook would. Skip credit-notes
+        # (refunds) and proformas. The billing function decides whether
+        # the subscription actually qualifies (comp/canceled → no-op).
+        if invoice.kind == "invoice" and invoice.subscription_id is not None:
+            from app.services import billing as billing_module
+
+            updated = await billing_module.apply_manual_payment_success(
+                session,
+                org_id=invoice.organization_id,
+                invoice_number=invoice.number,
+                paid_at=ts,
+            )
+            if updated is not None:
+                session.add(
+                    InvoiceAuditLog(
+                        invoice_id=invoice.id,
+                        event="subscription_extended",
+                        actor_user_id=by_admin_id,
+                        payload={
+                            "period_ends_at": (
+                                updated.current_period_ends_at.isoformat()
+                                if updated.current_period_ends_at is not None
+                                else None
+                            ),
+                            "status": updated.status,
+                        },
+                    )
+                )
+                await session.flush()
         return invoice
 
     async def void(
