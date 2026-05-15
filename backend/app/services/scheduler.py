@@ -466,6 +466,125 @@ overdue_invoice_scheduler = _DailyRunner(hour=OVERDUE_PAST_DUE_HOUR, job=run_ove
 
 
 # ---------------------------------------------------------------------------
+# Billing-info reminder sweep (admin nudge ~1 week before trial cliff)
+# ---------------------------------------------------------------------------
+#
+# Runs daily at 06:00 Europe/Prague. For every trialing org whose
+# `trial_ends_at` falls within `BILLING_INFO_REMINDER_WINDOW`, emails
+# the org's admins exactly once if the Fakturační údaje (IČO + address)
+# are still missing. `Organization.billing_info_reminder_sent_at` is
+# stamped so the daily sweep never re-emails the same org.
+#
+# Paired with the persistent red `InvoiceDetailsNudge` banner: the
+# banner nags admins in-app; this email reaches them when they're not
+# logged in.
+
+BILLING_INFO_REMINDER_HOUR = 6  # 06:00 local
+
+# Window in days from `trial_ends_at`. Wider than a single day so the
+# sweep tolerates a missed run (e.g. the scheduler was restarted across
+# the firing moment). Targets ~day 7 of remaining trial.
+BILLING_INFO_REMINDER_MIN_DAYS = 5
+BILLING_INFO_REMINDER_MAX_DAYS = 8
+
+
+async def run_billing_info_reminder_sweep() -> int:
+    """Email each trialing org's admins once when the trial is ~1 week
+    out and billing details are still incomplete.
+
+    Filters:
+      - Subscription.status='trialing'
+      - is_comp=False
+      - Organization.billing_info_reminder_sent_at IS NULL
+      - trial_ends_at within [now + 5d, now + 8d]
+      - billing info incomplete (no IČO or any of street/city/zip missing)
+
+    Returns the number of orgs notified (useful for tests).
+    """
+    from app.db.models import Organization
+    from app.services.email import build_billing_info_reminder_email
+
+    now = datetime.now(tz=UTC)
+    lower = now + timedelta(days=BILLING_INFO_REMINDER_MIN_DAYS)
+    upper = now + timedelta(days=BILLING_INFO_REMINDER_MAX_DAYS)
+    notified = 0
+
+    async with AsyncSessionLocal() as session:
+        candidates_stmt = (
+            select(Organization, Subscription)
+            .join(Subscription, Subscription.organization_id == Organization.id)
+            .where(Subscription.status == "trialing")
+            .where(Subscription.is_comp.is_(False))
+            .where(Organization.billing_info_reminder_sent_at.is_(None))
+            .where(Organization.trial_ends_at >= lower)
+            .where(Organization.trial_ends_at <= upper)
+        )
+        rows = (await session.execute(candidates_stmt)).all()
+
+        # Reuse the same frontend-origin helper the auth flow uses so
+        # the link respects FRONTEND_SUCCESS_REDIRECT in every env.
+        from app.api.v1.auth import _frontend_origin
+        from app.core.config import get_settings
+
+        settings_link = f"{_frontend_origin(get_settings().frontend_success_redirect)}/app/settings"
+
+        for org, _sub in rows:
+            complete = bool(org.ico and org.address_street and org.address_city and org.address_zip)
+            if complete:
+                continue
+
+            admins = (
+                (
+                    await session.execute(
+                        select(User)
+                        .where(User.organization_id == org.id)
+                        .where(User.role == "admin")
+                        .where(User.is_active.is_(True))
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            recipients = [a for a in admins if a.email]
+            if not recipients:
+                # No deliverable admin — stamp anyway so we don't retry
+                # forever on a stuck org; ops can clear the column if
+                # they fix the admin list and want a fresh nudge.
+                org.billing_info_reminder_sent_at = now
+                continue
+
+            days_remaining = max(0, (org.trial_ends_at - now).days)
+            for recipient in recipients:
+                try:
+                    await send_email(
+                        build_billing_info_reminder_email(
+                            recipient=recipient.email,
+                            name=recipient.name or "tým SimpleCRM",
+                            org_name=org.name,
+                            days_remaining=days_remaining,
+                            settings_link=settings_link,
+                        )
+                    )
+                except Exception:
+                    # Stamp regardless: one bounced address shouldn't
+                    # keep the org in the retry pool. Stamp-once is the
+                    # contract; bounce diagnostics live in SMTP logs.
+                    logger.exception("billing-info reminder: send failed for %s", recipient.email)
+            org.billing_info_reminder_sent_at = now
+            notified += 1
+
+        await session.commit()
+
+    logger.info("billing-info reminder sweep completed: notified=%d", notified)
+    return notified
+
+
+billing_info_reminder_scheduler = _DailyRunner(
+    hour=BILLING_INFO_REMINDER_HOUR, job=run_billing_info_reminder_sweep
+)
+
+
+# ---------------------------------------------------------------------------
 # Weekly archive-integrity sweep (commit #12 of INVOICES_TASK.md)
 # ---------------------------------------------------------------------------
 #

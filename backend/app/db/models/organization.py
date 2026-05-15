@@ -62,6 +62,10 @@ class Organization(Base):
         DateTime(timezone=True), default=_default_trial_ends_at, nullable=False
     )
 
+    # Stamped by `run_billing_info_reminder_sweep` so the reminder email
+    # only goes out once per org. NULL = never sent.
+    billing_info_reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     # When False (the default for new orgs), salespeople do not see the
     # team/user leaderboards in Reporty or on the dashboard. Admins/managers
     # always see them. Admins flip this in Settings → Oprávnění.

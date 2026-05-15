@@ -107,6 +107,34 @@ def build_subscription_pending_email(
     return Email(to=founder_email, subject=subject, body=body)
 
 
+def build_billing_info_reminder_email(
+    *,
+    recipient: str,
+    name: str,
+    org_name: str,
+    days_remaining: int,
+    settings_link: str,
+) -> Email:
+    """Reminder email for an org admin: trial ends soon and the
+    Fakturační údaje are still missing.
+
+    Sent by `run_billing_info_reminder_sweep` once per org, ~1 week
+    before `trial_ends_at`. Without IČO + address on file the first
+    invoice would render with an empty customer block, so we nudge
+    the admin to fix it before the trial cliff.
+    """
+    subject = f"SimpleCRM: doplňte fakturační údaje (zkušebka končí za {days_remaining} dní)"
+    body = (
+        f"Ahoj {name},\n\n"
+        f"zkušební verze organizace {org_name} končí za {days_remaining} dní. "
+        "Pro vystavení první faktury potřebujeme mít na souboru vaše "
+        "fakturační údaje (IČO a sídlo). Doplňte je prosím v nastavení:\n\n"
+        f"{settings_link}\n\n"
+        "Bez vyplněných údajů by faktura nebyla platným daňovým dokladem.\n"
+    )
+    return Email(to=recipient, subject=subject, body=body)
+
+
 def build_verification_email(*, recipient: str, name: str, link: str) -> Email:
     """Compose the verify-your-email message for a new (or linking) user.
 
