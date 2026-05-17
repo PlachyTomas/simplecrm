@@ -12,6 +12,7 @@ from app.api.v1 import (
     deals,
     feedback,
     health,
+    imports,
     invitations,
     invoices,
     onboarding,
@@ -69,6 +70,9 @@ api_router.include_router(teams.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(users.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(activities.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(blocked_companies.router, dependencies=PROTECTED_DEPS)
+# Admin CSV import. Trial-gated because import-on-an-expired-trial would
+# let a customer skirt the paywall by bulk-loading data after lockout.
+api_router.include_router(imports.router, dependencies=PROTECTED_DEPS)
 # Subscription read + choose-plan + contact-enterprise — auth + org-membership
 # only, intentionally NOT trial-gated so a gated user can still escape the
 # gate by picking a plan.
