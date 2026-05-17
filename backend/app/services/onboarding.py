@@ -25,6 +25,12 @@ async def create_organization_with_admin(
     founder: User,
     seat_count: int = 1,
     intended_plan_code: str | None = None,
+    ico: str | None = None,
+    dic: str | None = None,
+    address_street: str | None = None,
+    address_city: str | None = None,
+    address_zip: str | None = None,
+    legal_form: str | None = None,
 ) -> Organization:
     """Create a new Organization and promote `founder` to its admin.
 
@@ -41,7 +47,15 @@ async def create_organization_with_admin(
 
     The caller is expected to have already verified `founder.organization_id is None`.
     """
-    organization = Organization(name=name)
+    organization = Organization(
+        name=name,
+        ico=ico,
+        dic=dic,
+        address_street=address_street,
+        address_city=address_city,
+        address_zip=address_zip,
+        legal_form=legal_form,
+    )
     session.add(organization)
     await session.flush()
 

@@ -70,3 +70,8 @@ class CreateOrganizationIn(BaseModel):
     # Aktivovat path can apply it on payment receipt without further
     # admin input.
     intended_plan_code: str | None = Field(default=None, pattern="^(monthly|annual)$")
+    # Optional Czech IČO. When present, the onboarding endpoint runs an
+    # ARES lookup and persists the resolved name/address/DIČ/legal_form
+    # onto the org so the invoice nudge banner disappears immediately.
+    # ARES failures don't block onboarding — just the IČO is saved.
+    ico: str | None = Field(default=None, pattern=r"^\d{8}$")
