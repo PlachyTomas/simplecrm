@@ -9,17 +9,20 @@ import { useEffect, useState } from "react";
  */
 export function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia(query).matches;
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+    // jsdom and some older WebViews return a MediaQueryList that's
+    // missing `matches`; treat that as "no match" instead of crashing.
+    return window.matchMedia(query)?.matches ?? false;
   });
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
     const mql = window.matchMedia(query);
+    if (!mql) return;
     const handler = (event: MediaQueryListEvent) => setMatches(event.matches);
-    setMatches(mql.matches);
-    mql.addEventListener("change", handler);
-    return () => mql.removeEventListener("change", handler);
+    setMatches(mql.matches ?? false);
+    mql.addEventListener?.("change", handler);
+    return () => mql.removeEventListener?.("change", handler);
   }, [query]);
 
   return matches;

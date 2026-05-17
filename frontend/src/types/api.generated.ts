@@ -1409,6 +1409,32 @@ export interface paths {
         patch: operations["update_user_api_v1_users__user_id__patch"];
         trace?: never;
     };
+    "/api/v1/users/me/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Patch My Preferences
+         * @description Merge a partial preferences blob into the current user's row.
+         *
+         *     Merge-patch semantics: only keys present in the body are touched.
+         *     Explicit `null` in the body deletes that key from the JSONB blob
+         *     (the schema models that as `Optional[T] = None`, which is `None`
+         *     here regardless of whether the caller sent `null` or omitted the
+         *     key — but ``model_fields_set`` lets us tell the two apart).
+         */
+        patch: operations["patch_my_preferences_api_v1_users_me_preferences_patch"];
+        trace?: never;
+    };
     "/api/v1/activities": {
         parameters: {
             query?: never;
@@ -3533,6 +3559,10 @@ export interface components {
              */
             email_verified: boolean;
             organization?: components["schemas"]["OrganizationSummary"] | null;
+            /** Preferences */
+            preferences?: {
+                [key: string]: unknown;
+            };
         };
         /**
          * DashboardConfig
@@ -4509,6 +4539,21 @@ export interface components {
             sort_order: number;
             /** Trial Days */
             trial_days?: number | null;
+        };
+        /**
+         * PreferencesPatch
+         * @description All fields optional; only present keys are merged into the row.
+         *
+         *     `model_config.extra = "forbid"` is the gate that rejects unknown keys
+         *     with a 422 instead of silently storing them.
+         */
+        PreferencesPatch: {
+            /** Tutorial Completed At */
+            tutorial_completed_at?: string | null;
+            /** Tutorial Dismissed At */
+            tutorial_dismissed_at?: string | null;
+            /** Tutorial Step Index */
+            tutorial_step_index?: number | null;
         };
         /**
          * PublicPlanOut
@@ -8173,6 +8218,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_my_preferences_api_v1_users_me_preferences_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreferencesPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

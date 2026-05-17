@@ -5,6 +5,7 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { InvoiceDetailsNudge } from "@/app/InvoiceDetailsNudge";
 import { MobileTabBar } from "@/app/MobileTabBar";
 import { Sidebar } from "@/app/Sidebar";
+import { TourOverlay, TourReplayButton } from "@/app/tutorial";
 import { TrialBanner } from "@/app/TrialBanner";
 import { UnverifiedEmailBanner } from "@/auth/UnverifiedEmailBanner";
 import { useAuth } from "@/auth/useAuth";
@@ -127,6 +128,7 @@ export function AppShell() {
             </div>
 
             <div className="flex items-center gap-3">
+              <TourReplayButton />
               {user.is_super_admin ? (
                 <Link
                   to="/admin"
@@ -175,6 +177,7 @@ export function AppShell() {
       </div>
 
       <MobileTabBar />
+      <TourOverlay />
     </div>
   );
 }
