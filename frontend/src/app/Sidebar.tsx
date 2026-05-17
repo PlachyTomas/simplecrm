@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
+import { testIds } from "@/lib/testids";
 import { ThemeToggle } from "@/lib/ThemeToggle";
 import { cn } from "@/lib/utils";
 
@@ -20,19 +21,20 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   end?: boolean;
+  testId?: string;
 }
 
 const PRIMARY_ITEMS: NavItem[] = [
-  { to: "/app", label: "Přehled", icon: Home, end: true },
-  { to: "/app/pipeline", label: "Pipeline", icon: Workflow },
-  { to: "/app/companies", label: "Firmy", icon: Building2 },
-  { to: "/app/contacts", label: "Kontakty", icon: Users },
-  { to: "/app/deals", label: "Obchody", icon: Handshake },
-  { to: "/app/reports", label: "Reporty", icon: LineChart },
+  { to: "/app", label: "Přehled", icon: Home, end: true, testId: testIds.nav.overview },
+  { to: "/app/pipeline", label: "Pipeline", icon: Workflow, testId: testIds.nav.pipeline },
+  { to: "/app/companies", label: "Firmy", icon: Building2, testId: testIds.nav.companies },
+  { to: "/app/contacts", label: "Kontakty", icon: Users, testId: testIds.nav.contacts },
+  { to: "/app/deals", label: "Obchody", icon: Handshake, testId: testIds.nav.deals },
+  { to: "/app/reports", label: "Reporty", icon: LineChart, testId: testIds.nav.reports },
 ];
 
 const SECONDARY_ITEMS: NavItem[] = [
-  { to: "/app/settings", label: "Nastavení", icon: Settings },
+  { to: "/app/settings", label: "Nastavení", icon: Settings, testId: testIds.nav.settings },
   { to: "/app/feedback", label: "Zpětná vazba", icon: MessageSquare },
 ];
 
@@ -60,7 +62,13 @@ export function Sidebar({ onLogout }: SidebarProps) {
           Prodej
         </p>
         {PRIMARY_ITEMS.map((item) => (
-          <NavLink key={item.to} to={item.to} end={item.end} className={linkClass}>
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            className={linkClass}
+            data-testid={item.testId}
+          >
             <item.icon size={18} strokeWidth={1.75} />
             <span>{item.label}</span>
           </NavLink>
@@ -69,7 +77,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
 
       <div className="space-y-1 border-t border-border-subtle pt-3">
         {SECONDARY_ITEMS.map((item) => (
-          <NavLink key={item.to} to={item.to} className={linkClass}>
+          <NavLink key={item.to} to={item.to} className={linkClass} data-testid={item.testId}>
             <item.icon size={18} strokeWidth={1.75} />
             <span>{item.label}</span>
           </NavLink>
