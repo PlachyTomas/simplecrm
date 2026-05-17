@@ -1461,6 +1461,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/imports/fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Importable Fields */
+        get: operations["list_importable_fields_api_v1_admin_imports_fields_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/imports/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Import */
+        post: operations["preview_import_api_v1_admin_imports_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/imports/commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Commit Import */
+        post: operations["commit_import_api_v1_admin_imports_commit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/current/subscription": {
         parameters: {
             query?: never;
@@ -3032,6 +3083,55 @@ export interface components {
             /** Deals */
             deals: components["schemas"]["DealOut"][];
         };
+        /** Body_commit_import_api_v1_admin_imports_commit_post */
+        Body_commit_import_api_v1_admin_imports_commit_post: {
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "companies_only" | "combined" | "separate";
+            /** Mapping Companies Json */
+            mapping_companies_json: string;
+            /** Companies File */
+            companies_file: string;
+            /** Mapping Contacts Json */
+            mapping_contacts_json?: string | null;
+            /** Match Source */
+            match_source?: ("ico" | "name" | "email") | null;
+            /** Match Key Company */
+            match_key_company?: string | null;
+            /** Match Key Contact */
+            match_key_contact?: string | null;
+            /** Contacts File */
+            contacts_file?: string | null;
+            /**
+             * Skip Unmatched
+             * @default false
+             */
+            skip_unmatched: boolean;
+        };
+        /** Body_preview_import_api_v1_admin_imports_preview_post */
+        Body_preview_import_api_v1_admin_imports_preview_post: {
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "companies_only" | "combined" | "separate";
+            /** Mapping Companies Json */
+            mapping_companies_json: string;
+            /** Companies File */
+            companies_file: string;
+            /** Mapping Contacts Json */
+            mapping_contacts_json?: string | null;
+            /** Match Source */
+            match_source?: ("ico" | "name" | "email") | null;
+            /** Match Key Company */
+            match_key_company?: string | null;
+            /** Match Key Contact */
+            match_key_contact?: string | null;
+            /** Contacts File */
+            contacts_file?: string | null;
+        };
         /** Body_submit_feedback_api_v1_feedback_post */
         Body_submit_feedback_api_v1_feedback_post: {
             kind: components["schemas"]["FeedbackKind"];
@@ -3647,6 +3747,27 @@ export interface components {
          * @enum {string}
          */
         FeedbackKind: "bug" | "improvement";
+        /** FieldDescriptor */
+        FieldDescriptor: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Required */
+            required: boolean;
+        };
+        /**
+         * FieldsCatalog
+         * @description The set of fields the user can map a CSV column onto. Served by
+         *     `GET /admin/imports/fields` so the frontend mapping <select> options
+         *     stay in lockstep with the backend allowlist.
+         */
+        FieldsCatalog: {
+            /** Company */
+            company: components["schemas"]["FieldDescriptor"][];
+            /** Contact */
+            contact: components["schemas"]["FieldDescriptor"][];
+        };
         /** GlobalFilters */
         GlobalFilters: {
             dateRange?: components["schemas"]["DateRangeFilter"];
@@ -3682,6 +3803,53 @@ export interface components {
             user_id: string;
             /** Email */
             email: string;
+        };
+        /** ImportCommitOut */
+        ImportCommitOut: {
+            counts: components["schemas"]["ImportCountsOut"];
+            /** Errors */
+            errors?: components["schemas"]["RowErrorOut"][];
+            /** Created Company Ids */
+            created_company_ids?: string[];
+            /** Updated Company Ids */
+            updated_company_ids?: string[];
+            /** Created Contact Ids */
+            created_contact_ids?: string[];
+            /** Updated Contact Ids */
+            updated_contact_ids?: string[];
+        };
+        /** ImportCountsOut */
+        ImportCountsOut: {
+            /** Companies To Create */
+            companies_to_create: number;
+            /** Companies To Update */
+            companies_to_update: number;
+            /** Contacts To Create */
+            contacts_to_create: number;
+            /** Contacts To Update */
+            contacts_to_update: number;
+            /** Invalid Rows */
+            invalid_rows: number;
+            /** Unmatched Contacts */
+            unmatched_contacts: number;
+        };
+        /**
+         * ImportPreviewOut
+         * @description Dry-run import results
+         */
+        ImportPreviewOut: {
+            counts: components["schemas"]["ImportCountsOut"];
+            /** Errors */
+            errors?: components["schemas"]["RowErrorOut"][];
+            /** Unmatched */
+            unmatched?: components["schemas"]["UnmatchedContactOut"][];
+            /** Update Diffs */
+            update_diffs?: components["schemas"]["UpdateDiffOut"][];
+            /**
+             * Update Diffs Truncated
+             * @default false
+             */
+            update_diffs_truncated: boolean;
         };
         /**
          * InitialPaymentInitIn
@@ -4444,6 +4612,22 @@ export interface components {
              */
             email: string;
         };
+        /** RowErrorOut */
+        RowErrorOut: {
+            /** Row Index */
+            row_index: number;
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "company" | "contact";
+            /** Field */
+            field?: string | null;
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
         /**
          * SalesCycleLengthConfig
          * @description Days between Company.created_at and Deal.closed_at for won deals.
@@ -5029,6 +5213,38 @@ export interface components {
             email: string;
             /** Requires Password */
             requires_password: boolean;
+        };
+        /** UnmatchedContactOut */
+        UnmatchedContactOut: {
+            /** Row Index */
+            row_index: number;
+            /** First Name */
+            first_name: string | null;
+            /** Last Name */
+            last_name: string | null;
+            /** Match Key Value */
+            match_key_value: string | null;
+        };
+        /** UpdateDiffOut */
+        UpdateDiffOut: {
+            /** Row Index */
+            row_index: number;
+            /**
+             * Entity Type
+             * @enum {string}
+             */
+            entity_type: "company" | "contact";
+            /**
+             * Entity Id
+             * Format: uuid
+             */
+            entity_id: string;
+            /** Changes */
+            changes: {
+                [key: string]: {
+                    [key: string]: string | null;
+                };
+            };
         };
         /**
          * UpdateSeatCountIn
@@ -8086,6 +8302,92 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_importable_fields_api_v1_admin_imports_fields_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldsCatalog"];
+                };
+            };
+        };
+    };
+    preview_import_api_v1_admin_imports_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_preview_import_api_v1_admin_imports_preview_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    commit_import_api_v1_admin_imports_commit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_commit_import_api_v1_admin_imports_commit_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportCommitOut"];
+                };
             };
             /** @description Validation Error */
             422: {

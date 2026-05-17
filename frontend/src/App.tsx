@@ -13,6 +13,7 @@ import { DealsListPage } from "@/app/deals/DealsListPage";
 import { FeedbackPage } from "@/app/feedback/FeedbackPage";
 import { PipelinePage } from "@/app/pipeline/PipelinePage";
 import { ReportsPage } from "@/app/reports/ReportsPage";
+import { ImportPage } from "@/app/settings/import/ImportPage";
 import { SettingsPage } from "@/app/settings/SettingsPage";
 import { AuthProvider } from "@/auth/AuthContext";
 import { ForgotPasswordPage } from "@/auth/ForgotPasswordPage";
@@ -82,6 +83,7 @@ export function AppRoutes() {
         <Route path="deals/:dealId" element={<DealDetailPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="settings/import" element={<ImportPage />} />
         <Route path="nastaveni/predplatne" element={<SettingsPage initialTab="billing" />} />
         <Route path="feedback" element={<FeedbackPage />} />
         <Route path="billing/return" element={<BillingReturnPage />} />

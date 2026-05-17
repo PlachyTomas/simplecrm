@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Download, Pencil, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import {
   type StageOut,
@@ -403,6 +404,17 @@ export function SettingsPage({ initialTab = "pipeline" }: SettingsPageProps = {}
       <header className="mb-6">
         <h1 className="text-2xl font-semibold">Nastavení — {activeTabMeta.label}</h1>
         <p className="mt-1 text-sm text-text-tertiary">{activeTabMeta.description}</p>
+        {user?.role === "admin" ? (
+          <p className="mt-2 text-xs text-text-tertiary">
+            <Link
+              to="/app/settings/import"
+              className="text-accent hover:underline"
+              data-testid="settings-import-link"
+            >
+              Hromadný import z CSV →
+            </Link>
+          </p>
+        ) : null}
       </header>
 
       <nav aria-label="Karty nastavení" className="mb-6 border-b border-border-subtle">

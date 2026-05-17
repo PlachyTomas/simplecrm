@@ -221,9 +221,14 @@ async def _run_pipeline(
     blocked = await _load_blocked_icos(session, payload.organization_id, icos_in_file)
 
     # Decide create vs update per candidate; build update-diff list.
+    # Any mapping-time error (required_missing, invalid_format, too_long)
+    # disqualifies the row from create/update — the DB write would either
+    # fail or silently store garbage. The errors themselves are already
+    # in `result.errors` so the admin sees them in the preview report.
     company_index_to_existing: dict[int, Company] = {}
+    blocking_codes = {"required_missing", "invalid_format", "too_long"}
     for cand_idx, company_cand in enumerate(deduped_companies):
-        if any(e.code == "required_missing" for e in company_cand.errors):
+        if any(e.code in blocking_codes for e in company_cand.errors):
             result.counts["invalid_rows"] += 1
             continue
         ico = company_cand.fields.get("ico")
@@ -265,12 +270,10 @@ async def _run_pipeline(
     # ---- Contacts (skip in companies-only mode) ----
     for contact_cand in payload.contact_candidates:
         result.errors.extend(contact_cand.errors)
-        if any(e.code == "required_missing" for e in contact_cand.errors):
+        if any(e.code in blocking_codes for e in contact_cand.errors):
             result.counts["invalid_rows"] += 1
     contacts_for_matcher = [
-        c
-        for c in payload.contact_candidates
-        if not any(e.code == "required_missing" for e in c.errors)
+        c for c in payload.contact_candidates if not any(e.code in blocking_codes for e in c.errors)
     ]
 
     matcher_existing_by_ico = {ico: row.id for ico, row in existing_by_ico.items()}
@@ -331,7 +334,10 @@ async def _run_pipeline(
     # Companies first so contact FKs resolve.
     candidate_index_to_company_id: dict[int, uuid.UUID] = {}
     for cand_idx, cand in enumerate(deduped_companies):
-        if any(e.code in ("required_missing", "ico_blocked") for e in cand.errors):
+        if any(
+            e.code in {"required_missing", "invalid_format", "too_long", "ico_blocked"}
+            for e in cand.errors
+        ):
             continue
         existing = company_index_to_existing.get(cand_idx)
         if existing is not None:
