@@ -380,6 +380,11 @@ export interface paths {
          *     Only callable by users who don't already belong to an org — calling
          *     this from an existing-org user is a 409 (the create-org page is
          *     front-end-gated, so this is just a defense-in-depth check).
+         *
+         *     When `payload.ico` is provided, an ARES lookup is attempted to
+         *     prefill name/address/DIČ. ARES failures are logged but don't block
+         *     onboarding — the IČO alone is still persisted so the admin can fill
+         *     the rest later in Nastavení.
          */
         post: operations["create_organization_api_v1_onboarding_organization_post"];
         delete?: never;
@@ -402,6 +407,32 @@ export interface paths {
          *     UI can render a precise message.
          */
         get: operations["preview_invitation_api_v1_onboarding_invite__token__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/lookup-registry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Onboarding Lookup Registry
+         * @description ARES lookup callable during the create-org wizard.
+         *
+         *     Mirrors `GET /companies/lookup-registry` but is mounted on the
+         *     onboarding router so it bypasses `require_org_membership` — the user
+         *     by definition has no org yet at this point. Shares the same cache +
+         *     per-user rate limiter as the org-scoped endpoint to keep behavior
+         *     identical once the user gets in.
+         */
+        get: operations["onboarding_lookup_registry_api_v1_onboarding_lookup_registry_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2679,6 +2710,12 @@ export interface components {
             taxable_supply_date?: string | null;
             /** Due At */
             due_at?: string | null;
+            /**
+             * Link Subscription
+             * @description When true, the new invoice is linked to the org's subscription. Once the founder marks the invoice paid, the subscription period is extended automatically (bank-transfer flow).
+             * @default false
+             */
+            link_subscription: boolean;
         };
         /** AdminManualLineIn */
         AdminManualLineIn: {
@@ -3150,6 +3187,8 @@ export interface components {
             legal_form?: string | null;
             /** Website */
             website?: string | null;
+            /** Email */
+            email?: string | null;
             /** Note */
             note?: string | null;
             /** Owner User Id */
@@ -3183,6 +3222,8 @@ export interface components {
             legal_form?: string | null;
             /** Website */
             website?: string | null;
+            /** Email */
+            email?: string | null;
             /** Note */
             note?: string | null;
             /** Owner User Id */
@@ -3234,6 +3275,8 @@ export interface components {
             legal_form?: string | null;
             /** Website */
             website?: string | null;
+            /** Email */
+            email?: string | null;
             /** Note */
             note?: string | null;
             /** Owner User Id */
@@ -3357,6 +3400,8 @@ export interface components {
             seat_count: number;
             /** Intended Plan Code */
             intended_plan_code?: string | null;
+            /** Ico */
+            ico?: string | null;
         };
         /** CurrentUser */
         CurrentUser: {
@@ -5695,6 +5740,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InvitationPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    onboarding_lookup_registry_api_v1_onboarding_lookup_registry_get: {
+        parameters: {
+            query: {
+                /** @description ISO-ish country code */
+                country: string;
+                /** @description Registration number (e.g. IČO) */
+                number: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistryLookupResult"];
                 };
             };
             /** @description Validation Error */

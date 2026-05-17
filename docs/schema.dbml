@@ -1,0 +1,402 @@
+Table activities {
+  id uuid [pk]
+  organization_id uuid [not null]
+  entity_type enum [not null]
+  entity_id uuid [not null]
+  user_id uuid
+  activity_type enum [not null]
+  payload jsonb [not null]
+  created_at datetime [not null]
+}
+
+Table auth_action_tokens {
+  jti string [pk]
+  user_id uuid [not null]
+  purpose string [not null]
+  expires_at datetime [not null]
+  created_at datetime [not null]
+}
+
+Table billing_settings {
+  id integer [pk]
+  is_vat_payer boolean [not null]
+  vat_rate_percent numeric [not null]
+  seller_iban string
+  seller_ico string
+  contact_email string [not null]
+  issuer_name string [not null]
+  issuer_address_street string [not null]
+  issuer_address_city string [not null]
+  issuer_address_zip string [not null]
+  issuer_register_text text [not null]
+  issuer_account_domestic string
+  default_payment_term_days integer [not null]
+  invoice_email_subject_template string [not null]
+  invoice_email_body_template text [not null]
+  updated_at datetime [not null]
+}
+
+Table blocked_companies {
+  id uuid [pk]
+  organization_id uuid [not null]
+  ico string [not null]
+  reason_category enum [not null]
+  note string
+  ares_name string
+  created_by uuid
+  created_at datetime [not null]
+}
+
+Table charges {
+  id uuid [pk]
+  organization_id uuid [not null]
+  kind string [not null]
+  amount_minor integer [not null]
+  currency string [not null]
+  status string [not null]
+  comgate_trans_id string
+  seats integer
+  period_starts_at datetime
+  period_ends_at datetime
+  failure_reason text
+  created_at datetime [not null]
+  paid_at datetime
+}
+
+Table companies {
+  id uuid [pk]
+  organization_id uuid [not null]
+  name string [not null]
+  ico string
+  dic string
+  address_street string
+  address_city string
+  address_zip string
+  legal_form string
+  registered_on datetime
+  website string
+  email string
+  note string
+  owner_user_id uuid
+  main_contact_id uuid
+  last_order_at datetime
+  ownership_expires_at datetime [not null]
+  ares_synced_at datetime
+  created_at datetime [not null]
+  updated_at datetime [not null]
+}
+
+Table contacts {
+  id uuid [pk]
+  organization_id uuid [not null]
+  company_id uuid
+  first_name string [not null]
+  last_name string [not null]
+  position string
+  email string
+  phone string
+  linkedin_url string
+  note string
+  created_at datetime [not null]
+  updated_at datetime [not null]
+}
+
+Table deals {
+  id uuid [pk]
+  organization_id uuid [not null]
+  company_id uuid [not null]
+  primary_contact_id uuid
+  stage_id uuid [not null]
+  owner_user_id uuid
+  name string [not null]
+  value numeric [not null]
+  currency string [not null]
+  probability_override integer
+  expected_close_date date
+  closed_at datetime
+  lost_reason string
+  is_paid boolean [not null]
+  paid_at datetime
+  created_at datetime [not null]
+  updated_at datetime [not null]
+}
+
+Table invitations {
+  id uuid [pk]
+  organization_id uuid [not null]
+  email string [not null]
+  role enum [not null]
+  team_id uuid
+  can_invite boolean [not null]
+  invited_by_user_id uuid
+  token_jti uuid [not null]
+  expires_at datetime [not null]
+  accepted_at datetime
+  revoked_at datetime
+  created_at datetime [not null]
+}
+
+Table invoice_audit_log {
+  id uuid [pk]
+  invoice_id uuid
+  event string [not null]
+  actor_user_id uuid
+  payload jsonb [not null]
+  created_at datetime [not null]
+}
+
+Table invoice_counters {
+  year integer [pk]
+  last_sequence integer [not null]
+  updated_at datetime [not null]
+}
+
+Table invoice_lines {
+  id uuid [pk]
+  invoice_id uuid [not null]
+  position integer [not null]
+  description text [not null]
+  quantity numeric [not null]
+  unit_label string
+  unit_price_minor integer [not null]
+  vat_rate_percent numeric [not null]
+  line_subtotal_minor integer [not null]
+  line_vat_minor integer [not null]
+  line_total_minor integer [not null]
+}
+
+Table invoices {
+  id uuid [pk]
+  organization_id uuid [not null]
+  subscription_id uuid
+  charge_id uuid
+  number string [not null]
+  year integer [not null]
+  sequence_in_year integer [not null]
+  variable_symbol string [not null]
+  status string [not null]
+  kind string [not null]
+  related_invoice_id uuid
+  issued_at datetime [not null]
+  taxable_supply_date date [not null]
+  due_at date [not null]
+  paid_at datetime
+  issuer_name string [not null]
+  issuer_address text [not null]
+  issuer_ico string [not null]
+  issuer_dic string
+  issuer_iban string [not null]
+  issuer_account_domestic string
+  issuer_register_text text [not null]
+  issuer_is_vat_payer boolean [not null]
+  customer_name string [not null]
+  customer_address text [not null]
+  customer_ico string
+  customer_dic string
+  customer_email string
+  currency string [not null]
+  subtotal_minor integer [not null]
+  vat_amount_minor integer [not null]
+  total_minor integer [not null]
+  vat_rate_percent numeric [not null]
+  pdf_object_key string
+  pdf_sha256 string
+  pdf_size_bytes integer
+  isdoc_object_key string
+  isdoc_sha256 string
+  note text
+  payment_method string [not null]
+  sent_at datetime
+  sent_to_email string
+  created_at datetime [not null]
+  updated_at datetime [not null]
+}
+
+Table organizations {
+  id uuid [pk]
+  name string [not null]
+  ico string
+  dic string
+  address_street string
+  address_city string
+  address_zip string
+  legal_form string
+  registered_on datetime
+  region enum [not null]
+  locale string [not null]
+  currency string [not null]
+  billing_name string
+  billing_email string
+  stripe_customer_id string
+  trial_ends_at datetime [not null]
+  billing_info_reminder_sent_at datetime
+  show_leaderboard_to_salespeople boolean [not null]
+  ownership_window_days integer [not null]
+  created_at datetime [not null]
+  updated_at datetime [not null]
+}
+
+Table ownership_history {
+  id uuid [pk]
+  company_id uuid [not null]
+  user_id uuid
+  assigned_at datetime [not null]
+  released_at datetime
+  reason enum [not null]
+}
+
+Table payment_methods {
+  id uuid [pk]
+  organization_id uuid [not null]
+  comgate_initial_trans_id string [not null]
+  card_brand string
+  card_last4 string
+  card_exp_month smallinteger
+  card_exp_year smallinteger
+  created_at datetime [not null]
+  updated_at datetime [not null]
+}
+
+Table pipelines {
+  id uuid [pk]
+  organization_id uuid [not null]
+  name string [not null]
+  is_default boolean [not null]
+  created_at datetime [not null]
+}
+
+Table plans {
+  id uuid [pk]
+  code string [not null]
+  display_name_cs string [not null]
+  description_cs text
+  billing_interval string [not null]
+  price_per_user_minor integer
+  currency string [not null]
+  is_public boolean [not null]
+  is_active boolean [not null]
+  sort_order integer [not null]
+  trial_days integer
+  created_at datetime [not null]
+  updated_at datetime [not null]
+}
+
+Table refresh_tokens {
+  jti string [pk]
+  user_id uuid [not null]
+  expires_at datetime [not null]
+  created_at datetime [not null]
+}
+
+Table stages {
+  id uuid [pk]
+  pipeline_id uuid [not null]
+  name string [not null]
+  default_probability integer [not null]
+  color string [not null]
+  position integer [not null]
+  stage_type enum [not null]
+}
+
+Table subscriptions {
+  id uuid [pk]
+  organization_id uuid [not null]
+  plan_id uuid [not null]
+  status string [not null]
+  started_at datetime [not null]
+  current_period_starts_at datetime
+  current_period_ends_at datetime
+  canceled_at datetime
+  override_price_per_user_minor integer
+  seat_count integer [not null]
+  contracted_seat_count integer [not null]
+  dunning_attempts integer [not null]
+  last_charge_failed_at datetime
+  next_renewal_charge_at datetime
+  pending_plan_id uuid
+  pending_seat_count integer
+  pending_user_deactivations jsonb
+  is_comp boolean [not null]
+  comp_reason text
+  notes text
+  created_at datetime [not null]
+  updated_at datetime [not null]
+}
+
+Table teams {
+  id uuid [pk]
+  name string [not null]
+  manager_user_id uuid
+  organization_id uuid [not null]
+  is_default boolean [not null]
+  created_at datetime [not null]
+}
+
+Table users {
+  id uuid [pk]
+  email string [not null]
+  name string [not null]
+  avatar_url string
+  google_id string
+  password_hash string
+  email_verified boolean [not null]
+  email_verified_at datetime
+  role enum [not null]
+  organization_id uuid
+  team_id uuid
+  can_invite boolean [not null]
+  is_super_admin boolean [not null]
+  is_active boolean [not null]
+  last_login_at datetime
+  max_owned_companies integer
+  reports_dashboard_config jsonb [not null]
+  created_at datetime [not null]
+}
+
+Table webhook_events {
+  id uuid [pk]
+  comgate_event_id string [not null]
+  received_at datetime [not null]
+  processed_at datetime
+  payload jsonb [not null]
+}
+
+Ref: activities.organization_id > organizations.id
+Ref: activities.user_id > users.id
+Ref: auth_action_tokens.user_id > users.id
+Ref: blocked_companies.organization_id > organizations.id
+Ref: blocked_companies.created_by > users.id
+Ref: charges.organization_id > organizations.id
+Ref: companies.organization_id > organizations.id
+Ref: companies.owner_user_id > users.id
+Ref: companies.main_contact_id > contacts.id
+Ref: contacts.organization_id > organizations.id
+Ref: contacts.company_id > companies.id
+Ref: deals.organization_id > organizations.id
+Ref: deals.company_id > companies.id
+Ref: deals.primary_contact_id > contacts.id
+Ref: deals.stage_id > stages.id
+Ref: deals.owner_user_id > users.id
+Ref: invitations.organization_id > organizations.id
+Ref: invitations.team_id > teams.id
+Ref: invitations.invited_by_user_id > users.id
+Ref: invoice_audit_log.invoice_id > invoices.id
+Ref: invoice_audit_log.actor_user_id > users.id
+Ref: invoice_lines.invoice_id > invoices.id
+Ref: invoices.organization_id > organizations.id
+Ref: invoices.subscription_id > subscriptions.id
+Ref: invoices.charge_id > charges.id
+Ref: invoices.related_invoice_id > invoices.id
+Ref: ownership_history.company_id > companies.id
+Ref: ownership_history.user_id > users.id
+Ref: payment_methods.organization_id > organizations.id
+Ref: pipelines.organization_id > organizations.id
+Ref: refresh_tokens.user_id > users.id
+Ref: stages.pipeline_id > pipelines.id
+Ref: subscriptions.organization_id > organizations.id
+Ref: subscriptions.plan_id > plans.id
+Ref: subscriptions.pending_plan_id > plans.id
+Ref: teams.manager_user_id > users.id
+Ref: teams.organization_id > organizations.id
+Ref: users.organization_id > organizations.id
+Ref: users.team_id > teams.id

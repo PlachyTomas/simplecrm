@@ -32,6 +32,9 @@ simplecrm/
 - `docs/dev-container.md` — how to run the isolated Claude Code dev container.
 - `docs/adr/` — architectural decisions with rationale.
 - `docs/work-log.md` — what has been built so far.
+- `docs/ERD.md` — auto-generated entity-relationship diagram (Mermaid).
+  Regenerate after schema changes:
+  `uv run --project backend python scripts/generate_erd.py`
 
 ## Quick start via dev container
 

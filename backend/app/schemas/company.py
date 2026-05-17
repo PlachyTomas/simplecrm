@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.schemas.contact import ContactOut
 
@@ -17,6 +17,7 @@ class CompanyCreate(BaseModel):
     address_zip: str | None = Field(default=None, max_length=12)
     legal_form: str | None = Field(default=None, max_length=120)
     website: str | None = Field(default=None, max_length=300)
+    email: EmailStr | None = Field(default=None, max_length=320)
     note: str | None = Field(default=None, max_length=2000)
     owner_user_id: uuid.UUID | None = None
 
@@ -30,6 +31,7 @@ class CompanyUpdate(BaseModel):
     address_zip: str | None = Field(default=None, max_length=12)
     legal_form: str | None = Field(default=None, max_length=120)
     website: str | None = Field(default=None, max_length=300)
+    email: EmailStr | None = Field(default=None, max_length=320)
     note: str | None = Field(default=None, max_length=2000)
     owner_user_id: uuid.UUID | None = None
     main_contact_id: uuid.UUID | None = None
@@ -48,6 +50,7 @@ class CompanyOut(BaseModel):
     address_zip: str | None = None
     legal_form: str | None = None
     website: str | None = None
+    email: EmailStr | None = None
     note: str | None = None
     owner_user_id: uuid.UUID | None = None
     last_order_at: datetime | None = None

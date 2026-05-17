@@ -5,6 +5,7 @@ import { useCreateCompany } from "@/app/companies/useCreateCompany";
 import { useLookupRegistry } from "@/app/companies/useLookupRegistry";
 import { useCreateContact } from "@/app/contacts/useCreateContact";
 import { ApiError } from "@/lib/api";
+import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
@@ -22,6 +23,8 @@ interface FormState {
   address_city: string;
   address_zip: string;
   legal_form: string;
+  email: string;
+  website: string;
 }
 
 interface ContactDraft {
@@ -40,6 +43,8 @@ const EMPTY_FORM: FormState = {
   address_city: "",
   address_zip: "",
   legal_form: "",
+  email: "",
+  website: "",
 };
 
 const EMPTY_CONTACT: ContactDraft = {
@@ -112,7 +117,14 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
     }
     if (lastFilledIcoRef.current && form.ico !== lastFilledIcoRef.current) {
       lastFilledIcoRef.current = null;
-      setForm((prev) => ({ ...EMPTY_FORM, ico: prev.ico }));
+      // Preserve email + website: they aren't ARES-derived, so the user
+      // typing them and then changing IČO shouldn't wipe their work.
+      setForm((prev) => ({
+        ...EMPTY_FORM,
+        ico: prev.ico,
+        email: prev.email,
+        website: prev.website,
+      }));
     }
   }, [lookup.data, form.ico]);
 
@@ -138,6 +150,8 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
         address_city: form.address_city.trim() || null,
         address_zip: form.address_zip.trim() || null,
         legal_form: form.legal_form.trim() || null,
+        email: form.email.trim() || null,
+        website: form.website.trim() || null,
       });
       if (wantsContact) {
         try {
@@ -221,6 +235,7 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
               type="text"
               inputMode="numeric"
               autoComplete="off"
+              data-testid={testIds.companies.addModal.icoInput}
               value={form.ico}
               onChange={(e) =>
                 // Strip non-digit characters at input time so paste of
@@ -274,9 +289,11 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
             <input
               type="text"
               autoComplete="organization"
+              data-testid={testIds.companies.addModal.nameInput}
               value={form.name}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
               required
+              aria-required="true"
               className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
             />
           </label>
@@ -333,6 +350,33 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
                 value={form.address_zip}
                 onChange={(e) => setForm((prev) => ({ ...prev, address_zip: e.target.value }))}
                 className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 font-mono text-sm text-text-primary focus:border-accent focus:outline-none"
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-xs font-medium text-text-secondary">E-mail (volitelné)</span>
+              <input
+                type="email"
+                autoComplete="email"
+                data-testid={testIds.companies.addModal.emailInput}
+                value={form.email}
+                onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+                className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
+                placeholder="info@firma.cz"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-medium text-text-secondary">Web (volitelné)</span>
+              <input
+                type="url"
+                autoComplete="url"
+                data-testid={testIds.companies.addModal.websiteInput}
+                value={form.website}
+                onChange={(e) => setForm((prev) => ({ ...prev, website: e.target.value }))}
+                className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
+                placeholder="https://firma.cz"
               />
             </label>
           </div>
@@ -441,6 +485,7 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
           <button
             type="button"
             onClick={onClose}
+            data-testid={testIds.companies.addModal.cancel}
             className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
           >
             Zrušit
@@ -448,6 +493,7 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
           <button
             type="submit"
             disabled={createMutation.isPending || !form.name.trim()}
+            data-testid={testIds.companies.addModal.submit}
             className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {createMutation.isPending ? "Ukládám…" : "Uložit firmu"}

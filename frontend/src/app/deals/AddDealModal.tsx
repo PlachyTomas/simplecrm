@@ -9,6 +9,7 @@ import { useCreateDeal } from "@/app/deals/useCreateDeal";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { ApiError } from "@/lib/api";
+import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
@@ -185,7 +186,14 @@ export function AddDealModal({
   if (!open) return null;
 
   const newCompanyReady = showNewCompany && !!newCompany.name.trim();
-  const canSubmit = !!form.name.trim() && !!form.stageId && (!!form.companyId || newCompanyReady);
+  const hasName = !!form.name.trim();
+  const hasCompany = !!form.companyId || newCompanyReady;
+  const hasStage = !!form.stageId;
+  const canSubmit = hasName && hasStage && hasCompany;
+  const missingLabels: string[] = [];
+  if (!hasName) missingLabels.push("název obchodu");
+  if (!hasCompany) missingLabels.push("firma");
+  if (!hasStage) missingLabels.push("fáze");
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -294,10 +302,14 @@ export function AddDealModal({
 
         <div className="mt-6 space-y-5">
           <label className="block">
-            <span className="text-xs font-medium text-text-secondary">Název obchodu</span>
+            <span className="text-xs font-medium text-text-secondary">
+              Název obchodu <span className="text-danger">*</span>
+            </span>
             <input
               type="text"
               required
+              aria-required="true"
+              data-testid={testIds.deals.addModal.nameInput}
               value={form.name}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
               className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
@@ -306,9 +318,13 @@ export function AddDealModal({
           </label>
 
           <label className="block">
-            <span className="text-xs font-medium text-text-secondary">Firma</span>
+            <span className="text-xs font-medium text-text-secondary">
+              Firma <span className="text-danger">*</span>
+            </span>
             <input
               type="text"
+              aria-required="true"
+              data-testid={testIds.deals.addModal.companyInput}
               value={companySearch}
               onChange={(e) => {
                 setCompanySearch(e.target.value);
@@ -526,9 +542,13 @@ export function AddDealModal({
               </select>
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-text-secondary">Fáze</span>
+              <span className="text-xs font-medium text-text-secondary">
+                Fáze <span className="text-danger">*</span>
+              </span>
               <select
                 value={form.stageId}
+                aria-required="true"
+                data-testid={testIds.deals.addModal.stageSelect}
                 onChange={(e) => setForm((prev) => ({ ...prev, stageId: e.target.value }))}
                 className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
               >
@@ -551,10 +571,22 @@ export function AddDealModal({
           </p>
         ) : null}
 
+        {missingLabels.length > 0 ? (
+          <p
+            id="add-deal-missing"
+            data-testid={testIds.deals.addModal.missingSummary}
+            className="mt-4 text-xs text-text-tertiary"
+            role="status"
+          >
+            Pro uložení vyplňte: <span className="text-danger">{missingLabels.join(", ")}</span>.
+          </p>
+        ) : null}
+
         <div className="mt-6 flex items-center justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
+            data-testid={testIds.deals.addModal.cancel}
             className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
           >
             Zrušit
@@ -562,6 +594,8 @@ export function AddDealModal({
           <button
             type="submit"
             disabled={createDeal.isPending || !canSubmit}
+            aria-describedby={missingLabels.length > 0 ? "add-deal-missing" : undefined}
+            data-testid={testIds.deals.addModal.submit}
             className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {createDeal.isPending ? "Ukládám…" : "Uložit obchod"}

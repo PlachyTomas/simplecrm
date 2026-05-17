@@ -76,6 +76,15 @@ function OverviewTab({ company, locale }: { company: CompanyOut; locale: string 
             "—"
           )}
         </FieldRow>
+        <FieldRow label="E-mail">
+          {company.email ? (
+            <a href={`mailto:${company.email}`} className="text-accent hover:text-accent-hover">
+              {company.email}
+            </a>
+          ) : (
+            "—"
+          )}
+        </FieldRow>
         <FieldRow label="Vytvořeno">{dateFmt.format(new Date(company.created_at))}</FieldRow>
         <FieldRow label="Vlastnictví vyprší">
           <div>
