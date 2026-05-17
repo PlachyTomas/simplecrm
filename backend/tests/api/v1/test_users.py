@@ -119,3 +119,98 @@ async def test_can_assign_team(
     )
     assert response.status_code == 200, response.text
     assert response.json()["team_id"] == str(team.id)
+
+
+# ---- PATCH /users/me/preferences ----
+
+
+async def test_preferences_default_to_empty_dict_on_me(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, _, sales = await _seed(db_session, owned_cleanup)
+    r = await client.get("/api/v1/auth/me", headers=_auth(sales))
+    assert r.status_code == 200, r.text
+    assert r.json()["preferences"] == {}
+
+
+async def test_patch_preferences_writes_then_round_trips_via_me(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, _, sales = await _seed(db_session, owned_cleanup)
+    r = await client.patch(
+        "/api/v1/users/me/preferences",
+        headers=_auth(sales),
+        json={"tutorial_step_index": 2},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["tutorial_step_index"] == 2
+
+    me = await client.get("/api/v1/auth/me", headers=_auth(sales))
+    assert me.json()["preferences"]["tutorial_step_index"] == 2
+
+
+async def test_patch_preferences_is_merge_not_replace(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, _, sales = await _seed(db_session, owned_cleanup)
+    await client.patch(
+        "/api/v1/users/me/preferences",
+        headers=_auth(sales),
+        json={"tutorial_step_index": 3, "tutorial_completed_at": "2026-05-17T22:00:00+00:00"},
+    )
+    r = await client.patch(
+        "/api/v1/users/me/preferences",
+        headers=_auth(sales),
+        json={"tutorial_step_index": 5},
+    )
+    body = r.json()
+    assert body["tutorial_step_index"] == 5
+    # The completed_at key was NOT touched by the second PATCH — must persist.
+    assert "tutorial_completed_at" in body
+
+
+async def test_patch_preferences_null_deletes_key(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, _, sales = await _seed(db_session, owned_cleanup)
+    await client.patch(
+        "/api/v1/users/me/preferences",
+        headers=_auth(sales),
+        json={"tutorial_completed_at": "2026-05-17T22:00:00+00:00"},
+    )
+    r = await client.patch(
+        "/api/v1/users/me/preferences",
+        headers=_auth(sales),
+        json={"tutorial_completed_at": None},
+    )
+    assert r.status_code == 200
+    assert "tutorial_completed_at" not in r.json()
+
+
+async def test_patch_preferences_rejects_unknown_key(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, _, sales = await _seed(db_session, owned_cleanup)
+    r = await client.patch(
+        "/api/v1/users/me/preferences",
+        headers=_auth(sales),
+        json={"something_made_up": 42},
+    )
+    assert r.status_code == 422
+
+
+async def test_patch_preferences_requires_auth(client: AsyncClient) -> None:
+    r = await client.patch("/api/v1/users/me/preferences", json={"tutorial_step_index": 0})
+    assert r.status_code == 401
+
+
+async def test_patch_preferences_rejects_negative_step(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, _, sales = await _seed(db_session, owned_cleanup)
+    r = await client.patch(
+        "/api/v1/users/me/preferences",
+        headers=_auth(sales),
+        json={"tutorial_step_index": -1},
+    )
+    assert r.status_code == 422

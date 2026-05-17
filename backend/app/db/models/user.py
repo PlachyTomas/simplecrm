@@ -115,6 +115,15 @@ class User(Base):
         JSONB, default=dict, server_default="{}", nullable=False
     )
 
+    # Free-form per-user preference blob. Populated only by
+    # `PATCH /users/me/preferences`, which enforces an allowlist of keys
+    # (currently: `tutorial_completed_at`, `tutorial_dismissed_at`,
+    # `tutorial_step_index`). Kept separate from `reports_dashboard_config`
+    # because that one has its own structured schema and dedicated endpoint.
+    preferences: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=dict, server_default="{}", nullable=False
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

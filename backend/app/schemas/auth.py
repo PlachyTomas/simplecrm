@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -42,6 +43,11 @@ class CurrentUser(BaseModel):
     # Frontend `ProtectedRoute` reads this and routes to /onboarding/create-org
     # when null instead of attempting any org-scoped queries.
     organization: OrganizationSummary | None = None
+    # Free-form per-user preference blob. Currently carries the first-login
+    # tutorial state under the keys `tutorial_completed_at`,
+    # `tutorial_dismissed_at`, `tutorial_step_index`. Always present on the
+    # wire (empty dict for users who have never set anything).
+    preferences: dict[str, Any] = Field(default_factory=dict)
 
 
 class AuthCallbackResult(BaseModel):

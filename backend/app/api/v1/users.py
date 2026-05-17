@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.deps import get_current_user, require_role
 from app.db import get_db
 from app.db.models import Team, User, UserRole
 from app.schemas.pagination import Page, PaginationParams
 from app.schemas.user import UserOut, UserUpdate
+from app.schemas.user_preferences import PreferencesPatch
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -102,3 +105,35 @@ async def update_user(
     await session.commit()
     await session.refresh(target)
     return target
+
+
+@router.patch("/me/preferences", response_model=dict[str, Any])
+async def patch_my_preferences(
+    payload: PreferencesPatch,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Merge a partial preferences blob into the current user's row.
+
+    Merge-patch semantics: only keys present in the body are touched.
+    Explicit `null` in the body deletes that key from the JSONB blob
+    (the schema models that as `Optional[T] = None`, which is `None`
+    here regardless of whether the caller sent `null` or omitted the
+    key — but ``model_fields_set`` lets us tell the two apart).
+    """
+    merge = payload.to_merge_dict(fields_set=payload.model_fields_set)
+    # Copy so the assignment-tracking knows about the mutation.
+    new_prefs = dict(user.preferences or {})
+    for key, value in merge.items():
+        if value is None:
+            new_prefs.pop(key, None)
+        else:
+            new_prefs[key] = value
+    user.preferences = new_prefs
+    # JSONB columns assigned an in-place mutation don't always tickle the
+    # ORM change tracker — be explicit. The dict() copy above usually
+    # suffices, but `flag_modified` is the belt to that copy's braces.
+    flag_modified(user, "preferences")
+    await session.commit()
+    await session.refresh(user)
+    return user.preferences
