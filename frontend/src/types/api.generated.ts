@@ -532,6 +532,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/me/erase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Erase Current Organization
+         * @description GDPR Art. 17 erasure for the caller's organization.
+         *
+         *     Admin-only, irreversible. Anonymizes the org + users in place and
+         *     hard-deletes every PII satellite (contacts, companies, deals, …) but
+         *     keeps invoices for the 10-year accounting retention window per
+         *     § 31 zák. č. 563/1991 Sb.
+         *
+         *     UX guardrails (also enforced server-side):
+         *       - `confirmation_name` must match the org's current `name` exactly
+         *       - admin role required — managers/salespeople can't trigger erasure
+         *       - any existing subscription is canceled best-effort first so the
+         *         billing scheduler doesn't re-charge an erased org
+         */
+        post: operations["erase_current_organization_api_v1_organizations_me_erase_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies": {
         parameters: {
             query?: never;
@@ -4291,6 +4322,30 @@ export interface components {
             /** Breakdown */
             breakdown: components["schemas"]["NewCompaniesBreakdownItem"][];
         };
+        /**
+         * OrganizationEraseIn
+         * @description GDPR Art. 17 erasure request. `confirmation_name` MUST match the
+         *     organization's current `name` exactly; the route 422s otherwise. UI
+         *     disables the submit button until typed-input matches but the server
+         *     re-checks because UI gates are not authorization.
+         */
+        OrganizationEraseIn: {
+            /** Confirmation Name */
+            confirmation_name: string;
+        };
+        /** OrganizationEraseOut */
+        OrganizationEraseOut: {
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /**
+             * Deleted At
+             * Format: date-time
+             */
+            deleted_at: string;
+        };
         /** OrganizationOut */
         OrganizationOut: {
             /**
@@ -6279,6 +6334,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminAccessLogList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    erase_current_organization_api_v1_organizations_me_erase_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganizationEraseIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationEraseOut"];
                 };
             };
             /** @description Validation Error */

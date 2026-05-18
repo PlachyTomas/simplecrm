@@ -91,6 +91,13 @@ class Organization(Base):
         nullable=False,
     )
 
+    # Stamped by the GDPR Art. 17 erasure service. The row itself stays
+    # because cascading invoices into oblivion would breach § 31 zák. č.
+    # 563/1991 Sb. (10-year accounting retention); the erasure service
+    # blanks every PII column instead. Auth deps treat a non-null value
+    # as a hard block via the per-user `is_active=False` flip.
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     users: Mapped[list[User]] = relationship(
         back_populates="organization", cascade="all, delete-orphan"
     )

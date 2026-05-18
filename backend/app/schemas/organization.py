@@ -81,3 +81,17 @@ class AdminAccessLogRow(BaseModel):
 class AdminAccessLogList(BaseModel):
     items: list[AdminAccessLogRow]
     total: int
+
+
+class OrganizationEraseIn(BaseModel):
+    """GDPR Art. 17 erasure request. `confirmation_name` MUST match the
+    organization's current `name` exactly; the route 422s otherwise. UI
+    disables the submit button until typed-input matches but the server
+    re-checks because UI gates are not authorization."""
+
+    confirmation_name: str = Field(..., min_length=1, max_length=200)
+
+
+class OrganizationEraseOut(BaseModel):
+    organization_id: uuid.UUID
+    deleted_at: datetime

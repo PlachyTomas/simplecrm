@@ -10,7 +10,7 @@ from __future__ import annotations
 import uuid
 from typing import cast
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,9 +20,13 @@ from app.db.models import Organization, SuperAdminAuditLog, User, UserRole
 from app.schemas.organization import (
     AdminAccessLogList,
     AdminAccessLogRow,
+    OrganizationEraseIn,
+    OrganizationEraseOut,
     OrganizationOut,
     OrganizationUpdate,
 )
+from app.services import org_erasure
+from app.services.comgate import ComGateClient, get_comgate_client
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
@@ -87,3 +91,48 @@ async def list_admin_access_log(
         items=[AdminAccessLogRow.model_validate(r) for r in rows],
         total=total,
     )
+
+
+@router.post(
+    "/me/erase",
+    response_model=OrganizationEraseOut,
+    status_code=status.HTTP_200_OK,
+)
+async def erase_current_organization(
+    payload: OrganizationEraseIn,
+    user: User = Depends(require_role(UserRole.admin)),
+    session: AsyncSession = Depends(get_db),
+    comgate: ComGateClient = Depends(get_comgate_client),
+) -> OrganizationEraseOut:
+    """GDPR Art. 17 erasure for the caller's organization.
+
+    Admin-only, irreversible. Anonymizes the org + users in place and
+    hard-deletes every PII satellite (contacts, companies, deals, …) but
+    keeps invoices for the 10-year accounting retention window per
+    § 31 zák. č. 563/1991 Sb.
+
+    UX guardrails (also enforced server-side):
+      - `confirmation_name` must match the org's current `name` exactly
+      - admin role required — managers/salespeople can't trigger erasure
+      - any existing subscription is canceled best-effort first so the
+        billing scheduler doesn't re-charge an erased org
+    """
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No organization")
+
+    try:
+        org = await org_erasure.erase_organization(
+            session,
+            org_id=user.organization_id,
+            confirmation_name=payload.confirmation_name,
+            by_admin_id=user.id,
+            comgate=comgate,
+        )
+    except org_erasure.ErasureError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+
+    await session.commit()
+    assert org.deleted_at is not None
+    return OrganizationEraseOut(organization_id=org.id, deleted_at=org.deleted_at)
