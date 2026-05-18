@@ -12,7 +12,6 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
 
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
@@ -43,7 +42,6 @@ export function useTutorial(): TutorialState {
   const { accessToken } = useAuth();
   const me = useCurrentUser();
   const queryClient = useQueryClient();
-  const location = useLocation();
   // Out of scope on small viewports per the plan — the spotlight
   // anchors are in the desktop sidebar.
   const isDesktop = useMediaQuery("(min-width: 640px)");
@@ -54,15 +52,9 @@ export function useTutorial(): TutorialState {
   const dismissedAt =
     typeof prefs.tutorial_dismissed_at === "string" ? prefs.tutorial_dismissed_at : null;
   const storedIndex = typeof prefs.tutorial_step_index === "number" ? prefs.tutorial_step_index : 0;
-  const onBillingReturn = location.pathname.startsWith("/app/billing/return");
 
   const baseShouldShow =
-    isDesktop &&
-    !!me.data &&
-    !!me.data.organization &&
-    !completedAt &&
-    !dismissedAt &&
-    !onBillingReturn;
+    isDesktop && !!me.data && !!me.data.organization && !completedAt && !dismissedAt;
 
   // Local cursor — drives the displayed step. Initialized from the
   // server-side resume point so a mid-tour reload picks up where the
