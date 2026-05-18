@@ -5,8 +5,11 @@
  * jméno, sídlo, IČO, údaj o zápisu) and by Comgate's onboarding checklist.
  * Edit here to update every legal page, footer, contact page, and DPA at once.
  *
- * Fields prefixed with TODO_ are placeholders the founder must fill in before
- * the site goes live. `isReady` flips to true once every TODO_ is replaced.
+ * Any of the placeholder markers in `PLACEHOLDER_MARKERS` (TODO_, „bude
+ * doplněno", TBD, …) flips `isLegalEntityReady()` to false. `runLegalPlaceholderLint`
+ * also scans the rendered legal page text at module load in dev builds so a
+ * stray "bude doplněno" inside the JSX (not just LEGAL_ENTITY) is caught
+ * before the founder ships the site.
  */
 
 export const LEGAL_ENTITY = {
@@ -41,13 +44,38 @@ export const COMGATE_INFO = {
 /** Effective date stamped onto VOP / Privacy / DPA / Cookies pages. */
 export const LEGAL_EFFECTIVE_DATE = "10.05.2026";
 
-/** True once every TODO_ value above has been replaced. Footer / Kontakt page use this to surface a build-time warning to the founder during development. */
+/**
+ * Substrings that flag unreplaced placeholder text. Matched case-insensitively
+ * so "TODO_", "todo_", "Bude doplněno", "BUDE DOPLNĚNO" all trip the lint.
+ */
+export const PLACEHOLDER_MARKERS = [
+  "TODO_",
+  "bude doplněno",
+  "bude doplneno",
+  "TBD",
+  "[XXX",
+  "lorem ipsum",
+] as const;
+
+export function containsPlaceholder(text: string): boolean {
+  const haystack = text.toLowerCase();
+  return PLACEHOLDER_MARKERS.some((marker) => haystack.includes(marker.toLowerCase()));
+}
+
+/**
+ * Returns true once every LEGAL_ENTITY value has been replaced. The check is
+ * shallow — for stray placeholders inside legal-page JSX use
+ * `runLegalPlaceholderLint` (called from the dev entrypoint).
+ */
 export const isLegalEntityReady = (): boolean => {
   const values = [
+    LEGAL_ENTITY.fullName,
     LEGAL_ENTITY.address,
     LEGAL_ENTITY.ico,
     LEGAL_ENTITY.registryClause,
+    LEGAL_ENTITY.email,
+    LEGAL_ENTITY.phone,
     LEGAL_EFFECTIVE_DATE,
   ];
-  return !values.some((v) => v.includes("TODO_"));
+  return !values.some(containsPlaceholder);
 };

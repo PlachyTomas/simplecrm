@@ -60,11 +60,12 @@ export function ZpracovatelskaSmlouvaPage() {
           <li>zpracovává údaje pouze na základě pokynů Správce,</li>
           <li>zajišťuje mlčenlivost osob s přístupem k údajům,</li>
           <li>
-            přijímá technická a organizační opatření dle čl. 32 GDPR (šifrování přenosů a úložiště,
-            autentizace, logování, zálohy),
+            přijímá technická a organizační opatření dle čl. 32 GDPR (šifrovaný přenos
+            HTTPS/TLS, autentizace, logování přístupů, denní zálohy mimo produkční prostředí),
           </li>
           <li>
-            bez zbytečného odkladu informuje Správce o porušení zabezpečení (max. do 48 hodin),
+            bez zbytečného odkladu informuje Správce o porušení zabezpečení (max. do 72 hodin v
+            souladu s čl. 33 GDPR),
           </li>
           <li>pomáhá Správci s žádostmi subjektů údajů,</li>
           <li>na konci smlouvy údaje vymaže nebo vrátí Správci (dle volby),</li>
@@ -79,11 +80,17 @@ export function ZpracovatelskaSmlouvaPage() {
         </p>
         <p className="font-medium text-text-primary">Aktuální seznam:</p>
         <ul className="list-disc space-y-1 pl-5">
-          <li>Hetzner Online GmbH (hosting, DE)</li>
-          <li>Comgate, a.s. (platby, CZ)</li>
-          <li>Fakturační systém (CZ) — bude doplněno</li>
-          <li>E-mailingový nástroj (EU) — bude doplněno</li>
+          <li>Hetzner Online GmbH (hosting a denní zálohy, DE)</li>
+          <li>Comgate, a.s. (platební brána, CZ)</li>
+          <li>
+            Zoho Corporation B.V. (transakční a marketingová e-mailová komunikace,
+            datacentrum Amsterdam, NL)
+          </li>
         </ul>
+        <p className="text-xs text-text-tertiary">
+          Fakturační agendu vede Zpracovatel in-house ve vlastní aplikaci — žádný externí
+          fakturační systém k osobním údajům Subjektů nemá přístup.
+        </p>
       </Section>
 
       <Section id="cl-6" title="6. Předávání do třetích zemí">
