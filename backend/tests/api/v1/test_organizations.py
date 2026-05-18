@@ -39,9 +39,7 @@ async def owned_emails() -> AsyncIterator[list[str]]:
         # Orphaned organizations — delete any whose name starts with our
         # fixture marker.
         await session.execute(
-            delete(SuperAdminAuditLog).where(
-                SuperAdminAuditLog.super_admin_email.in_(tracked)
-            )
+            delete(SuperAdminAuditLog).where(SuperAdminAuditLog.super_admin_email.in_(tracked))
         )
         await session.execute(delete(Organization).where(Organization.name == "Placeholder Alfa"))
         await session.commit()

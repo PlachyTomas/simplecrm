@@ -84,9 +84,7 @@ export function OchranaOsobnichUdajuPage() {
       <Section id="prijemci" title="3. Příjemci osobních údajů">
         <p>Vaše údaje předáváme pouze:</p>
         <ul className="list-disc space-y-1 pl-5">
-          <li>
-            poskytovateli hostingu a denních záloh — Hetzner Online GmbH, Německo, EU,
-          </li>
+          <li>poskytovateli hostingu a denních záloh — Hetzner Online GmbH, Německo, EU,</li>
           <li>platební bráně Comgate, a.s., Česká republika,</li>
           <li>
             poskytovateli transakční a marketingové e-mailové komunikace — Zoho Corporation B.V.,
@@ -95,9 +93,9 @@ export function OchranaOsobnichUdajuPage() {
           <li>účetní po dohodě.</li>
         </ul>
         <p>
-          Fakturační agendu vedeme in-house ve vlastní aplikaci — žádný externí fakturační systém
-          k Vašim údajům přístup nemá. Všichni dodavatelé sídlí nebo zpracovávají údaje v EU/EHP;
-          mimo EU údaje nepředáváme.
+          Fakturační agendu vedeme in-house ve vlastní aplikaci — žádný externí fakturační systém k
+          Vašim údajům přístup nemá. Všichni dodavatelé sídlí nebo zpracovávají údaje v EU/EHP; mimo
+          EU údaje nepředáváme.
         </p>
       </Section>
 
@@ -136,9 +134,9 @@ export function OchranaOsobnichUdajuPage() {
       <Section id="zabezpeceni" title="5. Zabezpečení">
         <p>
           Údaje jsou chráněny šifrovaným přenosem (HTTPS/TLS), denními zálohami uchovávanými mimo
-          produkční prostředí, logováním administrátorských přístupů a izolací mezi organizacemi
-          na úrovni aplikační vrstvy. Šifrování databáze v klidu (at rest) plánujeme nasadit
-          v rámci přechodu na šifrovaný diskový svazek.
+          produkční prostředí, logováním administrátorských přístupů a izolací mezi organizacemi na
+          úrovni aplikační vrstvy. Šifrování databáze v klidu (at rest) plánujeme nasadit v rámci
+          přechodu na šifrovaný diskový svazek.
         </p>
       </Section>
 

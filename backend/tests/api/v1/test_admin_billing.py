@@ -676,10 +676,18 @@ async def test_audit_logged_on_list_users_view_invoices_activity_subscription(
     token = create_access_token(admin.id, admin.organization_id, admin.role)
     headers = {"Authorization": f"Bearer {token}"}
 
-    assert (await client.get(f"/api/v1/admin/organizations/{org.id}/users", headers=headers)).status_code == 200
-    assert (await client.get(f"/api/v1/admin/organizations/{org.id}/invoices", headers=headers)).status_code == 200
-    assert (await client.get(f"/api/v1/admin/organizations/{org.id}/activity", headers=headers)).status_code == 200
-    assert (await client.get(f"/api/v1/admin/organizations/{org.id}", headers=headers)).status_code == 200
+    assert (
+        await client.get(f"/api/v1/admin/organizations/{org.id}/users", headers=headers)
+    ).status_code == 200
+    assert (
+        await client.get(f"/api/v1/admin/organizations/{org.id}/invoices", headers=headers)
+    ).status_code == 200
+    assert (
+        await client.get(f"/api/v1/admin/organizations/{org.id}/activity", headers=headers)
+    ).status_code == 200
+    assert (
+        await client.get(f"/api/v1/admin/organizations/{org.id}", headers=headers)
+    ).status_code == 200
 
     rows = await _audit_rows(db_session, org.id)
     actions = sorted(r.action for r in rows)

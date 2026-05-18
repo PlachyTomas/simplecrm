@@ -60,8 +60,8 @@ export function ZpracovatelskaSmlouvaPage() {
           <li>zpracovává údaje pouze na základě pokynů Správce,</li>
           <li>zajišťuje mlčenlivost osob s přístupem k údajům,</li>
           <li>
-            přijímá technická a organizační opatření dle čl. 32 GDPR (šifrovaný přenos
-            HTTPS/TLS, autentizace, logování přístupů, denní zálohy mimo produkční prostředí),
+            přijímá technická a organizační opatření dle čl. 32 GDPR (šifrovaný přenos HTTPS/TLS,
+            autentizace, logování přístupů, denní zálohy mimo produkční prostředí),
           </li>
           <li>
             bez zbytečného odkladu informuje Správce o porušení zabezpečení (max. do 72 hodin v
@@ -71,17 +71,17 @@ export function ZpracovatelskaSmlouvaPage() {
           <li>na konci smlouvy údaje vymaže nebo vrátí Správci (dle volby),</li>
           <li>umožňuje audit Správci (předem oznámený, max. 1× ročně),</li>
           <li>
-            informuje Správce o všech provozních přístupech svých pověřených osob k jeho datům
-            (viz čl. 5 níže).
+            informuje Správce o všech provozních přístupech svých pověřených osob k jeho datům (viz
+            čl. 5 níže).
           </li>
         </ol>
       </Section>
 
       <Section id="cl-5" title="5. Provozní přístup pověřených osob Zpracovatele">
         <p>
-          5.1 Pro účely zákaznické podpory, řešení incidentů, údržbu a kontrolu integrity
-          dat má omezený okruh pověřených osob Zpracovatele (tzv. „super-administrátor")
-          technickou možnost:
+          5.1 Pro účely zákaznické podpory, řešení incidentů, údržbu a kontrolu integrity dat má
+          omezený okruh pověřených osob Zpracovatele (tzv. „super-administrátor") technickou
+          možnost:
         </p>
         <ol className="list-[lower-alpha] space-y-1 pl-5">
           <li>
@@ -91,21 +91,20 @@ export function ZpracovatelskaSmlouvaPage() {
           <li>zobrazit seznam uživatelských účtů (jméno, e-mail, role),</li>
           <li>zobrazit fakturační historii a aktivitu předplatného,</li>
           <li>
-            přihlásit se jménem konkrétního uživatele Správce („impersonace") pro účely
-            replikace nahlášeného problému; v takovém režimu má pověřená osoba stejné
-            oprávnění jako daný uživatel.
+            přihlásit se jménem konkrétního uživatele Správce („impersonace") pro účely replikace
+            nahlášeného problému; v takovém režimu má pověřená osoba stejné oprávnění jako daný
+            uživatel.
           </li>
         </ol>
         <p>
-          5.2 Tento přístup je výslovným pokynem Správce ve smyslu čl. 28 odst. 3 písm. a) GDPR
-          a uděluje se jím obecné povolení k uvedeným úkonům po dobu trvání Smlouvy. Pověřené
-          osoby jsou vázány mlčenlivostí dle čl. 4 písm. b).
+          5.2 Tento přístup je výslovným pokynem Správce ve smyslu čl. 28 odst. 3 písm. a) GDPR a
+          uděluje se jím obecné povolení k uvedeným úkonům po dobu trvání Smlouvy. Pověřené osoby
+          jsou vázány mlčenlivostí dle čl. 4 písm. b).
         </p>
         <p>
-          5.3 Každý jednotlivý přístup je auditně zaznamenán a Správci dostupný v reálném čase
-          v administraci pod{" "}
-          <em>Nastavení → Přístup operátora</em>. Záznam obsahuje datum, typ úkonu, identitu
-          pověřené osoby a — v případě impersonace — identitu uživatele, jehož jménem byl
+          5.3 Každý jednotlivý přístup je auditně zaznamenán a Správci dostupný v reálném čase v
+          administraci pod <em>Nastavení → Přístup operátora</em>. Záznam obsahuje datum, typ úkonu,
+          identitu pověřené osoby a — v případě impersonace — identitu uživatele, jehož jménem byl
           přístup proveden.
         </p>
         <p>
@@ -127,13 +126,13 @@ export function ZpracovatelskaSmlouvaPage() {
           <li>Hetzner Online GmbH (hosting a denní zálohy, DE)</li>
           <li>Comgate, a.s. (platební brána, CZ)</li>
           <li>
-            Zoho Corporation B.V. (transakční a marketingová e-mailová komunikace,
-            datacentrum Amsterdam, NL)
+            Zoho Corporation B.V. (transakční a marketingová e-mailová komunikace, datacentrum
+            Amsterdam, NL)
           </li>
         </ul>
         <p className="text-xs text-text-tertiary">
-          Fakturační agendu vede Zpracovatel in-house ve vlastní aplikaci — žádný externí
-          fakturační systém k osobním údajům Subjektů nemá přístup.
+          Fakturační agendu vede Zpracovatel in-house ve vlastní aplikaci — žádný externí fakturační
+          systém k osobním údajům Subjektů nemá přístup.
         </p>
       </Section>
 

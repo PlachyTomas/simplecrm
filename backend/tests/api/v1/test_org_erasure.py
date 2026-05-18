@@ -22,8 +22,8 @@ from app.db.models import (
     UserRole,
 )
 from app.db.session import AsyncSessionLocal
-from app.services.comgate import ComGateClient, get_comgate_client
 from app.main import app
+from app.services.comgate import ComGateClient, get_comgate_client
 
 
 @pytest.fixture(autouse=True)
@@ -141,7 +141,9 @@ async def test_erase_blanks_pii_and_keeps_invoice(
     # transaction is snapshot-isolated, so observe the result through a
     # fresh session.
     async with AsyncSessionLocal() as s:
-        refreshed = (await s.execute(select(Organization).where(Organization.id == org.id))).scalar_one()
+        refreshed = (
+            await s.execute(select(Organization).where(Organization.id == org.id))
+        ).scalar_one()
         assert refreshed.name.startswith("[Smazaná organizace #")
         assert refreshed.ico is None
         assert refreshed.billing_email is None
@@ -182,14 +184,16 @@ async def test_erase_rejects_name_mismatch(
     )
     assert resp.status_code == 422
     async with AsyncSessionLocal() as s:
-        refreshed = (await s.execute(select(Organization).where(Organization.id == org.id))).scalar_one()
+        refreshed = (
+            await s.execute(select(Organization).where(Organization.id == org.id))
+        ).scalar_one()
         assert refreshed.deleted_at is None
 
 
 async def test_erase_is_idempotent(
     client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
 ) -> None:
-    org, admin = await _seed_admin(db_session, owned_emails)
+    _org, admin = await _seed_admin(db_session, owned_emails)
     token = create_access_token(admin.id, admin.organization_id, admin.role)
     first = await client.post(
         "/api/v1/organizations/me/erase",
@@ -231,7 +235,7 @@ async def test_erase_rejects_non_admin(
     )
     assert resp.status_code == 403
     async with AsyncSessionLocal() as s:
-        refreshed = (await s.execute(select(Organization).where(Organization.id == org.id))).scalar_one()
+        refreshed = (
+            await s.execute(select(Organization).where(Organization.id == org.id))
+        ).scalar_one()
         assert refreshed.deleted_at is None
-
-

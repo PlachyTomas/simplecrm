@@ -134,5 +134,7 @@ async def erase_current_organization(
         ) from exc
 
     await session.commit()
-    assert org.deleted_at is not None
-    return OrganizationEraseOut(organization_id=org.id, deleted_at=org.deleted_at)
+    deleted_at = org.deleted_at
+    if deleted_at is None:  # pragma: no cover — erase_organization always stamps it
+        raise RuntimeError("erase_organization did not stamp deleted_at")
+    return OrganizationEraseOut(organization_id=org.id, deleted_at=deleted_at)

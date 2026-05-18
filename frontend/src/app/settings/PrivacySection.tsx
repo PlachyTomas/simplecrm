@@ -75,9 +75,9 @@ export function PrivacySection() {
       <div className="rounded-lg border border-border bg-surface p-6">
         <h2 className="text-lg font-semibold text-text-primary">Přístup operátora</h2>
         <p className="mt-2 text-sm text-text-secondary">
-          Pověřené osoby provozovatele SimpleCRM mají pro účely podpory, řešení incidentů
-          a údržby omezený přístup k Vašim datům. Každý takový přístup je zaznamenán a najdete
-          ho v tabulce níže. Podrobnosti k povinnostem provozovatele jsou v{" "}
+          Pověřené osoby provozovatele SimpleCRM mají pro účely podpory, řešení incidentů a údržby
+          omezený přístup k Vašim datům. Každý takový přístup je zaznamenán a najdete ho v tabulce
+          níže. Podrobnosti k povinnostem provozovatele jsou v{" "}
           <Link
             to="/zpracovatelska-smlouva#cl-5"
             className="underline hover:text-text-primary"
@@ -154,9 +154,9 @@ function DangerZone({ orgName }: { orgName: string }) {
     <div className="border-danger/40 rounded-lg border bg-danger-subtle p-6">
       <h2 className="text-lg font-semibold text-text-primary">Trvale smazat organizaci</h2>
       <p className="mt-2 text-sm text-text-secondary">
-        Nevratně smaže veškerá osobní data: kontakty, firmy, obchody, aktivity i uživatelské
-        účty. Vystavené daňové doklady ze zákona uchováváme dalších 10 let dle § 31 zákona
-        o účetnictví — bez Vašich přístupových údajů.
+        Nevratně smaže veškerá osobní data: kontakty, firmy, obchody, aktivity i uživatelské účty.
+        Vystavené daňové doklady ze zákona uchováváme dalších 10 let dle § 31 zákona o účetnictví —
+        bez Vašich přístupových údajů.
       </p>
       <p className="mt-2 text-xs text-text-tertiary">
         Před smazáním Vám doporučujeme exportovat data ze sekce Reporty. Aktivní předplatné
@@ -212,9 +212,7 @@ function EraseOrgDialog({ orgName, onClose }: { orgName: string; onClose: () => 
         },
         onError: (err) => {
           const detail =
-            err instanceof ApiError
-              ? (err.body as { detail?: string } | null)?.detail
-              : undefined;
+            err instanceof ApiError ? (err.body as { detail?: string } | null)?.detail : undefined;
           setError(detail ?? "Smazání se nezdařilo. Zkuste to prosím znovu.");
         },
       },
@@ -241,7 +239,7 @@ function EraseOrgDialog({ orgName, onClose }: { orgName: string; onClose: () => 
         <p className="mt-2 text-sm text-text-secondary">
           Tuto akci nelze vrátit zpět. Pro potvrzení opište přesný název organizace:
         </p>
-        <p className="mt-2 rounded-md border border-border bg-surface-overlay px-3 py-2 text-sm font-mono text-text-primary">
+        <p className="mt-2 rounded-md border border-border bg-surface-overlay px-3 py-2 font-mono text-sm text-text-primary">
           {orgName}
         </p>
         <label className="mt-4 block text-xs font-medium text-text-tertiary">

@@ -18,6 +18,7 @@ Hard-deleted (PII-heavy, no accounting need):
 
 from __future__ import annotations
 
+import contextlib
 import uuid
 from datetime import UTC, datetime
 
@@ -82,16 +83,14 @@ async def erase_organization(
     if payment_method is not None:
         await comgate.disable_recurring(payment_method.comgate_initial_trans_id)
 
-    try:
+    # Already-canceled, trialing-without-sub, etc. all raise BillingError —
+    # fine to ignore. The scheduler's `is_comp=False` / `status='active'`
+    # filter plus the per-user `is_active=False` flip below stop further
+    # charges anyway.
+    with contextlib.suppress(billing.BillingError):
         await billing.cancel_self_serve(
             session, org_id=org_id, by_admin_id=by_admin_id, reason="organization_erased"
         )
-    except billing.BillingError:
-        # Already canceled, trialing without sub, etc. — fine to ignore;
-        # the scheduler's other gates (`is_comp=False`, `status='active'`)
-        # plus the per-user `is_active=False` flip below will keep the
-        # org from being charged.
-        pass
 
     # 2. Hard-delete PII satellites. Order matters where row-level FKs
     #    cascade (e.g. deals reference companies); SQL CASCADEs cover the
@@ -114,17 +113,13 @@ async def erase_organization(
     await session.execute(delete(Pipeline).where(Pipeline.organization_id == org_id))
     await session.execute(delete(Team).where(Team.organization_id == org_id))
     if payment_method is not None:
-        await session.execute(
-            delete(PaymentMethod).where(PaymentMethod.organization_id == org_id)
-        )
+        await session.execute(delete(PaymentMethod).where(PaymentMethod.organization_id == org_id))
 
     # 3. Anonymize users in place. Email becomes a per-user noreply address
     #    inside the .invalid TLD (RFC 6761 — guaranteed never deliverable)
     #    so we can keep the unique-email constraint intact.
     users = (
-        (await session.execute(select(User).where(User.organization_id == org_id)))
-        .scalars()
-        .all()
+        (await session.execute(select(User).where(User.organization_id == org_id))).scalars().all()
     )
     for u in users:
         u.email = f"deleted-{u.id.hex}@{_ANON_EMAIL_DOMAIN}"

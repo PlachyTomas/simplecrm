@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from app.db.models.user import User
 
 
-class SuperAdminAction(str, enum.Enum):
+class SuperAdminAction(enum.StrEnum):
     """What a super-admin did. Kept small on purpose — we audit the routes
     that touch a customer org's PII, not internal billing-only mutations
     (those already land in `activities` as `subscription_change`)."""
