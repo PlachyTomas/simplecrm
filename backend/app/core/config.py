@@ -85,9 +85,8 @@ class Settings(BaseSettings):
     smtp_from_info: str = "info@simplecrm.cz"
 
     # Inbox the /api/v1/feedback endpoint forwards bug reports and
-    # improvement suggestions to. By default we send the notification to
-    # the same info@ mailbox that signs it.
-    feedback_recipient_email: str = "info@simplecrm.cz"
+    # improvement suggestions to.
+    feedback_recipient_email: str = "podpora@simplecrm.cz"
 
     # Tax-invoice archival storage (commit #4 of INVOICES_TASK.md).
     # When `s3_endpoint_url` is set, the storage layer writes invoice

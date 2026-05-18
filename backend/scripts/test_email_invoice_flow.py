@@ -1,7 +1,7 @@
 """Soft-launch readiness probe for Zoho SMTP + invoice flow.
 
 Three checks, run in order:
-  1. Send a `feedback` notification via `send_email` to info@simplecrm.cz.
+  1. Send a `feedback` notification via `send_email` to podpora@simplecrm.cz.
      Verifies the smtplib transaction succeeds.
   2. Seed a Test Zákazník s.r.o. org + paid Charge, run InvoiceService.
      issue_for_charge → assert PDF lands at var/invoices/.

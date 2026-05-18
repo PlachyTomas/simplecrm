@@ -2,7 +2,7 @@
  * Feedback form. Authenticated users pick bug vs. improvement, write
  * a one-line caption + free-text body, optionally attach up to five
  * screenshots, and submit. The backend forwards the payload (with the
- * user's email set as Reply-To) to `simplecrm@seznam.cz`.
+ * user's email set as Reply-To) to `podpora@simplecrm.cz`.
  *
  * Attachment limits mirror the server: 5 files, 5 MB each, 15 MB total,
  * PNG/JPEG/WebP only. We surface size violations before hitting the
@@ -285,7 +285,7 @@ export function FeedbackPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle pt-5">
           <p className="text-xs text-text-tertiary">
             Zpráva půjde na{" "}
-            <code className="font-mono text-text-secondary">simplecrm@seznam.cz</code> a odpovíme
+            <code className="font-mono text-text-secondary">podpora@simplecrm.cz</code> a odpovíme
             vám na váš e-mail.
           </p>
           <button
