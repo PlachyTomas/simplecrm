@@ -1,4 +1,4 @@
-import { Mail, MapPin } from "lucide-react";
+import { Mail, MapPin, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { LEGAL_ENTITY } from "@/marketing/legal-entity";
@@ -38,6 +38,21 @@ export function KontaktPage() {
               <p className="mt-1 text-xs text-text-tertiary">
                 Pro obchodní dotazy, technickou podporu i reklamace. Odpovídáme zpravidla v pracovní
                 dny do několika hodin.
+              </p>
+            </div>
+          </li>
+          <li className="flex items-start gap-3">
+            <Phone size={18} strokeWidth={1.75} className="mt-0.5 text-text-tertiary" />
+            <div>
+              <p className="font-medium text-text-primary">Telefon</p>
+              <a
+                href={`tel:${LEGAL_ENTITY.phone.replace(/\s+/g, "")}`}
+                className="text-text-secondary underline hover:text-text-primary"
+              >
+                {LEGAL_ENTITY.phone}
+              </a>
+              <p className="mt-1 text-xs text-text-tertiary">
+                Pracovní dny 9–17 h. Mimo pracovní dobu prosím využijte e-mail.
               </p>
             </div>
           </li>

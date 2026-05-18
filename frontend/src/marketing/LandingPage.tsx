@@ -6,6 +6,7 @@ import {
   Mail,
   Menu,
   MousePointerClick,
+  Phone,
   RefreshCw,
   Scissors,
   Sparkles,
@@ -646,6 +647,12 @@ export function Footer() {
               className="mt-3 inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary"
             >
               <Mail size={12} strokeWidth={1.75} /> {LEGAL_ENTITY.email}
+            </a>
+            <a
+              href={`tel:${LEGAL_ENTITY.phone.replace(/\s+/g, "")}`}
+              className="mt-1 inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary"
+            >
+              <Phone size={12} strokeWidth={1.75} /> {LEGAL_ENTITY.phone}
             </a>
           </div>
 

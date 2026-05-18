@@ -10,18 +10,18 @@
  */
 
 export const LEGAL_ENTITY = {
-  fullName: "Tomáš Plachý",
-  address: "Lidická 55, Brno 602 00",
+  fullName: "Ing. Tomáš Plachý",
+  address: "Lidická 709/55, Veveří, 602 00 Brno",
   ico: "06437541",
   registryClause:
     "Fyzická osoba zapsaná v živnostenském rejstříku, evidenční úřad: Magistrát města Brna.",
   /**
    * Single kontaktní e-mail — slouží zároveň pro obchodní dotazy,
-   * technickou podporu i reklamace. Bez telefonního kontaktu (vědomé
-   * rozhodnutí provozovatele); ComGate náležitosti e-shopu doporučují
-   * uvádět i telefon, proto k tomu před spuštěním zvážit alternativu.
+   * technickou podporu i reklamace.
    */
-  email: "simplecrm@seznam.cz",
+  email: "podpora@simplecrm.cz",
+  /** Kontaktní telefon — uvádí se v patičce a na stránce Kontakt. */
+  phone: "+420 776 282 696",
   // Číslo bankovního účtu se na veřejných stránkách nezobrazuje — invoice
   // šablony a ComGate onboarding ho čerpají z backend env `BANK_ACCOUNT`.
 } as const;
