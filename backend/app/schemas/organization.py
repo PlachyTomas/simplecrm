@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -52,3 +53,31 @@ class OrganizationOut(BaseModel):
     stripe_customer_id: str | None = None
     show_leaderboard_to_salespeople: bool
     ownership_window_days: int
+
+
+SuperAdminActionLiteral = Literal[
+    "list_users",
+    "view_subscription",
+    "view_invoices",
+    "view_activity",
+    "impersonate",
+]
+
+
+class AdminAccessLogRow(BaseModel):
+    """One super-admin action against the caller's org, as shown in
+    Settings → Přístup operátora."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    action: SuperAdminActionLiteral
+    super_admin_email: str
+    target_user_email: str | None
+    payload: dict[str, Any]
+    created_at: datetime
+
+
+class AdminAccessLogList(BaseModel):
+    items: list[AdminAccessLogRow]
+    total: int

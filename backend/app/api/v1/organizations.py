@@ -10,13 +10,19 @@ from __future__ import annotations
 import uuid
 from typing import cast
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, require_role
 from app.db import get_db
-from app.db.models import Organization, User, UserRole
-from app.schemas.organization import OrganizationOut, OrganizationUpdate
+from app.db.models import Organization, SuperAdminAuditLog, User, UserRole
+from app.schemas.organization import (
+    AdminAccessLogList,
+    AdminAccessLogRow,
+    OrganizationOut,
+    OrganizationUpdate,
+)
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
@@ -49,3 +55,35 @@ async def update_current_organization(
     await session.commit()
     await session.refresh(org)
     return org
+
+
+@router.get("/me/admin-access-log", response_model=AdminAccessLogList)
+async def list_admin_access_log(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    user: User = Depends(require_role(UserRole.admin)),
+    session: AsyncSession = Depends(get_db),
+) -> AdminAccessLogList:
+    """History of super-admin (operator-team) access to *this* organization.
+
+    Surfaced in Settings → Přístup operátora. Disclosed in DPA čl. 4(h) so
+    the controller can audit who from our side has looked at their data,
+    when, and (for impersonation) as whom.
+    """
+    base = select(SuperAdminAuditLog).where(
+        SuperAdminAuditLog.target_organization_id == user.organization_id
+    )
+    total = (await session.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
+    rows = (
+        (
+            await session.execute(
+                base.order_by(SuperAdminAuditLog.created_at.desc()).limit(limit).offset(offset)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return AdminAccessLogList(
+        items=[AdminAccessLogRow.model_validate(r) for r in rows],
+        total=total,
+    )

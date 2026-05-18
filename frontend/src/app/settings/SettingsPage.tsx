@@ -14,6 +14,7 @@ import {
 import { InvoiceDetailsCard } from "@/app/settings/InvoiceDetailsCard";
 import { InvitationsSection } from "@/app/settings/InvitationsSection";
 import { BlockedCompaniesSection } from "@/app/settings/BlockedCompaniesSection";
+import { PrivacySection } from "@/app/settings/PrivacySection";
 import { TeamsSection } from "@/app/settings/TeamsSection";
 import { UsersSection } from "@/app/settings/UsersSection";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
@@ -58,7 +59,8 @@ type SettingsTab =
   | "blocked-companies"
   | "organization"
   | "billing"
-  | "integrations";
+  | "integrations"
+  | "privacy";
 
 const TABS: { key: SettingsTab; label: string; description: string }[] = [
   {
@@ -110,6 +112,11 @@ const TABS: { key: SettingsTab; label: string; description: string }[] = [
     key: "integrations",
     label: "Integrace",
     description: "Propojení s externími službami.",
+  },
+  {
+    key: "privacy",
+    label: "Soukromí",
+    description: "Historie přístupů týmu SimpleCRM k Vašim datům a zrušení organizace.",
   },
 ];
 
@@ -461,6 +468,7 @@ export function SettingsPage({ initialTab = "pipeline" }: SettingsPageProps = {}
       {activeTab === "organization" ? <OrganizationSection /> : null}
       {activeTab === "billing" ? <BillingSection /> : null}
       {activeTab === "integrations" ? <IntegrationsSection /> : null}
+      {activeTab === "privacy" ? <PrivacySection /> : null}
       {activeTab !== "pipeline" ? null : isPending ? (
         <div className="rounded-lg border border-border bg-surface p-6 text-sm text-text-tertiary">
           Načítání pipeline…

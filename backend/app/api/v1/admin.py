@@ -34,6 +34,7 @@ from app.db.models import (
     Charge,
     Organization,
     Subscription,
+    SuperAdminAction,
     User,
 )
 from app.schemas.billing import (
@@ -56,7 +57,7 @@ from app.schemas.billing import (
     SubscriptionStatus,
 )
 from app.schemas.payments import ChargeList, ChargeOut
-from app.services import billing
+from app.services import billing, super_admin_audit
 
 logger = logging.getLogger(__name__)
 
@@ -200,7 +201,7 @@ def _subscription_payload(sub: Subscription) -> SubscriptionOut:
 @router.get("/organizations/{org_id}", response_model=SubscriptionOut)
 async def get_organization_subscription(
     org_id: uuid.UUID,
-    _admin: User = Depends(require_super_admin),
+    admin: User = Depends(require_super_admin),
     session: AsyncSession = Depends(get_db),
 ) -> SubscriptionOut:
     """Org detail, returned as a Subscription view (org metadata is on the
@@ -208,6 +209,13 @@ async def get_organization_subscription(
     list).
     """
     sub = await billing.get_current_subscription(session, org_id)
+    await super_admin_audit.record(
+        session,
+        super_admin=admin,
+        action=SuperAdminAction.view_subscription,
+        target_organization_id=org_id,
+    )
+    await session.commit()
     return _subscription_payload(sub)
 
 
@@ -364,7 +372,7 @@ async def get_org_subscription_activity(
     org_id: uuid.UUID,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    _admin: User = Depends(require_super_admin),
+    admin: User = Depends(require_super_admin),
     session: AsyncSession = Depends(get_db),
 ) -> AdminActivityList:
     """Subscription-scoped activity rows for the admin detail drawer.
@@ -413,6 +421,13 @@ async def get_org_subscription_activity(
         )
         for a in rows
     ]
+    await super_admin_audit.record(
+        session,
+        super_admin=admin,
+        action=SuperAdminAction.view_activity,
+        target_organization_id=org_id,
+    )
+    await session.commit()
     return AdminActivityList(items=items, total=total)
 
 
@@ -458,7 +473,7 @@ async def list_org_invoices(
     org_id: uuid.UUID,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    _admin: User = Depends(require_super_admin),
+    admin: User = Depends(require_super_admin),
     session: AsyncSession = Depends(get_db),
 ) -> ChargeList:
     """Founder-facing invoice list for one org.
@@ -474,6 +489,13 @@ async def list_org_invoices(
         .scalars()
         .all()
     )
+    await super_admin_audit.record(
+        session,
+        super_admin=admin,
+        action=SuperAdminAction.view_invoices,
+        target_organization_id=org_id,
+    )
+    await session.commit()
     return ChargeList(
         items=[ChargeOut.model_validate(r) for r in rows],
         total=total,
@@ -491,7 +513,7 @@ async def list_org_invoices(
 )
 async def list_org_users(
     org_id: uuid.UUID,
-    _admin: User = Depends(require_super_admin),
+    admin: User = Depends(require_super_admin),
     session: AsyncSession = Depends(get_db),
 ) -> AdminOrgUserList:
     """All members of an org, ordered admin → manager → salesperson then
@@ -506,6 +528,13 @@ async def list_org_users(
         .scalars()
         .all()
     )
+    await super_admin_audit.record(
+        session,
+        super_admin=admin,
+        action=SuperAdminAction.list_users,
+        target_organization_id=org_id,
+    )
+    await session.commit()
     return AdminOrgUserList(items=[AdminOrgUserRow.model_validate(u) for u in rows])
 
 
@@ -552,8 +581,8 @@ async def impersonate_user(
             detail="Target user has no organization",
         )
 
-    # Audit trail lives in the app log — no DB schema change. Includes
-    # both identities so a single grep reconstructs every impersonation.
+    # Belt-and-braces: app log keeps an instant grep-friendly trail; the
+    # persisted audit row is what the customer admin can see in Settings.
     logger.warning(
         "super-admin %s (%s) impersonating user %s (%s) in org %s",
         admin.id,
@@ -562,6 +591,15 @@ async def impersonate_user(
         target.email,
         target.organization_id,
     )
+    await super_admin_audit.record(
+        session,
+        super_admin=admin,
+        action=SuperAdminAction.impersonate,
+        target_organization_id=target.organization_id,
+        target_user=target,
+        payload={"target_role": target.role.value},
+    )
+    await session.commit()
 
     access_token = create_access_token(target.id, target.organization_id, target.role)
     return ImpersonateOut(

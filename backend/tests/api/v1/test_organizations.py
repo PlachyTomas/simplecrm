@@ -18,7 +18,13 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.db.models import Organization, User, UserRole
+from app.db.models import (
+    Organization,
+    SuperAdminAction,
+    SuperAdminAuditLog,
+    User,
+    UserRole,
+)
 from app.db.session import AsyncSessionLocal
 
 
@@ -32,6 +38,11 @@ async def owned_emails() -> AsyncIterator[list[str]]:
         await session.execute(delete(User).where(User.email.in_(tracked)))
         # Orphaned organizations — delete any whose name starts with our
         # fixture marker.
+        await session.execute(
+            delete(SuperAdminAuditLog).where(
+                SuperAdminAuditLog.super_admin_email.in_(tracked)
+            )
+        )
         await session.execute(delete(Organization).where(Organization.name == "Placeholder Alfa"))
         await session.commit()
 
@@ -221,3 +232,69 @@ async def test_create_company_uses_configured_window(
     expected_low = before + timedelta(days=60) - timedelta(seconds=5)
     expected_high = after + timedelta(days=60) + timedelta(seconds=5)
     assert expected_low <= expires_at <= expected_high, f"expected ~+60d window, got {expires_at!s}"
+
+
+# ---------------------------------------------------------------------------
+# GET /organizations/me/admin-access-log
+# ---------------------------------------------------------------------------
+
+
+async def test_admin_access_log_returns_rows_for_caller_org(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    user = await _seed_user(db_session, owned_emails)
+    # Seed two audit rows: one for this org, one for some other org (must
+    # not leak into the response).
+    db_session.add(
+        SuperAdminAuditLog(
+            super_admin_email="ops@simplecrm.cz",
+            target_organization_id=user.organization_id,
+            action=SuperAdminAction.impersonate,
+            target_user_email=user.email,
+            payload={"target_role": "admin"},
+        )
+    )
+    other_org = Organization(name="Other Org")
+    db_session.add(other_org)
+    await db_session.flush()
+    db_session.add(
+        SuperAdminAuditLog(
+            super_admin_email="ops@simplecrm.cz",
+            target_organization_id=other_org.id,
+            action=SuperAdminAction.view_invoices,
+        )
+    )
+    await db_session.commit()
+
+    token = create_access_token(user.id, user.organization_id, user.role)
+    resp = await client.get(
+        "/api/v1/organizations/me/admin-access-log",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["total"] == 1
+    assert len(body["items"]) == 1
+    assert body["items"][0]["action"] == "impersonate"
+    assert body["items"][0]["target_user_email"] == user.email
+
+    # Cleanup the manual fixture rows + org.
+    await db_session.execute(
+        delete(SuperAdminAuditLog).where(
+            SuperAdminAuditLog.target_organization_id.in_([user.organization_id, other_org.id])
+        )
+    )
+    await db_session.execute(delete(Organization).where(Organization.id == other_org.id))
+    await db_session.commit()
+
+
+async def test_admin_access_log_rejects_non_admin(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    user = await _seed_user(db_session, owned_emails, role=UserRole.salesperson)
+    token = create_access_token(user.id, user.organization_id, user.role)
+    resp = await client.get(
+        "/api/v1/organizations/me/admin-access-log",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 403

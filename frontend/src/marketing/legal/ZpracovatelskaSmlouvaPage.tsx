@@ -69,11 +69,55 @@ export function ZpracovatelskaSmlouvaPage() {
           </li>
           <li>pomáhá Správci s žádostmi subjektů údajů,</li>
           <li>na konci smlouvy údaje vymaže nebo vrátí Správci (dle volby),</li>
-          <li>umožňuje audit Správci (předem oznámený, max. 1× ročně).</li>
+          <li>umožňuje audit Správci (předem oznámený, max. 1× ročně),</li>
+          <li>
+            informuje Správce o všech provozních přístupech svých pověřených osob k jeho datům
+            (viz čl. 5 níže).
+          </li>
         </ol>
       </Section>
 
-      <Section id="cl-5" title="5. Subdodavatelé (sub-processors)">
+      <Section id="cl-5" title="5. Provozní přístup pověřených osob Zpracovatele">
+        <p>
+          5.1 Pro účely zákaznické podpory, řešení incidentů, údržbu a kontrolu integrity
+          dat má omezený okruh pověřených osob Zpracovatele (tzv. „super-administrátor")
+          technickou možnost:
+        </p>
+        <ol className="list-[lower-alpha] space-y-1 pl-5">
+          <li>
+            zobrazit metadata organizace Správce (název, plán, počet uživatelů, datum poslední
+            aktivity, billing údaje),
+          </li>
+          <li>zobrazit seznam uživatelských účtů (jméno, e-mail, role),</li>
+          <li>zobrazit fakturační historii a aktivitu předplatného,</li>
+          <li>
+            přihlásit se jménem konkrétního uživatele Správce („impersonace") pro účely
+            replikace nahlášeného problému; v takovém režimu má pověřená osoba stejné
+            oprávnění jako daný uživatel.
+          </li>
+        </ol>
+        <p>
+          5.2 Tento přístup je výslovným pokynem Správce ve smyslu čl. 28 odst. 3 písm. a) GDPR
+          a uděluje se jím obecné povolení k uvedeným úkonům po dobu trvání Smlouvy. Pověřené
+          osoby jsou vázány mlčenlivostí dle čl. 4 písm. b).
+        </p>
+        <p>
+          5.3 Každý jednotlivý přístup je auditně zaznamenán a Správci dostupný v reálném čase
+          v administraci pod{" "}
+          <em>Nastavení → Přístup operátora</em>. Záznam obsahuje datum, typ úkonu, identitu
+          pověřené osoby a — v případě impersonace — identitu uživatele, jehož jménem byl
+          přístup proveden.
+        </p>
+        <p>
+          5.4 Správce může kdykoli vznést námitku proti konkrétnímu přístupu na{" "}
+          <a href={`mailto:${LEGAL_ENTITY.email}`} className="underline hover:text-text-primary">
+            {LEGAL_ENTITY.email}
+          </a>
+          .
+        </p>
+      </Section>
+
+      <Section id="cl-6" title="6. Subdodavatelé (sub-processors)">
         <p>
           Správce uděluje obecné povolení k zapojení subdodavatelů uvedených níže. O změně
           subdodavatele bude Správce informován s 30denním předstihem a má právo vznést námitku.
@@ -93,11 +137,11 @@ export function ZpracovatelskaSmlouvaPage() {
         </p>
       </Section>
 
-      <Section id="cl-6" title="6. Předávání do třetích zemí">
+      <Section id="cl-7" title="7. Předávání do třetích zemí">
         <p>Veškeré zpracování probíhá v EU/EHP. Předávání mimo EU neprobíhá.</p>
       </Section>
 
-      <Section id="cl-7" title="7. Doba trvání">
+      <Section id="cl-8" title="8. Doba trvání">
         <p>
           Tato DPA je účinná po dobu trvání hlavní Smlouvy a 30 dnů po jejím ukončení (období na
           export dat).

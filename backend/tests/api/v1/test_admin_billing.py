@@ -16,6 +16,8 @@ from app.db.models import (
     Organization,
     Plan,
     Subscription,
+    SuperAdminAction,
+    SuperAdminAuditLog,
     User,
     UserRole,
 )
@@ -623,3 +625,65 @@ async def test_impersonate_unknown_user_returns_404(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Super-admin audit log persistence
+# ---------------------------------------------------------------------------
+
+
+async def _audit_rows(session: AsyncSession, org_id: uuid.UUID) -> list[SuperAdminAuditLog]:
+    return list(
+        (
+            await session.execute(
+                select(SuperAdminAuditLog)
+                .where(SuperAdminAuditLog.target_organization_id == org_id)
+                .order_by(SuperAdminAuditLog.created_at)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+
+async def test_audit_logged_on_impersonate(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    org, admin = await _seed_org_with_super_admin(db_session, owned_emails)
+    member = await _add_member(db_session, org, owned_emails)
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    resp = await client.post(
+        f"/api/v1/admin/users/{member.id}/impersonate",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+
+    rows = await _audit_rows(db_session, org.id)
+    impersonations = [r for r in rows if r.action is SuperAdminAction.impersonate]
+    assert len(impersonations) == 1
+    row = impersonations[0]
+    assert row.super_admin_user_id == admin.id
+    assert row.super_admin_email == admin.email
+    assert row.target_user_id == member.id
+    assert row.target_user_email == member.email
+    assert row.payload == {"target_role": member.role.value}
+
+
+async def test_audit_logged_on_list_users_view_invoices_activity_subscription(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    org, admin = await _seed_org_with_super_admin(db_session, owned_emails)
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    assert (await client.get(f"/api/v1/admin/organizations/{org.id}/users", headers=headers)).status_code == 200
+    assert (await client.get(f"/api/v1/admin/organizations/{org.id}/invoices", headers=headers)).status_code == 200
+    assert (await client.get(f"/api/v1/admin/organizations/{org.id}/activity", headers=headers)).status_code == 200
+    assert (await client.get(f"/api/v1/admin/organizations/{org.id}", headers=headers)).status_code == 200
+
+    rows = await _audit_rows(db_session, org.id)
+    actions = sorted(r.action for r in rows)
+    assert SuperAdminAction.list_users in actions
+    assert SuperAdminAction.view_invoices in actions
+    assert SuperAdminAction.view_activity in actions
+    assert SuperAdminAction.view_subscription in actions

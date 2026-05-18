@@ -508,6 +508,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/me/admin-access-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Admin Access Log
+         * @description History of super-admin (operator-team) access to *this* organization.
+         *
+         *     Surfaced in Settings → Přístup operátora. Disclosed in DPA čl. 4(h) so
+         *     the controller can audit who from our side has looked at their data,
+         *     when, and (for impersonation) as whom.
+         */
+        get: operations["list_admin_access_log_api_v1_organizations_me_admin_access_log_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies": {
         parameters: {
             query?: never;
@@ -2457,6 +2481,43 @@ export interface components {
          * @enum {string}
          */
         ActivityType: "note" | "stage_change" | "owner_change" | "deal_won" | "deal_lost" | "company_freed" | "ownership_reassigned" | "subscription_change";
+        /** AdminAccessLogList */
+        AdminAccessLogList: {
+            /** Items */
+            items: components["schemas"]["AdminAccessLogRow"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * AdminAccessLogRow
+         * @description One super-admin action against the caller's org, as shown in
+         *     Settings → Přístup operátora.
+         */
+        AdminAccessLogRow: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "list_users" | "view_subscription" | "view_invoices" | "view_activity" | "impersonate";
+            /** Super Admin Email */
+            super_admin_email: string;
+            /** Target User Email */
+            target_user_email: string | null;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** AdminActivityActor */
         AdminActivityActor: {
             /**
@@ -6186,6 +6247,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OrganizationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_admin_access_log_api_v1_organizations_me_admin_access_log_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAccessLogList"];
                 };
             };
             /** @description Validation Error */
