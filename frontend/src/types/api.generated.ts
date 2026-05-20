@@ -3203,25 +3203,12 @@ export interface components {
         };
         /** Body_commit_import_api_v1_admin_imports_commit_post */
         Body_commit_import_api_v1_admin_imports_commit_post: {
-            /**
-             * Mode
-             * @enum {string}
-             */
-            mode: "companies_only" | "combined" | "separate";
-            /** Mapping Companies Json */
-            mapping_companies_json: string;
-            /** Companies File */
-            companies_file: string;
-            /** Mapping Contacts Json */
-            mapping_contacts_json?: string | null;
+            /** Files */
+            files: string[];
+            /** File Specs Json */
+            file_specs_json: string;
             /** Match Source */
             match_source?: ("ico" | "name" | "email") | null;
-            /** Match Key Company */
-            match_key_company?: string | null;
-            /** Match Key Contact */
-            match_key_contact?: string | null;
-            /** Contacts File */
-            contacts_file?: string | null;
             /**
              * Skip Unmatched
              * @default false
@@ -3232,25 +3219,12 @@ export interface components {
         };
         /** Body_preview_import_api_v1_admin_imports_preview_post */
         Body_preview_import_api_v1_admin_imports_preview_post: {
-            /**
-             * Mode
-             * @enum {string}
-             */
-            mode: "companies_only" | "combined" | "separate";
-            /** Mapping Companies Json */
-            mapping_companies_json: string;
-            /** Companies File */
-            companies_file: string;
-            /** Mapping Contacts Json */
-            mapping_contacts_json?: string | null;
+            /** Files */
+            files: string[];
+            /** File Specs Json */
+            file_specs_json: string;
             /** Match Source */
             match_source?: ("ico" | "name" | "email") | null;
-            /** Match Key Company */
-            match_key_company?: string | null;
-            /** Match Key Contact */
-            match_key_contact?: string | null;
-            /** Contacts File */
-            contacts_file?: string | null;
             /** Bulk Owner User Id */
             bulk_owner_user_id?: string | null;
         };

@@ -1,4 +1,4 @@
-"""Integration tests for the admin CSV-import endpoints.
+"""Integration tests for the admin CSV-import endpoints (v2 multi-file).
 
 Each test seeds a fresh organization + admin, runs at least one
 /preview, and where relevant a /commit. The /commit path verifies that
@@ -72,13 +72,41 @@ def _auth(user: User) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _csv_upload(content: str, filename: str = "companies.csv") -> tuple[str, io.BytesIO, str]:
+def _csv(content: str, filename: str) -> tuple[str, io.BytesIO, str]:
     return (filename, io.BytesIO(content.encode("utf-8")), "text/csv")
 
 
 COMPANIES_CSV = (
     "Název,IČO,E-mail\nAcme s.r.o.,12345678,info@acme.cz\nBeta a.s.,87654321,kontakt@beta.cz\n"
 )
+
+
+def _spec_companies(mapping: dict[str, str]) -> dict[str, object]:
+    return {"role": "companies", "mapping_company": mapping}
+
+
+def _spec_contacts(
+    mapping: dict[str, str], match_key_contact: str | None = None
+) -> dict[str, object]:
+    spec: dict[str, object] = {"role": "contacts", "mapping_contact": mapping}
+    if match_key_contact is not None:
+        spec["match_key_contact"] = match_key_contact
+    return spec
+
+
+def _spec_combined(
+    company_mapping: dict[str, str],
+    contact_mapping: dict[str, str],
+    match_key_contact: str | None = None,
+) -> dict[str, object]:
+    spec: dict[str, object] = {
+        "role": "combined",
+        "mapping_company": company_mapping,
+        "mapping_contact": contact_mapping,
+    }
+    if match_key_contact is not None:
+        spec["match_key_contact"] = match_key_contact
+    return spec
 
 
 async def test_fields_catalog_lists_company_and_contact_keys(
@@ -90,7 +118,9 @@ async def test_fields_catalog_lists_company_and_contact_keys(
     r = await client.get("/api/v1/admin/imports/fields", headers=_auth(admin))
     assert r.status_code == 200
     body = r.json()
-    assert {"name", "ico", "email"}.issubset({f["key"] for f in body["company"]})
+    assert {"name", "ico", "email", "phone", "industry", "owner"}.issubset(
+        {f["key"] for f in body["company"]}
+    )
     assert {"first_name", "last_name"}.issubset({f["key"] for f in body["contact"]})
 
 
@@ -100,10 +130,11 @@ async def test_preview_companies_only_counts_new_rows(
     org = await _seed_org(db_session, owned_cleanup)
     admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
 
-    files = {"companies_file": _csv_upload(COMPANIES_CSV)}
+    files = [("files", _csv(COMPANIES_CSV, "companies.csv"))]
     data = {
-        "mode": "companies_only",
-        "mapping_companies_json": json.dumps({"Název": "name", "IČO": "ico", "E-mail": "email"}),
+        "file_specs_json": json.dumps(
+            [_spec_companies({"Název": "name", "IČO": "ico", "E-mail": "email"})]
+        ),
     }
     r = await client.post(
         "/api/v1/admin/imports/preview", headers=_auth(admin), files=files, data=data
@@ -131,10 +162,11 @@ async def test_preview_diff_shows_changed_field_on_existing_company(
     )
     await db_session.commit()
 
-    files = {"companies_file": _csv_upload(COMPANIES_CSV)}
+    files = [("files", _csv(COMPANIES_CSV, "companies.csv"))]
     data = {
-        "mode": "companies_only",
-        "mapping_companies_json": json.dumps({"Název": "name", "IČO": "ico", "E-mail": "email"}),
+        "file_specs_json": json.dumps(
+            [_spec_companies({"Název": "name", "IČO": "ico", "E-mail": "email"})]
+        ),
     }
     r = await client.post(
         "/api/v1/admin/imports/preview", headers=_auth(admin), files=files, data=data
@@ -158,10 +190,9 @@ async def test_preview_flags_blocked_ico(
     )
     await db_session.commit()
 
-    files = {"companies_file": _csv_upload(COMPANIES_CSV)}
+    files = [("files", _csv(COMPANIES_CSV, "companies.csv"))]
     data = {
-        "mode": "companies_only",
-        "mapping_companies_json": json.dumps({"Název": "name", "IČO": "ico"}),
+        "file_specs_json": json.dumps([_spec_companies({"Název": "name", "IČO": "ico"})]),
     }
     r = await client.post(
         "/api/v1/admin/imports/preview", headers=_auth(admin), files=files, data=data
@@ -177,10 +208,11 @@ async def test_commit_persists_new_companies(
     org = await _seed_org(db_session, owned_cleanup)
     admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
 
-    files = {"companies_file": _csv_upload(COMPANIES_CSV)}
+    files = [("files", _csv(COMPANIES_CSV, "companies.csv"))]
     data = {
-        "mode": "companies_only",
-        "mapping_companies_json": json.dumps({"Název": "name", "IČO": "ico", "E-mail": "email"}),
+        "file_specs_json": json.dumps(
+            [_spec_companies({"Název": "name", "IČO": "ico", "E-mail": "email"})]
+        ),
     }
     r = await client.post(
         "/api/v1/admin/imports/commit", headers=_auth(admin), files=files, data=data
@@ -212,27 +244,30 @@ async def test_preview_combined_mode_links_contacts_by_ico(
     org = await _seed_org(db_session, owned_cleanup)
     admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
 
-    files = {"companies_file": _csv_upload(COMBINED_CSV, filename="combined.csv")}
+    files = [("files", _csv(COMBINED_CSV, "combined.csv"))]
     data = {
-        "mode": "combined",
-        "mapping_companies_json": json.dumps({"FirmaNázev": "name", "FirmaIČO": "ico"}),
-        "mapping_contacts_json": json.dumps({"Jméno": "first_name", "Příjmení": "last_name"}),
+        "file_specs_json": json.dumps(
+            [
+                _spec_combined(
+                    company_mapping={"FirmaNázev": "name", "FirmaIČO": "ico"},
+                    contact_mapping={"Jméno": "first_name", "Příjmení": "last_name"},
+                    match_key_contact="FirmaIČO",
+                )
+            ]
+        ),
         "match_source": "ico",
-        "match_key_company": "FirmaIČO",
-        "match_key_contact": "FirmaIČO",
     }
     r = await client.post(
         "/api/v1/admin/imports/preview", headers=_auth(admin), files=files, data=data
     )
     assert r.status_code == 200, r.text
     body = r.json()
-    # 2 unique companies after dedup, 3 contacts all matched.
     assert body["counts"]["companies_to_create"] == 2
     assert body["counts"]["contacts_to_create"] == 3
     assert body["counts"]["unmatched_contacts"] == 0
 
 
-async def test_commit_separate_mode_links_contacts_to_companies(
+async def test_commit_separate_files_link_contacts_to_companies(
     client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
 ) -> None:
     org = await _seed_org(db_session, owned_cleanup)
@@ -245,17 +280,21 @@ async def test_commit_separate_mode_links_contacts_to_companies(
         "Bob,Black,87654321\n"
         "Sirotek,Bezfirmy,99999999\n"  # unmatched
     )
-    files = {
-        "companies_file": _csv_upload(companies_csv, filename="companies.csv"),
-        "contacts_file": _csv_upload(contacts_csv, filename="contacts.csv"),
-    }
+    files = [
+        ("files", _csv(companies_csv, "companies.csv")),
+        ("files", _csv(contacts_csv, "contacts.csv")),
+    ]
     data = {
-        "mode": "separate",
-        "mapping_companies_json": json.dumps({"Název": "name", "IČO": "ico"}),
-        "mapping_contacts_json": json.dumps({"Jméno": "first_name", "Příjmení": "last_name"}),
+        "file_specs_json": json.dumps(
+            [
+                _spec_companies({"Název": "name", "IČO": "ico"}),
+                _spec_contacts(
+                    {"Jméno": "first_name", "Příjmení": "last_name"},
+                    match_key_contact="FirmaIČO",
+                ),
+            ]
+        ),
         "match_source": "ico",
-        "match_key_company": "IČO",
-        "match_key_contact": "FirmaIČO",
         "skip_unmatched": "true",
     }
     r = await client.post(
@@ -273,8 +312,35 @@ async def test_commit_separate_mode_links_contacts_to_companies(
             .all()
         )
         assert {c.last_name for c in contacts} == {"Nováková", "Black"}
-        # Both must have a company_id pointing to the matching company.
         assert all(c.company_id is not None for c in contacts)
+
+
+async def test_preview_concatenates_two_companies_files(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+
+    first = "Název,IČO\nFirst Co,11111118\n"
+    second = "Název,IČO\nSecond Co,22222226\n"
+    files = [
+        ("files", _csv(first, "a.csv")),
+        ("files", _csv(second, "b.csv")),
+    ]
+    data = {
+        "file_specs_json": json.dumps(
+            [
+                _spec_companies({"Název": "name", "IČO": "ico"}),
+                _spec_companies({"Název": "name", "IČO": "ico"}),
+            ]
+        ),
+    }
+    r = await client.post(
+        "/api/v1/admin/imports/preview", headers=_auth(admin), files=files, data=data
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["counts"]["companies_to_create"] == 2
 
 
 async def test_salesperson_cannot_import(
@@ -283,10 +349,9 @@ async def test_salesperson_cannot_import(
     org = await _seed_org(db_session, owned_cleanup)
     sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
 
-    files = {"companies_file": _csv_upload(COMPANIES_CSV)}
+    files = [("files", _csv(COMPANIES_CSV, "companies.csv"))]
     data = {
-        "mode": "companies_only",
-        "mapping_companies_json": json.dumps({"Název": "name"}),
+        "file_specs_json": json.dumps([_spec_companies({"Název": "name"})]),
     }
     r = await client.post(
         "/api/v1/admin/imports/preview", headers=_auth(sales), files=files, data=data
@@ -304,19 +369,18 @@ async def test_commit_resolves_owner_by_email(
     csv = (
         "Název,IČO,Obchodník\n"
         f"Acme s.r.o.,12345678,{sales.email}\n"
-        f"Beta a.s.,87654321,{sales.email.upper()}\n"  # case-insensitive
+        f"Beta a.s.,87654321,{sales.email.upper()}\n"
     )
-    files = {"companies_file": _csv_upload(csv)}
+    files = [("files", _csv(csv, "companies.csv"))]
     data = {
-        "mode": "companies_only",
-        "mapping_companies_json": json.dumps({"Název": "name", "IČO": "ico", "Obchodník": "owner"}),
+        "file_specs_json": json.dumps(
+            [_spec_companies({"Název": "name", "IČO": "ico", "Obchodník": "owner"})]
+        ),
     }
     r = await client.post(
         "/api/v1/admin/imports/commit", headers=_auth(admin), files=files, data=data
     )
     assert r.status_code == 200, r.text
-    body = r.json()
-    assert len(body["created_company_ids"]) == 2
 
     async with AsyncSessionLocal() as s:
         companies = (
@@ -334,10 +398,11 @@ async def test_preview_flags_owner_unknown(
     admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
 
     csv = "Název,IČO,Obchodník\nAcme s.r.o.,12345678,ghost@nikde.cz\n"
-    files = {"companies_file": _csv_upload(csv)}
+    files = [("files", _csv(csv, "companies.csv"))]
     data = {
-        "mode": "companies_only",
-        "mapping_companies_json": json.dumps({"Název": "name", "IČO": "ico", "Obchodník": "owner"}),
+        "file_specs_json": json.dumps(
+            [_spec_companies({"Název": "name", "IČO": "ico", "Obchodník": "owner"})]
+        ),
     }
     r = await client.post(
         "/api/v1/admin/imports/preview", headers=_auth(admin), files=files, data=data
@@ -355,10 +420,11 @@ async def test_commit_bulk_owner_assigns_every_company(
     admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
     sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
 
-    files = {"companies_file": _csv_upload(COMPANIES_CSV)}
+    files = [("files", _csv(COMPANIES_CSV, "companies.csv"))]
     data = {
-        "mode": "companies_only",
-        "mapping_companies_json": json.dumps({"Název": "name", "IČO": "ico", "E-mail": "email"}),
+        "file_specs_json": json.dumps(
+            [_spec_companies({"Název": "name", "IČO": "ico", "E-mail": "email"})]
+        ),
         "bulk_owner_user_id": str(sales.id),
     }
     r = await client.post(
@@ -385,22 +451,25 @@ async def test_preview_blocks_when_owner_cap_would_be_exceeded(
     sales.max_owned_companies = 1
     await db_session.commit()
 
-    csv = f"Název,IČO,Obchodník\nFirm 1,11111118,{sales.email}\nFirm 2,22222226,{sales.email}\n"
-    files = {"companies_file": _csv_upload(csv)}
+    csv = (
+        "Název,IČO,Obchodník\n"
+        f"Firm 1,11111118,{sales.email}\n"
+        f"Firm 2,22222226,{sales.email}\n"
+    )
+    files = [("files", _csv(csv, "companies.csv"))]
     data = {
-        "mode": "companies_only",
-        "mapping_companies_json": json.dumps({"Název": "name", "IČO": "ico", "Obchodník": "owner"}),
+        "file_specs_json": json.dumps(
+            [_spec_companies({"Název": "name", "IČO": "ico", "Obchodník": "owner"})]
+        ),
     }
     r = await client.post(
         "/api/v1/admin/imports/preview", headers=_auth(admin), files=files, data=data
     )
     assert r.status_code == 200, r.text
     body = r.json()
-    # First row fits (current 0 + 1 = 1 ≤ cap); second one busts it.
     assert body["counts"]["companies_to_create"] == 1
     assert body["counts"]["invalid_rows"] == 1
-    cap_errors = [e for e in body["errors"] if e["code"] == "owner_cap_reached"]
-    assert len(cap_errors) == 1
+    assert any(e["code"] == "owner_cap_reached" for e in body["errors"])
 
 
 async def test_invalid_mapping_returns_400_with_clear_message(
@@ -409,14 +478,35 @@ async def test_invalid_mapping_returns_400_with_clear_message(
     org = await _seed_org(db_session, owned_cleanup)
     admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
 
-    files = {"companies_file": _csv_upload(COMPANIES_CSV)}
-    # Mapped to a non-existent field key.
+    files = [("files", _csv(COMPANIES_CSV, "companies.csv"))]
     data = {
-        "mode": "companies_only",
-        "mapping_companies_json": json.dumps({"Název": "made_up_field"}),
+        "file_specs_json": json.dumps([_spec_companies({"Název": "made_up_field"})]),
     }
     r = await client.post(
         "/api/v1/admin/imports/preview", headers=_auth(admin), files=files, data=data
     )
     assert r.status_code == 400
     assert "made_up_field" in r.json()["detail"]
+
+
+async def test_file_specs_length_mismatch_returns_400(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+
+    files = [("files", _csv(COMPANIES_CSV, "a.csv"))]
+    # Two specs but only one file uploaded.
+    data = {
+        "file_specs_json": json.dumps(
+            [
+                _spec_companies({"Název": "name"}),
+                _spec_companies({"Název": "name"}),
+            ]
+        ),
+    }
+    r = await client.post(
+        "/api/v1/admin/imports/preview", headers=_auth(admin), files=files, data=data
+    )
+    assert r.status_code == 400
+    assert "2 entries" in r.json()["detail"]

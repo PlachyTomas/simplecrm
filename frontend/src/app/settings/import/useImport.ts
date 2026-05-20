@@ -1,10 +1,12 @@
 /**
- * Mutations + types for the admin CSV import flow.
+ * Mutations + types for the admin CSV import flow (v2 multi-file).
  *
- * The backend exposes three endpoints under /admin/imports/*. We hand-
- * type the request payloads here because they're multipart/form-data —
- * the auto-generated openapi-typescript types don't model `FormData`
- * field-by-field. The response types come from `api.generated.ts`.
+ * The wizard uploads N files in one multipart request, plus a JSON
+ * array of *file specs* paralleling the files. Each spec carries the
+ * file's role (companies / contacts / combined) + its per-side mapping.
+ *
+ * Hand-typed because multipart/form-data isn't modelled field-by-field
+ * by openapi-typescript. Response types still come from `api.generated`.
  */
 
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -12,8 +14,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/auth/useAuth";
 import { apiFetch } from "@/lib/api";
 
-export type ImportMode = "companies_only" | "combined" | "separate";
 export type MatchSource = "ico" | "name" | "email";
+export type FileRole = "companies" | "contacts" | "combined";
 
 export interface FieldDescriptor {
   key: string;
@@ -74,37 +76,51 @@ export interface ImportCommitOut {
   updated_contact_ids: string[];
 }
 
-export interface ImportRunInput {
-  mode: ImportMode;
-  mappingCompanies: Record<string, string>;
-  mappingContacts?: Record<string, string>;
-  matchSource?: MatchSource | null;
-  matchKeyCompany?: string | null;
+/**
+ * One file's spec in the parallel array. Fields are optional or
+ * required depending on `role`:
+ *
+ *   - companies → `mappingCompany` required
+ *   - contacts  → `mappingContact` + `matchKeyContact` required
+ *   - combined  → `mappingCompany` + `mappingContact` (+ `matchKeyContact`) required
+ */
+export interface FileSpec {
+  role: FileRole;
+  mappingCompany?: Record<string, string>;
+  mappingContact?: Record<string, string>;
   matchKeyContact?: string | null;
-  companiesFile: File;
-  contactsFile?: File | null;
+}
+
+export interface ImportRunInput {
+  files: File[];
+  specs: FileSpec[];
+  matchSource?: MatchSource | null;
   skipUnmatched?: boolean;
-  // When set, every imported company is assigned to this user — wins
-  // over any per-row "owner" mapping. UUID of a `User` in the same org.
   bulkOwnerUserId?: string | null;
 }
 
 function buildFormData(payload: ImportRunInput): FormData {
   const fd = new FormData();
-  fd.set("mode", payload.mode);
-  fd.set("mapping_companies_json", JSON.stringify(payload.mappingCompanies));
-  if (payload.mappingContacts) {
-    fd.set("mapping_contacts_json", JSON.stringify(payload.mappingContacts));
+  for (const f of payload.files) {
+    fd.append("files", f);
   }
+  fd.set(
+    "file_specs_json",
+    JSON.stringify(
+      payload.specs.map((s) => {
+        const out: Record<string, unknown> = { role: s.role };
+        if (s.mappingCompany) out.mapping_company = s.mappingCompany;
+        if (s.mappingContact) out.mapping_contact = s.mappingContact;
+        if (s.matchKeyContact) out.match_key_contact = s.matchKeyContact;
+        return out;
+      }),
+    ),
+  );
   if (payload.matchSource) fd.set("match_source", payload.matchSource);
-  if (payload.matchKeyCompany) fd.set("match_key_company", payload.matchKeyCompany);
-  if (payload.matchKeyContact) fd.set("match_key_contact", payload.matchKeyContact);
   if (payload.skipUnmatched !== undefined) {
     fd.set("skip_unmatched", payload.skipUnmatched ? "true" : "false");
   }
   if (payload.bulkOwnerUserId) fd.set("bulk_owner_user_id", payload.bulkOwnerUserId);
-  fd.set("companies_file", payload.companiesFile);
-  if (payload.contactsFile) fd.set("contacts_file", payload.contactsFile);
   return fd;
 }
 

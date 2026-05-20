@@ -1,23 +1,23 @@
-"""Admin CSV import endpoints.
+"""Admin CSV import endpoints (multi-file, v2 shape).
 
-Three modes:
+The wizard uploads N files in one multipart request, plus a JSON array
+of *file specs* that runs parallel to the files list. Each spec carries
+the file's role (``companies`` / ``contacts`` / ``combined``), its
+header→field mapping, and (for contact-bearing files) the column header
+the matcher should use to link to a company. A single ``match_source``
+(``ico`` / ``name`` / ``email``) applies globally — the matcher indexes
+company candidates by that field across every uploaded company file.
 
-* ``companies_only`` — one CSV, each row = one company.
-* ``combined`` — one CSV, each row = one contact + its (possibly
-  repeated) company; the same rows are mapped twice, once per side.
-* ``separate`` — two CSVs (companies + contacts) with a user-picked
-  match-key pair to link them.
-
-Both ``/preview`` (no writes) and ``/commit`` (single transaction)
-share the same multipart shape so the frontend can run a dry-run and
-re-submit identical form data on confirm.
+Both ``/preview`` (no writes) and ``/commit`` (single transaction) share
+the same multipart shape so the frontend can run a dry-run and re-submit
+identical form data on confirm.
 """
 
 from __future__ import annotations
 
 import json
 import uuid
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,6 +38,8 @@ from app.schemas.imports import (
 from app.services.imports import (
     COMPANY_FIELDS,
     CONTACT_FIELDS,
+    CandidateCompany,
+    CandidateContact,
     CsvReadError,
     ImportInput,
     MappingError,
@@ -49,7 +51,7 @@ from app.services.imports import (
     validate_mapping,
 )
 from app.services.imports.matcher import MatchSource
-from app.services.imports.runner import ImportMode, ImportRunResult
+from app.services.imports.runner import ImportRunResult
 from app.services.lookup_cache import RateLimiter
 
 router = APIRouter(prefix="/admin/imports", tags=["admin:imports"])
@@ -64,6 +66,10 @@ def get_import_rate_limiter() -> RateLimiter:
     return _import_rate_limiter
 
 
+FileRole = Literal["companies", "contacts", "combined"]
+_VALID_ROLES: set[str] = {"companies", "contacts", "combined"}
+
+
 @router.get("/fields", response_model=FieldsCatalog)
 async def list_importable_fields(
     _user: User = Depends(require_role(UserRole.admin)),
@@ -74,20 +80,46 @@ async def list_importable_fields(
     )
 
 
-def _parse_json_field(name: str, raw: str) -> dict[str, str]:
+def _bad(detail: str) -> HTTPException:
+    return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+
+
+def _parse_file_specs(raw: str, *, expected_count: int) -> list[dict[str, Any]]:
+    """Decode the parallel file-specs array. Raises 400 on any structural
+    failure so the wizard surfaces a single readable error per attempt."""
     try:
         decoded = json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"{name} must be a JSON object string.",
-        ) from exc
-    if not isinstance(decoded, dict):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"{name} must decode to a JSON object.",
+        raise _bad("file_specs_json must be a JSON array.") from exc
+    if not isinstance(decoded, list):
+        raise _bad("file_specs_json must decode to a JSON array.")
+    if len(decoded) != expected_count:
+        raise _bad(
+            f"file_specs_json has {len(decoded)} entries but {expected_count} files were uploaded."
         )
-    return {str(k): str(v) for k, v in decoded.items()}
+    out: list[dict[str, Any]] = []
+    for idx, spec in enumerate(decoded):
+        if not isinstance(spec, dict):
+            raise _bad(f"file_specs_json[{idx}] must be an object.")
+        role = spec.get("role")
+        if role not in _VALID_ROLES:
+            raise _bad(
+                f"file_specs_json[{idx}].role must be one of {sorted(_VALID_ROLES)}."
+            )
+        if role in {"companies", "combined"} and not isinstance(
+            spec.get("mapping_company"), dict
+        ):
+            raise _bad(
+                f"file_specs_json[{idx}].mapping_company must be an object for role {role!r}."
+            )
+        if role in {"contacts", "combined"} and not isinstance(
+            spec.get("mapping_contact"), dict
+        ):
+            raise _bad(
+                f"file_specs_json[{idx}].mapping_contact must be an object for role {role!r}."
+            )
+        out.append(spec)
+    return out
 
 
 def _to_out(run: ImportRunResult, *, commit: bool) -> ImportPreviewOut | ImportCommitOut:
@@ -122,113 +154,74 @@ def _to_out(run: ImportRunResult, *, commit: bool) -> ImportPreviewOut | ImportC
 async def _build_input(
     *,
     organization_id: uuid.UUID | None,
-    mode: ImportMode,
-    mapping_companies_json: str,
-    mapping_contacts_json: str | None,
+    files: list[UploadFile],
+    file_specs_json: str,
     match_source: MatchSource | None,
-    match_key_company: str | None,
-    match_key_contact: str | None,
-    companies_file: UploadFile,
-    contacts_file: UploadFile | None,
     skip_unmatched: bool,
     bulk_owner_user_id: uuid.UUID | None,
 ) -> ImportInput:
-    # The router-level `require_org_membership` (via PROTECTED_DEPS) has
-    # already rejected callers without an org, so this is a belt-and-
-    # braces narrowing for the type-checker.
     if organization_id is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin must belong to an organization to import data.",
         )
-    company_mapping_raw = _parse_json_field("mapping_companies_json", mapping_companies_json)
-    contact_mapping_raw = (
-        _parse_json_field("mapping_contacts_json", mapping_contacts_json)
-        if mapping_contacts_json
-        else {}
-    )
+    if not files:
+        raise _bad("At least one file is required.")
+    specs = _parse_file_specs(file_specs_json, expected_count=len(files))
 
-    # Read the file blobs eagerly — they're capped at 10 MB each so
-    # streaming wouldn't buy us much over the simple bytes API.
-    companies_blob = await companies_file.read()
-    try:
-        companies_parsed = parse_csv_bytes(companies_blob)
-    except CsvReadError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    company_candidates: list[CandidateCompany] = []
+    contact_candidates: list[CandidateContact] = []
+    has_contact_side = False
 
-    try:
-        cleaned_company_mapping = validate_mapping(
-            company_mapping_raw, side="company", headers=companies_parsed.headers
-        )
-    except MappingError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-
-    company_candidates = apply_company_mapping(companies_parsed.rows, cleaned_company_mapping)
-
-    contact_candidates = []
-    if mode != "companies_only":
-        if mode == "separate":
-            if contacts_file is None:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Mode 'separate' requires a contacts_file upload.",
-                )
-            contacts_blob = await contacts_file.read()
-            try:
-                contacts_parsed = parse_csv_bytes(contacts_blob)
-            except CsvReadError as exc:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
-                ) from exc
-        else:
-            # Combined mode shares the same CSV between sides.
-            contacts_parsed = companies_parsed
-
+    for idx, (file, spec) in enumerate(zip(files, specs, strict=True)):
+        role: FileRole = spec["role"]
+        blob = await file.read()
         try:
-            cleaned_contact_mapping = validate_mapping(
-                contact_mapping_raw, side="contact", headers=contacts_parsed.headers
-            )
-        except MappingError as exc:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+            parsed = parse_csv_bytes(blob)
+        except CsvReadError as exc:
+            raise _bad(f"{file.filename or f'file[{idx}]'}: {exc}") from exc
 
-        contact_candidates = apply_contact_mapping(
-            contacts_parsed.rows,
-            cleaned_contact_mapping,
-            match_key_header=match_key_contact,
-        )
+        if role in {"companies", "combined"}:
+            try:
+                cleaned = validate_mapping(
+                    spec["mapping_company"], side="company", headers=parsed.headers
+                )
+            except MappingError as exc:
+                raise _bad(f"{file.filename or f'file[{idx}]'} (company): {exc}") from exc
+            company_candidates.extend(apply_company_mapping(parsed.rows, cleaned))
 
-        if match_source is None or match_key_company is None or match_key_contact is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "Modes 'combined' and 'separate' require match_source, "
-                    "match_key_company and match_key_contact."
-                ),
+        if role in {"contacts", "combined"}:
+            has_contact_side = True
+            try:
+                cleaned_c = validate_mapping(
+                    spec["mapping_contact"], side="contact", headers=parsed.headers
+                )
+            except MappingError as exc:
+                raise _bad(f"{file.filename or f'file[{idx}]'} (contact): {exc}") from exc
+            match_key_contact = spec.get("match_key_contact")
+            if match_key_contact is not None and match_key_contact not in parsed.headers:
+                raise _bad(
+                    f"{file.filename or f'file[{idx}]'}: match_key_contact "
+                    f"{match_key_contact!r} is not a header in this file."
+                )
+            contact_candidates.extend(
+                apply_contact_mapping(
+                    parsed.rows, cleaned_c, match_key_header=match_key_contact
+                )
             )
-        if match_key_company not in companies_parsed.headers:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"match_key_company {match_key_company!r} is not a header in the "
-                "companies CSV.",
-            )
-        if match_key_contact not in contacts_parsed.headers:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"match_key_contact {match_key_contact!r} is not a header in the "
-                "contacts CSV.",
-            )
-        # The match-key on the company side picks which company-field
-        # column the matcher should consult — we infer it from the
-        # cleaned mapping so the matcher index uses the right key.
-        company_key_field = cleaned_company_mapping.get(match_key_company)
-        if company_key_field != match_source:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    f"match_key_company column must be mapped to the {match_source!r} field "
-                    f"(currently mapped to {company_key_field!r})."
-                ),
-            )
+
+    if has_contact_side and match_source is None:
+        raise _bad("match_source is required when any file has a contacts/combined role.")
+
+    # `mode` is purely a label downstream — derive it from the role mix
+    # for backwards-compatible logging / tests. The runner doesn't read it.
+    mode: Literal["companies_only", "combined", "separate"]
+    if not has_contact_side:
+        mode = "companies_only"
+    elif any(s["role"] == "combined" for s in specs):
+        mode = "combined"
+    else:
+        mode = "separate"
 
     return ImportInput(
         organization_id=organization_id,
@@ -243,14 +236,9 @@ async def _build_input(
 
 @router.post("/preview", response_model=ImportPreviewOut)
 async def preview_import(
-    mode: Annotated[ImportMode, Form(...)],
-    mapping_companies_json: Annotated[str, Form(...)],
-    companies_file: Annotated[UploadFile, File(...)],
-    mapping_contacts_json: Annotated[str | None, Form()] = None,
+    files: Annotated[list[UploadFile], File(...)],
+    file_specs_json: Annotated[str, Form(...)],
     match_source: Annotated[MatchSource | None, Form()] = None,
-    match_key_company: Annotated[str | None, Form()] = None,
-    match_key_contact: Annotated[str | None, Form()] = None,
-    contacts_file: Annotated[UploadFile | None, File()] = None,
     bulk_owner_user_id: Annotated[uuid.UUID | None, Form()] = None,
     user: User = Depends(require_role(UserRole.admin)),
     session: AsyncSession = Depends(get_db),
@@ -264,21 +252,16 @@ async def preview_import(
 
     payload = await _build_input(
         organization_id=user.organization_id,
-        mode=mode,
-        mapping_companies_json=mapping_companies_json,
-        mapping_contacts_json=mapping_contacts_json,
+        files=files,
+        file_specs_json=file_specs_json,
         match_source=match_source,
-        match_key_company=match_key_company,
-        match_key_contact=match_key_contact,
-        companies_file=companies_file,
-        contacts_file=contacts_file,
         skip_unmatched=False,
         bulk_owner_user_id=bulk_owner_user_id,
     )
     try:
         run = await run_preview(session, payload)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        raise _bad(str(exc)) from exc
     out = _to_out(run, commit=False)
     if not isinstance(out, ImportPreviewOut):  # pragma: no cover - narrowing
         raise RuntimeError("preview returned wrong shape")
@@ -287,14 +270,9 @@ async def preview_import(
 
 @router.post("/commit", response_model=ImportCommitOut)
 async def commit_import(
-    mode: Annotated[ImportMode, Form(...)],
-    mapping_companies_json: Annotated[str, Form(...)],
-    companies_file: Annotated[UploadFile, File(...)],
-    mapping_contacts_json: Annotated[str | None, Form()] = None,
+    files: Annotated[list[UploadFile], File(...)],
+    file_specs_json: Annotated[str, Form(...)],
     match_source: Annotated[MatchSource | None, Form()] = None,
-    match_key_company: Annotated[str | None, Form()] = None,
-    match_key_contact: Annotated[str | None, Form()] = None,
-    contacts_file: Annotated[UploadFile | None, File()] = None,
     skip_unmatched: Annotated[bool, Form()] = False,
     bulk_owner_user_id: Annotated[uuid.UUID | None, Form()] = None,
     user: User = Depends(require_role(UserRole.admin)),
@@ -309,26 +287,17 @@ async def commit_import(
 
     payload = await _build_input(
         organization_id=user.organization_id,
-        mode=mode,
-        mapping_companies_json=mapping_companies_json,
-        mapping_contacts_json=mapping_contacts_json,
+        files=files,
+        file_specs_json=file_specs_json,
         match_source=match_source,
-        match_key_company=match_key_company,
-        match_key_contact=match_key_contact,
-        companies_file=companies_file,
-        contacts_file=contacts_file,
         skip_unmatched=skip_unmatched,
         bulk_owner_user_id=bulk_owner_user_id,
     )
     try:
         run = await run_commit(session, payload)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        raise _bad(str(exc)) from exc
     out = _to_out(run, commit=True)
     if not isinstance(out, ImportCommitOut):  # pragma: no cover - narrowing
         raise RuntimeError("commit returned wrong shape")
     return out
-
-
-# Silence Literal-Variable warnings on `MatchSource` etc.
-_ = Literal
