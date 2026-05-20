@@ -16,7 +16,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Literal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import BlockedCompany, Company, Contact
@@ -29,6 +29,11 @@ from app.services.imports.matcher import (
     CompanyKey,
     MatchSource,
     match_contacts_to_companies,
+)
+from app.services.imports.owners import (
+    OwnerResolutionError,
+    OwnerResolver,
+    ResolvedOwner,
 )
 
 MAX_DIFF_ENTRIES = 200
@@ -114,6 +119,28 @@ async def _load_blocked_icos(
         BlockedCompany.ico.in_(icos),
     )
     return set((await session.execute(stmt)).scalars().all())
+
+
+async def _load_owner_counts(
+    session: AsyncSession,
+    organization_id: uuid.UUID,
+    user_ids: set[uuid.UUID],
+) -> dict[uuid.UUID, int]:
+    """Current company counts per owner. Caller passes the set of users
+    actually referenced by the import so we don't broadcast-count the
+    whole users table."""
+    if not user_ids:
+        return {}
+    stmt = (
+        select(Company.owner_user_id, func.count(Company.id))
+        .where(
+            Company.organization_id == organization_id,
+            Company.owner_user_id.in_(user_ids),
+        )
+        .group_by(Company.owner_user_id)
+    )
+    rows = (await session.execute(stmt)).all()
+    return {uid: count for uid, count in rows if uid is not None}
 
 
 async def _load_existing_contacts(
@@ -220,13 +247,58 @@ async def _run_pipeline(
     )
     blocked = await _load_blocked_icos(session, payload.organization_id, icos_in_file)
 
+    # Resolve owner cells once per import. Only build the resolver when
+    # at least one candidate references the owner column — keeps the cost
+    # at zero for the common "no owner mapping" path.
+    owner_resolver: OwnerResolver | None = None
+    if any(cand.owner_raw for cand in deduped_companies):
+        owner_resolver = await OwnerResolver.from_org(session, payload.organization_id)
+
+    # Per-batch cap tracking: `assignments[user_id] = how many NEW
+    # companies this batch is about to add to that owner's total`. We
+    # only count *additional* assignments — re-assigning a user to a
+    # company they already own is a no-op for the cap.
+    owner_assignments: dict[int, ResolvedOwner] = {}
+    referenced_user_ids: set[uuid.UUID] = set()
+    for cand_idx, cand in enumerate(deduped_companies):
+        if not cand.owner_raw or owner_resolver is None:
+            continue
+        resolved = owner_resolver.resolve(cand.owner_raw)
+        if isinstance(resolved, OwnerResolutionError):
+            err = RowError(
+                row_index=cand.row_index,
+                side="company",
+                field="owner",
+                code=resolved.code,
+                message=resolved.message,
+            )
+            cand.errors.append(err)
+            result.errors.append(err)
+            continue
+        owner_assignments[cand_idx] = resolved
+        referenced_user_ids.add(resolved.user_id)
+
+    existing_counts = await _load_owner_counts(
+        session, payload.organization_id, referenced_user_ids
+    )
+    batch_increments: dict[uuid.UUID, int] = {}
+
     # Decide create vs update per candidate; build update-diff list.
     # Any mapping-time error (required_missing, invalid_format, too_long)
     # disqualifies the row from create/update — the DB write would either
     # fail or silently store garbage. The errors themselves are already
     # in `result.errors` so the admin sees them in the preview report.
     company_index_to_existing: dict[int, Company] = {}
-    blocking_codes = {"required_missing", "invalid_format", "too_long"}
+    company_index_to_new_owner: dict[int, uuid.UUID] = {}
+    blocking_codes = {
+        "required_missing",
+        "invalid_format",
+        "too_long",
+        "owner_unknown",
+        "owner_ambiguous",
+        "owner_inactive",
+        "owner_cap_reached",
+    }
     for cand_idx, company_cand in enumerate(deduped_companies):
         if any(e.code in blocking_codes for e in company_cand.errors):
             result.counts["invalid_rows"] += 1
@@ -248,9 +320,50 @@ async def _run_pipeline(
         existing_company: Company | None = (existing_by_ico.get(ico) if ico else None) or (
             existing_by_name.get((company_cand.fields.get("name") or "").lower())
         )
+
+        # Cap check (only when the row actually changes the owner). We
+        # do this before recording the diff so a cap failure here flips
+        # the row to invalid without leaving a phantom "to_update" entry.
+        resolved_owner = owner_assignments.get(cand_idx)
+        if resolved_owner is not None:
+            current_owner_id = (
+                existing_company.owner_user_id if existing_company is not None else None
+            )
+            if current_owner_id != resolved_owner.user_id:
+                cap = resolved_owner.max_owned_companies
+                if cap is not None:
+                    projected = (
+                        existing_counts.get(resolved_owner.user_id, 0)
+                        + batch_increments.get(resolved_owner.user_id, 0)
+                        + 1
+                    )
+                    if projected > cap:
+                        err = RowError(
+                            row_index=company_cand.row_index,
+                            side="company",
+                            field="owner",
+                            code="owner_cap_reached",
+                            message=(f"Obchodník by překročil limit ({cap}) vlastněných firem."),
+                        )
+                        company_cand.errors.append(err)
+                        result.errors.append(err)
+                        result.counts["invalid_rows"] += 1
+                        continue
+                batch_increments[resolved_owner.user_id] = (
+                    batch_increments.get(resolved_owner.user_id, 0) + 1
+                )
+                company_index_to_new_owner[cand_idx] = resolved_owner.user_id
+
         if existing_company is not None:
             company_index_to_existing[cand_idx] = existing_company
             diff = _diff_company(existing_company, company_cand.fields)
+            if cand_idx in company_index_to_new_owner:
+                diff_new_owner = company_index_to_new_owner[cand_idx]
+                old_owner_id = existing_company.owner_user_id
+                diff["owner_user_id"] = {
+                    "from": str(old_owner_id) if old_owner_id is not None else None,
+                    "to": str(diff_new_owner),
+                }
             if diff:
                 if len(result.update_diffs) < MAX_DIFF_ENTRIES:
                     result.update_diffs.append(
@@ -333,13 +446,21 @@ async def _run_pipeline(
     # ---- Write phase ----
     # Companies first so contact FKs resolve.
     candidate_index_to_company_id: dict[int, uuid.UUID] = {}
+    write_skip_codes = {
+        "required_missing",
+        "invalid_format",
+        "too_long",
+        "ico_blocked",
+        "owner_unknown",
+        "owner_ambiguous",
+        "owner_inactive",
+        "owner_cap_reached",
+    }
     for cand_idx, cand in enumerate(deduped_companies):
-        if any(
-            e.code in {"required_missing", "invalid_format", "too_long", "ico_blocked"}
-            for e in cand.errors
-        ):
+        if any(e.code in write_skip_codes for e in cand.errors):
             continue
         existing = company_index_to_existing.get(cand_idx)
+        new_owner_id: uuid.UUID | None = company_index_to_new_owner.get(cand_idx)
         if existing is not None:
             # Honor the "never overwrite a non-empty field with a blank
             # cell" rule (mirrors `_diff_company` so the diff matches
@@ -351,6 +472,8 @@ async def _run_pipeline(
                 ):
                     continue
                 setattr(existing, field_name, new_value)
+            if new_owner_id is not None:
+                existing.owner_user_id = new_owner_id
             candidate_index_to_company_id[cand_idx] = existing.id
             if existing.id not in result.updated_company_ids:
                 result.updated_company_ids.append(existing.id)
@@ -358,6 +481,7 @@ async def _run_pipeline(
             create_fields = {k: v for k, v in cand.fields.items() if v is not None}
             company = Company(
                 organization_id=payload.organization_id,
+                owner_user_id=new_owner_id,
                 **create_fields,
             )
             session.add(company)

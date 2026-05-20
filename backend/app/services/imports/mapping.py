@@ -29,7 +29,22 @@ COMPANY_FIELDS: list[dict[str, str | bool]] = [
     {"key": "address_zip", "label": "PSČ", "required": False},
     {"key": "legal_form", "label": "Právní forma", "required": False},
     {"key": "note", "label": "Poznámka", "required": False},
+    # Virtual field: a CSV column mapped to `owner` carries an
+    # e-mail or full name; the runner resolves it to `User.id` and
+    # writes `Company.owner_user_id`. There is no SQL column called
+    # "owner" — the special path lives in `runner.py`.
+    {"key": "owner", "label": "Obchodník (e-mail nebo jméno)", "required": False},
 ]
+
+# Virtual company fields (mapped by the user, never written via setattr
+# because no matching SQL column exists). Used by `apply_company_mapping`
+# and the runner to keep these cells out of `CandidateCompany.fields`.
+VIRTUAL_COMPANY_FIELDS: set[str] = {"owner"}
+
+# Max length for the owner cell — 320 because the longest legal e-mail
+# is 254 chars and we keep some headroom for whitespace + comments.
+_OWNER_RAW_MAX_LEN = 320
+
 
 CONTACT_FIELDS: list[dict[str, str | bool]] = [
     {"key": "first_name", "label": "Jméno", "required": True},
@@ -109,6 +124,10 @@ class CandidateCompany:
     # The key value the matcher will use to dedup within this import.
     # Falls back to lowercased `name` when no IČO mapping was supplied.
     dedup_key: str | None
+    # Raw cell from the "owner" column (e-mail or name). Kept off
+    # `fields` so the runner's diff/setattr loops never try to write
+    # it as a SQL column. Resolved to `User.id` by `OwnerResolver`.
+    owner_raw: str | None = None
     errors: list[RowError] = field(default_factory=list)
 
 
@@ -216,9 +235,27 @@ def apply_company_mapping(
         # row_index = 2-based to match `parse_csv_bytes` (row 1 = header).
         row_index = rows.index(row) + 2
         fields: dict[str, str | None] = {}
+        owner_raw: str | None = None
         errors: list[RowError] = []
         for header, target in cleaned_mapping.items():
             cell = row.get(header, "").strip()
+            if target in VIRTUAL_COMPANY_FIELDS:
+                # Owner is the only virtual field today; keep this branch
+                # general in case more land later.
+                if cell == "":
+                    continue
+                if len(cell) > _OWNER_RAW_MAX_LEN:
+                    errors.append(
+                        RowError(
+                            row_index=row_index,
+                            side="company",
+                            field=target,
+                            code="too_long",
+                            message=(f"Value is {len(cell)} chars; max is {_OWNER_RAW_MAX_LEN}."),
+                        )
+                    )
+                owner_raw = cell
+                continue
             if cell == "":
                 fields[target] = None
                 continue
@@ -242,7 +279,13 @@ def apply_company_mapping(
 
         dedup_key = fields.get("ico") or (fields.get("name") or "").lower() or None
         candidates.append(
-            CandidateCompany(row_index=row_index, fields=fields, dedup_key=dedup_key, errors=errors)
+            CandidateCompany(
+                row_index=row_index,
+                fields=fields,
+                owner_raw=owner_raw,
+                dedup_key=dedup_key,
+                errors=errors,
+            )
         )
     return candidates
 

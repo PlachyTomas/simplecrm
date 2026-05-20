@@ -294,6 +294,87 @@ async def test_salesperson_cannot_import(
     assert r.status_code == 403
 
 
+async def test_commit_resolves_owner_by_email(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+
+    csv = (
+        "Název,IČO,Obchodník\n"
+        f"Acme s.r.o.,12345678,{sales.email}\n"
+        f"Beta a.s.,87654321,{sales.email.upper()}\n"  # case-insensitive
+    )
+    files = {"companies_file": _csv_upload(csv)}
+    data = {
+        "mode": "companies_only",
+        "mapping_companies_json": json.dumps({"Název": "name", "IČO": "ico", "Obchodník": "owner"}),
+    }
+    r = await client.post(
+        "/api/v1/admin/imports/commit", headers=_auth(admin), files=files, data=data
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert len(body["created_company_ids"]) == 2
+
+    async with AsyncSessionLocal() as s:
+        companies = (
+            (await s.execute(select(Company).where(Company.organization_id == org.id)))
+            .scalars()
+            .all()
+        )
+        assert all(c.owner_user_id == sales.id for c in companies)
+
+
+async def test_preview_flags_owner_unknown(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+
+    csv = "Název,IČO,Obchodník\nAcme s.r.o.,12345678,ghost@nikde.cz\n"
+    files = {"companies_file": _csv_upload(csv)}
+    data = {
+        "mode": "companies_only",
+        "mapping_companies_json": json.dumps({"Název": "name", "IČO": "ico", "Obchodník": "owner"}),
+    }
+    r = await client.post(
+        "/api/v1/admin/imports/preview", headers=_auth(admin), files=files, data=data
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["counts"]["invalid_rows"] == 1
+    assert any(e["code"] == "owner_unknown" for e in body["errors"])
+
+
+async def test_preview_blocks_when_owner_cap_would_be_exceeded(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    sales.max_owned_companies = 1
+    await db_session.commit()
+
+    csv = f"Název,IČO,Obchodník\nFirm 1,11111118,{sales.email}\nFirm 2,22222226,{sales.email}\n"
+    files = {"companies_file": _csv_upload(csv)}
+    data = {
+        "mode": "companies_only",
+        "mapping_companies_json": json.dumps({"Název": "name", "IČO": "ico", "Obchodník": "owner"}),
+    }
+    r = await client.post(
+        "/api/v1/admin/imports/preview", headers=_auth(admin), files=files, data=data
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    # First row fits (current 0 + 1 = 1 ≤ cap); second one busts it.
+    assert body["counts"]["companies_to_create"] == 1
+    assert body["counts"]["invalid_rows"] == 1
+    cap_errors = [e for e in body["errors"] if e["code"] == "owner_cap_reached"]
+    assert len(cap_errors) == 1
+
+
 async def test_invalid_mapping_returns_400_with_clear_message(
     client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
 ) -> None:

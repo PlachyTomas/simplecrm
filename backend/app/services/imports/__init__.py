@@ -33,6 +33,11 @@ from app.services.imports.mapping import (
     validate_mapping,
 )
 from app.services.imports.matcher import MatcherResult, match_contacts_to_companies
+from app.services.imports.owners import (
+    OwnerResolutionError,
+    OwnerResolver,
+    ResolvedOwner,
+)
 from app.services.imports.runner import (
     ImportInput,
     ImportRunResult,
@@ -52,7 +57,10 @@ __all__ = [
     "ImportRunResult",
     "MappingError",
     "MatcherResult",
+    "OwnerResolutionError",
+    "OwnerResolver",
     "ParsedCsv",
+    "ResolvedOwner",
     "RowError",
     "apply_company_mapping",
     "apply_contact_mapping",
