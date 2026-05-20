@@ -3227,6 +3227,8 @@ export interface components {
              * @default false
              */
             skip_unmatched: boolean;
+            /** Bulk Owner User Id */
+            bulk_owner_user_id?: string | null;
         };
         /** Body_preview_import_api_v1_admin_imports_preview_post */
         Body_preview_import_api_v1_admin_imports_preview_post: {
@@ -3249,6 +3251,8 @@ export interface components {
             match_key_contact?: string | null;
             /** Contacts File */
             contacts_file?: string | null;
+            /** Bulk Owner User Id */
+            bulk_owner_user_id?: string | null;
         };
         /** Body_submit_feedback_api_v1_feedback_post */
         Body_submit_feedback_api_v1_feedback_post: {

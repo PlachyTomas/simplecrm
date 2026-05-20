@@ -131,6 +131,7 @@ async def _build_input(
     companies_file: UploadFile,
     contacts_file: UploadFile | None,
     skip_unmatched: bool,
+    bulk_owner_user_id: uuid.UUID | None,
 ) -> ImportInput:
     # The router-level `require_org_membership` (via PROTECTED_DEPS) has
     # already rejected callers without an org, so this is a belt-and-
@@ -236,6 +237,7 @@ async def _build_input(
         contact_candidates=contact_candidates,
         match_source=match_source,
         skip_unmatched=skip_unmatched,
+        bulk_owner_user_id=bulk_owner_user_id,
     )
 
 
@@ -249,6 +251,7 @@ async def preview_import(
     match_key_company: Annotated[str | None, Form()] = None,
     match_key_contact: Annotated[str | None, Form()] = None,
     contacts_file: Annotated[UploadFile | None, File()] = None,
+    bulk_owner_user_id: Annotated[uuid.UUID | None, Form()] = None,
     user: User = Depends(require_role(UserRole.admin)),
     session: AsyncSession = Depends(get_db),
     rate_limiter: RateLimiter = Depends(get_import_rate_limiter),
@@ -270,8 +273,12 @@ async def preview_import(
         companies_file=companies_file,
         contacts_file=contacts_file,
         skip_unmatched=False,
+        bulk_owner_user_id=bulk_owner_user_id,
     )
-    run = await run_preview(session, payload)
+    try:
+        run = await run_preview(session, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     out = _to_out(run, commit=False)
     if not isinstance(out, ImportPreviewOut):  # pragma: no cover - narrowing
         raise RuntimeError("preview returned wrong shape")
@@ -289,6 +296,7 @@ async def commit_import(
     match_key_contact: Annotated[str | None, Form()] = None,
     contacts_file: Annotated[UploadFile | None, File()] = None,
     skip_unmatched: Annotated[bool, Form()] = False,
+    bulk_owner_user_id: Annotated[uuid.UUID | None, Form()] = None,
     user: User = Depends(require_role(UserRole.admin)),
     session: AsyncSession = Depends(get_db),
     rate_limiter: RateLimiter = Depends(get_import_rate_limiter),
@@ -310,8 +318,12 @@ async def commit_import(
         companies_file=companies_file,
         contacts_file=contacts_file,
         skip_unmatched=skip_unmatched,
+        bulk_owner_user_id=bulk_owner_user_id,
     )
-    run = await run_commit(session, payload)
+    try:
+        run = await run_commit(session, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     out = _to_out(run, commit=True)
     if not isinstance(out, ImportCommitOut):  # pragma: no cover - narrowing
         raise RuntimeError("commit returned wrong shape")

@@ -50,6 +50,12 @@ class ImportInput:
     contact_candidates: list[CandidateContact]
     match_source: MatchSource | None
     skip_unmatched: bool = False
+    # When set, every successfully-mapped company is assigned to this
+    # user, overriding any per-row "owner" cell. Use case: admin uploads
+    # a fresh prospect list and wants the whole batch on one rep.
+    # Cap arithmetic still applies — a bulk assign that busts the cap
+    # fails the offending row, not the whole import.
+    bulk_owner_user_id: uuid.UUID | None = None
 
 
 @dataclass
@@ -247,20 +253,43 @@ async def _run_pipeline(
     )
     blocked = await _load_blocked_icos(session, payload.organization_id, icos_in_file)
 
-    # Resolve owner cells once per import. Only build the resolver when
-    # at least one candidate references the owner column — keeps the cost
-    # at zero for the common "no owner mapping" path.
+    # Resolve owner cells once per import. Build the resolver if either
+    # any candidate references the owner column OR the admin selected a
+    # bulk owner — both paths funnel through the same cap arithmetic.
+    needs_resolver = (
+        payload.bulk_owner_user_id is not None
+        or any(cand.owner_raw for cand in deduped_companies)
+    )
     owner_resolver: OwnerResolver | None = None
-    if any(cand.owner_raw for cand in deduped_companies):
+    if needs_resolver:
         owner_resolver = await OwnerResolver.from_org(session, payload.organization_id)
+
+    # If a bulk owner was set, resolve it once up front. A bogus user id
+    # is a configuration error from the wizard, not a per-row error —
+    # the API layer surfaces it as a 400 instead of poisoning every row.
+    bulk_owner: ResolvedOwner | None = None
+    if payload.bulk_owner_user_id is not None and owner_resolver is not None:
+        bulk_resolution = owner_resolver.get_by_id(payload.bulk_owner_user_id)
+        if isinstance(bulk_resolution, OwnerResolutionError):
+            raise ValueError(
+                f"bulk_owner_user_id {payload.bulk_owner_user_id}: {bulk_resolution.message}"
+            )
+        bulk_owner = bulk_resolution
 
     # Per-batch cap tracking: `assignments[user_id] = how many NEW
     # companies this batch is about to add to that owner's total`. We
     # only count *additional* assignments — re-assigning a user to a
     # company they already own is a no-op for the cap.
+    # Bulk-assign wins over per-row owner cells: when both are set, the
+    # bulk choice applies and per-row cells are ignored (no error — we
+    # treat the bulk picker as the explicit override).
     owner_assignments: dict[int, ResolvedOwner] = {}
     referenced_user_ids: set[uuid.UUID] = set()
     for cand_idx, cand in enumerate(deduped_companies):
+        if bulk_owner is not None:
+            owner_assignments[cand_idx] = bulk_owner
+            referenced_user_ids.add(bulk_owner.user_id)
+            continue
         if not cand.owner_raw or owner_resolver is None:
             continue
         resolved = owner_resolver.resolve(cand.owner_raw)

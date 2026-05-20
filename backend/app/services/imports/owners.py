@@ -89,6 +89,25 @@ class OwnerResolver:
             by_name.setdefault(snap.name.strip().lower(), []).append(snap)
         return cls(by_email=by_email, by_name=by_name)
 
+    def get_by_id(self, user_id: uuid.UUID) -> ResolvedOwner | OwnerResolutionError:
+        """Look up a user by primary key; used for the bulk-assign path
+        where the wizard hands us a UUID directly rather than a cell
+        value. Returns ``owner_unknown`` if the id is foreign to the org."""
+        for snap in self._by_email.values():
+            if snap.id == user_id:
+                if not snap.is_active:
+                    return OwnerResolutionError(
+                        code="owner_inactive",
+                        message=f"Uživatel {snap.email} je deaktivovaný a nemůže vlastnit firmy.",
+                    )
+                return ResolvedOwner(
+                    user_id=snap.id, max_owned_companies=snap.max_owned_companies
+                )
+        return OwnerResolutionError(
+            code="owner_unknown",
+            message=f"Uživatel {user_id} není členem této organizace.",
+        )
+
     def resolve(self, raw_value: str) -> ResolvedOwner | OwnerResolutionError:
         """Look up the user. ``@`` in the value picks the email path; else
         we fall back to case-folded name matching."""

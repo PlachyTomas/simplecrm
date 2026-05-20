@@ -348,6 +348,34 @@ async def test_preview_flags_owner_unknown(
     assert any(e["code"] == "owner_unknown" for e in body["errors"])
 
 
+async def test_commit_bulk_owner_assigns_every_company(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+
+    files = {"companies_file": _csv_upload(COMPANIES_CSV)}
+    data = {
+        "mode": "companies_only",
+        "mapping_companies_json": json.dumps({"Název": "name", "IČO": "ico", "E-mail": "email"}),
+        "bulk_owner_user_id": str(sales.id),
+    }
+    r = await client.post(
+        "/api/v1/admin/imports/commit", headers=_auth(admin), files=files, data=data
+    )
+    assert r.status_code == 200, r.text
+
+    async with AsyncSessionLocal() as s:
+        companies = (
+            (await s.execute(select(Company).where(Company.organization_id == org.id)))
+            .scalars()
+            .all()
+        )
+        assert {c.owner_user_id for c in companies} == {sales.id}
+        assert len(companies) == 2
+
+
 async def test_preview_blocks_when_owner_cap_would_be_exceeded(
     client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
 ) -> None:

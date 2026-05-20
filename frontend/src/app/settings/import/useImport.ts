@@ -84,6 +84,9 @@ export interface ImportRunInput {
   companiesFile: File;
   contactsFile?: File | null;
   skipUnmatched?: boolean;
+  // When set, every imported company is assigned to this user — wins
+  // over any per-row "owner" mapping. UUID of a `User` in the same org.
+  bulkOwnerUserId?: string | null;
 }
 
 function buildFormData(payload: ImportRunInput): FormData {
@@ -99,6 +102,7 @@ function buildFormData(payload: ImportRunInput): FormData {
   if (payload.skipUnmatched !== undefined) {
     fd.set("skip_unmatched", payload.skipUnmatched ? "true" : "false");
   }
+  if (payload.bulkOwnerUserId) fd.set("bulk_owner_user_id", payload.bulkOwnerUserId);
   fd.set("companies_file", payload.companiesFile);
   if (payload.contactsFile) fd.set("contacts_file", payload.contactsFile);
   return fd;

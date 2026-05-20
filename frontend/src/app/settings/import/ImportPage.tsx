@@ -9,7 +9,7 @@
  * fenced message instead of the form.
  */
 
-import { ArrowLeft, FileText, Loader2, ShieldAlert, X } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, ShieldAlert, UserCheck, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 
@@ -25,6 +25,7 @@ import {
   useImportFields,
   usePreviewImport,
 } from "@/app/settings/import/useImport";
+import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { useToast } from "@/lib/toast";
 import { usePageTitle } from "@/lib/usePageTitle";
@@ -86,6 +87,10 @@ function ImportPageInner() {
   const [matchKeyCompany, setMatchKeyCompany] = useState<string>("");
   const [matchKeyContact, setMatchKeyContact] = useState<string>("");
   const [skipUnmatched, setSkipUnmatched] = useState(true);
+  // Bulk-assign salesperson. Null = leave ownership to whatever the
+  // per-row mapping decides (or stay null/pool). When set, the backend
+  // ignores any per-row "owner" column.
+  const [bulkOwnerUserId, setBulkOwnerUserId] = useState<string | null>(null);
 
   const [previewResult, setPreviewResult] = useState<ImportPreviewOut | null>(null);
 
@@ -146,6 +151,7 @@ function ImportPageInner() {
       if (skipUnmatchedOverride !== undefined) {
         payload.skipUnmatched = skipUnmatchedOverride;
       }
+      if (bulkOwnerUserId) payload.bulkOwnerUserId = bulkOwnerUserId;
       return payload;
     },
     [
@@ -158,6 +164,7 @@ function ImportPageInner() {
       matchKeyCompany,
       matchKeyContact,
       needsContactSide,
+      bulkOwnerUserId,
     ],
   );
 
@@ -194,6 +201,7 @@ function ImportPageInner() {
     setMatchSource("ico");
     setMatchKeyCompany("");
     setMatchKeyContact("");
+    setBulkOwnerUserId(null);
     setPreviewResult(null);
   }, []);
 
@@ -267,6 +275,8 @@ function ImportPageInner() {
           setMatchKeyCompany={setMatchKeyCompany}
           matchKeyContact={matchKeyContact}
           setMatchKeyContact={setMatchKeyContact}
+          bulkOwnerUserId={bulkOwnerUserId}
+          setBulkOwnerUserId={setBulkOwnerUserId}
           onBack={() => setStep(1)}
           onPreview={handleRunPreview}
           isPreviewing={preview.isPending}
@@ -475,6 +485,8 @@ function StepMapping(props: {
   setMatchKeyCompany: (h: string) => void;
   matchKeyContact: string;
   setMatchKeyContact: (h: string) => void;
+  bulkOwnerUserId: string | null;
+  setBulkOwnerUserId: (id: string | null) => void;
   onBack: () => void;
   onPreview: () => void;
   isPreviewing: boolean;
@@ -487,6 +499,10 @@ function StepMapping(props: {
       </div>
     );
   }
+  // Detect whether the admin already mapped a column to the per-row
+  // owner field. We surface a note in the bulk-assign picker so they
+  // know the bulk choice takes priority.
+  const hasPerRowOwnerMapping = Object.values(props.mappingCompanies).includes("owner");
   return (
     <section className="space-y-6">
       <ImportMappingTable
@@ -520,6 +536,12 @@ function StepMapping(props: {
         </>
       )}
 
+      <BulkOwnerPicker
+        bulkOwnerUserId={props.bulkOwnerUserId}
+        setBulkOwnerUserId={props.setBulkOwnerUserId}
+        hasPerRowOwnerMapping={hasPerRowOwnerMapping}
+      />
+
       <div className="flex justify-between">
         <button
           type="button"
@@ -540,6 +562,69 @@ function StepMapping(props: {
         </button>
       </div>
     </section>
+  );
+}
+
+function BulkOwnerPicker(props: {
+  bulkOwnerUserId: string | null;
+  setBulkOwnerUserId: (id: string | null) => void;
+  hasPerRowOwnerMapping: boolean;
+}) {
+  const usersQuery = useOrgUsers();
+  const eligible = useMemo(
+    () =>
+      (usersQuery.data?.items ?? [])
+        .filter((u) => u.is_active)
+        .sort((a, b) => a.name.localeCompare(b.name, "cs")),
+    [usersQuery.data],
+  );
+  const enabled = props.bulkOwnerUserId !== null;
+  return (
+    <fieldset className="space-y-3 rounded-md border border-border bg-surface p-4">
+      <legend className="flex items-center gap-2 px-2 text-sm font-medium">
+        <UserCheck size={14} strokeWidth={1.75} className="text-accent" />
+        Přiřadit všem importovaným firmám jednoho obchodníka
+      </legend>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) =>
+            props.setBulkOwnerUserId(e.target.checked ? (eligible[0]?.id ?? "") : null)
+          }
+          data-testid="import-bulk-owner-toggle"
+        />
+        Aktivovat hromadné přiřazení
+      </label>
+      {enabled && (
+        <label className="block text-sm">
+          <span className="mb-1 block text-xs uppercase text-text-tertiary">Obchodník</span>
+          <select
+            value={props.bulkOwnerUserId ?? ""}
+            onChange={(e) => props.setBulkOwnerUserId(e.target.value || null)}
+            className="w-full rounded-md border border-border bg-bg px-2 py-1.5"
+            data-testid="import-bulk-owner-select"
+          >
+            <option value="">— vyberte —</option>
+            {eligible.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name} ({u.email})
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {props.hasPerRowOwnerMapping && enabled && (
+        <p className="text-xs text-warning" role="alert">
+          Sloupec „Obchodník" je v mapování zapnutý, ale hromadné přiřazení má přednost — sloupec
+          bude ignorován.
+        </p>
+      )}
+      <p className="text-xs text-text-tertiary">
+        Bez aktivace zůstanou firmy buď bez vlastníka (společný pool), nebo dostanou vlastníka ze
+        sloupce „Obchodník" v CSV (e-mail nebo jméno).
+      </p>
+    </fieldset>
   );
 }
 
