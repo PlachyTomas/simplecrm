@@ -3407,6 +3407,10 @@ export interface components {
             website?: string | null;
             /** Email */
             email?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Industry */
+            industry?: string | null;
             /** Note */
             note?: string | null;
             /** Owner User Id */
@@ -3442,6 +3446,10 @@ export interface components {
             website?: string | null;
             /** Email */
             email?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Industry */
+            industry?: string | null;
             /** Note */
             note?: string | null;
             /** Owner User Id */
@@ -3495,6 +3503,10 @@ export interface components {
             website?: string | null;
             /** Email */
             email?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Industry */
+            industry?: string | null;
             /** Note */
             note?: string | null;
             /** Owner User Id */

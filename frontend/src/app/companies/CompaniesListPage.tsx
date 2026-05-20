@@ -296,7 +296,10 @@ export function CompaniesListPage() {
         id: "phone",
         header: "Telefon",
         cell: (info) => {
-          const phone = info.row.original.main_contact?.phone;
+          // Prefer the company-level phone (added 2026-05-20) and fall
+          // back to the main contact's number so existing rows that only
+          // have a contact phone still render.
+          const phone = info.row.original.phone ?? info.row.original.main_contact?.phone;
           return phone ? (
             <a
               href={`tel:${phone}`}
@@ -314,7 +317,7 @@ export function CompaniesListPage() {
         id: "email",
         header: "Email",
         cell: (info) => {
-          const email = info.row.original.main_contact?.email;
+          const email = info.row.original.email ?? info.row.original.main_contact?.email;
           return email ? (
             <a
               href={`mailto:${email}`}
@@ -327,6 +330,11 @@ export function CompaniesListPage() {
             <span className="text-text-tertiary">—</span>
           );
         },
+      }),
+      helper.accessor("industry", {
+        header: "Obor",
+        enableSorting: false,
+        cell: (info) => <span className="text-text-secondary">{info.getValue() ?? "—"}</span>,
       }),
       helper.accessor("owner_user_id", {
         header: "Vlastník",

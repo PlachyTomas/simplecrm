@@ -24,7 +24,9 @@ interface FormState {
   address_zip: string;
   legal_form: string;
   email: string;
+  phone: string;
   website: string;
+  industry: string;
 }
 
 interface ContactDraft {
@@ -44,7 +46,9 @@ const EMPTY_FORM: FormState = {
   address_zip: "",
   legal_form: "",
   email: "",
+  phone: "",
   website: "",
+  industry: "",
 };
 
 const EMPTY_CONTACT: ContactDraft = {
@@ -117,13 +121,15 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
     }
     if (lastFilledIcoRef.current && form.ico !== lastFilledIcoRef.current) {
       lastFilledIcoRef.current = null;
-      // Preserve email + website: they aren't ARES-derived, so the user
-      // typing them and then changing IČO shouldn't wipe their work.
+      // Preserve email + phone + website + industry: none of them are
+      // ARES-derived, so changing IČO shouldn't wipe what the user typed.
       setForm((prev) => ({
         ...EMPTY_FORM,
         ico: prev.ico,
         email: prev.email,
+        phone: prev.phone,
         website: prev.website,
+        industry: prev.industry,
       }));
     }
   }, [lookup.data, form.ico]);
@@ -151,7 +157,9 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
         address_zip: form.address_zip.trim() || null,
         legal_form: form.legal_form.trim() || null,
         email: form.email.trim() || null,
+        phone: form.phone.trim() || null,
         website: form.website.trim() || null,
+        industry: form.industry.trim() || null,
       });
       if (wantsContact) {
         try {
@@ -378,6 +386,42 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
                 className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
                 placeholder="https://firma.cz"
               />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-xs font-medium text-text-secondary">Telefon (volitelné)</span>
+              <input
+                type="tel"
+                autoComplete="tel"
+                value={form.phone}
+                onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+                className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 font-mono text-sm text-text-primary focus:border-accent focus:outline-none"
+                placeholder="+420 777 123 456"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-medium text-text-secondary">Obor (volitelné)</span>
+              <input
+                type="text"
+                list="company-industry-suggestions"
+                autoComplete="off"
+                value={form.industry}
+                onChange={(e) => setForm((prev) => ({ ...prev, industry: e.target.value }))}
+                className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
+                placeholder="např. Gastro, Automotive, IT"
+              />
+              <datalist id="company-industry-suggestions">
+                <option value="Gastro" />
+                <option value="Automotive" />
+                <option value="IT" />
+                <option value="Stavebnictví" />
+                <option value="Doprava" />
+                <option value="E-shop" />
+                <option value="Výroba" />
+                <option value="Služby" />
+              </datalist>
             </label>
           </div>
 

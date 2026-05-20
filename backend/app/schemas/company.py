@@ -18,6 +18,8 @@ class CompanyCreate(BaseModel):
     legal_form: str | None = Field(default=None, max_length=120)
     website: str | None = Field(default=None, max_length=300)
     email: EmailStr | None = Field(default=None, max_length=320)
+    phone: str | None = Field(default=None, max_length=40)
+    industry: str | None = Field(default=None, max_length=120)
     note: str | None = Field(default=None, max_length=2000)
     owner_user_id: uuid.UUID | None = None
 
@@ -32,6 +34,8 @@ class CompanyUpdate(BaseModel):
     legal_form: str | None = Field(default=None, max_length=120)
     website: str | None = Field(default=None, max_length=300)
     email: EmailStr | None = Field(default=None, max_length=320)
+    phone: str | None = Field(default=None, max_length=40)
+    industry: str | None = Field(default=None, max_length=120)
     note: str | None = Field(default=None, max_length=2000)
     owner_user_id: uuid.UUID | None = None
     main_contact_id: uuid.UUID | None = None
@@ -51,6 +55,8 @@ class CompanyOut(BaseModel):
     legal_form: str | None = None
     website: str | None = None
     email: EmailStr | None = None
+    phone: str | None = None
+    industry: str | None = None
     note: str | None = None
     owner_user_id: uuid.UUID | None = None
     last_order_at: datetime | None = None

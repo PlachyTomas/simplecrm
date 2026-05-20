@@ -64,6 +64,7 @@ function OverviewTab({ company, locale }: { company: CompanyOut; locale: string 
           <span className="font-mono">{company.dic ?? "—"}</span>
         </FieldRow>
         <FieldRow label="Právní forma">{company.legal_form ?? "—"}</FieldRow>
+        <FieldRow label="Obor">{company.industry ?? "—"}</FieldRow>
         <FieldRow label="Ulice">{company.address_street ?? "—"}</FieldRow>
         <FieldRow label="Město">{company.address_city ?? "—"}</FieldRow>
         <FieldRow label="PSČ">{company.address_zip ?? "—"}</FieldRow>
@@ -80,6 +81,18 @@ function OverviewTab({ company, locale }: { company: CompanyOut; locale: string 
           {company.email ? (
             <a href={`mailto:${company.email}`} className="text-accent hover:text-accent-hover">
               {company.email}
+            </a>
+          ) : (
+            "—"
+          )}
+        </FieldRow>
+        <FieldRow label="Telefon">
+          {company.phone ? (
+            <a
+              href={`tel:${company.phone}`}
+              className="font-mono text-accent hover:text-accent-hover"
+            >
+              {company.phone}
             </a>
           ) : (
             "—"
