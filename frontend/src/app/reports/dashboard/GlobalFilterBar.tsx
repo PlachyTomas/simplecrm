@@ -120,7 +120,7 @@ export function GlobalFilterBar({ value, onChange }: GlobalFilterBarProps) {
 
   return (
     <div
-      className="bg-bg/90 sticky top-0 z-10 -mx-4 border-b border-border px-4 py-3 backdrop-blur md:-mx-8 md:px-8"
+      className="sticky top-0 z-10 -mx-4 border-b border-border bg-bg/90 px-4 py-3 backdrop-blur md:-mx-8 md:px-8"
       role="toolbar"
       aria-label="Filtry reportů"
     >

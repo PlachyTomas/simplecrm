@@ -709,7 +709,7 @@ function OwnershipWindowSetting() {
       {error ? (
         <p
           role="alert"
-          className="border-danger/40 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
+          className="rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
         >
           {error}
         </p>
@@ -1239,7 +1239,7 @@ function TaxInvoicesCard() {
       {error ? (
         <p
           role="alert"
-          className="border-danger/40 mt-3 rounded-md border bg-bg px-3 py-2 text-sm text-danger"
+          className="mt-3 rounded-md border border-danger/40 bg-bg px-3 py-2 text-sm text-danger"
         >
           {error}
         </p>
@@ -1329,7 +1329,7 @@ function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
 
   if (isScheduledForCancel) {
     return (
-      <section className="border-warning/40 rounded-lg border bg-warning-subtle p-6">
+      <section className="rounded-lg border border-warning/40 bg-warning-subtle p-6">
         <h2 className="text-lg font-semibold text-text-primary">
           Předplatné je naplánované ke zrušení
         </h2>
@@ -1341,7 +1341,7 @@ function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
         {error ? (
           <p
             role="alert"
-            className="border-danger/40 mt-3 rounded-md border bg-bg px-3 py-2 text-sm text-danger"
+            className="mt-3 rounded-md border border-danger/40 bg-bg px-3 py-2 text-sm text-danger"
           >
             {error}
           </p>
@@ -1386,7 +1386,7 @@ function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
           Zrušit předplatné
         </button>
       ) : (
-        <div className="border-danger/40 mt-4 space-y-3 rounded-md border bg-danger-subtle p-4">
+        <div className="mt-4 space-y-3 rounded-md border border-danger/40 bg-danger-subtle p-4">
           <p className="text-sm font-medium text-text-primary">Opravdu chcete zrušit předplatné?</p>
           <label className="block text-xs font-medium text-text-tertiary">
             Důvod (nepovinné, pomůže nám se zlepšit)
@@ -1417,7 +1417,7 @@ function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
                   },
                 );
               }}
-              className="hover:bg-danger/90 inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-danger/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {cancel.isPending ? "Rušíme…" : "Ano, zrušit"}
             </button>
@@ -1491,7 +1491,7 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="choose-plan-title"
-      className="bg-bg/80 fixed inset-0 z-50 flex items-center justify-center px-4 py-8 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 py-8 backdrop-blur-md"
     >
       <form
         onSubmit={handleSubmit}
@@ -1560,7 +1560,7 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
         {error ? (
           <p
             role="alert"
-            className="border-danger/40 mt-4 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
+            className="mt-4 rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
           >
             {error}
           </p>
@@ -1843,7 +1843,7 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
       {sub.pending_seat_count != null && queuedUsers.length > 0 ? (
         <div
           data-testid="seat-count-pending-banner"
-          className="border-info/40 mt-4 rounded-md border bg-info-subtle p-4"
+          className="mt-4 rounded-md border border-info/40 bg-info-subtle p-4"
         >
           <p className="text-sm font-medium text-text-primary">
             Naplánovaná změna: počet klesne na {sub.pending_seat_count}
@@ -1884,7 +1884,7 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
       />
 
       {needsToDeactivate ? (
-        <div className="border-warning/40 mt-4 rounded-md border bg-warning-subtle p-4">
+        <div className="mt-4 rounded-md border border-warning/40 bg-warning-subtle p-4">
           <p className="text-sm font-medium text-text-primary">
             {periodEndsAt
               ? `Po skončení současného období (${periodEndsAt}) ztratí přístup ${requiredCount} `
@@ -1929,7 +1929,7 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
       {error ? (
         <p
           role="alert"
-          className="border-danger/40 mt-4 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
+          className="mt-4 rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
         >
           {error}
         </p>
@@ -2115,7 +2115,7 @@ function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
       </div>
 
       {pendingInterval && pendingInterval !== currentInterval ? (
-        <p className="border-info/40 mt-4 rounded-md border bg-info-subtle px-3 py-2 text-sm text-info">
+        <p className="mt-4 rounded-md border border-info/40 bg-info-subtle px-3 py-2 text-sm text-info">
           Aktuálně účtujeme{" "}
           {currentInterval === "monthly"
             ? "měsíčně"
@@ -2130,7 +2130,7 @@ function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
       {error ? (
         <p
           role="alert"
-          className="border-danger/40 mt-4 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
+          className="mt-4 rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
         >
           {error}
         </p>

@@ -43,7 +43,7 @@ export function InvoiceDetailsNudge() {
     <div
       role="alert"
       data-testid="invoice-details-nudge"
-      className="border-danger/30 flex flex-wrap items-center justify-between gap-3 border-b bg-danger-subtle px-4 py-2 md:px-8"
+      className="flex flex-wrap items-center justify-between gap-3 border-b border-danger/30 bg-danger-subtle px-4 py-2 md:px-8"
     >
       <div className="flex min-w-0 items-center gap-2 text-sm text-danger">
         <FileWarning size={16} strokeWidth={1.75} aria-hidden />
@@ -53,7 +53,7 @@ export function InvoiceDetailsNudge() {
       </div>
       <Link
         to="/app/settings"
-        className="hover:bg-danger/90 inline-flex h-8 shrink-0 items-center justify-center rounded-md bg-danger px-3 text-xs font-semibold text-white transition-colors duration-fast"
+        className="inline-flex h-8 shrink-0 items-center justify-center rounded-md bg-danger px-3 text-xs font-semibold text-white transition-colors duration-fast hover:bg-danger/90"
       >
         Doplnit fakturační údaje
       </Link>

@@ -121,7 +121,7 @@ export function InvoicesList({ selectedInvoiceId, onSelect }: InvoicesListProps)
       {exportError ? (
         <p
           role="alert"
-          className="border-danger/40 rounded-md border bg-bg px-3 py-2 text-xs text-danger"
+          className="rounded-md border border-danger/40 bg-bg px-3 py-2 text-xs text-danger"
         >
           {exportError}
         </p>
@@ -152,7 +152,7 @@ export function InvoicesList({ selectedInvoiceId, onSelect }: InvoicesListProps)
                 className={cn(
                   "rounded-full border px-3 py-1 text-xs transition",
                   active
-                    ? "bg-accent/10 border-accent text-accent"
+                    ? "border-accent bg-accent/10 text-accent"
                     : "border-border bg-bg text-text-secondary hover:text-text-primary",
                 )}
               >

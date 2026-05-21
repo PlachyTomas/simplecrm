@@ -156,7 +156,7 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
         {actionError ? (
           <p
             role="alert"
-            className="border-danger/40 rounded-md border bg-bg px-2 py-1 text-xs text-danger"
+            className="rounded-md border border-danger/40 bg-bg px-2 py-1 text-xs text-danger"
           >
             {actionError}
           </p>
@@ -191,7 +191,7 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
               type="button"
               onClick={handleVoid}
               disabled={voidInvoice.isPending}
-              className="border-danger/40 rounded-md border bg-bg px-3 py-1.5 text-xs text-danger hover:bg-danger-subtle disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md border border-danger/40 bg-bg px-3 py-1.5 text-xs text-danger hover:bg-danger-subtle disabled:cursor-not-allowed disabled:opacity-50"
             >
               Stornovat
             </button>

@@ -86,7 +86,7 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
     <div
       role="alertdialog"
       aria-labelledby="trial-expired-title"
-      className="bg-bg/80 fixed inset-0 z-50 flex items-center justify-center px-4 py-8 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 py-8 backdrop-blur-md"
     >
       <div className="w-full max-w-2xl rounded-xl border border-border bg-surface p-6 shadow-lg sm:p-8">
         {submitted ? (
@@ -164,7 +164,7 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
             {error ? (
               <p
                 role="alert"
-                className="border-danger/40 mt-4 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
+                className="mt-4 rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
               >
                 {error}
               </p>
@@ -406,7 +406,7 @@ function ContactEnterpriseDialog({
     <dialog
       ref={dialogRef as React.RefObject<HTMLDialogElement>}
       onClose={handleClose}
-      className="backdrop:bg-bg/60 rounded-xl border border-border bg-surface p-0 text-text-primary shadow-lg backdrop:backdrop-blur-sm"
+      className="rounded-xl border border-border bg-surface p-0 text-text-primary shadow-lg backdrop:bg-bg/60 backdrop:backdrop-blur-sm"
     >
       <div className="w-[min(92vw,32rem)] p-6">
         {done ? (
@@ -459,7 +459,7 @@ function ContactEnterpriseDialog({
             {err ? (
               <p
                 role="alert"
-                className="border-danger/40 mt-3 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
+                className="mt-3 rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
               >
                 {err}
               </p>

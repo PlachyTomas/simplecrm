@@ -43,7 +43,7 @@ export function MarkLostDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="mark-lost-title"
-      className="bg-bg/80 fixed inset-0 z-50 flex items-center justify-center px-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 backdrop-blur-sm"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

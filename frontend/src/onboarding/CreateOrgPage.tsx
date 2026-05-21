@@ -514,7 +514,7 @@ function BillingStep({ ico, setIco }: { ico: string; setIco: (v: string) => void
       {resolved ? (
         <div
           data-testid={testIds.onboarding.wizard.aresPreview}
-          className="border-success/40 mt-5 rounded-md border bg-success-subtle p-4 text-sm"
+          className="mt-5 rounded-md border border-success/40 bg-success-subtle p-4 text-sm"
         >
           <p className="text-xs font-medium uppercase tracking-wider text-success">
             Údaje doplněny z ARES

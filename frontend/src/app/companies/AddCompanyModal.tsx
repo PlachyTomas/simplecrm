@@ -206,7 +206,7 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-company-title"
-      className="bg-bg/80 fixed inset-0 z-50 flex items-end justify-center px-0 backdrop-blur-sm md:items-center md:px-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-bg/80 px-0 backdrop-blur-sm md:items-center md:px-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

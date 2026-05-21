@@ -79,7 +79,7 @@ export function CreditNoteModal({ parent, onClose, onIssued }: CreditNoteModalPr
         {error ? (
           <p
             role="alert"
-            className="border-danger/40 mt-3 rounded-md border bg-bg px-3 py-2 text-sm text-danger"
+            className="mt-3 rounded-md border border-danger/40 bg-bg px-3 py-2 text-sm text-danger"
           >
             {error}
           </p>

@@ -104,7 +104,7 @@ export function IntegrityPanel() {
             </p>
           ) : null}
           {data.failures.length > 0 ? (
-            <ul className="bg-danger-subtle/30 space-y-1 rounded-md border border-danger-subtle p-3 text-xs">
+            <ul className="space-y-1 rounded-md border border-danger-subtle bg-danger/5 p-3 text-xs">
               {data.failures.map((f, idx) => (
                 <li key={`${f.invoice_id}-${f.kind}-${idx}`}>
                   <span className="font-medium">{f.invoice_number}</span>{" "}

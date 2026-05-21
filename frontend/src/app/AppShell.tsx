@@ -87,7 +87,7 @@ export function AppShell() {
         <UnverifiedEmailBanner />
         <InvoiceDetailsNudge />
         <TrialBanner daysRemaining={daysRemaining} endsOn={trialEndsAt} />
-        <header className="bg-bg/90 sticky top-0 z-30 border-b border-border-subtle backdrop-blur">
+        <header className="sticky top-0 z-30 border-b border-border-subtle bg-bg/70 backdrop-blur">
           <div className="flex h-16 items-center justify-between gap-3 px-4 md:px-8">
             <div className="flex min-w-0 items-center gap-3">
               <span

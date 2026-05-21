@@ -2,10 +2,12 @@
  * Tooltip card rendered next to (or over) the anchored element.
  *
  * Visuals follow the design brief — indigo accent border for steps 1–4,
- * magenta accent only on the final celebratory step. Glassmorphism
- * (`backdrop-blur` + translucent surface) is permitted per the project
- * memory; it lands legibly on both themes via the semantic surface
- * tokens.
+ * magenta accent only on the final celebratory step. The card uses a
+ * solid surface (not a translucent glass) because the design tokens are
+ * stored as hex CSS variables, which Tailwind cannot apply alpha to via
+ * the `bg-X/<n>` syntax — the result is a fully transparent card and
+ * unreadable text. The blurred scrim still gives the surrounding
+ * glass-ish feel.
  */
 
 import { Sparkles, X } from "lucide-react";
@@ -50,7 +52,7 @@ export function TourCard(props: TourCardProps) {
       aria-labelledby={`tour-step-title-${props.step.id}`}
       tabIndex={-1}
       className={cn(
-        "bg-surface-elevated/95 fixed z-50 w-[var(--tour-card-w)] max-w-[calc(100vw-2rem)] rounded-lg border p-5 shadow-lg backdrop-blur",
+        "fixed z-50 w-[var(--tour-card-w)] max-w-[calc(100vw-2rem)] rounded-lg border bg-surface-elevated p-5 shadow-lg",
         isMagenta ? "border-brand-accent" : "border-accent",
       )}
       style={

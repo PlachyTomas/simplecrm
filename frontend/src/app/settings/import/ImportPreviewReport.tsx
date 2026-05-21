@@ -132,7 +132,7 @@ function ErrorList({ errors }: { errors: ImportPreviewOut["errors"] }) {
   const visible = errors.slice(0, MAX_ERRORS_RENDERED);
   const overflow = errors.length - visible.length;
   return (
-    <details open className="bg-danger-subtle/30 rounded-md border border-danger p-4">
+    <details open className="rounded-md border border-danger bg-danger/5 p-4">
       <summary className="cursor-pointer text-sm font-medium text-danger">
         Chybové řádky ({errors.length})
       </summary>
@@ -199,7 +199,7 @@ function DiffPanel(props: { diffs: ImportPreviewOut["update_diffs"]; truncated: 
 
 function UnmatchedList({ unmatched }: { unmatched: ImportPreviewOut["unmatched"] }) {
   return (
-    <details className="bg-warning-subtle/30 rounded-md border border-warning p-4">
+    <details className="rounded-md border border-warning bg-warning/5 p-4">
       <summary className="cursor-pointer text-sm font-medium text-warning">
         Nezpárované kontakty ({unmatched.length})
       </summary>

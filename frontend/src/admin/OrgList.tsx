@@ -178,7 +178,7 @@ export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
                   data-org-id={row.original.id}
                   onClick={() => onSelect(row.original.id, row.original.user_count)}
                   className={cn(
-                    "border-border-subtle/40 cursor-pointer border-b transition-colors",
+                    "cursor-pointer border-b border-border-subtle/40 transition-colors",
                     selectedOrgId === row.original.id
                       ? "bg-surface-overlay"
                       : "hover:bg-surface-overlay",

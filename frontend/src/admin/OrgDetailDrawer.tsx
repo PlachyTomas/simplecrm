@@ -223,7 +223,7 @@ function ActionButton({
       className={cn(
         "inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-medium transition-colors duration-fast",
         variant === "danger"
-          ? "border-danger/40 hover:bg-danger/10 border bg-danger-subtle text-danger"
+          ? "border border-danger/40 bg-danger-subtle text-danger hover:bg-danger/10"
           : "border border-border bg-surface text-text-primary hover:bg-surface-overlay",
       )}
     >
@@ -244,7 +244,7 @@ function ModalShell({ title, onClose, children }: ModalShellProps) {
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      className="bg-bg/80 fixed inset-0 z-50 flex items-center justify-center px-4 py-8 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 py-8 backdrop-blur-md"
     >
       <div
         className="w-full max-w-lg rounded-xl border border-border bg-surface p-6 shadow-lg"
@@ -365,7 +365,7 @@ function ActivateModal({ orgId, onClose }: { orgId: string; onClose: () => void 
         {error ? (
           <p
             role="alert"
-            className="border-danger/40 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
+            className="rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
           >
             {error}
           </p>
@@ -440,7 +440,7 @@ function SetCompModal({ orgId, onClose }: { orgId: string; onClose: () => void }
         {error ? (
           <p
             role="alert"
-            className="border-danger/40 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
+            className="rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
           >
             {error}
           </p>
@@ -560,7 +560,7 @@ function SetEnterpriseModal({
         {error ? (
           <p
             role="alert"
-            className="border-danger/40 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
+            className="rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
           >
             {error}
           </p>
@@ -648,7 +648,7 @@ function ExtendTrialModal({
         {error ? (
           <p
             role="alert"
-            className="border-danger/40 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
+            className="rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
           >
             {error}
           </p>
@@ -731,7 +731,7 @@ function CancelModal({
         {error ? (
           <p
             role="alert"
-            className="border-danger/40 rounded-md border bg-danger-subtle px-3 py-2 text-sm text-danger"
+            className="rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
           >
             {error}
           </p>
@@ -748,7 +748,7 @@ function CancelModal({
           <button
             type="submit"
             disabled={!confirmMatches || mutation.isPending}
-            className="hover:bg-danger/90 inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-semibold text-white hover:bg-danger/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {mutation.isPending ? "Rušíme…" : "Zrušit předplatné"}
           </button>

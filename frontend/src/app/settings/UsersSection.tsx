@@ -157,7 +157,7 @@ function UserRow({
           {scheduledDeactivationDate ? (
             <span
               data-testid={`scheduled-deactivation-${u.id}`}
-              className="border-warning/40 inline-flex items-center gap-1 rounded-full border bg-warning-subtle px-2 py-0.5 text-[11px] font-medium text-warning"
+              className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning-subtle px-2 py-0.5 text-[11px] font-medium text-warning"
               title={`Tento uživatel ztratí přístup ${scheduledDeactivationDate}.`}
             >
               <span>Deaktivace naplánovaná na {scheduledDeactivationDate}</span>
@@ -165,7 +165,7 @@ function UserRow({
                 type="button"
                 onClick={onCancelScheduledDeactivation}
                 aria-label="Zrušit naplánovanou deaktivaci"
-                className="hover:bg-warning/20 -mr-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full"
+                className="-mr-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full hover:bg-warning/20"
               >
                 <X size={10} strokeWidth={2.5} aria-hidden />
               </button>

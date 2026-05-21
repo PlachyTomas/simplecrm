@@ -5,6 +5,26 @@
  * tokens live at `:root`. Application code must reference only these semantic
  * variables, never raw hex / Tailwind default palettes.
  *
+ * Color storage convention
+ * ------------------------
+ * Each base color is exposed twice:
+ *   `--color-x-rgb: <r> <g> <b>;`         ← canonical channels, space-separated
+ *   `--color-x:     rgb(var(--color-x-rgb));` ← convenience alias, valid CSS color
+ *
+ * The `-rgb` triple is what `tailwind.config.ts` feeds into
+ * `rgb(var(--color-x-rgb) / <alpha-value>)`, so utilities like `bg-bg/80` or
+ * `border-danger/40` actually produce a translucent color rather than silently
+ * falling back to transparent (which used to happen with `var(--color-x)`
+ * because hex CSS values don't slot into Tailwind's `<alpha-value>` template).
+ *
+ * The plain `--color-x` alias remains for direct CSS / inline-style use
+ * (`background: var(--color-bg)`, `outline: 2px solid var(--color-accent)`)
+ * so existing call sites don't have to wrap everything in `rgb()`.
+ *
+ * `*-subtle` and `*-border` are composite tokens — already-translucent washes
+ * built from the matching `-rgb` triple. They're meant to be applied as-is
+ * (`bg-accent-subtle`) and do not accept further `/<alpha>` chaining.
+ *
  * The brand accent `--color-brand-accent` is canonical magenta `#EC4899` —
  * "Označit jako vyhráno", logo, leaderboard #1 only. Lime is retired per
  * SIMPLECRM_DESIGN_BRIEF.md; the `--color-highlight` token alias remains and
@@ -70,60 +90,83 @@
 
 :root,
 :root[data-theme="dark"] {
-  --color-bg: #0a0a0b;
-  --color-surface: #141416;
-  --color-surface-elevated: #1c1c20;
-  --color-surface-overlay: #26262b;
+  --color-bg-rgb: 10 10 11;
+  --color-surface-rgb: 20 20 22;
+  --color-surface-elevated-rgb: 28 28 32;
+  --color-surface-overlay-rgb: 38 38 43;
+  --color-bg: rgb(var(--color-bg-rgb));
+  --color-surface: rgb(var(--color-surface-rgb));
+  --color-surface-elevated: rgb(var(--color-surface-elevated-rgb));
+  --color-surface-overlay: rgb(var(--color-surface-overlay-rgb));
 
-  --color-border: #26262b;
-  --color-border-strong: #3a3a42;
-  --color-border-subtle: #1c1c20;
+  --color-border-rgb: 38 38 43;
+  --color-border-strong-rgb: 58 58 66;
+  --color-border-subtle-rgb: 28 28 32;
+  --color-border: rgb(var(--color-border-rgb));
+  --color-border-strong: rgb(var(--color-border-strong-rgb));
+  --color-border-subtle: rgb(var(--color-border-subtle-rgb));
 
-  --color-text-primary: #f5f5f7;
-  --color-text-secondary: #a8a8b3;
+  --color-text-primary-rgb: 245 245 247;
+  --color-text-secondary-rgb: 168 168 179;
   /* Tertiary bumped from #6b6b76 to clear WCAG AA 4.5:1 on the dark surface. */
-  --color-text-tertiary: #9090a0;
-  --color-text-on-accent: #0a0a0b;
+  --color-text-tertiary-rgb: 144 144 160;
+  --color-text-on-accent-rgb: 10 10 11;
   /* Solid magenta fills always carry near-black text — never white. */
-  --color-text-on-brand-accent: #0a0a0b;
+  --color-text-on-brand-accent-rgb: 10 10 11;
+  --color-text-primary: rgb(var(--color-text-primary-rgb));
+  --color-text-secondary: rgb(var(--color-text-secondary-rgb));
+  --color-text-tertiary: rgb(var(--color-text-tertiary-rgb));
+  --color-text-on-accent: rgb(var(--color-text-on-accent-rgb));
+  --color-text-on-brand-accent: rgb(var(--color-text-on-brand-accent-rgb));
 
   /* Primary interactive — Radix iris-9 (#5B5BD6) tuned a few degrees off
      Tailwind's default indigo-500. In dark mode, lighten + slightly desaturate
      to indigo-400 (#818CF8) per the brief. */
-  --color-accent: #818cf8;
-  --color-accent-hover: #a5b4fc;
-  --color-accent-active: #6366f1;
-  --color-accent-subtle: rgba(129, 140, 248, 0.16);
-  --color-accent-border: rgba(129, 140, 248, 0.32);
+  --color-accent-rgb: 129 140 248;
+  --color-accent-hover-rgb: 165 180 252;
+  --color-accent-active-rgb: 99 102 241;
+  --color-accent: rgb(var(--color-accent-rgb));
+  --color-accent-hover: rgb(var(--color-accent-hover-rgb));
+  --color-accent-active: rgb(var(--color-accent-active-rgb));
+  --color-accent-subtle: rgb(var(--color-accent-rgb) / 0.16);
+  --color-accent-border: rgb(var(--color-accent-rgb) / 0.32);
 
   /* Brand accent — magenta. Reserved for celebration, win moments, logo. */
-  --color-brand-accent: #ec4899;
-  --color-brand-accent-hover: #f472b6;
-  --color-brand-accent-subtle: rgba(236, 72, 153, 0.12);
-  --color-brand-accent-border: rgba(236, 72, 153, 0.32);
+  --color-brand-accent-rgb: 236 72 153;
+  --color-brand-accent-hover-rgb: 244 114 182;
+  --color-brand-accent: rgb(var(--color-brand-accent-rgb));
+  --color-brand-accent-hover: rgb(var(--color-brand-accent-hover-rgb));
+  --color-brand-accent-subtle: rgb(var(--color-brand-accent-rgb) / 0.12);
+  --color-brand-accent-border: rgb(var(--color-brand-accent-rgb) / 0.32);
 
   /* Win — alias of brand-accent for celebration cues. */
-  --color-win: #ec4899;
-  --color-win-subtle: rgba(236, 72, 153, 0.12);
+  --color-win-rgb: 236 72 153;
+  --color-win: rgb(var(--color-win-rgb));
+  --color-win-subtle: rgb(var(--color-win-rgb) / 0.12);
 
   /* Lime is retired. The aliases below point at the brand-accent so any
      `bg-highlight*` callsite still pending audit flips to magenta. */
+  --color-highlight-rgb: var(--color-brand-accent-rgb);
   --color-highlight: var(--color-brand-accent);
   --color-highlight-hover: var(--color-brand-accent-hover);
   --color-highlight-subtle: var(--color-brand-accent-subtle);
   --color-highlight-border: var(--color-brand-accent-border);
 
-  --color-success: #10b981;
-  --color-success-subtle: rgba(16, 185, 129, 0.16);
-  --color-warning: #f59e0b;
-  --color-warning-subtle: rgba(245, 158, 11, 0.16);
+  --color-success-rgb: 16 185 129;
+  --color-warning-rgb: 245 158 11;
   /* Lost / error — kept as a traditional pure red specifically to stay visually
      distinct from the magenta brand accent. */
-  --color-danger: #dc2626;
-  --color-danger-subtle: rgba(220, 38, 38, 0.16);
+  --color-danger-rgb: 220 38 38;
   /* Info: cyan, distinct from indigo so "new info" doesn't blur with "action". */
-  --color-info: #38bdf8;
-  --color-info-subtle: rgba(56, 189, 248, 0.16);
+  --color-info-rgb: 56 189 248;
+  --color-success: rgb(var(--color-success-rgb));
+  --color-warning: rgb(var(--color-warning-rgb));
+  --color-danger: rgb(var(--color-danger-rgb));
+  --color-info: rgb(var(--color-info-rgb));
+  --color-success-subtle: rgb(var(--color-success-rgb) / 0.16);
+  --color-warning-subtle: rgb(var(--color-warning-rgb) / 0.16);
+  --color-danger-subtle: rgb(var(--color-danger-rgb) / 0.16);
+  --color-info-subtle: rgb(var(--color-info-rgb) / 0.16);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
@@ -134,54 +177,78 @@
 }
 
 :root[data-theme="light"] {
-  --color-bg: #fafafb;
-  --color-surface: #ffffff;
-  --color-surface-elevated: #ffffff;
-  --color-surface-overlay: #f4f4f6;
+  --color-bg-rgb: 250 250 251;
+  --color-surface-rgb: 255 255 255;
+  --color-surface-elevated-rgb: 255 255 255;
+  --color-surface-overlay-rgb: 244 244 246;
+  --color-bg: rgb(var(--color-bg-rgb));
+  --color-surface: rgb(var(--color-surface-rgb));
+  --color-surface-elevated: rgb(var(--color-surface-elevated-rgb));
+  --color-surface-overlay: rgb(var(--color-surface-overlay-rgb));
 
-  --color-border: #e8e8ec;
-  --color-border-strong: #d4d4da;
-  --color-border-subtle: #f0f0f3;
+  --color-border-rgb: 232 232 236;
+  --color-border-strong-rgb: 212 212 218;
+  --color-border-subtle-rgb: 240 240 243;
+  --color-border: rgb(var(--color-border-rgb));
+  --color-border-strong: rgb(var(--color-border-strong-rgb));
+  --color-border-subtle: rgb(var(--color-border-subtle-rgb));
 
-  --color-text-primary: #0a0a0b;
-  --color-text-secondary: #4a4a55;
+  --color-text-primary-rgb: 10 10 11;
+  --color-text-secondary-rgb: 74 74 85;
   /* Tertiary bumped from #8a8a95 to clear WCAG AA 4.5:1 on the light surface. */
-  --color-text-tertiary: #5a5a65;
-  --color-text-on-accent: #ffffff;
+  --color-text-tertiary-rgb: 90 90 101;
+  --color-text-on-accent-rgb: 255 255 255;
   /* Solid magenta fills always carry near-black text — never white. */
-  --color-text-on-brand-accent: #0a0a0b;
+  --color-text-on-brand-accent-rgb: 10 10 11;
+  --color-text-primary: rgb(var(--color-text-primary-rgb));
+  --color-text-secondary: rgb(var(--color-text-secondary-rgb));
+  --color-text-tertiary: rgb(var(--color-text-tertiary-rgb));
+  --color-text-on-accent: rgb(var(--color-text-on-accent-rgb));
+  --color-text-on-brand-accent: rgb(var(--color-text-on-brand-accent-rgb));
 
   /* Primary — Radix iris-9 #5B5BD6, slightly darkened for AA on warm-white. */
-  --color-accent: #5b5bd6;
-  --color-accent-hover: #6e6ee8;
-  --color-accent-active: #4848bf;
-  --color-accent-subtle: rgba(91, 91, 214, 0.1);
-  --color-accent-border: rgba(91, 91, 214, 0.3);
+  --color-accent-rgb: 91 91 214;
+  --color-accent-hover-rgb: 110 110 232;
+  --color-accent-active-rgb: 72 72 191;
+  --color-accent: rgb(var(--color-accent-rgb));
+  --color-accent-hover: rgb(var(--color-accent-hover-rgb));
+  --color-accent-active: rgb(var(--color-accent-active-rgb));
+  --color-accent-subtle: rgb(var(--color-accent-rgb) / 0.1);
+  --color-accent-border: rgb(var(--color-accent-rgb) / 0.3);
 
   /* Brand accent — magenta. Same hex in both themes; the brief notes the
      surrounding contrast changes the perceived loudness. Use sparingly in
      light mode (≤1 instance per screen). */
-  --color-brand-accent: #ec4899;
-  --color-brand-accent-hover: #f472b6;
-  --color-brand-accent-subtle: #fbeaf0; /* Radix pink-50 — solid for light mode */
-  --color-brand-accent-border: rgba(236, 72, 153, 0.32);
+  --color-brand-accent-rgb: 236 72 153;
+  --color-brand-accent-hover-rgb: 244 114 182;
+  --color-brand-accent: rgb(var(--color-brand-accent-rgb));
+  --color-brand-accent-hover: rgb(var(--color-brand-accent-hover-rgb));
+  /* Radix pink-50 — solid for light mode (intentionally not translucent). */
+  --color-brand-accent-subtle: rgb(251 234 240);
+  --color-brand-accent-border: rgb(var(--color-brand-accent-rgb) / 0.32);
 
-  --color-win: #ec4899;
-  --color-win-subtle: #fbeaf0;
+  --color-win-rgb: 236 72 153;
+  --color-win: rgb(var(--color-win-rgb));
+  --color-win-subtle: rgb(251 234 240);
 
+  --color-highlight-rgb: var(--color-brand-accent-rgb);
   --color-highlight: var(--color-brand-accent);
   --color-highlight-hover: var(--color-brand-accent-hover);
   --color-highlight-subtle: var(--color-brand-accent-subtle);
   --color-highlight-border: var(--color-brand-accent-border);
 
-  --color-success: #059669;
-  --color-success-subtle: rgba(5, 150, 105, 0.1);
-  --color-warning: #d97706;
-  --color-warning-subtle: rgba(217, 119, 6, 0.1);
-  --color-danger: #dc2626;
-  --color-danger-subtle: rgba(220, 38, 38, 0.1);
-  --color-info: #0ea5e9;
-  --color-info-subtle: rgba(14, 165, 233, 0.1);
+  --color-success-rgb: 5 150 105;
+  --color-warning-rgb: 217 119 6;
+  --color-danger-rgb: 220 38 38;
+  --color-info-rgb: 14 165 233;
+  --color-success: rgb(var(--color-success-rgb));
+  --color-warning: rgb(var(--color-warning-rgb));
+  --color-danger: rgb(var(--color-danger-rgb));
+  --color-info: rgb(var(--color-info-rgb));
+  --color-success-subtle: rgb(var(--color-success-rgb) / 0.1);
+  --color-warning-subtle: rgb(var(--color-warning-rgb) / 0.1);
+  --color-danger-subtle: rgb(var(--color-danger-rgb) / 0.1);
+  --color-info-subtle: rgb(var(--color-info-rgb) / 0.1);
 
   --shadow-sm: 0 1px 2px rgba(15, 15, 20, 0.06);
   --shadow-md: 0 4px 12px rgba(15, 15, 20, 0.08);

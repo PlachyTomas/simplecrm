@@ -5,29 +5,34 @@ const config: Config = {
   darkMode: ["class", '[data-theme="dark"]'],
   theme: {
     extend: {
+      // Base colors are wired through `rgb(var(--color-x-rgb) / <alpha-value>)`
+      // so utilities like `bg-bg/80` or `border-danger/40` produce a real
+      // translucent color. The `-subtle` and `-border` keys point at the
+      // already-composite vars in tokens.css and are not meant to chain
+      // further `/<alpha>` modifiers.
       colors: {
-        bg: "var(--color-bg)",
+        bg: "rgb(var(--color-bg-rgb) / <alpha-value>)",
         surface: {
-          DEFAULT: "var(--color-surface)",
-          elevated: "var(--color-surface-elevated)",
-          overlay: "var(--color-surface-overlay)",
+          DEFAULT: "rgb(var(--color-surface-rgb) / <alpha-value>)",
+          elevated: "rgb(var(--color-surface-elevated-rgb) / <alpha-value>)",
+          overlay: "rgb(var(--color-surface-overlay-rgb) / <alpha-value>)",
         },
         border: {
-          DEFAULT: "var(--color-border)",
-          strong: "var(--color-border-strong)",
-          subtle: "var(--color-border-subtle)",
+          DEFAULT: "rgb(var(--color-border-rgb) / <alpha-value>)",
+          strong: "rgb(var(--color-border-strong-rgb) / <alpha-value>)",
+          subtle: "rgb(var(--color-border-subtle-rgb) / <alpha-value>)",
         },
         text: {
-          primary: "var(--color-text-primary)",
-          secondary: "var(--color-text-secondary)",
-          tertiary: "var(--color-text-tertiary)",
-          "on-accent": "var(--color-text-on-accent)",
-          "on-brand-accent": "var(--color-text-on-brand-accent)",
+          primary: "rgb(var(--color-text-primary-rgb) / <alpha-value>)",
+          secondary: "rgb(var(--color-text-secondary-rgb) / <alpha-value>)",
+          tertiary: "rgb(var(--color-text-tertiary-rgb) / <alpha-value>)",
+          "on-accent": "rgb(var(--color-text-on-accent-rgb) / <alpha-value>)",
+          "on-brand-accent": "rgb(var(--color-text-on-brand-accent-rgb) / <alpha-value>)",
         },
         accent: {
-          DEFAULT: "var(--color-accent)",
-          hover: "var(--color-accent-hover)",
-          active: "var(--color-accent-active)",
+          DEFAULT: "rgb(var(--color-accent-rgb) / <alpha-value>)",
+          hover: "rgb(var(--color-accent-hover-rgb) / <alpha-value>)",
+          active: "rgb(var(--color-accent-active-rgb) / <alpha-value>)",
           subtle: "var(--color-accent-subtle)",
           border: "var(--color-accent-border)",
         },
@@ -35,35 +40,35 @@ const config: Config = {
         // `brand-accent` is the canonical name; `highlight` survives as an
         // alias so existing `bg-highlight*` callsites flip without churn.
         "brand-accent": {
-          DEFAULT: "var(--color-brand-accent)",
-          hover: "var(--color-brand-accent-hover)",
+          DEFAULT: "rgb(var(--color-brand-accent-rgb) / <alpha-value>)",
+          hover: "rgb(var(--color-brand-accent-hover-rgb) / <alpha-value>)",
           subtle: "var(--color-brand-accent-subtle)",
           border: "var(--color-brand-accent-border)",
         },
         win: {
-          DEFAULT: "var(--color-win)",
+          DEFAULT: "rgb(var(--color-win-rgb) / <alpha-value>)",
           subtle: "var(--color-win-subtle)",
         },
         highlight: {
-          DEFAULT: "var(--color-highlight)",
+          DEFAULT: "rgb(var(--color-highlight-rgb) / <alpha-value>)",
           hover: "var(--color-highlight-hover)",
           subtle: "var(--color-highlight-subtle)",
           border: "var(--color-highlight-border)",
         },
         success: {
-          DEFAULT: "var(--color-success)",
+          DEFAULT: "rgb(var(--color-success-rgb) / <alpha-value>)",
           subtle: "var(--color-success-subtle)",
         },
         warning: {
-          DEFAULT: "var(--color-warning)",
+          DEFAULT: "rgb(var(--color-warning-rgb) / <alpha-value>)",
           subtle: "var(--color-warning-subtle)",
         },
         danger: {
-          DEFAULT: "var(--color-danger)",
+          DEFAULT: "rgb(var(--color-danger-rgb) / <alpha-value>)",
           subtle: "var(--color-danger-subtle)",
         },
         info: {
-          DEFAULT: "var(--color-info)",
+          DEFAULT: "rgb(var(--color-info-rgb) / <alpha-value>)",
           subtle: "var(--color-info-subtle)",
         },
       },

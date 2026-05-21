@@ -62,7 +62,7 @@ export function UnverifiedEmailBanner() {
           type="button"
           onClick={() => void handleResend()}
           disabled={busy}
-          className="border-warning/40 inline-flex h-8 items-center justify-center rounded-md border bg-bg px-3 text-xs font-semibold text-warning transition-colors duration-fast hover:bg-warning-subtle disabled:opacity-50"
+          className="inline-flex h-8 items-center justify-center rounded-md border border-warning/40 bg-bg px-3 text-xs font-semibold text-warning transition-colors duration-fast hover:bg-warning-subtle disabled:opacity-50"
         >
           {busy ? "Odesílám…" : "Odeslat znovu"}
         </button>

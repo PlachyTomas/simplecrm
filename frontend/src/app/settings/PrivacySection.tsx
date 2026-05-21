@@ -151,7 +151,7 @@ function DangerZone({ orgName }: { orgName: string }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="border-danger/40 rounded-lg border bg-danger-subtle p-6">
+    <div className="rounded-lg border border-danger/40 bg-danger-subtle p-6">
       <h2 className="text-lg font-semibold text-text-primary">Trvale smazat organizaci</h2>
       <p className="mt-2 text-sm text-text-secondary">
         Nevratně smaže veškerá osobní data: kontakty, firmy, obchody, aktivity i uživatelské účty.
@@ -224,7 +224,7 @@ function EraseOrgDialog({ orgName, onClose }: { orgName: string; onClose: () => 
       role="dialog"
       aria-modal="true"
       aria-labelledby="erase-org-title"
-      className="bg-bg/80 fixed inset-0 z-50 flex items-center justify-center px-4 py-8"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 py-8"
       onClick={(e) => {
         if (e.target === e.currentTarget && !erase.isPending) onClose();
       }}
@@ -263,7 +263,7 @@ function EraseOrgDialog({ orgName, onClose }: { orgName: string; onClose: () => 
           <button
             type="submit"
             disabled={submitDisabled}
-            className="hover:bg-danger/90 inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-danger/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {erase.isPending ? "Mažeme…" : "Trvale smazat"}
           </button>

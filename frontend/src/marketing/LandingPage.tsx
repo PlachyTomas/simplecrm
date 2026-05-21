@@ -91,7 +91,7 @@ export function Nav() {
   }, [drawerOpen]);
 
   return (
-    <header className="bg-bg/90 sticky top-0 z-30 border-b border-border-subtle backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-border-subtle bg-bg/70 backdrop-blur">
       <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-2 px-4 py-4 md:gap-8 md:px-8">
         <Link to="/" className="flex items-center gap-2" aria-label="SimpleCRM">
           <span
@@ -287,10 +287,24 @@ function Hero() {
     <section className="relative overflow-hidden">
       {/* Dual radial glow behind the hero — indigo bottom-left, magenta
           top-right — only the marketing hero is allowed this gradient
-          combo per brief §2 anti-patterns. */}
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="bg-accent/30 absolute -bottom-32 -left-32 h-96 w-96 rounded-full blur-3xl" />
-        <div className="bg-brand-accent/20 absolute -right-32 -top-32 h-96 w-96 rounded-full blur-3xl" />
+          combo per brief §2 anti-patterns.
+
+          The container carries a vertical mask so each glow fades to
+          transparent before reaching the section's clipped edges,
+          replacing the hard arc that `overflow-hidden` would otherwise
+          carve at the section boundary. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          maskImage:
+            "linear-gradient(to bottom, transparent 0, black 12%, black 78%, transparent 100%)",
+          WebkitMaskImage:
+            "linear-gradient(to bottom, transparent 0, black 12%, black 78%, transparent 100%)",
+        }}
+      >
+        <div className="absolute -bottom-32 -left-32 h-[28rem] w-[28rem] rounded-full bg-accent/30 blur-3xl" />
+        <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-brand-accent/20 blur-3xl" />
       </div>
       <div className="relative mx-auto max-w-[1200px] px-4 pb-20 pt-16 text-center md:px-8 md:pb-24 md:pt-24">
         <p className="mb-4 text-sm font-medium uppercase tracking-wider text-text-tertiary">

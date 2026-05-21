@@ -92,14 +92,14 @@ export function TourOverlay(): ReactElement | null {
           can still scroll the page behind via wheel events. */}
       <div
         aria-hidden
-        className="absolute inset-0 bg-black/55 backdrop-blur-[1px] transition-opacity duration-200"
+        className="absolute inset-0 bg-black/65 backdrop-blur-sm transition-opacity duration-200"
       />
 
       {/* Spotlight ring around the anchored element. */}
       {anchorRect ? (
         <div
           aria-hidden
-          className="ring-offset-bg/60 absolute rounded-md ring-2 ring-accent ring-offset-2 transition-all duration-150"
+          className="absolute rounded-md ring-2 ring-accent ring-offset-2 ring-offset-bg/60 transition-all duration-150"
           style={{
             top: anchorRect.top - RING_PADDING,
             left: anchorRect.left - RING_PADDING,
