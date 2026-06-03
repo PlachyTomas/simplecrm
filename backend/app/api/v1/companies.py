@@ -341,6 +341,12 @@ async def create_company(
     session: AsyncSession = Depends(get_db),
 ) -> CompanyOut:
     owner_id = payload.owner_user_id
+    # Default ownership to the creator when the caller didn't specify an
+    # owner at all (the Add-company UI and the pipeline's inline create both
+    # omit the field). An explicit owner_user_id — including null, used to
+    # drop a row into the shared pool — is respected as sent.
+    if "owner_user_id" not in payload.model_fields_set:
+        owner_id = user.id
     # Salespeople can only create rows owned by themselves (or unowned).
     if user.role is UserRole.salesperson and owner_id is not None and owner_id != user.id:
         raise HTTPException(
