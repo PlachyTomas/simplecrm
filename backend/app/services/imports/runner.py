@@ -256,9 +256,8 @@ async def _run_pipeline(
     # Resolve owner cells once per import. Build the resolver if either
     # any candidate references the owner column OR the admin selected a
     # bulk owner — both paths funnel through the same cap arithmetic.
-    needs_resolver = (
-        payload.bulk_owner_user_id is not None
-        or any(cand.owner_raw for cand in deduped_companies)
+    needs_resolver = payload.bulk_owner_user_id is not None or any(
+        cand.owner_raw for cand in deduped_companies
     )
     owner_resolver: OwnerResolver | None = None
     if needs_resolver:

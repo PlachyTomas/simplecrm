@@ -451,11 +451,7 @@ async def test_preview_blocks_when_owner_cap_would_be_exceeded(
     sales.max_owned_companies = 1
     await db_session.commit()
 
-    csv = (
-        "Název,IČO,Obchodník\n"
-        f"Firm 1,11111118,{sales.email}\n"
-        f"Firm 2,22222226,{sales.email}\n"
-    )
+    csv = f"Název,IČO,Obchodník\nFirm 1,11111118,{sales.email}\nFirm 2,22222226,{sales.email}\n"
     files = [("files", _csv(csv, "companies.csv"))]
     data = {
         "file_specs_json": json.dumps(

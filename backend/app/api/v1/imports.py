@@ -103,18 +103,12 @@ def _parse_file_specs(raw: str, *, expected_count: int) -> list[dict[str, Any]]:
             raise _bad(f"file_specs_json[{idx}] must be an object.")
         role = spec.get("role")
         if role not in _VALID_ROLES:
-            raise _bad(
-                f"file_specs_json[{idx}].role must be one of {sorted(_VALID_ROLES)}."
-            )
-        if role in {"companies", "combined"} and not isinstance(
-            spec.get("mapping_company"), dict
-        ):
+            raise _bad(f"file_specs_json[{idx}].role must be one of {sorted(_VALID_ROLES)}.")
+        if role in {"companies", "combined"} and not isinstance(spec.get("mapping_company"), dict):
             raise _bad(
                 f"file_specs_json[{idx}].mapping_company must be an object for role {role!r}."
             )
-        if role in {"contacts", "combined"} and not isinstance(
-            spec.get("mapping_contact"), dict
-        ):
+        if role in {"contacts", "combined"} and not isinstance(spec.get("mapping_contact"), dict):
             raise _bad(
                 f"file_specs_json[{idx}].mapping_contact must be an object for role {role!r}."
             )
@@ -205,9 +199,7 @@ async def _build_input(
                     f"{match_key_contact!r} is not a header in this file."
                 )
             contact_candidates.extend(
-                apply_contact_mapping(
-                    parsed.rows, cleaned_c, match_key_header=match_key_contact
-                )
+                apply_contact_mapping(parsed.rows, cleaned_c, match_key_header=match_key_contact)
             )
 
     if has_contact_side and match_source is None:

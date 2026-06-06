@@ -100,9 +100,7 @@ class OwnerResolver:
                         code="owner_inactive",
                         message=f"Uživatel {snap.email} je deaktivovaný a nemůže vlastnit firmy.",
                     )
-                return ResolvedOwner(
-                    user_id=snap.id, max_owned_companies=snap.max_owned_companies
-                )
+                return ResolvedOwner(user_id=snap.id, max_owned_companies=snap.max_owned_companies)
         return OwnerResolutionError(
             code="owner_unknown",
             message=f"Uživatel {user_id} není členem této organizace.",
