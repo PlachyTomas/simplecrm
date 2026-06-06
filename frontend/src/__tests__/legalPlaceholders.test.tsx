@@ -21,6 +21,8 @@ const LEGAL_ROUTES = [
   "/cookies",
   "/predplatne",
   "/kontakt",
+  "/reklamacni-podminky",
+  "/dodaci-a-platebni-podminky",
 ];
 
 function renderAt(path: string) {

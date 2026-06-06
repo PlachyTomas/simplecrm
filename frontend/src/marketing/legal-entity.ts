@@ -45,6 +45,13 @@ export const COMGATE_INFO = {
 export const LEGAL_EFFECTIVE_DATE = "10.05.2026";
 
 /**
+ * Effective date for Reklamační podmínky + Dodací a platební podmínky —
+ * added later than the original legal bundle, for Comgate's full-access
+ * review (they require both as visible standalone documents).
+ */
+export const COMMERCE_TERMS_EFFECTIVE_DATE = "06.06.2026";
+
+/**
  * Substrings that flag unreplaced placeholder text. Matched case-insensitively
  * so "TODO_", "todo_", "Bude doplněno", "BUDE DOPLNĚNO" all trip the lint.
  */

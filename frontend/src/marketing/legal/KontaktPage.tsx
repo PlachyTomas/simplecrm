@@ -73,7 +73,11 @@ export function KontaktPage() {
             {LEGAL_ENTITY.email}
           </a>
           . Vyřízení proběhne do 30 dnů od doručení reklamace. Postup, definice vad služby a práva z
-          vadného plnění upravuje{" "}
+          vadného plnění upravují{" "}
+          <Link to="/reklamacni-podminky" className="underline hover:text-text-primary">
+            Reklamační podmínky
+          </Link>{" "}
+          a{" "}
           <Link to="/obchodni-podminky#cl-10" className="underline hover:text-text-primary">
             čl. 10 Obchodních podmínek
           </Link>
@@ -86,6 +90,16 @@ export function KontaktPage() {
           <li>
             <Link to="/obchodni-podminky" className="underline hover:text-text-primary">
               Obchodní podmínky
+            </Link>
+          </li>
+          <li>
+            <Link to="/reklamacni-podminky" className="underline hover:text-text-primary">
+              Reklamační podmínky
+            </Link>
+          </li>
+          <li>
+            <Link to="/dodaci-a-platebni-podminky" className="underline hover:text-text-primary">
+              Dodací a platební podmínky
             </Link>
           </li>
           <li>

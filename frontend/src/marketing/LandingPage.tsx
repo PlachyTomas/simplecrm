@@ -702,6 +702,18 @@ export function Footer() {
                 Obchodní podmínky
               </Link>
               <Link
+                to="/reklamacni-podminky"
+                className="text-text-secondary hover:text-text-primary"
+              >
+                Reklamační podmínky
+              </Link>
+              <Link
+                to="/dodaci-a-platebni-podminky"
+                className="text-text-secondary hover:text-text-primary"
+              >
+                Dodací a platební podmínky
+              </Link>
+              <Link
                 to="/ochrana-osobnich-udaju"
                 className="text-text-secondary hover:text-text-primary"
               >

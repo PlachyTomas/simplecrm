@@ -211,6 +211,17 @@ export function ObchodniPodminkyPage() {
           odpovědnost za ušlý zisk a následné/nepřímé škody. Uživatel s tímto omezením výslovně
           souhlasí.
         </p>
+        <p>
+          10.5 Podrobný postup reklamace, vrácení peněz a storna Služby upravují samostatné{" "}
+          <Link to="/reklamacni-podminky" className="underline hover:text-text-primary">
+            Reklamační podmínky
+          </Link>
+          ; podmínky zpřístupnění Služby a způsoby platby pak{" "}
+          <Link to="/dodaci-a-platebni-podminky" className="underline hover:text-text-primary">
+            Dodací a platební podmínky
+          </Link>
+          .
+        </p>
       </Section>
 
       <Section id="cl-11" title="11. Ochrana osobních údajů">

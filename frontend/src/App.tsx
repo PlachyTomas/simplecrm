@@ -29,10 +29,12 @@ import { CenikPage } from "@/marketing/CenikPage";
 import { CookieConsent } from "@/marketing/cookie-consent";
 import { LandingPage } from "@/marketing/LandingPage";
 import { CookiesPage } from "@/marketing/legal/CookiesPage";
+import { DodaciPlatebniPodminkyPage } from "@/marketing/legal/DodaciPlatebniPodminkyPage";
 import { KontaktPage } from "@/marketing/legal/KontaktPage";
 import { ObchodniPodminkyPage } from "@/marketing/legal/ObchodniPodminkyPage";
 import { OchranaOsobnichUdajuPage } from "@/marketing/legal/OchranaOsobnichUdajuPage";
 import { PredplatnePage } from "@/marketing/legal/PredplatnePage";
+import { ReklamacniPodminkyPage } from "@/marketing/legal/ReklamacniPodminkyPage";
 import { ZpracovatelskaSmlouvaPage } from "@/marketing/legal/ZpracovatelskaSmlouvaPage";
 import { NotFoundPage } from "@/marketing/NotFoundPage";
 import { AcceptInvitePage } from "@/onboarding/AcceptInvitePage";
@@ -47,6 +49,8 @@ export function AppRoutes() {
       <Route path="/cenik" element={<CenikPage />} />
       <Route path="/kontakt" element={<KontaktPage />} />
       <Route path="/obchodni-podminky" element={<ObchodniPodminkyPage />} />
+      <Route path="/reklamacni-podminky" element={<ReklamacniPodminkyPage />} />
+      <Route path="/dodaci-a-platebni-podminky" element={<DodaciPlatebniPodminkyPage />} />
       <Route path="/ochrana-osobnich-udaju" element={<OchranaOsobnichUdajuPage />} />
       <Route path="/zpracovatelska-smlouva" element={<ZpracovatelskaSmlouvaPage />} />
       <Route path="/cookies" element={<CookiesPage />} />
