@@ -221,6 +221,54 @@ class ComGateClient:
         except KeyError as exc:
             raise ComGateError(f"ComGate response missing expected field: {exc}") from exc
 
+    async def create_demo_payment(
+        self,
+        *,
+        amount_minor: int,
+        currency: str,
+        ref_id: str,
+        label: str,
+        email: str,
+        url_paid: str,
+        url_cancelled: str,
+        url_pending: str,
+        country: str = "CZ",
+    ) -> CreatedPayment:
+        """Public demo-order payment for the ComGate gateway showcase
+        (their review team requires a visible order → gateway flow).
+
+        `test` is **hardcoded True** — never `settings.comgate_test_mode`.
+        This endpoint is reachable without auth; in production the
+        settings flag is False and inheriting it would let any visitor
+        create real chargeable payments. Demo payments must stay
+        simulations forever.
+
+        No `initRecurring`, and the per-payment return URLs point at
+        the public order-result page instead of the portal-configured
+        (auth-gated) billing return.
+        """
+        payload: dict[str, Any] = {
+            "price": amount_minor,
+            "curr": currency,
+            "label": label,
+            "refId": ref_id,
+            "email": email,
+            "country": country,
+            "method": "ALL",
+            "test": True,  # hardcoded — see docstring
+            "url_paid": url_paid,
+            "url_cancelled": url_cancelled,
+            "url_pending": url_pending,
+        }
+        body = await self._post(_Endpoints.create, payload)
+        try:
+            return CreatedPayment(
+                trans_id=str(body["transId"]),
+                redirect_url=str(body["redirect"]),
+            )
+        except KeyError as exc:
+            raise ComGateError(f"ComGate response missing expected field: {exc}") from exc
+
     async def create_recurring_payment(
         self,
         *,

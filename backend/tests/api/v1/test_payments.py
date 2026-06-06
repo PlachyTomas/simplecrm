@@ -22,7 +22,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
@@ -750,3 +750,115 @@ async def test_seat_change_init_rejects_when_no_payment_method(
     )
     assert response.status_code == 422
     assert response.json()["detail"]["code"] == "no_payment_method"
+
+
+# ---------------------------------------------------------------------------
+# POST /demo-order — public gateway showcase (no auth)
+# ---------------------------------------------------------------------------
+
+
+class _FakeDemoComGate:
+    """Captures create_demo_payment kwargs; returns a canned redirect."""
+
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    async def create_demo_payment(self, **kwargs):
+        from app.services.comgate import CreatedPayment
+
+        self.calls.append(kwargs)
+        return CreatedPayment(
+            trans_id="DEMO-TX-1",
+            redirect_url="https://payments.comgate.cz/client/instructions/index?id=DEMO-TX-1",
+        )
+
+
+@pytest.fixture
+def demo_comgate():
+    """Override the ComGate client + give the test its own rate limiter."""
+    from app.api.v1.payments import get_demo_order_rate_limiter
+    from app.main import app
+    from app.services.comgate import get_comgate_client
+    from app.services.lookup_cache import RateLimiter
+
+    fake = _FakeDemoComGate()
+    limiter = RateLimiter(max_calls=10, window_seconds=600)
+    app.dependency_overrides[get_comgate_client] = lambda: fake
+    app.dependency_overrides[get_demo_order_rate_limiter] = lambda: limiter
+    try:
+        yield fake
+    finally:
+        app.dependency_overrides.pop(get_comgate_client, None)
+        app.dependency_overrides.pop(get_demo_order_rate_limiter, None)
+
+
+async def test_demo_order_returns_redirect_without_auth(
+    client: AsyncClient, demo_comgate: _FakeDemoComGate
+) -> None:
+    """Anonymous POST → hosted-page redirect URL; amount = seats × plan
+    price; refId is the non-UUID "demo-…" shape the webhook ignores."""
+    async with AsyncSessionLocal() as session:
+        price = (
+            await session.execute(select(Plan.price_per_user_minor).where(Plan.code == "monthly"))
+        ).scalar_one()
+
+    response = await client.post(
+        "/api/v1/payments/demo-order",
+        json={"plan_code": "monthly", "seats": 3, "email": "reviewer@comgate.cz"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["redirect_url"].startswith("https://payments.comgate.cz/")
+    assert body["amount_minor"] == 3 * price
+
+    assert len(demo_comgate.calls) == 1
+    call = demo_comgate.calls[0]
+    assert call["ref_id"].startswith("demo-")
+    assert call["label"] == "SimpleCRM demo"
+    assert call["url_paid"].endswith("/objednavka/navrat?status=paid")
+    assert call["url_cancelled"].endswith("/objednavka/navrat?status=cancelled")
+    assert call["url_pending"].endswith("/objednavka/navrat?status=pending")
+    # No DB rows for demo orders.
+    async with AsyncSessionLocal() as session:
+        count = (
+            await session.execute(
+                select(func.count())
+                .select_from(Charge)
+                .where(Charge.comgate_trans_id == "DEMO-TX-1")
+            )
+        ).scalar_one()
+    assert count == 0
+
+
+async def test_demo_order_validates_seat_bounds(
+    client: AsyncClient, demo_comgate: _FakeDemoComGate
+) -> None:
+    for seats in (0, 26):
+        response = await client.post(
+            "/api/v1/payments/demo-order",
+            json={"plan_code": "monthly", "seats": seats, "email": "a@b.cz"},
+        )
+        assert response.status_code == 422
+    assert demo_comgate.calls == []
+
+
+async def test_demo_order_rate_limited_per_ip(client: AsyncClient) -> None:
+    from app.api.v1.payments import get_demo_order_rate_limiter
+    from app.main import app
+    from app.services.comgate import get_comgate_client
+    from app.services.lookup_cache import RateLimiter
+
+    fake = _FakeDemoComGate()
+    limiter = RateLimiter(max_calls=2, window_seconds=600)
+    app.dependency_overrides[get_comgate_client] = lambda: fake
+    app.dependency_overrides[get_demo_order_rate_limiter] = lambda: limiter
+    try:
+        payload = {"plan_code": "monthly", "seats": 1, "email": "a@b.cz"}
+        for _ in range(2):
+            ok = await client.post("/api/v1/payments/demo-order", json=payload)
+            assert ok.status_code == 200
+        blocked = await client.post("/api/v1/payments/demo-order", json=payload)
+        assert blocked.status_code == 429
+    finally:
+        app.dependency_overrides.pop(get_comgate_client, None)
+        app.dependency_overrides.pop(get_demo_order_rate_limiter, None)

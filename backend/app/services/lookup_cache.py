@@ -57,7 +57,8 @@ class _Bucket:
 
 
 class RateLimiter:
-    """Sliding-window rate limiter keyed by user id.
+    """Sliding-window rate limiter keyed by user id (or any hashable
+    caller key — e.g. a client IP for unauthenticated endpoints).
 
     Returns True if the caller is within the limit; updates the bucket.
     """
@@ -69,10 +70,10 @@ class RateLimiter:
     ) -> None:
         self._max_calls = max_calls
         self._window = window_seconds
-        self._buckets: dict[uuid.UUID, _Bucket] = {}
+        self._buckets: dict[uuid.UUID | str, _Bucket] = {}
         self._lock = asyncio.Lock()
 
-    async def try_acquire(self, user_id: uuid.UUID) -> bool:
+    async def try_acquire(self, user_id: uuid.UUID | str) -> bool:
         async with self._lock:
             bucket = self._buckets.setdefault(user_id, _Bucket())
             now = time.monotonic()

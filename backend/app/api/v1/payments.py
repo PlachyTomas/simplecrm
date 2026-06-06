@@ -55,6 +55,8 @@ from app.db.models import (
 from app.schemas.payments import (
     ChargeList,
     ChargeOut,
+    DemoOrderIn,
+    DemoOrderOut,
     InitialPaymentInitIn,
     PaymentInitOut,
     SeatChangeInitIn,
@@ -66,10 +68,32 @@ from app.services.comgate import (
     ComGateError,
     get_comgate_client,
 )
+from app.services.lookup_cache import RateLimiter
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/payments", tags=["payments"])
+
+# Demo-order endpoint is public (no auth) — rate-limit per client IP so a
+# stray crawler can't hammer ComGate through us. 10 calls / 10 min is
+# plenty for a human reviewer clicking through the gateway showcase.
+_DEMO_ORDER_RATE_LIMITER = RateLimiter(max_calls=10, window_seconds=600)
+
+
+def get_demo_order_rate_limiter() -> RateLimiter:
+    """FastAPI dependency — overridable in tests."""
+    return _DEMO_ORDER_RATE_LIMITER
+
+
+def _frontend_origin() -> str:
+    """Origin (scheme://host[:port]) of the frontend, derived from
+    `frontend_success_redirect` (e.g. "http://localhost:5173/app" →
+    "http://localhost:5173")."""
+    base = get_settings().frontend_success_redirect
+    if base.startswith(("http://", "https://")):
+        parts = base.split("/", 3)
+        return "/".join(parts[:3])
+    return base
 
 
 # ---------------------------------------------------------------------------
@@ -147,6 +171,66 @@ async def initial_payment_init(
 
     return PaymentInitOut(
         charge_id=charge.id,
+        redirect_url=created.redirect_url,
+        amount_minor=amount_minor,
+        currency=plan.currency,
+    )
+
+
+@router.post("/demo-order", response_model=DemoOrderOut)
+async def demo_order(
+    payload: DemoOrderIn,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+    comgate: ComGateClient = Depends(get_comgate_client),
+    rate_limiter: RateLimiter = Depends(get_demo_order_rate_limiter),
+) -> DemoOrderOut:
+    """Public demo order — the gateway showcase ComGate's review team
+    requires before granting full access ("možnost provedení objednávky
+    …, stačí demo jen aby viděli tu bránu").
+
+    Creates a ComGate payment with `test=True` **hardcoded** (see
+    `ComGateClient.create_demo_payment`) and returns the hosted-page
+    URL. Writes no DB rows; the webhook for the resulting payment
+    carries a non-UUID `refId` ("demo-…") and is acknowledged-and-
+    ignored by `comgate_webhook`.
+    """
+    client_ip = request.client.host if request.client else "unknown"
+    if not await rate_limiter.try_acquire(client_ip):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Příliš mnoho pokusů, zkuste to prosím za pár minut.",
+        )
+
+    plan = await billing._load_plan_by_code(session, payload.plan_code)
+    if plan.price_per_user_minor is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"plan {payload.plan_code!r} has no public price.",
+        )
+    amount_minor = payload.seats * plan.price_per_user_minor
+
+    origin = _frontend_origin()
+    return_base = f"{origin}/objednavka/navrat"
+    try:
+        created = await comgate.create_demo_payment(
+            amount_minor=amount_minor,
+            currency=plan.currency,
+            ref_id=f"demo-{uuid.uuid4()}",
+            label="SimpleCRM demo",
+            email=payload.email,
+            url_paid=f"{return_base}?status=paid",
+            url_cancelled=f"{return_base}?status=cancelled",
+            url_pending=f"{return_base}?status=pending",
+        )
+    except ComGateError as exc:
+        logger.warning("ComGate create_demo_payment failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Platební brána není dostupná, zkuste to prosím za chvíli.",
+        ) from exc
+
+    return DemoOrderOut(
         redirect_url=created.redirect_url,
         amount_minor=amount_minor,
         currency=plan.currency,
@@ -279,7 +363,6 @@ async def payment_return(
     Read the charge if we know its ID, then 302 the customer to the
     frontend's billing-return route with whatever status we can see.
     """
-    settings = get_settings()
     target_status: str = "pending"
     if refId:
         try:
@@ -291,14 +374,17 @@ async def payment_return(
             if charge is not None:
                 target_status = charge.status
 
-    # frontend_success_redirect is e.g. "http://localhost:5173/app";
-    # peel off any path so we land on /app/billing/return.
-    base = settings.frontend_success_redirect
-    if base.startswith(("http://", "https://")):
-        parts = base.split("/", 3)
-        origin = "/".join(parts[:3])
-    else:
-        origin = base
+    # Demo orders (refId "demo-…") carry their own per-payment return
+    # URLs, but if ComGate falls back to the portal-configured URL we
+    # still route them to the public order-result page instead of the
+    # auth-gated billing return.
+    origin = _frontend_origin()
+    if refId and refId.startswith("demo-"):
+        return RedirectResponse(
+            url=f"{origin}/objednavka/navrat?status=pending",
+            status_code=status.HTTP_302_FOUND,
+        )
+
     redirect_url = f"{origin}/app/billing/return?status={target_status}"
     if transId:
         redirect_url += f"&transId={transId}"

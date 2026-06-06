@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class InitialPaymentInitIn(BaseModel):
@@ -35,6 +35,31 @@ class PaymentInitOut(BaseModel):
 
     redirect_url: str
     charge_id: uuid.UUID
+    amount_minor: int
+    currency: str
+
+
+class DemoOrderIn(BaseModel):
+    """Body for `POST /payments/demo-order` (public, unauthenticated).
+
+    Powers the /objednavka gateway showcase that ComGate's review team
+    requires. Seats are capped low — this flow never touches billing
+    state, so there is no reason to allow large amounts.
+    """
+
+    plan_code: Literal["monthly", "annual"]
+    seats: int = Field(ge=1, le=25)
+    email: EmailStr
+
+
+class DemoOrderOut(BaseModel):
+    """Response for `POST /payments/demo-order`.
+
+    No `charge_id` — demo orders create no DB rows; the frontend just
+    redirects to ComGate's hosted page.
+    """
+
+    redirect_url: str
     amount_minor: int
     currency: str
 

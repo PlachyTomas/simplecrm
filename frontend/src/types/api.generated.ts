@@ -1833,6 +1833,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/payments/demo-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Demo Order
+         * @description Public demo order — the gateway showcase ComGate's review team
+         *     requires before granting full access ("možnost provedení objednávky
+         *     …, stačí demo jen aby viděli tu bránu").
+         *
+         *     Creates a ComGate payment with `test=True` **hardcoded** (see
+         *     `ComGateClient.create_demo_payment`) and returns the hosted-page
+         *     URL. Writes no DB rows; the webhook for the resulting payment
+         *     carries a non-UUID `refId` ("demo-…") and is acknowledged-and-
+         *     ignored by `comgate_webhook`.
+         */
+        post: operations["demo_order_api_v1_payments_demo_order_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/payments/seat-change-init": {
         parameters: {
             query?: never;
@@ -3837,6 +3865,43 @@ export interface components {
             /** Sparkline */
             sparkline: components["schemas"]["SparklineBucket"][];
             comparison: components["schemas"]["Comparison"] | null;
+        };
+        /**
+         * DemoOrderIn
+         * @description Body for `POST /payments/demo-order` (public, unauthenticated).
+         *
+         *     Powers the /objednavka gateway showcase that ComGate's review team
+         *     requires. Seats are capped low — this flow never touches billing
+         *     state, so there is no reason to allow large amounts.
+         */
+        DemoOrderIn: {
+            /**
+             * Plan Code
+             * @enum {string}
+             */
+            plan_code: "monthly" | "annual";
+            /** Seats */
+            seats: number;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+        };
+        /**
+         * DemoOrderOut
+         * @description Response for `POST /payments/demo-order`.
+         *
+         *     No `charge_id` — demo orders create no DB rows; the frontend just
+         *     redirects to ComGate's hosted page.
+         */
+        DemoOrderOut: {
+            /** Redirect Url */
+            redirect_url: string;
+            /** Amount Minor */
+            amount_minor: number;
+            /** Currency */
+            currency: string;
         };
         /** ExtendTrialIn */
         ExtendTrialIn: {
@@ -8898,6 +8963,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaymentInitOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    demo_order_api_v1_payments_demo_order_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoOrderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoOrderOut"];
                 };
             };
             /** @description Validation Error */

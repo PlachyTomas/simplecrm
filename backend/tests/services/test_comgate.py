@@ -248,6 +248,75 @@ async def test_create_initial_payment_raises_on_missing_response_field() -> None
 
 
 # ---------------------------------------------------------------------------
+# Request shape — create_demo_payment (public gateway showcase)
+# ---------------------------------------------------------------------------
+
+
+async def test_create_demo_payment_forces_test_true_even_in_prod_mode() -> None:
+    """REGRESSION GUARD: the demo-order flow is public (no auth). With
+    production creds and `comgate_test_mode=False`, an inherited flag
+    would let any visitor create real chargeable payments. The demo
+    path must hardcode `test=true` no matter what settings say."""
+    captured: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(200, json={"transId": "DM-1", "redirect": "https://x"})
+
+    client = _client_with_handler(handler, comgate_test_mode=False)
+    await client.create_demo_payment(
+        amount_minor=9900,
+        currency="CZK",
+        ref_id="demo-abc",
+        label="SimpleCRM demo",
+        email="reviewer@comgate.cz",
+        url_paid="https://web/objednavka/navrat?status=paid",
+        url_cancelled="https://web/objednavka/navrat?status=cancelled",
+        url_pending="https://web/objednavka/navrat?status=pending",
+    )
+    body = json.loads(captured[0].content)
+    assert body["test"] is True
+
+
+async def test_create_demo_payment_sends_expected_fields() -> None:
+    captured: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "transId": "DM12-CD34",
+                "redirect": "https://payments.comgate.cz/client/instructions/index?id=DM12-CD34",
+            },
+        )
+
+    client = _client_with_handler(handler)
+    result = await client.create_demo_payment(
+        amount_minor=29700,
+        currency="CZK",
+        ref_id="demo-xyz",
+        label="SimpleCRM demo",
+        email="a@b.cz",
+        url_paid="https://web/objednavka/navrat?status=paid",
+        url_cancelled="https://web/objednavka/navrat?status=cancelled",
+        url_pending="https://web/objednavka/navrat?status=pending",
+    )
+
+    body = json.loads(captured[0].content)
+    assert captured[0].url.path.endswith("/payment")
+    assert body["price"] == 29700
+    assert body["refId"] == "demo-xyz"
+    assert body["label"] == "SimpleCRM demo"
+    assert body["url_paid"].endswith("status=paid")
+    assert body["url_cancelled"].endswith("status=cancelled")
+    assert body["url_pending"].endswith("status=pending")
+    # A demo order must never tokenize the card for recurring charges.
+    assert "initRecurring" not in body
+    assert result.trans_id == "DM12-CD34"
+
+
+# ---------------------------------------------------------------------------
 # Request shape — create_recurring_payment
 # ---------------------------------------------------------------------------
 
