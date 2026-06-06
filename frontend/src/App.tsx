@@ -37,6 +37,8 @@ import { PredplatnePage } from "@/marketing/legal/PredplatnePage";
 import { ReklamacniPodminkyPage } from "@/marketing/legal/ReklamacniPodminkyPage";
 import { ZpracovatelskaSmlouvaPage } from "@/marketing/legal/ZpracovatelskaSmlouvaPage";
 import { NotFoundPage } from "@/marketing/NotFoundPage";
+import { ObjednavkaNavratPage } from "@/marketing/ObjednavkaNavratPage";
+import { ObjednavkaPage } from "@/marketing/ObjednavkaPage";
 import { AcceptInvitePage } from "@/onboarding/AcceptInvitePage";
 import { CreateOrgPage } from "@/onboarding/CreateOrgPage";
 import { AdminPage } from "@/admin/AdminPage";
@@ -47,6 +49,8 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/cenik" element={<CenikPage />} />
+      <Route path="/objednavka" element={<ObjednavkaPage />} />
+      <Route path="/objednavka/navrat" element={<ObjednavkaNavratPage />} />
       <Route path="/kontakt" element={<KontaktPage />} />
       <Route path="/obchodni-podminky" element={<ObchodniPodminkyPage />} />
       <Route path="/reklamacni-podminky" element={<ReklamacniPodminkyPage />} />

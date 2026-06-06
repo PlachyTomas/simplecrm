@@ -21,9 +21,9 @@ export function ReklamacniPodminkyPage() {
         <p>
           Tyto reklamační podmínky vydává{" "}
           <span className="font-medium text-text-primary">{LEGAL_ENTITY.fullName}</span>, IČO{" "}
-          {LEGAL_ENTITY.ico}, se sídlem {LEGAL_ENTITY.address}. {LEGAL_ENTITY.registryClause}{" "}
-          (dále jen „Poskytovatel"). Upravují postup při reklamaci cloudové služby SimpleCRM,
-          vrácení peněz a storno služby a doplňují{" "}
+          {LEGAL_ENTITY.ico}, se sídlem {LEGAL_ENTITY.address}. {LEGAL_ENTITY.registryClause} (dále
+          jen „Poskytovatel"). Upravují postup při reklamaci cloudové služby SimpleCRM, vrácení
+          peněz a storno služby a doplňují{" "}
           <Link to="/obchodni-podminky#cl-10" className="underline hover:text-text-primary">
             čl. 10 Všeobecných obchodních podmínek
           </Link>
@@ -48,8 +48,8 @@ export function ReklamacniPodminkyPage() {
       <Section id="vraceni-zbozi" title="2. Vrácení zboží">
         <p>
           2.1 Poskytovatel nedodává žádné fyzické zboží. Předmětem prodeje je výhradně přístup k
-          digitální službě — proto se ustanovení o vracení fyzického zboží nepoužijí a Uživatel
-          nic fyzicky nevrací.
+          digitální službě — proto se ustanovení o vracení fyzického zboží nepoužijí a Uživatel nic
+          fyzicky nevrací.
         </p>
         <p>
           2.2 Pro vrácení peněz za již uhrazenou Službu platí čl. 4 těchto podmínek; pro ukončení
@@ -75,16 +75,16 @@ export function ReklamacniPodminkyPage() {
           nejpozději do 30 dnů od jejího doručení; o výsledku Uživatele informujeme e-mailem.
         </p>
         <p>
-          3.3 Práva z vadného plnění: odstranění vady (oprava), přiměřená sleva z ceny, nebo —
-          při podstatném porušení Smlouvy — odstoupení od Smlouvy.
+          3.3 Práva z vadného plnění: odstranění vady (oprava), přiměřená sleva z ceny, nebo — při
+          podstatném porušení Smlouvy — odstoupení od Smlouvy.
         </p>
       </Section>
 
       <Section id="vraceni-penez" title="4. Vrácení peněz">
         <p>
           4.1 Je-li reklamace oprávněná a Uživateli vznikne nárok na slevu z ceny nebo vrácení
-          platby (např. při odstoupení od Smlouvy), vrátí Poskytovatel příslušnou částku do 14
-          dnů od vyřízení reklamace.
+          platby (např. při odstoupení od Smlouvy), vrátí Poskytovatel příslušnou částku do 14 dnů
+          od vyřízení reklamace.
         </p>
         <p>
           4.2 Peníze vracíme stejnou cestou, jakou byla platba provedena — zpravidla na platební
@@ -95,13 +95,13 @@ export function ReklamacniPodminkyPage() {
 
       <Section id="storno" title="5. Storno služby">
         <p>
-          5.1 Uživatel může Službu kdykoli a bez udání důvodu vypovědět zrušením účtu v
-          administraci (Nastavení → Předplatné). Výpověď je účinná ke konci aktuálního
-          zaplaceného zúčtovacího období; do té doby zůstává Služba plně dostupná.
+          5.1 Uživatel může Službu kdykoli a bez udání důvodu vypovědět zrušením účtu v administraci
+          (Nastavení → Předplatné). Výpověď je účinná ke konci aktuálního zaplaceného zúčtovacího
+          období; do té doby zůstává Služba plně dostupná.
         </p>
         <p>
-          5.2 Zrušení automatického obnovování předplatného (opakovaných plateb) je možné kdykoli
-          v administraci účtu nebo e-mailem na{" "}
+          5.2 Zrušení automatického obnovování předplatného (opakovaných plateb) je možné kdykoli v
+          administraci účtu nebo e-mailem na{" "}
           <a href={`mailto:${LEGAL_ENTITY.email}`} className="underline hover:text-text-primary">
             {LEGAL_ENTITY.email}
           </a>{" "}
@@ -112,8 +112,8 @@ export function ReklamacniPodminkyPage() {
           .
         </p>
         <p>
-          5.3 Zkušební období (30 dní zdarma) nevyžaduje platební kartu a není třeba je stornovat
-          — po jeho uplynutí nedojde k žádnému stržení platby.
+          5.3 Zkušební období (30 dní zdarma) nevyžaduje platební kartu a není třeba je stornovat —
+          po jeho uplynutí nedojde k žádnému stržení platby.
         </p>
       </Section>
 
@@ -157,10 +157,7 @@ export function ReklamacniPodminkyPage() {
             Všeobecnými obchodními podmínkami
           </Link>{" "}
           a{" "}
-          <Link
-            to="/dodaci-a-platebni-podminky"
-            className="underline hover:text-text-primary"
-          >
+          <Link to="/dodaci-a-platebni-podminky" className="underline hover:text-text-primary">
             Dodacími a platebními podmínkami
           </Link>
           . V případě rozporu mají přednost VOP.

@@ -25,6 +25,9 @@ interface PlanCardProps {
   title: string;
   bullets: readonly string[];
   cta: { label: string; href: string; isExternal?: boolean };
+  /** Optional quieter second action under the primary CTA (e.g. the
+   *  demo order flow ComGate's review requires to be reachable). */
+  secondaryCta?: { label: string; href: string };
   highlighted?: boolean;
   /** Rendered in the price slot. */
   price: React.ReactNode;
@@ -32,7 +35,16 @@ interface PlanCardProps {
   caption?: React.ReactNode;
 }
 
-function PlanCard({ eyebrow, title, bullets, cta, highlighted, price, caption }: PlanCardProps) {
+function PlanCard({
+  eyebrow,
+  title,
+  bullets,
+  cta,
+  secondaryCta,
+  highlighted,
+  price,
+  caption,
+}: PlanCardProps) {
   const ctaClass = highlighted
     ? "mt-8 inline-flex h-11 w-full items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
     : "mt-8 inline-flex h-11 w-full items-center justify-center rounded-md border border-border bg-surface-overlay px-5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-elevated";
@@ -78,6 +90,14 @@ function PlanCard({ eyebrow, title, bullets, cta, highlighted, price, caption }:
             {cta.label}
           </Link>
         )}
+        {secondaryCta ? (
+          <Link
+            to={secondaryCta.href}
+            className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-md border border-border bg-surface-overlay px-5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-elevated"
+          >
+            {secondaryCta.label}
+          </Link>
+        ) : null}
       </div>
     </article>
   );
@@ -144,6 +164,7 @@ export function CenikPage() {
               price={<PriceDisplay baseMinor={9900} interval="monthly" size="xl" hideVatLine />}
               bullets={MONTHLY_BULLETS}
               cta={{ label: "Vyzkoušet 30 dní zdarma", href: "/login" }}
+              secondaryCta={{ label: "Objednat", href: "/objednavka?plan=monthly" }}
             />
 
             <PlanCard
@@ -158,6 +179,7 @@ export function CenikPage() {
               }
               bullets={ANNUAL_BULLETS}
               cta={{ label: "Vyzkoušet 30 dní zdarma", href: "/login" }}
+              secondaryCta={{ label: "Objednat", href: "/objednavka?plan=annual" }}
             />
 
             <PlanCard

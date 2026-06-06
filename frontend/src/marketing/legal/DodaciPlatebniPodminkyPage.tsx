@@ -22,8 +22,7 @@ export function DodaciPlatebniPodminkyPage() {
           Tyto podmínky vydává{" "}
           <span className="font-medium text-text-primary">{LEGAL_ENTITY.fullName}</span>, IČO{" "}
           {LEGAL_ENTITY.ico}, se sídlem {LEGAL_ENTITY.address}. {LEGAL_ENTITY.registryClause}{" "}
-          Popisují, jak je služba SimpleCRM dodávána (zpřístupněna) a jakými způsoby ji lze
-          uhradit.
+          Popisují, jak je služba SimpleCRM dodávána (zpřístupněna) a jakými způsoby ji lze uhradit.
         </p>
       }
     >
@@ -34,21 +33,21 @@ export function DodaciPlatebniPodminkyPage() {
           dopravné ani balné.
         </p>
         <p>
-          1.2 <strong>Zkušební období:</strong> účet je aktivován okamžitě po dokončení
-          registrace, bez platební karty, na 30 dní zdarma.
+          1.2 <strong>Zkušební období:</strong> účet je aktivován okamžitě po dokončení registrace,
+          bez platební karty, na 30 dní zdarma.
         </p>
         <p>
-          1.3 <strong>Placený plán:</strong> Služba (resp. její prodloužení) je aktivována ihned
-          po potvrzení platby platební bránou — zpravidla do několika minut od zaplacení. O
-          aktivaci Uživatele informujeme e-mailem.
+          1.3 <strong>Placený plán:</strong> Služba (resp. její prodloužení) je aktivována ihned po
+          potvrzení platby platební bránou — zpravidla do několika minut od zaplacení. O aktivaci
+          Uživatele informujeme e-mailem.
         </p>
         <p>
-          1.4 Po každé přijaté platbě zašleme na kontaktní e-mail potvrzení spolu s daňovým
-          dokladem (fakturou).
+          1.4 Po každé přijaté platbě zašleme na kontaktní e-mail potvrzení spolu s daňovým dokladem
+          (fakturou).
         </p>
         <p>
-          1.5 Pokud by Služba nebyla zpřístupněna do 24 hodin od potvrzení platby, kontaktujte
-          nás na{" "}
+          1.5 Pokud by Služba nebyla zpřístupněna do 24 hodin od potvrzení platby, kontaktujte nás
+          na{" "}
           <a href={`mailto:${LEGAL_ENTITY.email}`} className="underline hover:text-text-primary">
             {LEGAL_ENTITY.email}
           </a>{" "}
@@ -84,9 +83,9 @@ export function DodaciPlatebniPodminkyPage() {
 
       <Section id="opakovane-platby" title="3. Opakované platby">
         <p>
-          Zvolí-li si Uživatel automatické obnovování předplatného, jsou platby pravidelně
-          strhávány z platební karty. Úplné podmínky opakovaných plateb — výše a frekvence
-          strhávané částky, potvrzení o platbě a způsob zrušení — popisuje stránka{" "}
+          Zvolí-li si Uživatel automatické obnovování předplatného, jsou platby pravidelně strhávány
+          z platební karty. Úplné podmínky opakovaných plateb — výše a frekvence strhávané částky,
+          potvrzení o platbě a způsob zrušení — popisuje stránka{" "}
           <Link to="/predplatne" className="underline hover:text-text-primary">
             Předplatné a platby
           </Link>{" "}
