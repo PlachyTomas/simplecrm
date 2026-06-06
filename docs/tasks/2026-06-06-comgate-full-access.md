@@ -136,5 +136,18 @@ Standalone page:
       (`COMGATE_MERCHANT_ID`, `COMGATE_SECRET`), otherwise `/objednavka` returns
       503 and the reviewer never sees the gateway.
 - [ ] Deploy frontend + backend with this change before replying to Comgate.
+- [ ] **Live smoke test before replying to Comgate** (the local env has no
+      Comgate creds, so the gateway redirect was never exercised end-to-end):
+      run one order through `/objednavka` on the deployed site and confirm
+      (a) the create call returns a gateway redirect (verifies Comgate accepts
+      the `url_paid`/`url_cancelled`/`url_pending` fields — names confirmed
+      against the official PHP SDK + v2.0 REST docs, but never sent to the
+      live API from this codebase), and (b) after paying with a test card the
+      `/objednavka/navrat` page shows the "úspěšně" state (verifies Comgate
+      appends `refId`/`transId` with `&`, not a second `?`).
 - [ ] Reply to Comgate with URLs: `https://<web>/objednavka` (demo objednávka),
       `/reklamacni-podminky`, `/dodaci-a-platebni-podminky`.
+
+> Note: the demo-order rate limit keys on `request.client.host`. Behind a
+> reverse proxy that's the proxy IP → effectively a global 10 req / 10 min
+> limit unless X-Forwarded-For is honored. Fine for a human reviewer.
