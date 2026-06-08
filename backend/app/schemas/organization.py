@@ -27,6 +27,7 @@ class OrganizationUpdate(BaseModel):
     # Pass an empty string to clear an override and fall back to `name`.
     billing_name: str | None = Field(default=None, max_length=200)
     billing_email: str | None = Field(default=None, max_length=320)
+    billing_kind: Literal["business", "individual"] | None = None
     show_leaderboard_to_salespeople: bool | None = None
     # Auto-release window for companies. Bounded to 1..3650 (one day to ten
     # years) — anything wider than ten years would render the auto-release
@@ -47,6 +48,7 @@ class OrganizationOut(BaseModel):
     legal_form: str | None = None
     billing_name: str | None = None
     billing_email: str | None = None
+    billing_kind: Literal["business", "individual"] | None = None
     locale: str
     currency: str
     trial_ends_at: datetime
