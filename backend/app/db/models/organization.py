@@ -56,6 +56,10 @@ class Organization(Base):
     # null, the invoice generator falls back to `name`.
     billing_name: Mapped[str | None] = mapped_column(String(200))
     billing_email: Mapped[str | None] = mapped_column(String(320))
+    # "business" (firma — has IČO) or "individual" (soukromá osoba — no IČO).
+    # Nullable for orgs created before billing was collected at payment time;
+    # the UI falls back to inferring from IČO presence when null.
+    billing_kind: Mapped[str | None] = mapped_column(String(16))
     stripe_customer_id: Mapped[str | None] = mapped_column(String(64))
 
     trial_ends_at: Mapped[datetime] = mapped_column(
