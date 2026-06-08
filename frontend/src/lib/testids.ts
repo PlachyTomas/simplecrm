@@ -65,8 +65,6 @@ export const testIds = {
     wizard: {
       nameInput: "onboarding-name-input",
       seatCountInput: "onboarding-seat-count-input",
-      icoInput: "onboarding-ico-input",
-      aresPreview: "onboarding-ares-preview",
       next: "onboarding-next",
       back: "onboarding-back",
       submit: "onboarding-submit",

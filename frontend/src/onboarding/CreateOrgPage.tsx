@@ -4,15 +4,12 @@ import {
   ArrowRight,
   Building2,
   Check,
-  Receipt,
-  RefreshCcw,
   Sparkles,
   Users,
 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { useLookupRegistry } from "@/app/companies/useLookupRegistry";
 import { UnverifiedEmailBanner } from "@/auth/UnverifiedEmailBanner";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
@@ -23,7 +20,6 @@ import { ApiError, apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { testIds } from "@/lib/testids";
 import { ThemeToggle } from "@/lib/ThemeToggle";
-import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 import type { components } from "@/types/api.generated";
@@ -31,7 +27,7 @@ import type { components } from "@/types/api.generated";
 type CurrentUser = components["schemas"]["CurrentUser"];
 type PlanCode = "monthly" | "annual";
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3;
 
 // `apiFetch` accepts `Record<string, unknown>` for JSON bodies; the index
 // signature is required so a typed interface assigns cleanly.
@@ -42,14 +38,11 @@ type SubmitBody = {
 } & Record<string, unknown>;
 
 /**
- * 4-step wizard for the freshly-signed-up user (post-Google OAuth) who
+ * 3-step wizard for the freshly-signed-up user (post-Google OAuth) who
  * hasn't picked an organization yet:
  *   1. Org name
  *   2. Number of salesmen (seat_count)
- *   3. Fakturační údaje — optional IČO with one-click ARES fill. Empty
- *      IČO is accepted; an admin-only banner then nudges the user to
- *      fill it in Settings before the 30-day trial ends.
- *   4. 30-day trial info + monthly/yearly plan picker (with per-user and
+ *   3. 30-day trial info + monthly/yearly plan picker (with per-user and
  *      overall totals)
  *
  * Submitting promotes the user to admin, creates the default team
@@ -66,7 +59,6 @@ export function CreateOrgPage() {
   const [step, setStep] = useState<Step>(1);
   const [name, setName] = useState("");
   const [seatCount, setSeatCount] = useState<number>(1);
-  const [ico, setIco] = useState("");
   const [planCode, setPlanCode] = useState<PlanCode>("monthly");
   const [error, setError] = useState<string | null>(null);
 
@@ -105,16 +97,6 @@ export function CreateOrgPage() {
       setStep(3);
       return;
     }
-    if (step === 3) {
-      // IČO is optional. If filled, it must be exactly 8 digits — the
-      // input strips non-digits, so this only triggers for partial entries.
-      if (ico && !/^\d{8}$/.test(ico)) {
-        setError("IČO musí mít 8 číslic. Nebo pole nechte prázdné a doplníte později.");
-        return;
-      }
-      setStep(4);
-      return;
-    }
   }
 
   function goBack() {
@@ -125,7 +107,7 @@ export function CreateOrgPage() {
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (step !== 4) {
+    if (step !== 3) {
       goNext();
       return;
     }
@@ -134,9 +116,6 @@ export function CreateOrgPage() {
         name: name.trim(),
         seat_count: seatCount,
         intended_plan_code: planCode,
-        // Only send IČO when it's a complete 8-digit value; sending an
-        // empty string would make Pydantic's pattern validator unhappy.
-        ...(ico && /^\d{8}$/.test(ico) ? { ico } : {}),
       },
       {
         onError: (err) => {
@@ -188,8 +167,6 @@ export function CreateOrgPage() {
               <NameStep name={name} setName={setName} />
             ) : step === 2 ? (
               <SeatsStep seatCount={seatCount} setSeatCount={setSeatCount} planCode={planCode} />
-            ) : step === 3 ? (
-              <BillingStep ico={ico} setIco={setIco} />
             ) : (
               <PlanStep seatCount={seatCount} planCode={planCode} setPlanCode={setPlanCode} />
             )}
@@ -211,14 +188,14 @@ export function CreateOrgPage() {
                 <ArrowLeft size={16} strokeWidth={1.75} />
                 Zpět
               </button>
-              {step < 4 ? (
+              {step < 3 ? (
                 <button
                   type="button"
                   onClick={goNext}
                   data-testid={testIds.onboarding.wizard.next}
                   className="inline-flex h-10 items-center gap-1.5 rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
                 >
-                  {step === 3 && !ico ? "Přeskočit" : "Pokračovat"}
+                  Pokračovat
                   <ArrowRight size={16} strokeWidth={1.75} />
                 </button>
               ) : (
@@ -248,11 +225,10 @@ export function CreateOrgPage() {
 const STEP_LABELS: Record<Step, string> = {
   1: "Organizace",
   2: "Uživatelé",
-  3: "Fakturace",
-  4: "Plán",
+  3: "Plán",
 };
 
-const STEP_NUMBERS: Step[] = [1, 2, 3, 4];
+const STEP_NUMBERS: Step[] = [1, 2, 3];
 
 function StepDots({ step }: { step: Step }) {
   return (
@@ -411,137 +387,6 @@ function SeatsStep({
           </p>
         </div>
       ) : null}
-    </div>
-  );
-}
-
-function BillingStep({ ico, setIco }: { ico: string; setIco: (v: string) => void }) {
-  // Mirror AddCompanyModal's lookup UX: only fire on exactly 8 digits,
-  // debounced 250ms. Skipping the lookup until the field is empty so
-  // typing "270" doesn't burn a request per keystroke.
-  const debouncedIco = useDebouncedValue(ico, 250);
-  const icoQuery = /^\d{8}$/.test(debouncedIco) ? debouncedIco : "";
-  const lookup = useLookupRegistry({
-    country: "CZ",
-    number: icoQuery,
-    enabled: !!icoQuery,
-    scope: "onboarding",
-  });
-
-  const lookupState: "empty" | "typing" | "loading" | "success" | "not_found" | "error" = !ico
-    ? "empty"
-    : !icoQuery
-      ? "typing"
-      : lookup.isPending
-        ? "loading"
-        : lookup.isError
-          ? lookup.error instanceof ApiError && lookup.error.status === 404
-            ? "not_found"
-            : "error"
-          : "success";
-  const resolved = lookupState === "success" ? lookup.data : null;
-
-  return (
-    <div>
-      <p className="text-center text-sm text-text-secondary">
-        Fakturační údaje jsou <span className="font-medium text-text-primary">volitelné</span>.
-        Stačí zadat IČO a zbytek doplníme z ARES.
-      </p>
-      <label className="mt-5 block">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-text-secondary">IČO</span>
-          {lookupState === "typing" || lookupState === "loading" ? (
-            <span className="font-mono text-xs tabular-nums text-text-tertiary">
-              {ico.replace(/\D/g, "").length} / 8
-            </span>
-          ) : null}
-        </div>
-        <div className="relative mt-2">
-          <Receipt
-            aria-hidden
-            size={18}
-            strokeWidth={1.75}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
-          />
-          <input
-            type="text"
-            inputMode="numeric"
-            autoComplete="off"
-            autoFocus
-            data-testid={testIds.onboarding.wizard.icoInput}
-            value={ico}
-            onChange={(e) => setIco(e.target.value.replace(/\D/g, "").slice(0, 8))}
-            placeholder="27082440"
-            className="block h-10 w-40 rounded-md border border-border bg-surface-overlay pl-10 pr-3 font-mono text-sm tabular-nums text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
-          />
-        </div>
-        {lookupState === "empty" ? (
-          <p className="mt-2 text-xs text-text-tertiary">
-            Zadejte 8 číslic — automaticky vyhledáme název a adresu firmy.
-          </p>
-        ) : null}
-        {lookupState === "typing" ? (
-          <p className="mt-2 text-xs text-text-tertiary">
-            Pokračujte ve psaní — po 8 číslicích spustíme vyhledávání.
-          </p>
-        ) : null}
-        {lookupState === "loading" ? (
-          <p className="mt-2 text-xs text-text-tertiary" role="status">
-            Hledám v ARES…
-          </p>
-        ) : null}
-        {lookupState === "not_found" ? (
-          <p className="mt-2 text-xs text-warning" role="alert">
-            IČO {ico} nebylo v ARES nalezeno. Můžete jej i tak uložit a údaje doplnit ručně později.
-          </p>
-        ) : null}
-        {lookupState === "error" ? (
-          <div className="mt-2 flex items-center gap-2">
-            <p className="text-xs text-danger" role="alert">
-              ARES je momentálně nedostupný. Zkuste to znovu nebo IČO doplňte později.
-            </p>
-            <button
-              type="button"
-              onClick={() => void lookup.refetch()}
-              className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:text-accent-hover"
-            >
-              <RefreshCcw size={12} strokeWidth={1.75} /> Zkusit znovu
-            </button>
-          </div>
-        ) : null}
-      </label>
-
-      {resolved ? (
-        <div
-          data-testid={testIds.onboarding.wizard.aresPreview}
-          className="mt-5 rounded-md border border-success/40 bg-success-subtle p-4 text-sm"
-        >
-          <p className="text-xs font-medium uppercase tracking-wider text-success">
-            Údaje doplněny z ARES
-          </p>
-          <p className="mt-2 font-medium text-text-primary">{resolved.name}</p>
-          {resolved.address_street || resolved.address_city ? (
-            <p className="text-text-secondary">
-              {[
-                resolved.address_street,
-                [resolved.address_zip, resolved.address_city].filter(Boolean).join(" "),
-              ]
-                .filter(Boolean)
-                .join(", ")}
-            </p>
-          ) : null}
-          {resolved.dic ? (
-            <p className="text-text-tertiary">
-              DIČ <span className="font-mono">{resolved.dic}</span>
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      <p className="mt-5 rounded-md bg-info-subtle px-3 py-2 text-xs text-text-secondary">
-        Fakturační údaje můžete vyplnit i později v <strong>Nastavení → Fakturace</strong>. Pokud
-        zůstanou nevyplněné do konce 30denní zkušebky, nebudeme moci vystavit platnou fakturu.
-      </p>
     </div>
   );
 }
