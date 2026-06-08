@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Download, Pencil, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -21,6 +21,14 @@ import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { formatCzkMinor } from "@/components/billing/format";
+import { OrgBillingFields } from "@/components/billing/OrgBillingFields";
+import {
+  billingFormFromOrg,
+  billingFormToPayload,
+  emptyBillingForm,
+  isBillingFormValid,
+  type BillingFormState,
+} from "@/components/billing/orgBillingForm";
 import { PriceDisplay } from "@/components/billing/PriceDisplay";
 import { RecurringPaymentConsent } from "@/components/billing/RecurringPaymentConsent";
 import { useBillingSummary } from "@/components/billing/useBillingSummary";
@@ -1445,11 +1453,27 @@ interface ChoosePlanModalProps {
 }
 
 function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
+  const { accessToken } = useAuth();
   const plans = usePublicPlans();
   const summary = useBillingSummary();
   const [selected, setSelected] = useState<PlanCode | null>(preselect);
   const [recurringConsent, setRecurringConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // Backend requires complete billing details before initial-payment-init
+  // (422 billing_details_required otherwise). Fetch the org to prefill the
+  // form (and seed `savedIco` so hydrating a saved IČO doesn't re-trigger
+  // ARES), then keep local form state in sync.
+  const orgQuery = useQuery<OrganizationOut>({
+    queryKey: ["organizations", "current"],
+    enabled: !!accessToken,
+    queryFn: () => apiFetch("/api/v1/organizations/current", { token: accessToken }),
+  });
+  const [billing, setBilling] = useState<BillingFormState>(emptyBillingForm);
+  useEffect(() => {
+    if (orgQuery.data) setBilling(billingFormFromOrg(orgQuery.data));
+  }, [orgQuery.data]);
 
   const monthlyPlan = plans.data?.find((p) => p.code === "monthly");
   const annualPlan = plans.data?.find((p) => p.code === "annual");
@@ -1459,10 +1483,11 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
   // The legacy choose-plan endpoint still exists as a deprecated
   // fallback but is no longer wired here.
   const initPayment = useInitialPaymentInit();
+  const submitting = initPayment.isPending || saving;
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!selected || initPayment.isPending) return;
+    if (!selected || submitting || !accessToken) return;
     // Visa/Mastercard + Comgate Card-on-File rule — the customer must
     // explicitly accept the recurring-charge terms at the same click that
     // initiates the first charge. Static T&Cs page is not enough; this
@@ -1471,7 +1496,26 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
       setError("Pro pokračování je nutné potvrdit souhlas s opakovanými platbami.");
       return;
     }
+    if (!isBillingFormValid(billing)) {
+      setError("Vyplňte prosím fakturační údaje.");
+      return;
+    }
     setError(null);
+    // Persist billing first — the backend rejects initial-payment-init with
+    // 422 billing_details_required until the org row carries complete details.
+    setSaving(true);
+    try {
+      await apiFetch("/api/v1/organizations/current", {
+        method: "PUT",
+        token: accessToken,
+        body: billingFormToPayload(billing),
+      });
+    } catch {
+      setSaving(false);
+      setError("Uložení fakturačních údajů se nezdařilo. Zkuste to prosím znovu.");
+      return;
+    }
+    setSaving(false);
     initPayment.mutate(
       { plan_code: selected },
       {
@@ -1484,7 +1528,6 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
       },
     );
   }
-  const submitting = initPayment.isPending;
 
   return (
     <div
@@ -1494,7 +1537,7 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 py-8 backdrop-blur-md"
     >
       <form
-        onSubmit={handleSubmit}
+        onSubmit={(e) => void handleSubmit(e)}
         className="w-full max-w-2xl rounded-xl border border-border bg-surface p-6 shadow-lg sm:p-8"
       >
         <h2 id="choose-plan-title" className="text-xl font-semibold text-text-primary">
@@ -1557,6 +1600,21 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
           />
         </div>
 
+        <div className="mt-6">
+          <h3 className="text-sm font-semibold text-text-primary">Fakturační údaje</h3>
+          <p className="mt-1 text-xs text-text-secondary">
+            Tyto údaje použijeme na daňový doklad. Vyplnění je povinné pro pokračování k platbě.
+          </p>
+          <div className="mt-4">
+            <OrgBillingFields
+              value={billing}
+              onChange={setBilling}
+              orgName={orgQuery.data?.name ?? ""}
+              savedIco={orgQuery.data?.ico ?? ""}
+            />
+          </div>
+        </div>
+
         {error ? (
           <p
             role="alert"
@@ -1577,7 +1635,7 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
           </button>
           <button
             type="submit"
-            disabled={!selected || submitting || !recurringConsent}
+            disabled={!selected || submitting || !recurringConsent || !isBillingFormValid(billing)}
             className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? "Přesměrování…" : "Pokračovat na platbu"}

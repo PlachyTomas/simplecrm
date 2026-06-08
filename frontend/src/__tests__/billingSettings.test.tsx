@@ -78,6 +78,42 @@ const BILLING_SETTINGS = {
   contact_email: "podpora@simplecrm.cz",
 };
 
+// Org with complete, valid billing (8-digit IČO + full address) so the
+// ChoosePlanModal billing gate opens once the GET hydrates the form.
+const ORG_VALID_BILLING = {
+  id: ORG_ID,
+  name: "Example s.r.o.",
+  ico: "27082440",
+  dic: "CZ27082440",
+  address_street: "Pražská 1",
+  address_city: "Praha",
+  address_zip: "11000",
+  legal_form: "s.r.o.",
+  billing_name: "Example s.r.o.",
+  billing_email: "faktury@example.cz",
+  billing_kind: "business",
+  locale: "cs-CZ",
+  currency: "CZK",
+  trial_ends_at: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
+  stripe_customer_id: null,
+  show_leaderboard_to_salespeople: false,
+  ownership_window_days: 30,
+};
+
+// Same org but with no address / IČO — isBillingFormValid is false, so the
+// modal keeps the submit button disabled.
+const ORG_INVALID_BILLING = {
+  ...ORG_VALID_BILLING,
+  ico: null,
+  dic: null,
+  address_street: null,
+  address_city: null,
+  address_zip: null,
+  billing_name: null,
+  billing_email: null,
+  billing_kind: null,
+};
+
 const PIPELINE = {
   stages: [
     { id: "s1", name: "Lead", position: 1, type: "open", color: "#000" },
@@ -136,11 +172,13 @@ function buildSubscription(opts: VariantOpts) {
 
 interface SetupOpts extends VariantOpts {
   choosePlanFails?: boolean;
+  invalidBilling?: boolean;
 }
 
 function setupFetch(opts: SetupOpts) {
   const userCount = opts.userCount ?? 8;
   const sub = buildSubscription(opts);
+  const org = opts.invalidBilling ? ORG_INVALID_BILLING : ORG_VALID_BILLING;
   const summary = {
     organization_id: ORG_ID,
     user_count: userCount,
@@ -155,6 +193,10 @@ function setupFetch(opts: SetupOpts) {
     vat_rate_percent: "21.00",
   };
   const calls: Array<{ url: string; body: unknown }> = [];
+  const billingPutCalls: Array<{ url: string; body: unknown }> = [];
+  // Shared, ordered timeline so a test can assert the billing PUT save
+  // happens before the payment-init POST.
+  const timeline: string[] = [];
   const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (input, init) => {
     const url = typeof input === "string" ? input : (input as Request).url;
     if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
@@ -170,11 +212,26 @@ function setupFetch(opts: SetupOpts) {
     if (url.includes("/api/v1/organizations/current/invoices")) {
       return jsonResponse({ items: [], total: 0 });
     }
+    if (url.endsWith("/api/v1/organizations/current")) {
+      // GET prefills the modal's billing form; PUT persists billing before
+      // payment-init. The bare suffix can't shadow the longer-suffixed
+      // /subscription, /billing-summary, /invoices handlers above.
+      if (init?.method === "PUT") {
+        billingPutCalls.push({
+          url,
+          body: init.body ? JSON.parse(init.body as string) : null,
+        });
+        timeline.push("billing-put");
+        return jsonResponse({ ...org, ...JSON.parse((init.body as string) ?? "{}") });
+      }
+      return jsonResponse(org);
+    }
     if (url.endsWith("/api/v1/payments/initial-payment-init")) {
       calls.push({
         url,
         body: init?.body ? JSON.parse(init.body as string) : null,
       });
+      timeline.push("payment-init");
       if (opts.choosePlanFails) return new Response("err", { status: 500 });
       return jsonResponse({
         redirect_url: "https://payments.comgate.cz/client/instructions/index?id=TEST",
@@ -186,7 +243,7 @@ function setupFetch(opts: SetupOpts) {
     return new Response("not found", { status: 404 });
   });
   vi.stubGlobal("fetch", fetchMock);
-  return { fetchMock, calls };
+  return { fetchMock, calls, billingPutCalls, timeline };
 }
 
 function renderBillingTab() {
@@ -302,7 +359,11 @@ describe("Billing settings page", () => {
     // The "Přejít na roční" link is part of the Účtování card, which only
     // renders for active/past_due orgs. Active monthly is the natural case
     // — past_due triggers the same flow.
-    const { calls } = setupFetch({ status: "past_due", planCode: "monthly", userCount: 8 });
+    const { calls, billingPutCalls, timeline } = setupFetch({
+      status: "past_due",
+      planCode: "monthly",
+      userCount: 8,
+    });
     renderBillingTab();
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /^Přejít na roční$/i })).toBeInTheDocument(),
@@ -316,8 +377,15 @@ describe("Billing settings page", () => {
     expect(annualCard).toHaveAttribute("aria-checked", "true");
     // Card-on-File consent is required by Visa/MC + Comgate; tick before submit.
     fireEvent.click(screen.getByRole("checkbox", { name: /Souhlasím s opakovanými platbami/i }));
-    fireEvent.click(screen.getByRole("button", { name: /^Pokračovat na platbu$/i }));
+    // Billing hydrates async from the org GET (valid by default); wait for the
+    // gate to open before submitting.
+    const cta = await screen.findByRole("button", { name: /^Pokračovat na platbu$/i });
+    await waitFor(() => expect(cta).toBeEnabled());
+    fireEvent.click(cta);
     await waitFor(() => expect(calls).toHaveLength(1));
+    // Billing is persisted first, then payment-init fires.
+    expect(billingPutCalls).toHaveLength(1);
+    expect(timeline).toEqual(["billing-put", "payment-init"]);
     expect(calls[0]?.body).toEqual({ plan_code: "annual" });
   });
 
@@ -363,5 +431,68 @@ describe("Billing settings page", () => {
     expect(monthly).toHaveAttribute("aria-checked", "false");
     expect(annual).toHaveAttribute("aria-checked", "false");
     expect(screen.getByRole("button", { name: /^Pokračovat na platbu$/i })).toBeDisabled();
+  });
+
+  it("ChoosePlanModal keeps submit disabled when the org has incomplete billing", async () => {
+    setupFetch({ status: "past_due", planCode: "monthly", invalidBilling: true });
+    renderBillingTab();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^Změnit plán$/i })).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Změnit plán$/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("dialog", { name: /Vyberte plán/i })).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole("radio", { name: /Měsíční/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Souhlasím s opakovanými platbami/i }));
+    // Plan + consent are satisfied, but the org billing is invalid (no
+    // address), so the gate keeps the CTA disabled. Wait past the tick the
+    // org GET / hydration resolves on.
+    await waitFor(() => expect(screen.getByTestId("billing-address-street")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: /^Pokračovat na platbu$/i })).toBeDisabled();
+  });
+
+  it("ChoosePlanModal with complete billing PUTs billing before payment-init", async () => {
+    const { calls, billingPutCalls, timeline } = setupFetch({
+      status: "past_due",
+      planCode: "monthly",
+      userCount: 8,
+    });
+    const assign = vi.fn();
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      writable: true,
+      value: { ...originalLocation, assign },
+    });
+    try {
+      renderBillingTab();
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: /^Změnit plán$/i })).toBeInTheDocument(),
+      );
+      fireEvent.click(screen.getByRole("button", { name: /^Změnit plán$/i }));
+      await waitFor(() =>
+        expect(screen.getByRole("dialog", { name: /Vyberte plán/i })).toBeInTheDocument(),
+      );
+      fireEvent.click(screen.getByRole("radio", { name: /Měsíční/i }));
+      fireEvent.click(screen.getByRole("checkbox", { name: /Souhlasím s opakovanými platbami/i }));
+      const cta = await screen.findByRole("button", { name: /^Pokračovat na platbu$/i });
+      await waitFor(() => expect(cta).toBeEnabled());
+      fireEvent.click(cta);
+      // Billing is persisted, then payment-init fires — in that order.
+      await waitFor(() => expect(calls).toHaveLength(1));
+      expect(billingPutCalls).toHaveLength(1);
+      expect(billingPutCalls[0]?.body).toMatchObject({
+        billing_kind: "business",
+        ico: "27082440",
+        address_street: "Pražská 1",
+      });
+      expect(timeline).toEqual(["billing-put", "payment-init"]);
+      expect(calls[0]?.body).toEqual({ plan_code: "monthly" });
+    } finally {
+      Object.defineProperty(window, "location", {
+        writable: true,
+        value: originalLocation,
+      });
+    }
   });
 });
