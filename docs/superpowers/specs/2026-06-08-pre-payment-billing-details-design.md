@@ -25,10 +25,12 @@ fields being present.
 
 ## Decisions (from brainstorming)
 
-- **Type is inferred from IČO presence — no `billing_kind` column, no migration.**
-  IČO present ⇒ Firma; no IČO (but name + address) ⇒ soukromá osoba. The toggle is
-  client-side UI state only. Selecting "soukromá osoba" **clears** IČO/DIČ/legal_form
-  on save so the inference stays consistent.
+- **Type is stored explicitly in a new `billing_kind` column** (`"business" |
+  "individual"`, nullable for legacy/unset orgs) + a migration. The Firma/osoba
+  toggle persists this value. When the column is null (orgs created before this
+  change), the UI falls back to inferring the toggle from IČO presence. Selecting
+  "soukromá osoba" still **clears** IČO/DIČ/legal_form on save (individuals have no
+  IČO — keeps the invoice and data clean).
 - **Required fields:**
   - Firma: `ico` (8 digits, ARES-assisted) + full address (`address_street`,
     `address_city`, `address_zip`). `dic` optional.
@@ -39,30 +41,34 @@ fields being present.
 
 ## Non-goals
 
-- No new `billing_kind` storage. No changes to seat-upgrade/renewal charges (they
-  reuse the saved card and already-saved details). No change to the public
-  `/objednavka` demo flow. No redesign of the Comgate integration.
+- No changes to seat-upgrade/renewal charges (they reuse the saved card and
+  already-saved details). No change to the public `/objednavka` demo flow. No
+  redesign of the Comgate integration.
 
 ## Architecture
 
 ### Backend
 
-1. **`billing_complete(org) -> bool`** helper (new, in `services/billing.py` or a
+1. **`Organization.billing_kind` column** (new): `Mapped[str | None]`,
+   `String(16)`, nullable, values `"business" | "individual"`. Alembic migration
+   adds it (no backfill — legacy rows stay null). Add `billing_kind` to
+   `OrganizationOut` and `OrganizationUpdate` schemas as a
+   `Literal["business", "individual"] | None`.
+2. **`billing_complete(org) -> bool`** helper (new, in `services/billing.py` or a
    small `services/org_billing.py`):
-   - `True` iff `address_street`, `address_city`, `address_zip` are all non-empty
-     **and** (`ico` matches `^\d{8}$` **or** `billing_name` is non-empty).
-   - This is type-agnostic (works without a stored toggle): a Firma satisfies it
-     via IČO, a soukromá osoba via `billing_name`.
-2. **`POST /payments/initial-payment-init` guard:** before creating the Charge,
+   - `address_street`, `address_city`, `address_zip` all non-empty, **and**
+   - if `billing_kind == "individual"`: `billing_name` non-empty;
+   - else (business or null): `ico` matches `^\d{8}$`.
+   - (Null `billing_kind` is treated as business — the common case — so the IČO
+     rule applies.)
+3. **`POST /payments/initial-payment-init` guard:** before creating the Charge,
    load the org and `raise HTTPException(422, code="billing_details_required")` if
    `not billing_complete(org)`. Backstops the mandatory UI so the rule can't be
    bypassed via direct API calls.
-3. **Saving reuses `PUT /organizations/current`** (`OrganizationUpdate`) — already
-   accepts `ico`, `dic`, `billing_name`, `legal_form`, `address_*`, `billing_email`.
-   No schema change required. (Selecting soukromá osoba sends `ico/dic/legal_form =
-   null`.)
-4. No migration. No model change. No `OrganizationOut`/`OrganizationUpdate` field
-   additions.
+4. **Saving reuses `PUT /organizations/current`** (`OrganizationUpdate`) — already
+   accepts `ico`, `dic`, `billing_name`, `legal_form`, `address_*`, `billing_email`;
+   now also `billing_kind`. (Selecting soukromá osoba sends `billing_kind =
+   "individual"` and `ico/dic/legal_form = null`.)
 
 ### Frontend
 
@@ -73,8 +79,8 @@ fields being present.
      název, adresa.
    - Soukromá osoba: jméno (`billing_name`), adresa. No IČO/DIČ.
    - Controlled form value + an exposed `isValid` derived from the required-field
-     rules above. Initial toggle inferred from the passed-in org
-     (IČO present ⇒ Firma; else if name+address ⇒ osoba; else default Firma).
+     rules above. Initial toggle from the org's stored `billing_kind`; when null
+     (legacy), fall back to inferring (IČO present ⇒ Firma; else default Firma).
    - **Consumed in three places** so the form is byte-identical everywhere:
      a. the pre-payment step (TrialExpiredGate),
      b. the pre-payment step (ChoosePlanModal),
@@ -108,7 +114,7 @@ longer occurs for paid charges.
 ```
 User: select plan → confirm recurring consent → pick Firma/osoba → fill fields
   → continue button enabled (consent && billing valid)
-  → PUT /organizations/current        (save billing; osoba clears ico/dic/legal_form)
+  → PUT /organizations/current        (save billing + billing_kind; osoba clears ico/dic/legal_form)
   → POST /payments/initial-payment-init
        backend: billing_complete(org)? no → 422; yes → create Charge + Comgate create
   → window.location.assign(redirect_url)  → Comgate hosted gate
@@ -130,8 +136,11 @@ User: select plan → confirm recurring consent → pick Firma/osoba → fill fi
 ## Testing
 
 **Backend**
-- `billing_complete`: unit tests — business-complete, individual-complete, missing
-  address, missing both IČO and name → incomplete.
+- `billing_complete`: unit tests — business-complete (IČO+address), individual-
+  complete (name+address, no IČO), missing address, business missing IČO,
+  individual missing name → incomplete; null `billing_kind` treated as business.
+- `billing_kind` round-trips through `PUT /organizations/current` and appears in
+  `OrganizationOut`.
 - `initial-payment-init`: 422 when org billing incomplete; happy path when complete.
 
 **Frontend**
@@ -147,7 +156,8 @@ pytest; pnpm lint/typecheck/format:check/test/build.
 
 ## Rollout / sequencing
 
-1. Backend: `billing_complete` + init-payment guard (+ tests).
+1. Backend: `billing_kind` column + migration + schema fields; `billing_complete`
+   + init-payment guard (+ tests).
 2. Frontend: `OrgBillingFields` shared component (+ tests).
 3. Integrate into TrialExpiredGate and ChoosePlanModal.
 4. Refactor `InvoiceDetailsCard` to use `OrgBillingFields`.
