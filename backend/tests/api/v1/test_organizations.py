@@ -296,3 +296,38 @@ async def test_admin_access_log_rejects_non_admin(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# billing_kind round-trip
+# ---------------------------------------------------------------------------
+
+
+async def test_billing_kind_round_trips_through_put(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """PUT billing_kind='individual' persists and is returned by GET."""
+    user = await _seed_user(db_session, owned_emails)
+    token = create_access_token(user.id, user.organization_id, user.role)
+
+    put_resp = await client.put(
+        "/api/v1/organizations/current",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "billing_kind": "individual",
+            "billing_name": "Jan Novák",
+            "address_street": "Lidická 1",
+            "address_city": "Brno",
+            "address_zip": "60200",
+        },
+    )
+    assert put_resp.status_code == 200
+    assert put_resp.json()["billing_kind"] == "individual"
+
+    get_resp = await client.get(
+        "/api/v1/organizations/current",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert get_resp.status_code == 200
+    assert get_resp.json()["billing_kind"] == "individual"
+    assert get_resp.json()["billing_name"] == "Jan Novák"
