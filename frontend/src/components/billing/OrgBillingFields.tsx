@@ -34,26 +34,34 @@ function describeLookupError(error: unknown, ico: string): string {
  * "Firma" (business) collects IČO / DIČ / legal form; "Soukromá osoba"
  * (individual) drops those and keeps only a name + address. Both modes
  * share the address block and billing e-mail.
+ *
+ * Pass `savedIco` = the org's stored IČO so hydration doesn't re-trigger
+ * ARES; only user-typed changes (IČO that differs from `savedIco`) do.
  */
 export function OrgBillingFields({
   value,
   onChange,
   orgName,
+  savedIco = "",
 }: {
   value: BillingFormState;
   onChange: (next: BillingFormState) => void;
   orgName: string;
+  savedIco?: string;
 }) {
-  // The IČO whose ARES result already populated the form. Seeded from the
-  // initial value so a saved 8-digit IČO doesn't auto-fire ARES on mount
-  // and clobber the user's stored edits. Read in the effect's condition so
-  // the loop can't re-fire even if `onChange`/`value` identity churns.
-  const lastFilledIcoRef = useRef<string>(value.ico);
+  // The IČO whose ARES result already populated the form. Seeded from
+  // `savedIco` so a hydrated server IČO is treated as "already filled"
+  // and does not auto-fire ARES on mount, preventing clobber of any
+  // custom invoice name. Read in the effect's condition so the loop
+  // can't re-fire even if `onChange`/`value` identity churns.
+  const lastFilledIcoRef = useRef<string>(savedIco ?? "");
 
   const debouncedIco = useDebouncedValue(value.ico, 250);
   const icoQuery = /^\d{8}$/.test(debouncedIco) ? debouncedIco : "";
-  // Only fire for a *new* 8-digit IČO the user just typed.
-  const icoChanged = !!icoQuery && icoQuery !== lastFilledIcoRef.current;
+  // Only fire for a *new* 8-digit IČO the user just typed — one that
+  // differs from both the server's saved value and the last ARES-filled
+  // value. This mirrors the guard in InvoiceDetailsCard.
+  const icoChanged = !!icoQuery && icoQuery !== (savedIco ?? "") && icoQuery !== lastFilledIcoRef.current;
 
   const lookup = useLookupRegistry({
     country: "CZ",
