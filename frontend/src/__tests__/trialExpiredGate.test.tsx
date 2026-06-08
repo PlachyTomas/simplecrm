@@ -102,15 +102,53 @@ const ENTERPRISE_EXPIRED_SUB = {
   },
 };
 
+// Org with complete, valid billing (8-digit IČO + full address) so the
+// default render satisfies isBillingFormValid and the billing gate is open.
+const ORG_VALID_BILLING = {
+  id: ORG_ID,
+  name: "Example s.r.o.",
+  ico: "27082440",
+  dic: "CZ27082440",
+  address_street: "Pražská 1",
+  address_city: "Praha",
+  address_zip: "11000",
+  legal_form: "s.r.o.",
+  billing_name: "Example s.r.o.",
+  billing_email: "faktury@example.cz",
+  billing_kind: "business",
+  locale: "cs-CZ",
+  currency: "CZK",
+  trial_ends_at: new Date(Date.now() - 86400 * 1000).toISOString(),
+  stripe_customer_id: null,
+  show_leaderboard_to_salespeople: false,
+  ownership_window_days: 30,
+};
+
+// Same org but with no address — isBillingFormValid is false, so the
+// billing gate keeps the CTA disabled.
+const ORG_INVALID_BILLING = {
+  ...ORG_VALID_BILLING,
+  ico: null,
+  dic: null,
+  address_street: null,
+  address_city: null,
+  address_zip: null,
+  billing_name: null,
+  billing_email: null,
+  billing_kind: null,
+};
+
 interface MockOpts {
   userCount?: number;
   enterprise?: boolean;
   choosePlanFails?: boolean;
+  invalidBilling?: boolean;
 }
 
 function setupFetch(opts: MockOpts = {}) {
   const userCount = opts.userCount ?? 8;
   const sub = opts.enterprise ? ENTERPRISE_EXPIRED_SUB : TRIALING_SUB;
+  const org = opts.invalidBilling ? ORG_INVALID_BILLING : ORG_VALID_BILLING;
   const summary = {
     organization_id: ORG_ID,
     user_count: userCount,
@@ -125,6 +163,10 @@ function setupFetch(opts: MockOpts = {}) {
     vat_rate_percent: "21.00",
   };
   const choosePlanCalls: Array<{ url: string; body: unknown }> = [];
+  const billingPutCalls: Array<{ url: string; body: unknown }> = [];
+  // Shared, ordered timeline so tests can assert the PUT save happens
+  // before the payment-init POST.
+  const timeline: string[] = [];
   const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (input, init) => {
     const url = typeof input === "string" ? input : (input as Request).url;
     if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
@@ -133,11 +175,24 @@ function setupFetch(opts: MockOpts = {}) {
       return jsonResponse(BILLING_SETTINGS);
     if (url.endsWith("/api/v1/organizations/current/subscription")) return jsonResponse(sub);
     if (url.endsWith("/api/v1/organizations/current/billing-summary")) return jsonResponse(summary);
+    if (url.endsWith("/api/v1/organizations/current")) {
+      // GET prefills the form; PUT persists billing before payment-init.
+      if (init?.method === "PUT") {
+        billingPutCalls.push({
+          url,
+          body: init.body ? JSON.parse(init.body as string) : null,
+        });
+        timeline.push("billing-put");
+        return jsonResponse({ ...org, ...JSON.parse((init.body as string) ?? "{}") });
+      }
+      return jsonResponse(org);
+    }
     if (url.endsWith("/api/v1/payments/initial-payment-init")) {
       choosePlanCalls.push({
         url,
         body: init?.body ? JSON.parse(init.body as string) : null,
       });
+      timeline.push("payment-init");
       if (opts.choosePlanFails) return new Response("err", { status: 500 });
       return jsonResponse({
         redirect_url: "https://payments.comgate.cz/client/instructions/index?id=TEST",
@@ -152,7 +207,7 @@ function setupFetch(opts: MockOpts = {}) {
     return new Response("not found", { status: 404 });
   });
   vi.stubGlobal("fetch", fetchMock);
-  return { fetchMock, choosePlanCalls };
+  return { fetchMock, choosePlanCalls, billingPutCalls, timeline };
 }
 
 function jsonResponse(payload: unknown, status = 200) {
@@ -215,7 +270,57 @@ describe("TrialExpiredGate", () => {
     // After selecting a plan the CTA is still gated on the consent checkbox.
     expect(screen.getByRole("button", { name: /^Pokračovat na platbu$/i })).toBeDisabled();
     fireEvent.click(screen.getByRole("checkbox", { name: /Souhlasím s opakovanými platbami/i }));
-    expect(screen.getByRole("button", { name: /^Pokračovat na platbu$/i })).toBeEnabled();
+    // Billing prefills from the org query (valid by default) on a tick.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^Pokračovat na platbu$/i })).toBeEnabled(),
+    );
+  });
+
+  it("keeps the CTA disabled when the org has incomplete billing details", async () => {
+    setupFetch({ userCount: 8, invalidBilling: true });
+    renderGate();
+    const annualCard = await screen.findByRole("radio", { name: /Roční/i });
+    fireEvent.click(annualCard);
+    fireEvent.click(screen.getByRole("checkbox", { name: /Souhlasím s opakovanými platbami/i }));
+    // Plan + consent are satisfied, but billing is invalid (no address),
+    // so the gate keeps the CTA disabled. Assert it stays disabled past
+    // the tick the org query/hydration would resolve on.
+    await waitFor(() => expect(screen.getByTestId("billing-address-street")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: /^Pokračovat na platbu$/i })).toBeDisabled();
+  });
+
+  it("saves billing (PUT) before initiating payment when billing is valid", async () => {
+    const { billingPutCalls, choosePlanCalls, timeline } = setupFetch({ userCount: 8 });
+    const assign = vi.fn();
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      writable: true,
+      value: { ...originalLocation, assign },
+    });
+    try {
+      renderGate();
+      const annualCard = await screen.findByRole("radio", { name: /Roční/i });
+      fireEvent.click(annualCard);
+      fireEvent.click(screen.getByRole("checkbox", { name: /Souhlasím s opakovanými platbami/i }));
+      const cta = await screen.findByRole("button", { name: /^Pokračovat na platbu$/i });
+      await waitFor(() => expect(cta).toBeEnabled());
+      fireEvent.click(cta);
+      // Billing is persisted, then the payment-init fires — in that order.
+      await waitFor(() => expect(choosePlanCalls).toHaveLength(1));
+      expect(billingPutCalls).toHaveLength(1);
+      expect(billingPutCalls[0]?.body).toMatchObject({
+        billing_kind: "business",
+        ico: "27082440",
+        address_street: "Pražská 1",
+      });
+      expect(timeline).toEqual(["billing-put", "payment-init"]);
+      expect(choosePlanCalls[0]?.body).toEqual({ plan_code: "annual" });
+    } finally {
+      Object.defineProperty(window, "location", {
+        writable: true,
+        value: originalLocation,
+      });
+    }
   });
 
   it("uses singular instrumental for N=1", async () => {
@@ -241,7 +346,9 @@ describe("TrialExpiredGate", () => {
       const annualCard = await screen.findByRole("radio", { name: /Roční/i });
       fireEvent.click(annualCard);
       fireEvent.click(screen.getByRole("checkbox", { name: /Souhlasím s opakovanými platbami/i }));
-      fireEvent.click(screen.getByRole("button", { name: /^Pokračovat na platbu$/i }));
+      const cta = await screen.findByRole("button", { name: /^Pokračovat na platbu$/i });
+      await waitFor(() => expect(cta).toBeEnabled());
+      fireEvent.click(cta);
       await waitFor(() => expect(choosePlanCalls).toHaveLength(1));
       expect(choosePlanCalls[0]?.body).toEqual({ plan_code: "annual" });
       await waitFor(() =>
@@ -263,7 +370,9 @@ describe("TrialExpiredGate", () => {
     const monthlyCard = await screen.findByRole("radio", { name: /Měsíční/i });
     fireEvent.click(monthlyCard);
     fireEvent.click(screen.getByRole("checkbox", { name: /Souhlasím s opakovanými platbami/i }));
-    fireEvent.click(screen.getByRole("button", { name: /^Pokračovat na platbu$/i }));
+    const cta = await screen.findByRole("button", { name: /^Pokračovat na platbu$/i });
+    await waitFor(() => expect(cta).toBeEnabled());
+    fireEvent.click(cta);
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent(/Platební brána není dostupná/i),
     );

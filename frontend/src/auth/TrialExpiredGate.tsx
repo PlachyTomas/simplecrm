@@ -1,7 +1,16 @@
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/auth/useAuth";
 import { formatCzkMinor } from "@/components/billing/format";
+import { OrgBillingFields } from "@/components/billing/OrgBillingFields";
+import {
+  billingFormFromOrg,
+  billingFormToPayload,
+  emptyBillingForm,
+  isBillingFormValid,
+  type BillingFormState,
+} from "@/components/billing/orgBillingForm";
 import { PriceDisplay } from "@/components/billing/PriceDisplay";
 import { useBillingSummary } from "@/components/billing/useBillingSummary";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
@@ -11,6 +20,7 @@ import { usePublicPlans } from "@/components/billing/usePublicPlans";
 import { ApiError, apiFetch, type TrialExpiredPayload } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/usePageTitle";
+import type { components } from "@/types/api.generated";
 
 const SUPPORT_EMAIL = "podpora@simplecrm.cz";
 type PlanCode = "monthly" | "annual";
@@ -39,7 +49,21 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
   const [recurringConsent, setRecurringConsent] = useState(false);
   const [submitted] = useState(false); // legacy "thank-you" panel kept for shape; no longer flipped
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const contactDialogRef = useRef<HTMLDialogElement | null>(null);
+
+  // Backend requires complete billing details before initial-payment-init.
+  // Fetch the org to prefill the form (and seed `savedIco` so hydrating a
+  // saved IČO doesn't re-trigger ARES), then keep local form state in sync.
+  const orgQuery = useQuery<components["schemas"]["OrganizationOut"]>({
+    queryKey: ["organizations", "current"],
+    enabled: !!accessToken,
+    queryFn: () => apiFetch("/api/v1/organizations/current", { token: accessToken }),
+  });
+  const [billing, setBilling] = useState<BillingFormState>(emptyBillingForm);
+  useEffect(() => {
+    if (orgQuery.data) setBilling(billingFormFromOrg(orgQuery.data));
+  }, [orgQuery.data]);
 
   // Defensive: comp orgs should never reach this gate (the 402 doesn't fire
   // for is_comp=true). If we somehow got here, render nothing — failing
@@ -49,15 +73,34 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
   const monthlyPlan = plans.data?.find((p) => p.code === "monthly");
   const annualPlan = plans.data?.find((p) => p.code === "annual");
   const isEnterpriseExpired = subscription.data?.plan?.code === "enterprise";
-  const submitting = initPayment.isPending;
+  const submitting = initPayment.isPending || saving;
 
-  function onSubmitChoosePlan() {
+  async function onSubmitChoosePlan() {
     if (!selected || !accessToken) return;
     if (!recurringConsent) {
       setError("Pro pokračování je nutné potvrdit souhlas s opakovanými platbami.");
       return;
     }
+    if (!isBillingFormValid(billing)) {
+      setError("Vyplňte prosím fakturační údaje.");
+      return;
+    }
     setError(null);
+    // Persist billing first — the backend rejects initial-payment-init with
+    // 422 billing_details_required until the org row carries complete details.
+    setSaving(true);
+    try {
+      await apiFetch("/api/v1/organizations/current", {
+        method: "PUT",
+        token: accessToken,
+        body: billingFormToPayload(billing),
+      });
+    } catch {
+      setSaving(false);
+      setError("Uložení fakturačních údajů se nezdařilo. Zkuste to prosím znovu.");
+      return;
+    }
+    setSaving(false);
     initPayment.mutate(
       { plan_code: selected },
       {
@@ -153,6 +196,21 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
               />
             </div>
 
+            <div className="mt-6">
+              <h2 className="text-sm font-semibold text-text-primary">Fakturační údaje</h2>
+              <p className="mt-1 text-xs text-text-secondary">
+                Tyto údaje použijeme na daňový doklad. Vyplnění je povinné pro pokračování k platbě.
+              </p>
+              <div className="mt-4">
+                <OrgBillingFields
+                  value={billing}
+                  onChange={setBilling}
+                  orgName={orgQuery.data?.name ?? ""}
+                  savedIco={orgQuery.data?.ico ?? ""}
+                />
+              </div>
+            </div>
+
             <button
               type="button"
               onClick={openContactModal}
@@ -174,7 +232,7 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
               <button
                 type="button"
                 onClick={() => void onSubmitChoosePlan()}
-                disabled={!selected || submitting || !recurringConsent}
+                disabled={!selected || submitting || !recurringConsent || !isBillingFormValid(billing)}
                 className="inline-flex h-11 items-center justify-center rounded-md bg-accent px-6 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting ? "Přesměrování…" : "Pokračovat na platbu"}
