@@ -4,22 +4,25 @@ Pure HTTP transport: no DB writes, no business logic. Callers in
 `api/v1/payments` and `services/billing` decide what to do with the
 results.
 
-ComGate's full path catalog lives in the merchant portal (gated behind
-their KYC); the constants in `_Endpoints` below match the v2.0 REST
-shape but are exposed as overridable so the integration owner can
-adjust without code surgery if ComGate's portal documents a different
-path. See `docs/comgate-setup.md` for the setup walkthrough.
+The `_Endpoints` constants below are the ComGate v2.0 REST paths
+(`.json`-suffixed), confirmed against apidoc.comgate.cz and ComGate's
+own curl/PHP-SDK examples. See `docs/comgate-setup.md` and
+`comgate_integration.md` for the setup walkthrough.
 
 Authentication: HTTP Basic, `Authorization: Basic base64(merchant:secret)`
 — confirmed empirically by hitting the v2.0 root and reading the 1400
 error response.
+
+Webhook verification: ComGate sends **no** HMAC/signature on its push
+notification. The documented (and only) way to authenticate a callback
+is to re-query the authoritative payment status with our Basic-auth
+creds — see `get_payment_status`. The notification body is never
+trusted beyond reading the `transId` to know which payment to re-query.
 """
 
 from __future__ import annotations
 
 import base64
-import hashlib
-import hmac
 import logging
 from dataclasses import dataclass
 from typing import Any
@@ -33,18 +36,19 @@ logger = logging.getLogger(__name__)
 
 
 class _Endpoints:
-    """Centralized endpoint paths so the owner can patch without
-    hunting through the codebase if ComGate documents different URLs.
+    """ComGate v2.0 REST endpoint paths, relative to `comgate_base_url`
+    (which already ends in `/v2.0`).
 
-    Confirm against the merchant portal under "Pomoc → API protokol"
-    before going live.
+    Recurring and refund take their target transId in the JSON **body**
+    (`initRecurringId` / `transId`), not the URL path — see the methods
+    below. ComGate has no "cancel recurring" endpoint: recurring is
+    merchant-initiated, so stopping our scheduler IS the cancellation.
     """
 
-    create = "/payment"
-    recurring = "/payment/{trans_id}/recurring"
-    cancel_recurring = "/payment/{trans_id}/cancelRecurring"
-    status_query = "/payment/{trans_id}"
-    refund = "/payment/{trans_id}/refund"
+    create = "/payment.json"
+    recurring = "/recurring.json"
+    status_query = "/payment/transId/{trans_id}.json"
+    refund = "/refund.json"
 
 
 class ComGateError(Exception):
@@ -73,6 +77,24 @@ class CreatedPayment:
 
     trans_id: str
     redirect_url: str  # ComGate-hosted payment page; redirect the customer here
+
+
+@dataclass(frozen=True)
+class PaymentStatus:
+    """Authoritative payment state from a `get_payment_status` re-query.
+
+    `found` distinguishes "ComGate answered, this transId is unknown"
+    (spoofed/garbage callback → caller should ACK and ignore) from a
+    real payment. `status` is ComGate's verbatim state, upper-cased
+    (`PAID`, `CANCELLED`, `PENDING`, `AUTHORIZED`, …). `ref_id` is the
+    merchant reference we set at create-time (our Charge UUID).
+    """
+
+    trans_id: str
+    found: bool
+    status: str | None = None
+    ref_id: str | None = None
+    raw: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -167,6 +189,21 @@ class ComGateClient:
             if self._http is None:
                 await client.aclose()
         return self._unwrap(response)
+
+    async def _get(self, path: str) -> httpx.Response:
+        """Raw authenticated GET. Returns the response untouched so the
+        caller can classify status codes itself (unlike `_post`, which
+        raises on any 4xx). Transport failures still raise ComGateError."""
+        _require_credentials(self._settings)
+        client = await self._client()
+        try:
+            response = await client.get(path)
+        except httpx.HTTPError as exc:
+            raise ComGateError(f"ComGate transport error: {exc}") from exc
+        finally:
+            if self._http is None:
+                await client.aclose()
+        return response
 
     @staticmethod
     def _unwrap(response: httpx.Response) -> dict[str, Any]:
@@ -282,11 +319,14 @@ class ComGateClient:
 
         Outcome arrives via webhook — this method's return value only
         signals whether ComGate accepted the request for processing.
+
+        The initial payment's transId rides in the JSON body as
+        `initRecurringId` (ComGate v2.0 REST), not in the URL path.
         """
-        path = _Endpoints.recurring.format(trans_id=initial_trans_id)
         body = await self._post(
-            path,
+            _Endpoints.recurring,
             {
+                "initRecurringId": initial_trans_id,
                 "price": amount_minor,
                 "curr": currency,
                 "label": label,
@@ -301,66 +341,64 @@ class ComGateClient:
             message=body.get("message"),
         )
 
-    async def disable_recurring(self, initial_trans_id: str) -> bool:
-        """Best-effort revoke of the saved-card authorization on
-        ComGate's side. Returns True on success; False if the call
-        failed but the caller should still proceed with local cancel.
+    async def get_payment_status(self, trans_id: str) -> PaymentStatus:
+        """Re-query ComGate for the authoritative state of a payment.
 
-        We don't raise — local cancel (status='canceled') is what
-        actually stops future scheduled charges, and that's owned by
-        our scheduler. ComGate-side disable is just hygiene.
+        This is the webhook's verification step: ComGate signs nothing,
+        so a callback is only trusted insofar as our own authenticated
+        status query confirms it. Returns:
+
+          - `found=True` + status/ref_id on a known transaction;
+          - `found=False` when ComGate answers but the transId is
+            unknown (spoofed/garbage callback) — caller ACKs and ignores;
+          - raises `ComGateError` on transport failure or a 5xx, so the
+            caller can return a retryable response and ComGate re-sends.
         """
-        _require_credentials(self._settings)
-        path = _Endpoints.cancel_recurring.format(trans_id=initial_trans_id)
-        client = await self._client()
+        path = _Endpoints.status_query.format(trans_id=trans_id)
+        response = await self._get(path)
+        if response.status_code >= 500:
+            raise ComGateError(
+                "ComGate status query upstream error",
+                http_status=response.status_code,
+            )
         try:
-            try:
-                response = await client.post(path, json={})
-            finally:
-                if self._http is None:
-                    await client.aclose()
-        except httpx.HTTPError as exc:
-            logger.warning(
-                "ComGate disable_recurring transport failure for %s: %s",
-                initial_trans_id,
-                exc,
-            )
-            return False
+            body: dict[str, Any] = response.json()
+        except ValueError:
+            body = {}
+        code = body.get("code")
+        # ComGate returns a non-zero `code` (and/or 404) for an unknown
+        # transId. Treat that as "answered, but unknown" → ignore, don't
+        # make ComGate retry a bogus callback 1000×.
+        if response.status_code == 404 or (code not in (None, 0, "0")):
+            return PaymentStatus(trans_id=trans_id, found=False, raw=body)
         if response.status_code >= 400:
-            logger.warning(
-                "ComGate disable_recurring failed for %s: HTTP %s body=%s",
-                initial_trans_id,
-                response.status_code,
-                response.text[:200],
+            raise ComGateError(
+                str(body.get("message") or "ComGate status query failed"),
+                code=code if isinstance(code, int) else None,
+                http_status=response.status_code,
             )
-            return False
-        return True
+        status_value = str(body.get("status") or "").upper() or None
+        return PaymentStatus(
+            trans_id=str(body.get("transId") or trans_id),
+            found=True,
+            status=status_value,
+            ref_id=body.get("refId"),
+            raw=body,
+        )
 
-    def verify_webhook_signature(
-        self,
-        *,
-        raw_body: bytes,
-        signature_header: str | None,
-    ) -> bool:
-        """Verify ComGate's HMAC-SHA256 signature on a webhook callback.
+    async def disable_recurring(self, initial_trans_id: str) -> bool:
+        """No-op kept for call-site compatibility.
 
-        ComGate documents the canonical-string + header name in the
-        merchant portal under "Notifikace → Ověření podpisu" — this
-        implementation uses the standard `HMAC-SHA256(secret, raw_body)`
-        hex digest, which is the v2 default. If your portal documents a
-        different signing scheme, override this method via subclass.
+        ComGate recurring charges are **merchant-initiated** — there is
+        no saved-card mandate to revoke and no v2.0 endpoint to cancel
+        one. The cancellation that matters is local: once our scheduler
+        stops issuing `create_recurring_payment` calls (subscription
+        status='canceled'), no further charge ever happens. So this just
+        returns True without touching the network; callers
+        (`subscription`, `org_erasure`) can keep their best-effort
+        `await comgate.disable_recurring(...)` line unchanged.
         """
-        if not signature_header:
-            return False
-        _require_credentials(self._settings)
-        expected = hmac.new(
-            self._settings.comgate_secret.encode(),
-            raw_body,
-            hashlib.sha256,
-        ).hexdigest()
-        # Constant-time compare; case-insensitive because some portals
-        # uppercase the hex.
-        return hmac.compare_digest(expected.lower(), signature_header.lower())
+        return True
 
 
 # Module-level singleton so FastAPI Depends doesn't rebuild on every
@@ -386,6 +424,7 @@ __all__ = [
     "ComGateClient",
     "ComGateError",
     "CreatedPayment",
+    "PaymentStatus",
     "RecurringChargeResult",
     "get_comgate_client",
     "reset_default_client",

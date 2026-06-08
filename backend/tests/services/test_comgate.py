@@ -5,17 +5,16 @@ dependency is needed. Coverage:
 
   - Basic-auth header is correctly base64-encoded
   - 503 surfaces (not 500) when credentials are absent
-  - HMAC-SHA256 webhook signature verification (positive/negative/case)
   - Request shape for create_initial_payment + create_recurring_payment
+    (incl. the v2.0 `.json` paths + `initRecurringId` in the body)
+  - get_payment_status: found / not-found / transient-error mapping
   - Error mapping: 4xx with ComGate's `code` field becomes ComGateError
-  - disable_recurring is best-effort (returns False, doesn't raise)
+  - disable_recurring is a no-op (returns True, makes no HTTP call)
 """
 
 from __future__ import annotations
 
 import base64
-import hashlib
-import hmac
 import json
 
 import httpx
@@ -101,49 +100,78 @@ async def test_create_initial_payment_503_when_creds_missing() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Webhook signature verification
+# Webhook verification via status re-query (ComGate signs nothing)
 # ---------------------------------------------------------------------------
 
 
-def test_verify_webhook_signature_accepts_correct_hmac() -> None:
-    settings = _settings_with_creds()
-    client = ComGateClient(settings=settings)
-    raw = b'{"transId":"AB12-CD34","status":"PAID"}'
-    expected = hmac.new(settings.comgate_secret.encode(), raw, hashlib.sha256).hexdigest()
-    assert client.verify_webhook_signature(raw_body=raw, signature_header=expected) is True
+async def test_get_payment_status_returns_found_status_and_refid() -> None:
+    captured: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "code": 0,
+                "transId": "AB12-CD34",
+                "status": "PAID",
+                "refId": "charge-uuid-here",
+                "price": 9900,
+            },
+        )
+
+    client = _client_with_handler(handler)
+    result = await client.get_payment_status("AB12-CD34")
+
+    assert captured[0].method == "GET"
+    # v2.0 REST status path: /payment/transId/{id}.json
+    assert captured[0].url.path.endswith("/payment/transId/AB12-CD34.json")
+    assert result.found is True
+    assert result.status == "PAID"
+    assert result.ref_id == "charge-uuid-here"
 
 
-def test_verify_webhook_signature_rejects_wrong_hmac() -> None:
-    settings = _settings_with_creds()
-    client = ComGateClient(settings=settings)
-    raw = b'{"transId":"AB12-CD34","status":"PAID"}'
-    assert client.verify_webhook_signature(raw_body=raw, signature_header="0" * 64) is False
+async def test_get_payment_status_unknown_transid_is_not_found() -> None:
+    """ComGate answers but doesn't know the transId (non-zero code) →
+    found=False so the webhook ACKs and ignores a spoofed callback."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"code": 1400, "message": "payment not found"})
+
+    client = _client_with_handler(handler)
+    result = await client.get_payment_status("BOGUS")
+    assert result.found is False
+    assert result.status is None
 
 
-def test_verify_webhook_signature_rejects_missing_header() -> None:
-    settings = _settings_with_creds()
-    client = ComGateClient(settings=settings)
-    assert client.verify_webhook_signature(raw_body=b"x", signature_header=None) is False
-    assert client.verify_webhook_signature(raw_body=b"x", signature_header="") is False
+async def test_get_payment_status_404_is_not_found() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(404, json={})
+
+    client = _client_with_handler(handler)
+    result = await client.get_payment_status("BOGUS")
+    assert result.found is False
 
 
-def test_verify_webhook_signature_case_insensitive() -> None:
-    """Some merchant portals upper-case the hex; tolerate both."""
-    settings = _settings_with_creds()
-    client = ComGateClient(settings=settings)
-    raw = b'{"transId":"X","status":"PAID"}'
-    expected = hmac.new(settings.comgate_secret.encode(), raw, hashlib.sha256).hexdigest()
-    assert client.verify_webhook_signature(raw_body=raw, signature_header=expected.upper()) is True
+async def test_get_payment_status_raises_on_5xx() -> None:
+    """A transient upstream error must raise so the webhook returns 503
+    and ComGate retries — never silently treated as 'not found'."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(502, text="bad gateway")
+
+    client = _client_with_handler(handler)
+    with pytest.raises(ComGateError):
+        await client.get_payment_status("AB12-CD34")
 
 
-def test_verify_webhook_signature_rejects_when_body_tampered() -> None:
-    """Critical: a flipped byte in the body must invalidate the signature."""
-    settings = _settings_with_creds()
-    client = ComGateClient(settings=settings)
-    original = b'{"transId":"X","status":"PAID","price":9900}'
-    tampered = b'{"transId":"X","status":"PAID","price":1}'
-    sig = hmac.new(settings.comgate_secret.encode(), original, hashlib.sha256).hexdigest()
-    assert client.verify_webhook_signature(raw_body=tampered, signature_header=sig) is False
+async def test_get_payment_status_raises_on_transport_error() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("connection refused")
+
+    client = _client_with_handler(handler)
+    with pytest.raises(ComGateError):
+        await client.get_payment_status("AB12-CD34")
 
 
 # ---------------------------------------------------------------------------
@@ -176,7 +204,7 @@ async def test_create_initial_payment_sends_expected_fields() -> None:
     assert len(captured) == 1
     req = captured[0]
     assert req.method == "POST"
-    assert req.url.path.endswith("/payment")
+    assert req.url.path.endswith("/payment.json")
     body = json.loads(req.content)
     assert body["price"] == 49500
     assert body["curr"] == "CZK"
@@ -304,7 +332,7 @@ async def test_create_demo_payment_sends_expected_fields() -> None:
     )
 
     body = json.loads(captured[0].content)
-    assert captured[0].url.path.endswith("/payment")
+    assert captured[0].url.path.endswith("/payment.json")
     assert body["price"] == 29700
     assert body["refId"] == "demo-xyz"
     assert body["label"] == "SimpleCRM demo"
@@ -321,7 +349,7 @@ async def test_create_demo_payment_sends_expected_fields() -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_create_recurring_payment_uses_initial_trans_id_in_path() -> None:
+async def test_create_recurring_payment_sends_init_recurring_id_in_body() -> None:
     captured: list[httpx.Request] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -339,8 +367,11 @@ async def test_create_recurring_payment_uses_initial_trans_id_in_path() -> None:
 
     assert len(captured) == 1
     req = captured[0]
-    assert req.url.path.endswith("/payment/ORIGINAL-TRANS/recurring")
+    # v2.0 REST: dedicated /recurring.json path; the initial transId
+    # rides in the JSON body as initRecurringId, NOT in the URL.
+    assert req.url.path.endswith("/recurring.json")
     body = json.loads(req.content)
+    assert body["initRecurringId"] == "ORIGINAL-TRANS"
     assert body["price"] == 49500
     assert body["refId"] == "invoice-456"
     assert "initRecurring" not in body  # only on the create call
@@ -349,34 +380,21 @@ async def test_create_recurring_payment_uses_initial_trans_id_in_path() -> None:
 
 
 # ---------------------------------------------------------------------------
-# disable_recurring is best-effort
+# disable_recurring is a no-op (ComGate recurring is merchant-initiated;
+# stopping our scheduler is the real cancellation)
 # ---------------------------------------------------------------------------
 
 
-async def test_disable_recurring_returns_true_on_success() -> None:
+async def test_disable_recurring_is_noop_and_makes_no_http_call() -> None:
+    """There is no ComGate endpoint to revoke a recurring mandate, and
+    no need: the scheduler stops issuing charges on local cancel. So
+    disable_recurring returns True without ever hitting the network."""
+    called: list[httpx.Request] = []
+
     def handler(request: httpx.Request) -> httpx.Response:
+        called.append(request)
         return httpx.Response(200, json={"code": 0})
 
     client = _client_with_handler(handler)
     assert await client.disable_recurring("SOME-TRANS") is True
-
-
-async def test_disable_recurring_returns_false_on_4xx_without_raising() -> None:
-    """Self-serve cancel must never abort because ComGate had a hiccup —
-    the local cancel is what actually stops further charges."""
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(400, json={"code": 1400, "message": "Not found"})
-
-    client = _client_with_handler(handler)
-    assert await client.disable_recurring("MISSING-TRANS") is False
-
-
-async def test_disable_recurring_returns_false_on_transport_error() -> None:
-    """Network failure shouldn't propagate as an exception."""
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        raise httpx.ConnectError("connection refused")
-
-    client = _client_with_handler(handler)
-    assert await client.disable_recurring("SOME-TRANS") is False
+    assert called == []  # never touched the transport

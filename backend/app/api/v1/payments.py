@@ -9,9 +9,9 @@ Five routes:
   - GET  /payments/return — ComGate redirects the customer's browser
     here after they complete or abandon the hosted page; we 302 onward
     to the frontend's billing-return route.
-  - POST /payments/webhook — ComGate POSTs payment outcomes here;
-    signature-verified, deduped via `webhook_events`, dispatched into
-    the matching `services/billing.apply_*_success` /
+  - POST /payments/webhook — ComGate POSTs payment outcomes here; we
+    re-query the authoritative status, dedupe via `webhook_events`, and
+    dispatch into the matching `services/billing.apply_*_success` /
     `mark_charge_failed` funnel.
   - GET  /payments/invoices — invoice history for the org admin.
 
@@ -19,23 +19,25 @@ This router is intentionally NOT mounted under PROTECTED_DEPS: the
 trial-gate would block `seat-change-init` for orgs already on a paid
 plan that just want to upgrade — and `webhook` is server-to-server
 from ComGate (no user auth at all). The customer-facing endpoints
-require `require_role(UserRole.admin)`; the webhook is signature-
-gated.
+require `require_role(UserRole.admin)`.
 
-ComGate's exact field names + signature scheme are gated behind their
-merchant portal. The integration assumes the v2 REST shape (HMAC-SHA256
-on the raw body) and field names like `transId` / `status` / `refId`;
-adjust against your portal's "API protokol" + "Notifikace" pages if
-they differ. See `docs/comgate-setup.md`.
+ComGate sends **no** signature on its callback, so the webhook trusts
+the notification only enough to read the `transId`, then re-queries the
+authoritative payment status (`comgate.get_payment_status`) with our
+Basic-auth creds — that re-query is the authentication. The callback
+arrives as `application/x-www-form-urlencoded` (HTTP POST protocol),
+with a JSON fallback. See `docs/comgate-setup.md` + `comgate_integration.md`.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import uuid
 from datetime import UTC, datetime
+from urllib.parse import parse_qsl
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -423,93 +425,124 @@ async def list_charges(
 # ---------------------------------------------------------------------------
 
 
+# ComGate status values we treat as terminal. Anything else
+# (PENDING, AUTHORIZED, …) means "not done yet" — we ACK and wait for
+# the next notification rather than recording an outcome.
+_TERMINAL_SUCCESS = {"PAID"}
+_TERMINAL_FAILURE = {"CANCELLED", "EXPIRED", "TIMEOUT", "ERROR"}
+
+
+async def _extract_trans_id(request: Request) -> str:
+    """Pull `transId` out of a ComGate callback. The HTTP POST protocol
+    delivers `application/x-www-form-urlencoded`; some integrations get
+    JSON. We only read `transId` — everything else comes from the
+    authenticated status re-query, so the body format is low-stakes."""
+    raw = await request.body()
+    ctype = request.headers.get("content-type", "")
+    if "application/json" in ctype:
+        try:
+            data = json.loads(raw or b"{}")
+        except ValueError:
+            data = {}
+    else:
+        data = dict(parse_qsl(raw.decode("utf-8", "replace")))
+    return str(data.get("transId") or "")
+
+
 @router.post("/webhook", status_code=status.HTTP_204_NO_CONTENT)
 async def comgate_webhook(
     request: Request,
-    x_comgate_signature: str | None = Header(default=None),
     session: AsyncSession = Depends(get_db),
     comgate: ComGateClient = Depends(get_comgate_client),
 ) -> None:
     """ComGate server-to-server payment-outcome notification.
 
-    1. Verify the HMAC-SHA256 signature on the raw request body.
-    2. Dedupe via `webhook_events.comgate_event_id` — re-deliveries
-       silently 204.
-    3. Parse the payload, look up the matching Charge via `refId`
-       (which we set to the Charge ID at create-time).
-    4. Dispatch to the appropriate `services/billing.apply_*_success`
-       or `mark_charge_failed` based on Charge.kind + payload status.
+    ComGate signs nothing, so the flow is:
 
-    Returns 204 on every successful processing path (including dedupes
-    and known-bad inputs that we've decided to swallow). Returns 4xx
-    only when ComGate should be told to retry.
+    1. Read `transId` from the (untrusted) callback body.
+    2. Re-query the authoritative status with our Basic-auth creds —
+       this both verifies the callback and gives us the real status +
+       refId. A transient failure here returns 503 so ComGate retries.
+    3. Ignore non-terminal states (PENDING/AUTHORIZED) without recording
+       anything, so a later PAID for the same transId still processes.
+    4. For a terminal state, dedupe via `webhook_events`, look up the
+       Charge via refId (our Charge UUID), and dispatch into the right
+       `apply_*_success` / `mark_charge_failed` funnel.
+
+    Returns 204 on every path ComGate should NOT retry (processed,
+    deduped, unknown/non-terminal/non-charge). Returns 5xx only when a
+    transient upstream failure means ComGate should re-deliver.
     """
-    raw_body = await request.body()
-    if not comgate.verify_webhook_signature(
-        raw_body=raw_body, signature_header=x_comgate_signature
-    ):
-        # 400 (not 401) — ComGate uses 4xx as "don't retry".
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid webhook signature",
-        )
-
-    payload = await request.json()
-    trans_id = str(payload.get("transId") or "")
+    trans_id = await _extract_trans_id(request)
     if not trans_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Missing transId",
         )
 
-    # Idempotency: insert WebhookEvent first; FK violation on
-    # comgate_event_id means we've already processed this delivery.
-    event = WebhookEvent(comgate_event_id=trans_id, payload=payload)
+    # Verify by re-querying. A transport/upstream failure must NOT be
+    # acked — 503 tells ComGate to retry later.
+    try:
+        payment = await comgate.get_payment_status(trans_id)
+    except ComGateError as exc:
+        logger.warning("ComGate status re-query failed for %s: %s", trans_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="status re-query failed",
+        ) from exc
+
+    if not payment.found:
+        # ComGate answered but doesn't know this transId — spoofed or
+        # garbage callback. ACK so it stops retrying; change nothing.
+        logger.warning("ComGate webhook for unknown transId %s — ignoring", trans_id)
+        return
+
+    cg_status = (payment.status or "").upper()
+    if cg_status not in _TERMINAL_SUCCESS | _TERMINAL_FAILURE:
+        # PENDING / AUTHORIZED / unknown-non-terminal: wait for the next
+        # delivery. Crucially, do NOT write a dedup row, or the eventual
+        # PAID for this same transId would be silently swallowed.
+        logger.info("ComGate webhook %s non-terminal status=%s — waiting", trans_id, cg_status)
+        return
+
+    ref_id = payment.ref_id
+    if not ref_id:
+        logger.warning("ComGate status for %s missing refId — ignoring", trans_id)
+        return
+    try:
+        charge_id = uuid.UUID(str(ref_id))
+    except ValueError:
+        # Non-UUID refId (e.g. the public "demo-…" showcase orders) is
+        # not a real charge — ACK and ignore.
+        logger.warning("ComGate refId not a UUID: %s — ignoring", ref_id)
+        return
+
+    # Idempotency: insert the WebhookEvent now that we have a terminal
+    # outcome. A unique-violation on comgate_event_id means we already
+    # processed this terminal notification — silently 204.
+    event = WebhookEvent(comgate_event_id=trans_id, payload=payment.raw or {})
     session.add(event)
     try:
         await session.flush()
     except IntegrityError:
         await session.rollback()
-        # Already processed — silently 204.
-        return
-
-    ref_id = payload.get("refId")
-    if not ref_id:
-        event.processed_at = datetime.now(tz=UTC)
-        await session.commit()
-        logger.warning("ComGate webhook missing refId: %s", trans_id)
-        return
-
-    try:
-        charge_id = uuid.UUID(str(ref_id))
-    except ValueError:
-        event.processed_at = datetime.now(tz=UTC)
-        await session.commit()
-        logger.warning("ComGate webhook refId not a UUID: %s", ref_id)
         return
 
     charge = await session.get(Charge, charge_id)
     if charge is None:
         event.processed_at = datetime.now(tz=UTC)
         await session.commit()
-        logger.warning(
-            "ComGate webhook for unknown charge %s (transId=%s)",
-            charge_id,
-            trans_id,
-        )
+        logger.warning("ComGate webhook for unknown charge %s (transId=%s)", charge_id, trans_id)
         return
 
-    # Avoid double-processing if the same charge somehow gets two
-    # webhooks (e.g. ComGate event_id changed between retries).
+    # Avoid double-processing if a charge somehow reaches a terminal
+    # state twice (belt-and-suspenders alongside the webhook_events row).
     if charge.status in {"paid", "failed", "refunded"}:
         event.processed_at = datetime.now(tz=UTC)
         await session.commit()
         return
 
-    cg_status = str(payload.get("status") or "").upper()
-    succeeded = cg_status == "PAID"
-
-    if succeeded:
+    if cg_status in _TERMINAL_SUCCESS:
         await _dispatch_success(
             session,
             charge=charge,
@@ -517,11 +550,12 @@ async def comgate_webhook(
             comgate=comgate,
         )
     else:
+        reason = str((payment.raw or {}).get("message") or cg_status or "FAILED")
         await _dispatch_failure(
             session,
             charge=charge,
             comgate_trans_id=trans_id,
-            failure_reason=str(payload.get("message") or cg_status or "FAILED"),
+            failure_reason=reason,
         )
 
     event.processed_at = datetime.now(tz=UTC)

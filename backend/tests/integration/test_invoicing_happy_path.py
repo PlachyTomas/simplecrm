@@ -23,9 +23,6 @@ state-transition contracts.
 
 from __future__ import annotations
 
-import hashlib
-import hmac
-import json
 import uuid
 from datetime import UTC, datetime
 
@@ -48,13 +45,28 @@ from app.db.models import (
     UserRole,
 )
 from app.db.session import AsyncSessionLocal
+from app.main import app
+from app.services.comgate import PaymentStatus, get_comgate_client
 from tests.conftest import wipe_invoicing_for_org
+
+# transId → PaymentStatus the stubbed re-query returns. Cleared and
+# re-installed per test by `_comgate_secret`; `_post_webhook` fills it.
+_COMGATE_STATUSES: dict[str, PaymentStatus] = {}
+
+
+class _StubComgate:
+    """Stands in for the real client so the webhook's authoritative
+    status re-query returns canned data instead of hitting ComGate."""
+
+    async def get_payment_status(self, trans_id: str) -> PaymentStatus:
+        return _COMGATE_STATUSES.get(trans_id, PaymentStatus(trans_id=trans_id, found=False))
 
 
 @pytest.fixture(autouse=True)
 def _comgate_secret(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Same env wiring as test_payments — without it the webhook
-    signature path 503s."""
+    """Same env wiring as test_payments — without creds the customer
+    endpoints 503 — plus a stubbed ComGate client so the webhook's
+    status re-query stays offline."""
     monkeypatch.setenv("COMGATE_MERCHANT_ID", "1234567")
     monkeypatch.setenv("COMGATE_SECRET", "test-secret")
     from app.core.config import get_settings
@@ -63,13 +75,13 @@ def _comgate_secret(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.services import comgate
 
     comgate.reset_default_client()
+    _COMGATE_STATUSES.clear()
+    app.dependency_overrides[get_comgate_client] = _StubComgate
     yield
+    app.dependency_overrides.pop(get_comgate_client, None)
+    _COMGATE_STATUSES.clear()
     get_settings.cache_clear()
     comgate.reset_default_client()
-
-
-def _sign(body: bytes) -> str:
-    return hmac.new(b"test-secret", body, hashlib.sha256).hexdigest()
 
 
 async def _configure_issuer(session: AsyncSession) -> None:
@@ -132,14 +144,14 @@ async def _seed_trial_org_with_pending_charge(
 
 
 async def _post_webhook(client: AsyncClient, *, charge_id: uuid.UUID, trans_id: str) -> None:
-    body = json.dumps({"transId": trans_id, "status": "PAID", "refId": str(charge_id)}).encode()
+    # The handler trusts only the authoritative re-query, so register the
+    # PAID status the stub should return, then post a minimal callback.
+    _COMGATE_STATUSES[trans_id] = PaymentStatus(
+        trans_id=trans_id, found=True, status="PAID", ref_id=str(charge_id)
+    )
     response = await client.post(
         "/api/v1/payments/webhook",
-        content=body,
-        headers={
-            "content-type": "application/json",
-            "x-comgate-signature": _sign(body),
-        },
+        json={"transId": trans_id},
     )
     assert response.status_code == 204, response.text
 

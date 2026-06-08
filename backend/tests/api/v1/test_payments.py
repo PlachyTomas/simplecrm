@@ -1,7 +1,8 @@
 """Integration tests for /api/v1/payments/*.
 
 Coverage:
-  - Webhook signature verification (rejects unsigned + bad sig)
+  - Webhook verification via authoritative status re-query
+    (unknown transId ignored; transient upstream → 503 retry)
   - Webhook idempotency (re-delivery is a no-op)
   - Webhook routes paid initial → status=active + payment_method saved
   - Webhook routes paid seat_upgrade → seat_count + contracted lifted
@@ -13,9 +14,6 @@ Coverage:
 
 from __future__ import annotations
 
-import hashlib
-import hmac
-import json
 import uuid
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
@@ -41,6 +39,8 @@ from app.db.models import (
     WebhookEvent,
 )
 from app.db.session import AsyncSessionLocal
+from app.main import app
+from app.services.comgate import PaymentStatus, get_comgate_client
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -82,11 +82,11 @@ async def _wipe_invoices_for_org(session: AsyncSession, org_id) -> None:
 
 @pytest.fixture(autouse=True)
 def _set_comgate_secret(monkeypatch) -> None:
-    """Populate ComGate creds so the webhook signature path runs.
+    """Populate ComGate creds so credentialed paths run.
 
-    Without these, `verify_webhook_signature` (and any of the
-    customer-facing endpoints) would 503 on `_require_credentials`.
-    Cleared automatically per-test via monkeypatch.
+    Without these, the customer-facing endpoints (and the real status
+    re-query) would 503 on `_require_credentials`. Cleared automatically
+    per-test via monkeypatch.
     """
     monkeypatch.setenv("COMGATE_MERCHANT_ID", "1234567")
     monkeypatch.setenv("COMGATE_SECRET", "test-secret")
@@ -176,50 +176,81 @@ async def _seed_active_org_with_card(
     return org, admin, sub
 
 
-def _sign(body: bytes) -> str:
-    return hmac.new(b"test-secret", body, hashlib.sha256).hexdigest()
+class _StubComgate:
+    """Stand-in for ComGateClient in webhook tests. The handler verifies
+    a callback by re-querying `get_payment_status`; we feed it canned
+    answers keyed by transId so no network call happens.
+
+    A registered value may be a `PaymentStatus` (returned) or an
+    `Exception` (raised, to exercise the transient-retry path).
+    Unregistered transIds come back `found=False`.
+    """
+
+    def __init__(self, statuses: dict) -> None:
+        self._statuses = statuses
+
+    async def get_payment_status(self, trans_id: str) -> PaymentStatus:
+        result = self._statuses.get(trans_id)
+        if result is None:
+            return PaymentStatus(trans_id=trans_id, found=False)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+
+@pytest.fixture
+def comgate_status() -> AsyncIterator[dict]:
+    """Override `get_comgate_client` with a stub. Tests register the
+    authoritative status the re-query should return:
+
+        comgate_status[trans_id] = PaymentStatus(
+            trans_id=trans_id, found=True, status="PAID", ref_id=str(charge_id)
+        )
+    """
+    statuses: dict = {}
+    stub = _StubComgate(statuses)
+    app.dependency_overrides[get_comgate_client] = lambda: stub
+    yield statuses
+    app.dependency_overrides.pop(get_comgate_client, None)
+
+
+def _paid(trans_id: str, charge_id) -> PaymentStatus:
+    return PaymentStatus(trans_id=trans_id, found=True, status="PAID", ref_id=str(charge_id))
 
 
 # ---------------------------------------------------------------------------
-# Webhook signature
+# Webhook verification (status re-query)
 # ---------------------------------------------------------------------------
 
 
-async def test_webhook_rejects_unsigned_request(client: AsyncClient) -> None:
+async def test_webhook_ignores_unknown_transid(client: AsyncClient, comgate_status: dict) -> None:
+    """A transId the status API doesn't recognise (spoofed/garbage) is
+    ACKed (204) and changes nothing — no retry storm."""
     response = await client.post(
         "/api/v1/payments/webhook",
-        json={"transId": "x", "status": "PAID"},
+        json={"transId": "TOTALLY-BOGUS"},
     )
-    assert response.status_code == 400
-    assert "signature" in response.json()["detail"].lower()
+    assert response.status_code == 204
 
 
-async def test_webhook_rejects_bad_signature(client: AsyncClient) -> None:
-    body = json.dumps({"transId": "x", "status": "PAID"}).encode()
+async def test_webhook_returns_503_on_transient_status_error(
+    client: AsyncClient, comgate_status: dict
+) -> None:
+    """If the re-query itself fails (network/upstream), respond 5xx so
+    ComGate re-delivers rather than dropping the payment."""
+    from app.services.comgate import ComGateError
+
+    trans_id = "TRANSIENT-TX"
+    comgate_status[trans_id] = ComGateError("upstream down")
     response = await client.post(
         "/api/v1/payments/webhook",
-        content=body,
-        headers={
-            "content-type": "application/json",
-            "x-comgate-signature": "0" * 64,
-        },
+        json={"transId": trans_id},
     )
-    assert response.status_code == 400
+    assert response.status_code == 503
 
 
-async def test_webhook_rejects_when_body_tampered(client: AsyncClient) -> None:
-    """Signing the original body, but POSTing a tampered one, must 400."""
-    original = json.dumps({"transId": "x", "status": "PAID", "price": 9900}).encode()
-    tampered = json.dumps({"transId": "x", "status": "PAID", "price": 1}).encode()
-    sig = _sign(original)
-    response = await client.post(
-        "/api/v1/payments/webhook",
-        content=tampered,
-        headers={
-            "content-type": "application/json",
-            "x-comgate-signature": sig,
-        },
-    )
+async def test_webhook_missing_transid_is_400(client: AsyncClient, comgate_status: dict) -> None:
+    response = await client.post("/api/v1/payments/webhook", json={})
     assert response.status_code == 400
 
 
@@ -231,6 +262,7 @@ async def test_webhook_rejects_when_body_tampered(client: AsyncClient) -> None:
 async def test_webhook_initial_paid_promotes_to_active(
     client: AsyncClient,
     owned_payments_emails: list[str],
+    comgate_status: dict,
 ) -> None:
     """A PAID webhook for an initial-kind charge flips the subscription
     to active, sets contracted_seat_count = seat_count, and writes a
@@ -271,20 +303,10 @@ async def test_webhook_initial_paid_promotes_to_active(
         charge_id = charge.id
         org_id = org.id
 
-    body = json.dumps(
-        {
-            "transId": trans_id,
-            "status": "PAID",
-            "refId": str(charge_id),
-        }
-    ).encode()
+    comgate_status[trans_id] = _paid(trans_id, charge_id)
     response = await client.post(
         "/api/v1/payments/webhook",
-        content=body,
-        headers={
-            "content-type": "application/json",
-            "x-comgate-signature": _sign(body),
-        },
+        json={"transId": trans_id},
     )
     assert response.status_code == 204, response.text
 
@@ -328,6 +350,7 @@ async def test_webhook_initial_paid_promotes_to_active(
 async def test_webhook_paid_charge_auto_issues_tax_invoice(
     client: AsyncClient,
     owned_payments_emails: list[str],
+    comgate_status: dict,
     tmp_path,
 ) -> None:
     """When a PAID webhook lands on a non-comp org with BillingSettings
@@ -389,14 +412,10 @@ async def test_webhook_paid_charge_auto_issues_tax_invoice(
         charge_id = charge.id
         org_id = org.id
 
-    body = json.dumps({"transId": trans_id, "status": "PAID", "refId": str(charge_id)}).encode()
+    comgate_status[trans_id] = _paid(trans_id, charge_id)
     response = await client.post(
         "/api/v1/payments/webhook",
-        content=body,
-        headers={
-            "content-type": "application/json",
-            "x-comgate-signature": _sign(body),
-        },
+        json={"transId": trans_id},
     )
     assert response.status_code == 204, response.text
 
@@ -436,6 +455,7 @@ async def test_webhook_paid_charge_auto_issues_tax_invoice(
 async def test_webhook_paid_charge_auto_emails_invoice(
     client: AsyncClient,
     owned_payments_emails: list[str],
+    comgate_status: dict,
 ) -> None:
     """After auto-issuance the orchestrator emails the customer their
     daňový doklad. Czech B2B law requires the buyer to receive an
@@ -501,11 +521,10 @@ async def test_webhook_paid_charge_auto_emails_invoice(
         charge_id = charge.id
         org_id = org.id
 
-    body = json.dumps({"transId": trans_id, "status": "PAID", "refId": str(charge_id)}).encode()
+    comgate_status[trans_id] = _paid(trans_id, charge_id)
     response = await client.post(
         "/api/v1/payments/webhook",
-        content=body,
-        headers={"content-type": "application/json", "x-comgate-signature": _sign(body)},
+        json={"transId": trans_id},
     )
     assert response.status_code == 204, response.text
 
@@ -543,6 +562,7 @@ async def test_webhook_paid_charge_auto_emails_invoice(
 async def test_webhook_double_delivery_is_idempotent(
     client: AsyncClient,
     owned_payments_emails: list[str],
+    comgate_status: dict,
 ) -> None:
     """Re-firing the same webhook (same transId) is a silent no-op.
     The charge + subscription state from the first delivery aren't
@@ -569,21 +589,11 @@ async def test_webhook_double_delivery_is_idempotent(
         charge_id = charge.id
         org_id = org.id
 
-    body = json.dumps(
-        {
-            "transId": trans_id,
-            "status": "PAID",
-            "refId": str(charge_id),
-        }
-    ).encode()
-    sig = _sign(body)
-    headers = {
-        "content-type": "application/json",
-        "x-comgate-signature": sig,
-    }
+    comgate_status[trans_id] = _paid(trans_id, charge_id)
+    payload = {"transId": trans_id}
 
-    r1 = await client.post("/api/v1/payments/webhook", content=body, headers=headers)
-    r2 = await client.post("/api/v1/payments/webhook", content=body, headers=headers)
+    r1 = await client.post("/api/v1/payments/webhook", json=payload)
+    r2 = await client.post("/api/v1/payments/webhook", json=payload)
     assert r1.status_code == 204
     assert r2.status_code == 204  # idempotent
 
@@ -623,6 +633,7 @@ async def test_webhook_double_delivery_is_idempotent(
 async def test_webhook_failed_marks_charge_failed(
     client: AsyncClient,
     owned_payments_emails: list[str],
+    comgate_status: dict,
 ) -> None:
     trans_id = f"FAIL-TX-{uuid.uuid4().hex[:12]}"
     async with AsyncSessionLocal() as setup:
@@ -641,21 +652,16 @@ async def test_webhook_failed_marks_charge_failed(
         charge_id = charge.id
         org_id = org.id
 
-    body = json.dumps(
-        {
-            "transId": trans_id,
-            "status": "CANCELLED",
-            "refId": str(charge_id),
-            "message": "Customer cancelled",
-        }
-    ).encode()
+    comgate_status[trans_id] = PaymentStatus(
+        trans_id=trans_id,
+        found=True,
+        status="CANCELLED",
+        ref_id=str(charge_id),
+        raw={"message": "Customer cancelled"},
+    )
     response = await client.post(
         "/api/v1/payments/webhook",
-        content=body,
-        headers={
-            "content-type": "application/json",
-            "x-comgate-signature": _sign(body),
-        },
+        json={"transId": trans_id},
     )
     assert response.status_code == 204, response.text
     # Settle the connection pool: ASGITransport's connection might
