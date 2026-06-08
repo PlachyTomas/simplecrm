@@ -72,4 +72,14 @@ export const testIds = {
       submit: "onboarding-submit",
     },
   },
+  billing: {
+    kindBusiness: "billing-kind-business",
+    kindIndividual: "billing-kind-individual",
+    ico: "billing-ico",
+    billingName: "billing-name",
+    addressStreet: "billing-address-street",
+    addressCity: "billing-address-city",
+    addressZip: "billing-address-zip",
+    submit: "billing-submit",
+  },
 } as const;
