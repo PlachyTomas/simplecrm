@@ -1941,17 +1941,21 @@ export interface paths {
          * Comgate Webhook
          * @description ComGate server-to-server payment-outcome notification.
          *
-         *     1. Verify the HMAC-SHA256 signature on the raw request body.
-         *     2. Dedupe via `webhook_events.comgate_event_id` — re-deliveries
-         *        silently 204.
-         *     3. Parse the payload, look up the matching Charge via `refId`
-         *        (which we set to the Charge ID at create-time).
-         *     4. Dispatch to the appropriate `services/billing.apply_*_success`
-         *        or `mark_charge_failed` based on Charge.kind + payload status.
+         *     ComGate signs nothing, so the flow is:
          *
-         *     Returns 204 on every successful processing path (including dedupes
-         *     and known-bad inputs that we've decided to swallow). Returns 4xx
-         *     only when ComGate should be told to retry.
+         *     1. Read `transId` from the (untrusted) callback body.
+         *     2. Re-query the authoritative status with our Basic-auth creds —
+         *        this both verifies the callback and gives us the real status +
+         *        refId. A transient failure here returns 503 so ComGate retries.
+         *     3. Ignore non-terminal states (PENDING/AUTHORIZED) without recording
+         *        anything, so a later PAID for the same transId still processes.
+         *     4. For a terminal state, dedupe via `webhook_events`, look up the
+         *        Charge via refId (our Charge UUID), and dispatch into the right
+         *        `apply_*_success` / `mark_charge_failed` funnel.
+         *
+         *     Returns 204 on every path ComGate should NOT retry (processed,
+         *     deduped, unknown/non-terminal/non-charge). Returns 5xx only when a
+         *     transient upstream failure means ComGate should re-deliver.
          */
         post: operations["comgate_webhook_api_v1_payments_webhook_post"];
         delete?: never;
@@ -4426,6 +4430,8 @@ export interface components {
             billing_name?: string | null;
             /** Billing Email */
             billing_email?: string | null;
+            /** Billing Kind */
+            billing_kind?: ("business" | "individual") | null;
             /** Locale */
             locale: string;
             /** Currency */
@@ -4494,6 +4500,8 @@ export interface components {
             billing_name?: string | null;
             /** Billing Email */
             billing_email?: string | null;
+            /** Billing Kind */
+            billing_kind?: ("business" | "individual") | null;
             /** Show Leaderboard To Salespeople */
             show_leaderboard_to_salespeople?: boolean | null;
             /** Ownership Window Days */
@@ -9109,9 +9117,7 @@ export interface operations {
     comgate_webhook_api_v1_payments_webhook_post: {
         parameters: {
             query?: never;
-            header?: {
-                "x-comgate-signature"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -9123,15 +9129,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
             };
         };
     };
