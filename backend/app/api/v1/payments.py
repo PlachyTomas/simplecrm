@@ -71,6 +71,7 @@ from app.services.comgate import (
     get_comgate_client,
 )
 from app.services.lookup_cache import RateLimiter
+from app.services.org_billing import billing_complete
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +140,16 @@ async def initial_payment_init(
         )
     amount_minor = sub.seat_count * plan.price_per_user_minor
 
+    org = await session.get(Organization, org_id)
+    if org is None or not billing_complete(org):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "code": "billing_details_required",
+                "detail": "Před platbou je nutné vyplnit fakturační údaje.",
+            },
+        )
+
     charge = Charge(
         organization_id=org_id,
         kind="initial",
@@ -150,8 +161,7 @@ async def initial_payment_init(
     session.add(charge)
     await session.flush()
 
-    org = await session.get(Organization, org_id)
-    label = (f"SimpleCRM {plan.display_name_cs} – {org.name if org else ''}").strip()
+    label = f"SimpleCRM {plan.display_name_cs} – {org.name}".strip()
     try:
         created = await comgate.create_initial_payment(
             amount_minor=amount_minor,
