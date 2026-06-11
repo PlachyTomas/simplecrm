@@ -232,7 +232,9 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
               <button
                 type="button"
                 onClick={() => void onSubmitChoosePlan()}
-                disabled={!selected || submitting || !recurringConsent || !isBillingFormValid(billing)}
+                disabled={
+                  !selected || submitting || !recurringConsent || !isBillingFormValid(billing)
+                }
                 className="inline-flex h-11 items-center justify-center rounded-md bg-accent px-6 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting ? "Přesměrování…" : "Pokračovat na platbu"}

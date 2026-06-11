@@ -65,9 +65,7 @@ export function billingFormFromOrg(org: OrgBillingSource): BillingFormState {
 
 function addressComplete(s: BillingFormState): boolean {
   return (
-    s.address_street.trim() !== "" &&
-    s.address_city.trim() !== "" &&
-    s.address_zip.trim() !== ""
+    s.address_street.trim() !== "" && s.address_city.trim() !== "" && s.address_zip.trim() !== ""
   );
 }
 

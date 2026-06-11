@@ -1,12 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Building2,
-  Check,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Check, Sparkles, Users } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 

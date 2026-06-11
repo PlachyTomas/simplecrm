@@ -69,11 +69,22 @@ export function DodaciPlatebniPodminkyPage() {
           plátcem DPH.
         </p>
         <p>2.2 Cena se hradí předem na začátku každého zúčtovacího období.</p>
-        <p>2.3 Přijímáme tyto způsoby platby (vše prostřednictvím platební brány Comgate):</p>
+        <p>
+          2.3 Přijímáme tyto způsoby platby, vše prostřednictvím platební brány{" "}
+          <a
+            href={COMGATE_INFO.gatewayUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="underline hover:text-text-primary"
+          >
+            Comgate
+          </a>
+          :
+        </p>
         <ul className="list-disc space-y-1 pl-5">
           <li>platební karty Visa a Mastercard,</li>
           <li>Apple Pay a Google Pay,</li>
-          <li>online bankovní převod (tlačítka českých bank).</li>
+          <li>online bankovní převod (platební tlačítka českých bank).</li>
         </ul>
         <p>
           2.4 Za žádný způsob platby neúčtujeme příplatek — cena dle Ceníku je konečná. Platby
@@ -81,7 +92,43 @@ export function DodaciPlatebniPodminkyPage() {
         </p>
       </Section>
 
-      <Section id="opakovane-platby" title="3. Opakované platby">
+      <Section id="prubeh-platby" title="3. Jak platba probíhá">
+        <p>
+          3.1 Po výběru platby budete přesměrováni z naší aplikace na zabezpečenou platební bránu
+          Comgate, kde celou platbu dokončíte. Po jejím provedení (nebo zrušení) vás brána
+          automaticky vrátí zpět do SimpleCRM a o výsledku vás vyrozumíme.
+        </p>
+        <p>
+          3.2 <strong>Platba kartou:</strong> na bráně zadáte číslo karty, datum platnosti a CVC
+          kód; banka může vyžádat ověření 3-D Secure (např. potvrzení v mobilní aplikaci). Po
+          schválení je platba provedena okamžitě. Podrobnosti popisuje{" "}
+          <a
+            href={COMGATE_INFO.cardHelpUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="underline hover:text-text-primary"
+          >
+            nápověda Comgate k platbám kartou
+          </a>
+          .
+        </p>
+        <p>
+          3.3 <strong>Platební tlačítka bank (online převod):</strong> zvolíte svou banku,
+          přihlásíte se do jejího internetového bankovnictví a potvrdíte předvyplněný platební
+          příkaz. Platba je díky tomu spárována ihned. Podrobnosti popisuje{" "}
+          <a
+            href={COMGATE_INFO.bankHelpUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="underline hover:text-text-primary"
+          >
+            nápověda Comgate k bankovním převodům
+          </a>
+          .
+        </p>
+      </Section>
+
+      <Section id="opakovane-platby" title="4. Opakované platby">
         <p>
           Zvolí-li si Uživatel automatické obnovování předplatného, jsou platby pravidelně strhávány
           z platební karty. Úplné podmínky opakovaných plateb — výše a frekvence strhávané částky,
@@ -97,15 +144,25 @@ export function DodaciPlatebniPodminkyPage() {
         </p>
       </Section>
 
-      <Section id="zabezpeceni" title="4. Zabezpečení plateb">
+      <Section id="zabezpeceni" title="5. Zabezpečení plateb">
         <p>{COMGATE_INFO.legalText}</p>
         <p>
           Platební údaje zpracovává výhradně Comgate, a.s. dle bezpečnostního standardu PCI DSS.
-          SimpleCRM nemá nikdy přístup k číslu vaší platební karty.
+          SimpleCRM nemá nikdy přístup k číslu vaší platební karty. Další informace o platební bráně
+          najdete na{" "}
+          <a
+            href={COMGATE_INFO.gatewayUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="underline hover:text-text-primary"
+          >
+            comgate.eu
+          </a>
+          .
         </p>
       </Section>
 
-      <Section id="kontakt-platby" title="5. Kontakt pro dotazy k platbám">
+      <Section id="kontakt-platby" title="6. Kontakt pro dotazy k platbám">
         <p>
           S dotazy k objednávce, fakturaci či aktivaci Služby se obracejte na Poskytovatele:{" "}
           <a href={`mailto:${LEGAL_ENTITY.email}`} className="underline hover:text-text-primary">
@@ -145,9 +202,9 @@ export function DodaciPlatebniPodminkyPage() {
         </address>
       </Section>
 
-      <Section id="zaver" title="6. Závěrečná ustanovení">
+      <Section id="zaver" title="7. Závěrečná ustanovení">
         <p>
-          6.1 Tyto podmínky tvoří součást smluvní dokumentace spolu s{" "}
+          7.1 Tyto podmínky tvoří součást smluvní dokumentace spolu s{" "}
           <Link to="/obchodni-podminky" className="underline hover:text-text-primary">
             Všeobecnými obchodními podmínkami
           </Link>{" "}
@@ -157,7 +214,7 @@ export function DodaciPlatebniPodminkyPage() {
           </Link>
           . V případě rozporu mají přednost VOP.
         </p>
-        <p>6.2 Tyto podmínky nabývají účinnosti dne {COMMERCE_TERMS_EFFECTIVE_DATE}.</p>
+        <p>7.2 Tyto podmínky nabývají účinnosti dne {COMMERCE_TERMS_EFFECTIVE_DATE}.</p>
       </Section>
     </LegalPageLayout>
   );

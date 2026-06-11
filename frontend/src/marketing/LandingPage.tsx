@@ -744,25 +744,23 @@ export function Footer() {
             <span className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
               Platební metody
             </span>
-            <span className="inline-flex items-center rounded border border-border-subtle bg-surface-overlay px-2 py-1 text-xs font-semibold text-text-secondary">
-              VISA
-            </span>
-            <span className="inline-flex items-center rounded border border-border-subtle bg-surface-overlay px-2 py-1 text-xs font-semibold text-text-secondary">
-              Mastercard
-            </span>
-            <span className="inline-flex items-center rounded border border-border-subtle bg-surface-overlay px-2 py-1 text-xs font-semibold text-text-secondary">
-              Apple Pay
-            </span>
-            <span className="inline-flex items-center rounded border border-border-subtle bg-surface-overlay px-2 py-1 text-xs font-semibold text-text-secondary">
-              Google Pay
-            </span>
+            {/* Oficiální logo strip Comgate (Comgate + Visa + Mastercard) dle
+                help.comgate.cz/docs/cs/loga-a-udaje-na-webu. Web je light-only, takže
+                používáme variantu pro světlé pozadí; tmavá varianta (…-dark-bg.png) leží
+                vedle pro případné budoucí tmavé téma. */}
             <a
-              href="https://www.comgate.eu"
+              href={COMGATE_INFO.gatewayUrl}
               target="_blank"
               rel="noreferrer noopener"
-              className="inline-flex items-center rounded border border-border-subtle bg-surface-overlay px-2 py-1 text-xs font-semibold text-text-secondary hover:text-text-primary"
+              className="inline-flex"
+              aria-label="Platební brána Comgate – platby kartou Visa a Mastercard"
             >
-              Comgate
+              <img
+                src="/payment/comgate-logos-light-bg.png"
+                alt="Comgate, Visa, Mastercard"
+                className="h-8 w-auto"
+                loading="lazy"
+              />
             </a>
           </div>
           <p className="mt-4 max-w-3xl text-xs leading-relaxed text-text-tertiary">

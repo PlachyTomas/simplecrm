@@ -61,7 +61,8 @@ export function OrgBillingFields({
   // Only fire for a *new* 8-digit IČO the user just typed — one that
   // differs from both the server's saved value and the last ARES-filled
   // value. This mirrors the guard in InvoiceDetailsCard.
-  const icoChanged = !!icoQuery && icoQuery !== (savedIco ?? "") && icoQuery !== lastFilledIcoRef.current;
+  const icoChanged =
+    !!icoQuery && icoQuery !== (savedIco ?? "") && icoQuery !== lastFilledIcoRef.current;
 
   const lookup = useLookupRegistry({
     country: "CZ",
@@ -105,18 +106,17 @@ export function OrgBillingFields({
     ? describeLookupError(lookup.error, debouncedIco)
     : null;
   const icoLength = value.ico.replace(/\D/g, "").length;
-  const lookupState: "idle" | "typing" | "loading" | "success" | "not_found" | "error" =
-    !icoChanged
-      ? "idle"
-      : !icoQuery
-        ? "typing"
-        : lookup.isPending
-          ? "loading"
-          : lookup.isError
-            ? lookup.error instanceof ApiError && lookup.error.status === 404
-              ? "not_found"
-              : "error"
-            : "success";
+  const lookupState: "idle" | "typing" | "loading" | "success" | "not_found" | "error" = !icoChanged
+    ? "idle"
+    : !icoQuery
+      ? "typing"
+      : lookup.isPending
+        ? "loading"
+        : lookup.isError
+          ? lookup.error instanceof ApiError && lookup.error.status === 404
+            ? "not_found"
+            : "error"
+          : "success";
 
   const inputClass =
     "mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none";
