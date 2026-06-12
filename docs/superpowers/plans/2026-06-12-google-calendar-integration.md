@@ -116,28 +116,28 @@ Rules:
 
 ### Task 5: Frontend types + integrations settings UI
 
-- [ ] Backend running, `pnpm types:generate`, `pnpm types:check`
-- [ ] `frontend/src/app/settings/useGoogleCalendar.ts` — `useGoogleCalendarStatus`, `useGoogleCalendarConnect` (fetch authorize-url → `window.location.assign`), `useGoogleCalendarDisconnect`
-- [ ] Replace Google Calendar placeholder in `IntegrationsSection` (SettingsPage.tsx): connected state shows google_email + "Odpojit"; disconnected shows "Propojit"; `sync_broken` shows warning + reconnect; read `gcal`/`gcal_error` query params → toast + clean URL (SettingsPage already reads `tab` param)
-- [ ] Commit `feat(settings): google calendar connect/disconnect UI`
+- [x] Backend running, `pnpm types:generate`, `pnpm types:check`
+- [x] `frontend/src/app/settings/useGoogleCalendar.ts` — `useGoogleCalendarStatus`, `useGoogleCalendarConnect` (fetch authorize-url → `window.location.assign`), `useGoogleCalendarDisconnect`
+- [x] Replace Google Calendar placeholder in `IntegrationsSection` (SettingsPage.tsx): connected state shows google_email + "Odpojit"; disconnected shows "Propojit"; `sync_broken` shows warning + reconnect; read `gcal`/`gcal_error` query params → toast + clean URL (SettingsPage already reads `tab` param)
+- [x] Commit `feat(settings): google calendar connect/disconnect UI`
 
 ### Task 6: Deal detail events section + event modal
 
-- [ ] `frontend/src/app/events/useEvents.ts` — useEvents({from,to,dealId}), useCreateEvent, useUpdateEvent, useDeleteEvent (+ invalidation)
-- [ ] `frontend/src/app/events/EventFormModal.tsx` — create/edit; fields title, date, start/end time (native inputs), description, location, checkbox "Přidat do Google kalendáře" (disabled + link to settings when not connected; checked default when connected); edit of synced event keeps checkbox checked; uncheck removes from Google
-- [ ] `frontend/src/app/deals/DealDetailPage.tsx` — "Události" card under the details card: upcoming first, then past (muted); each row: title, formatted date/time, Google badge (synced) / warning (error), edit + delete buttons; "Naplánovat událost" button opens modal with deal prefill
-- [ ] Commit `feat(deals): events section + event form modal`
+- [x] `frontend/src/app/events/useEvents.ts` — useEvents({from,to,dealId}), useCreateEvent, useUpdateEvent, useDeleteEvent (+ invalidation)
+- [x] `frontend/src/app/events/EventFormModal.tsx` — create/edit; fields title, date, start/end time (native inputs), description, location, checkbox "Přidat do Google kalendáře" (disabled + link to settings when not connected; checked default when connected); edit of synced event keeps checkbox checked; uncheck removes from Google
+- [x] `frontend/src/app/deals/DealDetailPage.tsx` — "Události" card under the details card: upcoming first, then past (muted); each row: title, formatted date/time, Google badge (synced) / warning (error), edit + delete buttons; "Naplánovat událost" button opens modal with deal prefill
+- [x] Commit `feat(deals): events section + event form modal`
 
 ### Task 7: Calendar page + nav
 
-- [ ] `frontend/src/app/calendar/calendarMath.ts` — `monthGridDays(year, month)` Monday-first 6×7 grid + helpers; vitest `calendarMath.test.ts`
-- [ ] `frontend/src/app/calendar/CalendarPage.tsx` — month view: header (month name + rok, prev/Dnes/next), 7-col grid, event chips (truncate, +N více), today highlighted, other-month days muted; click event → EventFormModal edit; click day → opens day detail list (side panel on desktop); mobile (<md): agenda list of events for the month
-- [ ] Route `/app/calendar` in `App.tsx` + Sidebar item "Kalendář" (CalendarDays icon) + MobileTabBar if it lists same items
-- [ ] Commit `feat(calendar): in-app calendar page`
+- [x] `frontend/src/app/calendar/calendarMath.ts` — `monthGridDays(year, month)` Monday-first 6×7 grid + helpers; vitest `calendarMath.test.ts`
+- [x] `frontend/src/app/calendar/CalendarPage.tsx` — month view: header (month name + rok, prev/Dnes/next), 7-col grid, event chips (truncate, +N více), today highlighted, other-month days muted; click event → EventFormModal edit; click day → opens day detail list (side panel on desktop); mobile (<md): agenda list of events for the month
+- [x] Route `/app/calendar` in `App.tsx` + Sidebar item "Kalendář" (CalendarDays icon) + MobileTabBar if it lists same items
+- [x] Commit `feat(calendar): in-app calendar page`
 
 ### Task 8: Verification
 
-- [ ] Backend: `uv run pytest` clean; `uv run ruff check`, `uv run mypy` (45 passed; ruff+mypy+black clean)
-- [ ] Frontend: `pnpm lint && pnpm format:check && pnpm typecheck && pnpm types:check && pnpm test && pnpm build` (all green)
-- [ ] Playwright manual pass: settings integrations card, deal detail event create (Google checkbox visible+disabled when not connected), calendar page render; screenshots; close browser (screenshots in docs/screenshots/gcal-*.png)
-- [ ] Final commit + update this plan checkboxes
+- [x] Backend: `uv run pytest` clean; `uv run ruff check`, `uv run mypy` (45 passed; ruff+mypy+black clean)
+- [x] Frontend: `pnpm lint && pnpm format:check && pnpm typecheck && pnpm types:check && pnpm test && pnpm build` (all green)
+- [x] Playwright manual pass: settings integrations card, deal detail event create (Google checkbox visible+disabled when not connected), calendar page render; screenshots; close browser (screenshots in docs/screenshots/gcal-*.png)
+- [x] Final commit + update this plan checkboxes

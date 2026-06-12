@@ -25,6 +25,12 @@ function defaultStart(): { date: string; start: string; end: string } {
   d.setMinutes(0, 0, 0);
   d.setHours(d.getHours() + 1);
   const end = new Date(d.getTime() + 60 * 60 * 1000);
+  // The form composes both times with one date — clamp a midnight-crossing
+  // slot (23:00 start) to 23:59 so the default passes "end after start".
+  if (end.getDate() !== d.getDate()) {
+    end.setTime(d.getTime());
+    end.setMinutes(59);
+  }
   return {
     date: toLocalDate(d.toISOString()),
     start: toLocalTime(d.toISOString()),
