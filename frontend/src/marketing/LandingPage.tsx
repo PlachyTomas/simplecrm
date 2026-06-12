@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { openCookieSettings } from "@/marketing/cookie-consent-controls";
 import { COMGATE_INFO, LEGAL_ENTITY } from "@/marketing/legal-entity";
 import { AresDemoSection } from "@/marketing/AresDemoSection";
+import { CalendarDemoSection } from "@/marketing/CalendarDemoSection";
 import { InteractivePipeline } from "@/marketing/InteractivePipeline";
 import { ReportsDemoSection } from "@/marketing/ReportsDemoSection";
 
@@ -800,6 +801,7 @@ export function LandingPage() {
         <AresDemoSection />
         <HowItWorks />
         <ReportsDemoSection />
+        <CalendarDemoSection />
         <Pricing />
         <Faq />
       </main>
