@@ -43,10 +43,10 @@
 - Indexes: organization_id, deal_id, owner_user_id, starts_at
 - Relationships: organization, deal, owner
 
-- [ ] Step 1: Write models, register in `__init__`
-- [ ] Step 2: `uv run alembic revision --autogenerate -m "calendar events + google connections"`, review the diff
-- [ ] Step 3: `uv run alembic upgrade head` against dev DB
-- [ ] Step 4: Commit `feat(db): calendar events + google calendar connections`
+- [x] Step 1: Write models, register in `__init__`
+- [x] Step 2: `uv run alembic revision --autogenerate -m "calendar events + google connections"`, review the diff (stripped unrelated drift noise from autogen)
+- [x] Step 3: `uv run alembic upgrade head` against dev DB
+- [x] Step 4: Commit `feat(db): calendar events + google calendar connections` (89121ca)
 
 ### Task 2: Token crypto + Google Calendar service
 
@@ -69,7 +69,7 @@
 - `get_valid_access_token(session, connection) -> str` — cached if >60s left, else refresh + persist; marks `sync_broken=True` + raises on auth error
 - Protocol + `get_google_calendar_client()` dependency for test stubbing (like `GoogleOAuthClient`)
 
-- [ ] Steps: TDD crypto round-trip; service tests with `respx`/manual httpx mock or Protocol stub; commit `feat(gcal): google calendar client service + token crypto`
+- [x] Steps: TDD crypto round-trip; service tests with httpx.MockTransport; commit `feat(gcal): google calendar client service + token crypto` (eda2020) — 13 tests passing
 
 ### Task 3: Integration endpoints
 
@@ -86,7 +86,7 @@ Routes:
 - `GET /` (auth) → status from connection row
 - `DELETE /` (auth) → best-effort revoke refresh token, delete row, clear `google_event_id`/set `not_synced` on the user's events? NO — keep google_event_id? Spec says: status back to not_synced + clear google_event_id. 204.
 
-- [ ] Steps: TDD with stub client; commit `feat(gcal): connect/disconnect endpoints + status`
+- [x] Steps: TDD with stub client; commit `feat(gcal): connect/disconnect endpoints + status` (b010351) — 11 tests passing
 
 ### Task 4: Events CRUD + Google propagation
 
@@ -107,6 +107,12 @@ Rules:
 - Google: only the OWNER's connection is used. add_to_google=True on create/update → push (insert or patch); update of synced event → patch; add_to_google=False on update of synced event → delete google copy + clear; delete of synced event → best-effort google delete. All Google failures: keep local change, set status `error` (auth errors also set sync_broken on connection). Caller without connection + add_to_google → 400 `{"code": "google_calendar_not_connected"}`.
 
 - [ ] Steps: TDD CRUD + visibility + validation with stubbed client; commit `feat(events): deal events CRUD with optional google sync`
+
+**⏸ RESUME HERE (session paused 2026-06-12, mid-Task 4):**
+- DONE (committed as WIP): `app/schemas/calendar_event.py`, `app/api/v1/events.py`, router mounted in `app/api/v1/__init__.py`. Code written but **NOT yet tested/linted** — no test file exists yet.
+- NEXT: write `backend/tests/api/v1/test_events.py` (reuse FakeGoogleCalendarClient + seeding helpers from `tests/api/v1/test_google_calendar.py`; deal seeding via `create_default_pipeline` like `tests/api/v1/test_deals.py`). Planned coverage: create happy path (not_synced); add_to_google without connection → 400 `google_calendar_not_connected`; add_to_google with connection → synced + google_event_id; google failure → 201 with status `error` (local-first); deal from another org → 400; ends<=starts → 422; list overlap window (`from`/`to` aliases) + deal_id filter; scoping (salesperson vs admin); update by owner (patches google); update add_to_google=false (removes google copy → not_synced); update by other salesperson → 403; delete by owner/admin (best-effort google delete); 404 patch → re-insert path.
+- THEN: `uv run ruff check . && uv run ruff format . && uv run mypy app` + run new tests with `DATABASE_URL=postgresql+asyncpg://simplecrm:simplecrm@localhost:5432/simplecrm uv run pytest tests/api/v1/test_events.py` (postgres via `docker compose -f docker-compose.dev.yml up -d postgres`; it IS currently running). Then amend/commit as `feat(events): deal events CRUD with optional google sync`.
+- THEN continue Tasks 5–8 (frontend) per plan below. Design doc: `docs/superpowers/specs/2026-06-12-google-calendar-integration-design.md`.
 
 ### Task 5: Frontend types + integrations settings UI
 

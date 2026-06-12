@@ -10,6 +10,7 @@ from app.api.v1 import (
     contacts,
     data_export,
     deals,
+    events,
     feedback,
     google_calendar,
     health,
@@ -64,6 +65,7 @@ api_router.include_router(organizations.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(companies.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(contacts.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(deals.router, dependencies=PROTECTED_DEPS)
+api_router.include_router(events.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(invitations.router, dependencies=PROTECTED_DEPS)
 # Customer-facing tax-invoice surfaces. Org-membership gated; not trial-
 # gated (a gated org must still be able to download their existing
