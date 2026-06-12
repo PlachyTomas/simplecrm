@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Download, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Calendar, Download, Pencil, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import {
   type StageOut,
@@ -18,6 +18,11 @@ import { PrivacySection } from "@/app/settings/PrivacySection";
 import { TeamsSection } from "@/app/settings/TeamsSection";
 import { UsersSection } from "@/app/settings/UsersSection";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
+import {
+  useGoogleCalendarConnect,
+  useGoogleCalendarDisconnect,
+  useGoogleCalendarStatus,
+} from "@/app/settings/useGoogleCalendar";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { formatCzkMinor } from "@/components/billing/format";
@@ -51,6 +56,7 @@ import {
 import { ApiError, apiFetch } from "@/lib/api";
 import { csNoun } from "@/lib/i18n/nouns";
 import { ThemeToggle } from "@/lib/ThemeToggle";
+import { useToast } from "@/lib/toast";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 import type { components } from "@/types/api.generated";
@@ -328,6 +334,10 @@ interface SettingsPageProps {
   initialTab?: SettingsTab;
 }
 
+function isSettingsTab(value: string | null): value is SettingsTab {
+  return value !== null && TABS.some((t) => t.key === value);
+}
+
 export function SettingsPage({ initialTab = "pipeline" }: SettingsPageProps = {}) {
   const { data: user } = useCurrentUser();
   const { data: pipeline, isPending, isError } = usePipeline();
@@ -335,11 +345,38 @@ export function SettingsPage({ initialTab = "pipeline" }: SettingsPageProps = {}
   const updateStage = useUpdateStage();
   const deleteStage = useDeleteStage();
   const reorder = useReorderStages();
+  const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [addingOpen, setAddingOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [globalError, setGlobalError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
+  // `?tab=` deep-links a specific tab — the Google Calendar OAuth callback
+  // bounces to `/app/settings?tab=integrations&gcal=…`.
+  const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
+    const fromUrl = searchParams.get("tab");
+    return isSettingsTab(fromUrl) ? fromUrl : initialTab;
+  });
+
+  // One-shot toast for the OAuth callback outcome, then clean the URL so
+  // a refresh doesn't re-announce it.
+  useEffect(() => {
+    const connected = searchParams.get("gcal");
+    const errorCode = searchParams.get("gcal_error");
+    if (!connected && !errorCode) return;
+    if (connected === "connected") {
+      toast.success("Google Kalendář byl propojen");
+    } else if (errorCode === "denied") {
+      toast.error("Propojení Google Kalendáře bylo zrušeno");
+    } else if (errorCode) {
+      toast.error("Propojení Google Kalendáře se nezdařilo, zkuste to prosím znovu");
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete("gcal");
+    next.delete("gcal_error");
+    next.delete("tab");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, toast]);
 
   // TABS is a non-empty literal — index 0 always exists, but
   // noUncheckedIndexedAccess forces a non-null assertion.
@@ -2250,6 +2287,92 @@ function IntervalRadio({
   );
 }
 
+function GoogleCalendarCard() {
+  const toast = useToast();
+  const { data: status, isPending } = useGoogleCalendarStatus();
+  const connect = useGoogleCalendarConnect();
+  const disconnect = useGoogleCalendarDisconnect();
+
+  const connected = status?.connected ?? false;
+  const needsReconnect = connected && (status?.sync_broken ?? false);
+
+  return (
+    <li className="rounded-lg border border-border bg-surface p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 rounded-md bg-accent-subtle p-2 text-accent">
+            <Calendar size={18} strokeWidth={1.75} />
+          </span>
+          <div>
+            <p className="text-sm font-medium text-text-primary">Google Kalendář</p>
+            <p className="mt-0.5 text-sm text-text-secondary">
+              Události u obchodů se na přání zapíší i do vašeho Google kalendáře.
+            </p>
+            {connected ? (
+              <p className="mt-1 text-xs text-text-tertiary">
+                Propojeno s účtem{" "}
+                <span className="font-medium text-text-secondary">{status?.google_email}</span>
+              </p>
+            ) : null}
+            {needsReconnect ? (
+              <p className="mt-1 text-xs text-warning">
+                Google přístup odvolal — propojte kalendář prosím znovu.
+              </p>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {connected && !needsReconnect ? (
+            <span className="inline-flex items-center rounded-full bg-success-subtle px-2 py-0.5 text-xs font-medium text-success">
+              Aktivní
+            </span>
+          ) : null}
+          {connected ? (
+            <>
+              {needsReconnect ? (
+                <button
+                  type="button"
+                  onClick={() => connect.mutate()}
+                  disabled={connect.isPending}
+                  className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Propojit znovu
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() =>
+                  disconnect.mutate(undefined, {
+                    onSuccess: () => toast.success("Google Kalendář byl odpojen"),
+                    onError: () => toast.error("Odpojení se nezdařilo, zkuste to prosím znovu"),
+                  })
+                }
+                disabled={disconnect.isPending}
+                className="h-9 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Odpojit
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() =>
+                connect.mutate(undefined, {
+                  onError: () => toast.error("Propojení se nepodařilo zahájit, zkuste to znovu"),
+                })
+              }
+              disabled={isPending || connect.isPending}
+              className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {connect.isPending ? "Přesměrování…" : "Propojit"}
+            </button>
+          )}
+        </div>
+      </div>
+    </li>
+  );
+}
+
 function IntegrationsSection() {
   const integrations = [
     {
@@ -2277,6 +2400,7 @@ function IntegrationsSection() {
         </p>
       </header>
       <ul className="space-y-3">
+        <GoogleCalendarCard />
         {integrations.map((i) => (
           <li
             key={i.name}

@@ -490,6 +490,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/integrations/google-calendar/authorize-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Authorize Url */
+        get: operations["authorize_url_api_v1_integrations_google_calendar_authorize_url_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/google-calendar/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Callback
+         * @description Unauthenticated browser redirect from Google. Identity comes from
+         *     the signed state (pinned user_id) + the state cookie double-check.
+         */
+        get: operations["callback_api_v1_integrations_google_calendar_callback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/google-calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Connection Status */
+        get: operations["connection_status_api_v1_integrations_google_calendar_get"];
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect
+         * @description Drop the connection. Google copies of synced events stay in the
+         *     user's calendar (it's their data); locally those events go back to
+         *     `not_synced` so future edits stop trying to propagate.
+         */
+        delete: operations["disconnect_api_v1_integrations_google_calendar_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/current": {
         parameters: {
             query?: never;
@@ -826,6 +887,45 @@ export interface paths {
          */
         post: operations["update_deal_payment_api_v1_deals__deal_id__payment_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Events
+         * @description Events overlapping [from, to), soonest first.
+         */
+        get: operations["list_events_api_v1_events_get"];
+        put?: never;
+        /** Create Event */
+        post: operations["create_event_api_v1_events_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/events/{event_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Event */
+        put: operations["update_event_api_v1_events__event_id__put"];
+        post?: never;
+        /** Delete Event */
+        delete: operations["delete_event_api_v1_events__event_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3270,6 +3370,101 @@ export interface components {
             /** Attachments */
             attachments?: string[] | null;
         };
+        /** CalendarEventCreate */
+        CalendarEventCreate: {
+            /**
+             * Deal Id
+             * Format: uuid
+             */
+            deal_id: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description?: string | null;
+            /** Location */
+            location?: string | null;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /**
+             * Add To Google
+             * @default false
+             */
+            add_to_google: boolean;
+        };
+        /** CalendarEventOut */
+        CalendarEventOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /**
+             * Deal Id
+             * Format: uuid
+             */
+            deal_id: string;
+            /** Deal Name */
+            deal_name: string;
+            /** Owner User Id */
+            owner_user_id: string | null;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string | null;
+            /** Location */
+            location: string | null;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /** Google Event Id */
+            google_event_id: string | null;
+            google_sync_status: components["schemas"]["GoogleSyncStatus"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** CalendarEventUpdate */
+        CalendarEventUpdate: {
+            /** Title */
+            title?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Location */
+            location?: string | null;
+            /** Starts At */
+            starts_at?: string | null;
+            /** Ends At */
+            ends_at?: string | null;
+            /** Add To Google */
+            add_to_google?: boolean | null;
+        };
         /**
          * CancelSelfServeIn
          * @description Body for `POST /subscription/cancel`. Optional free-form reason
@@ -3957,6 +4152,42 @@ export interface components {
             /** Owneruserid */
             ownerUserId?: string | null;
         };
+        /**
+         * GoogleCalendarAuthorizeUrlOut
+         * @description Google consent-screen URL the frontend redirects the browser to.
+         *
+         *     Fetched via authenticated XHR (a plain `<a href>` redirect can't carry
+         *     the Bearer token), then `window.location.assign(url)`.
+         */
+        GoogleCalendarAuthorizeUrlOut: {
+            /** Url */
+            url: string;
+        };
+        /** GoogleCalendarStatusOut */
+        GoogleCalendarStatusOut: {
+            /** Connected */
+            connected: boolean;
+            /** Google Email */
+            google_email?: string | null;
+            /**
+             * Sync Broken
+             * @default false
+             */
+            sync_broken: boolean;
+            /** Connected At */
+            connected_at?: string | null;
+        };
+        /**
+         * GoogleSyncStatus
+         * @description Sync state of a calendar event against the owner's Google Calendar.
+         *
+         *     `not_synced` — local-only (the default, or the Google copy was removed).
+         *     `synced`     — a Google copy exists and matches the last local write.
+         *     `error`      — the last push attempt failed; the local row is still the
+         *                    source of truth and the UI surfaces a warning.
+         * @enum {string}
+         */
+        GoogleSyncStatus: "not_synced" | "synced" | "error";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -4522,6 +4753,17 @@ export interface components {
         Page_BlockedCompanyOut_: {
             /** Items */
             items: components["schemas"]["BlockedCompanyOut"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** Page[CalendarEventOut] */
+        Page_CalendarEventOut_: {
+            /** Items */
+            items: components["schemas"]["CalendarEventOut"][];
             /** Total */
             total: number;
             /** Limit */
@@ -6325,6 +6567,99 @@ export interface operations {
             };
         };
     };
+    authorize_url_api_v1_integrations_google_calendar_authorize_url_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleCalendarAuthorizeUrlOut"];
+                };
+            };
+        };
+    };
+    callback_api_v1_integrations_google_calendar_callback_get: {
+        parameters: {
+            query?: {
+                code?: string | null;
+                state?: string | null;
+                error?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                simplecrm_gcal_state?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    connection_status_api_v1_integrations_google_calendar_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleCalendarStatusOut"];
+                };
+            };
+        };
+    };
+    disconnect_api_v1_integrations_google_calendar_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     get_current_organization_api_v1_organizations_current_get: {
         parameters: {
             query?: never;
@@ -7156,6 +7491,138 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DealOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_events_api_v1_events_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                deal_id?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_CalendarEventOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_event_api_v1_events_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalendarEventCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarEventOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_event_api_v1_events__event_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalendarEventUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarEventOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_event_api_v1_events__event_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
