@@ -51,13 +51,14 @@ from app.services.google_calendar import (
 router = APIRouter(prefix="/events", tags=["events"])
 
 
-def _event_out(event: CalendarEvent) -> CalendarEventOut:
-    """Requires `event.deal` to be eager-loaded (async lazy-load raises)."""
+def _event_out(event: CalendarEvent, deal_name: str) -> CalendarEventOut:
+    """`deal_name` is passed explicitly — accessing `event.deal` after a
+    commit can trigger an async lazy-load, which raises MissingGreenlet."""
     return CalendarEventOut(
         id=event.id,
         organization_id=event.organization_id,
         deal_id=event.deal_id,
-        deal_name=event.deal.name,
+        deal_name=deal_name,
         owner_user_id=event.owner_user_id,
         title=event.title,
         description=event.description,
@@ -245,7 +246,7 @@ async def list_events(
     )
     events = (await session.execute(items_stmt)).scalars().all()
     return Page(
-        items=[_event_out(event) for event in events],
+        items=[_event_out(event, event.deal.name) for event in events],
         total=total,
         limit=pagination.limit,
         offset=pagination.offset,
@@ -279,8 +280,8 @@ async def create_event(
         await _sync_insert(session, event, connection, client)
 
     await session.commit()
-    await session.refresh(event, attribute_names=["deal"])
-    return _event_out(event)
+    await session.refresh(event)
+    return _event_out(event, deal.name)
 
 
 @router.put("/{event_id}", response_model=CalendarEventOut)
@@ -293,6 +294,7 @@ async def update_event(
 ) -> CalendarEventOut:
     event = await _get_scoped_event(session, user, event_id)
     _assert_can_modify(user, event)
+    deal_name = event.deal.name  # capture before commit expires the relationship
 
     fields = payload.model_dump(exclude_unset=True, exclude={"add_to_google"})
     for key, value in fields.items():
@@ -323,8 +325,8 @@ async def update_event(
         event.google_sync_status = GoogleSyncStatus.not_synced
 
     await session.commit()
-    await session.refresh(event, attribute_names=["deal"])
-    return _event_out(event)
+    await session.refresh(event)
+    return _event_out(event, deal_name)
 
 
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
