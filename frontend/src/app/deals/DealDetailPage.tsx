@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { useCompany } from "@/app/companies/useCompany";
 import { useContact, useContacts } from "@/app/contacts/useContacts";
+import { DealEventsSection } from "@/app/events/DealEventsSection";
 import { MarkLostDialog } from "@/app/deals/MarkLostDialog";
 import { useMarkDealLost, useMarkDealWon } from "@/app/deals/useDealActions";
 import { useDeal, useDeleteDeal, useUpdateDeal } from "@/app/deals/useDeals";
@@ -410,6 +411,8 @@ export function DealDetailPage() {
           </button>
         </div>
       ) : null}
+
+      <DealEventsSection dealId={deal.id} dealName={deal.name} locale={locale} />
 
       <MarkLostDialog
         open={lostDialogOpen}
