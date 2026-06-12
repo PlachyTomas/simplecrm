@@ -8,6 +8,7 @@ from app.db.models.activity import Activity
 from app.db.models.auth_action_token import AuthActionToken
 from app.db.models.billing_settings import BillingSettings
 from app.db.models.blocked_company import BlockedCompany
+from app.db.models.calendar_event import CalendarEvent
 from app.db.models.charge import Charge
 from app.db.models.company import Company
 from app.db.models.contact import Contact
@@ -16,11 +17,13 @@ from app.db.models.enums import (
     ActivityEntityType,
     ActivityType,
     BlockedCompanyReason,
+    GoogleSyncStatus,
     OwnershipChangeReason,
     Region,
     StageType,
     UserRole,
 )
+from app.db.models.google_calendar_connection import GoogleCalendarConnection
 from app.db.models.invitation import Invitation
 from app.db.models.invoice import Invoice
 from app.db.models.invoice_audit_log import InvoiceAuditLog
@@ -47,10 +50,13 @@ __all__ = [
     "BillingSettings",
     "BlockedCompany",
     "BlockedCompanyReason",
+    "CalendarEvent",
     "Charge",
     "Company",
     "Contact",
     "Deal",
+    "GoogleCalendarConnection",
+    "GoogleSyncStatus",
     "Invitation",
     "Invoice",
     "InvoiceAuditLog",

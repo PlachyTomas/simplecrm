@@ -45,6 +45,20 @@ class BlockedCompanyReason(StrEnum):
     other = "other"
 
 
+class GoogleSyncStatus(StrEnum):
+    """Sync state of a calendar event against the owner's Google Calendar.
+
+    `not_synced` — local-only (the default, or the Google copy was removed).
+    `synced`     — a Google copy exists and matches the last local write.
+    `error`      — the last push attempt failed; the local row is still the
+                   source of truth and the UI surfaces a warning.
+    """
+
+    not_synced = "not_synced"
+    synced = "synced"
+    error = "error"
+
+
 class ActivityType(StrEnum):
     note = "note"
     stage_change = "stage_change"
