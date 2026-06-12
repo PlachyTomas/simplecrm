@@ -173,9 +173,16 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
         </h2>
         <p className="mt-1 text-sm text-text-tertiary">
           Obchod:{" "}
-          <span className="font-medium text-text-secondary">
-            {event?.deal_name ?? dealName ?? "—"}
-          </span>
+          {event ? (
+            <Link
+              to={`/app/deals/${event.deal_id}`}
+              className="font-medium text-accent hover:text-accent-hover"
+            >
+              {event.deal_name}
+            </Link>
+          ) : (
+            <span className="font-medium text-text-secondary">{dealName ?? "—"}</span>
+          )}
         </p>
 
         <div className="mt-4 space-y-3">

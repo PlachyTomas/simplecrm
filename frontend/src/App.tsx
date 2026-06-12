@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AppShell } from "@/app/AppShell";
 import { MorePage } from "@/app/MorePage";
 import { BillingReturnPage } from "@/app/billing/BillingReturnPage";
+import { CalendarPage } from "@/app/calendar/CalendarPage";
 import { CompaniesListPage } from "@/app/companies/CompaniesListPage";
 import { CompanyDetailPage } from "@/app/companies/CompanyDetailPage";
 import { ContactsPage } from "@/app/contacts/ContactsPage";
@@ -89,6 +90,7 @@ export function AppRoutes() {
         <Route path="contacts/:contactId" element={<ContactsPage />} />
         <Route path="deals" element={<DealsListPage />} />
         <Route path="deals/:dealId" element={<DealDetailPage />} />
+        <Route path="calendar" element={<CalendarPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="settings/import" element={<ImportPage />} />

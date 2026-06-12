@@ -22,6 +22,7 @@ export const testIds = {
     companies: "nav-companies",
     contacts: "nav-contacts",
     deals: "nav-deals",
+    calendar: "nav-calendar",
     reports: "nav-reports",
     settings: "nav-settings",
   },

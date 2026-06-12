@@ -1,5 +1,13 @@
 import type { LucideIcon } from "lucide-react";
-import { ChevronRight, Handshake, LineChart, LogOut, MessageSquare, Settings } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronRight,
+  Handshake,
+  LineChart,
+  LogOut,
+  MessageSquare,
+  Settings,
+} from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 
@@ -40,6 +48,7 @@ export function MorePage() {
 
   const rows: Row[] = [
     { to: "/app/deals", label: "Obchody", icon: Handshake },
+    { to: "/app/calendar", label: "Kalendář", icon: CalendarDays },
     { to: "/app/reports", label: "Reporty", icon: LineChart },
     { to: "/app/settings", label: "Nastavení", icon: Settings },
     { to: "/app/feedback", label: "Zpětná vazba", icon: MessageSquare },

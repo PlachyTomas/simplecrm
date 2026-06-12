@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Building2,
+  CalendarDays,
   Handshake,
   Home,
   LineChart,
@@ -30,6 +31,7 @@ const PRIMARY_ITEMS: NavItem[] = [
   { to: "/app/companies", label: "Firmy", icon: Building2, testId: testIds.nav.companies },
   { to: "/app/contacts", label: "Kontakty", icon: Users, testId: testIds.nav.contacts },
   { to: "/app/deals", label: "Obchody", icon: Handshake, testId: testIds.nav.deals },
+  { to: "/app/calendar", label: "Kalendář", icon: CalendarDays, testId: testIds.nav.calendar },
   { to: "/app/reports", label: "Reporty", icon: LineChart, testId: testIds.nav.reports },
 ];
 
