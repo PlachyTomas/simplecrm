@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     google_redirect_uri: str = "http://localhost:8000/api/v1/auth/google/callback"
+    # Google Calendar integration reuses the same OAuth client but runs its
+    # own consent flow (scope calendar.events + offline refresh token). The
+    # redirect URI must be whitelisted in Google Cloud Console alongside the
+    # login one, and the Calendar API must be enabled for the project.
+    google_calendar_redirect_uri: str = (
+        "http://localhost:8000/api/v1/integrations/google-calendar/callback"
+    )
 
     # Where to send the user after a successful login.
     frontend_success_redirect: str = "http://localhost:5173/app"
