@@ -22,6 +22,7 @@ from app.db.models.enums import UserRole
 ACCESS_TOKEN_TYPE = "access"  # noqa: S105 — JWT type claim, not a credential
 REFRESH_TOKEN_TYPE = "refresh"  # noqa: S105 — JWT type claim, not a credential
 STATE_COOKIE_SALT = "simplecrm.oauth.state"
+GCAL_STATE_SALT = "simplecrm.gcal.state"
 INVITE_TOKEN_SALT = "simplecrm.invitation"  # noqa: S105 — itsdangerous salt
 INVITE_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60  # 7 days
 
@@ -104,6 +105,25 @@ def verify_oauth_state(token: str, max_age_seconds: int = 600) -> dict[str, Any]
     return result if isinstance(result, dict) else None
 
 
+def _gcal_state_serializer() -> URLSafeTimedSerializer:
+    return URLSafeTimedSerializer(get_settings().jwt_secret, salt=GCAL_STATE_SALT)
+
+
+def sign_gcal_state(payload: dict[str, Any]) -> str:
+    """State for the Google Calendar connect flow. Separate salt from the
+    login flow so a login state can't be replayed as a connect state —
+    the connect callback attaches a calendar to `payload["user_id"]`."""
+    return _gcal_state_serializer().dumps(payload)
+
+
+def verify_gcal_state(token: str, max_age_seconds: int = 600) -> dict[str, Any] | None:
+    try:
+        result = _gcal_state_serializer().loads(token, max_age=max_age_seconds)
+    except (BadSignature, SignatureExpired):
+        return None
+    return result if isinstance(result, dict) else None
+
+
 def _invite_serializer() -> URLSafeTimedSerializer:
     return URLSafeTimedSerializer(get_settings().jwt_secret, salt=INVITE_TOKEN_SALT)
 
@@ -155,8 +175,10 @@ __all__ = [
     "create_access_token",
     "create_refresh_token",
     "decode_token",
+    "sign_gcal_state",
     "sign_invite_token",
     "sign_oauth_state",
+    "verify_gcal_state",
     "verify_invite_token",
     "verify_oauth_state",
 ]

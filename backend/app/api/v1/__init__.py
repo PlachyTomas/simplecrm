@@ -11,6 +11,7 @@ from app.api.v1 import (
     data_export,
     deals,
     feedback,
+    google_calendar,
     health,
     imports,
     invitations,
@@ -54,6 +55,11 @@ api_router.include_router(data_export.router)
 # Feedback (bug reports / improvements). Auth-only — a user without an
 # org or with an expired trial still needs to reach the founder.
 api_router.include_router(feedback.router)
+# Google Calendar integration. NOT mounted under PROTECTED_DEPS because
+# `/callback` is an unauthenticated browser redirect from Google — the
+# authenticated routes carry their own per-route org-membership + trial
+# gates inside the router.
+api_router.include_router(google_calendar.router)
 api_router.include_router(organizations.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(companies.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(contacts.router, dependencies=PROTECTED_DEPS)
