@@ -203,33 +203,108 @@ def _resolve_sender(role: SenderRole) -> str:
     return role_value or settings.smtp_username
 
 
-def _send_via_smtp(message: Email) -> None:
-    """Blocking SMTP send. Called via `asyncio.to_thread` so the event
+@dataclass(frozen=True)
+class SmtpConfig:
+    """An explicit SMTP target. Lets us send through either the global
+    transactional account or a per-user mailbox (bulk email) with the same
+    transport code. `sender` is the full `From:` header value.
+    """
+
+    host: str
+    port: int
+    use_ssl: bool
+    use_starttls: bool
+    username: str
+    password: str
+    sender: str
+
+
+def _smtp_config_from_settings(sender: str) -> SmtpConfig:
+    """Build an `SmtpConfig` from the global transactional settings."""
+    settings = get_settings()
+    return SmtpConfig(
+        host=settings.smtp_host,
+        port=settings.smtp_port,
+        use_ssl=settings.smtp_use_ssl,
+        use_starttls=settings.smtp_use_starttls,
+        username=settings.smtp_username,
+        password=settings.smtp_password,
+        sender=sender,
+    )
+
+
+def _send_via_smtp_config(message: Email, config: SmtpConfig) -> None:
+    """Blocking SMTP send of a single message against an explicit config.
+
+    Shared by the global transactional path (`_send_via_smtp`) and the
+    per-user `send_email_via`. Called via `asyncio.to_thread` so the event
     loop isn't blocked on slow handshakes.
     """
-    settings = get_settings()
-    sender = _resolve_sender(message.sender_role)
-    mime = _build_mime(message, sender=sender)
-
+    mime = _build_mime(message, sender=config.sender)
     context = ssl.create_default_context()
-    if settings.smtp_use_ssl:
+    if config.use_ssl:
         with smtplib.SMTP_SSL(
-            host=settings.smtp_host,
-            port=settings.smtp_port,
+            host=config.host,
+            port=config.port,
             context=context,
             timeout=15,
         ) as client:
-            if settings.smtp_username:
-                client.login(settings.smtp_username, settings.smtp_password)
+            if config.username:
+                client.login(config.username, config.password)
             client.send_message(mime)
         return
 
-    with smtplib.SMTP(host=settings.smtp_host, port=settings.smtp_port, timeout=15) as client:
-        if settings.smtp_use_starttls:
+    with smtplib.SMTP(host=config.host, port=config.port, timeout=15) as client:
+        if config.use_starttls:
             client.starttls(context=context)
-        if settings.smtp_username:
-            client.login(settings.smtp_username, settings.smtp_password)
+        if config.username:
+            client.login(config.username, config.password)
         client.send_message(mime)
+
+
+def _send_via_smtp(message: Email) -> None:
+    """Blocking SMTP send through the global transactional account.
+
+    Kept as the seam the test suite patches to a no-op; delegates to the
+    config-based transport so there's a single SMTP code path.
+    """
+    config = _smtp_config_from_settings(_resolve_sender(message.sender_role))
+    _send_via_smtp_config(message, config)
+
+
+async def send_email_via(message: Email, config: SmtpConfig) -> None:
+    """Send one message through an explicit SMTP config (per-user sends).
+
+    Unlike `send_email`, there is no log-fallback: per-user bulk email is
+    only ever attempted once the user's SMTP has been verified, so a
+    failure here is a real error the caller records against the recipient.
+    """
+    await asyncio.to_thread(_send_via_smtp_config, message, config)
+
+
+def verify_smtp(config: SmtpConfig) -> None:
+    """Connect + authenticate to validate credentials, then disconnect.
+
+    Raises `smtplib.SMTPException` / `OSError` / `ssl.SSLError` on failure;
+    callers translate that into a user-facing "test failed" message.
+    """
+    context = ssl.create_default_context()
+    if config.use_ssl:
+        with smtplib.SMTP_SSL(
+            host=config.host,
+            port=config.port,
+            context=context,
+            timeout=15,
+        ) as client:
+            if config.username:
+                client.login(config.username, config.password)
+        return
+
+    with smtplib.SMTP(host=config.host, port=config.port, timeout=15) as client:
+        if config.use_starttls:
+            client.starttls(context=context)
+        if config.username:
+            client.login(config.username, config.password)
 
 
 async def send_email(message: Email) -> None:
