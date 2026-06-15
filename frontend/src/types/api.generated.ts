@@ -624,6 +624,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/bulk-email/recipients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** List Recipients */
+        post: operations["list_recipients_api_v1_companies_bulk_email_recipients_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/bulk-email/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send */
+        post: operations["send_api_v1_companies_bulk_email_send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/bulk-email/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Campaigns */
+        get: operations["list_campaigns_api_v1_companies_bulk_email_campaigns_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/bulk-email/campaigns/{campaign_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Campaign */
+        get: operations["get_campaign_api_v1_companies_bulk_email_campaigns__campaign_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies": {
         parameters: {
             query?: never;
@@ -1588,6 +1656,42 @@ export interface paths {
          *     key — but ``model_fields_set`` lets us tell the two apart).
          */
         patch: operations["patch_my_preferences_api_v1_users_me_preferences_patch"];
+        trace?: never;
+    };
+    "/api/v1/me/smtp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Smtp */
+        get: operations["get_smtp_api_v1_me_smtp_get"];
+        /** Put Smtp */
+        put: operations["put_smtp_api_v1_me_smtp_put"];
+        post?: never;
+        /** Delete Smtp */
+        delete: operations["delete_smtp_api_v1_me_smtp_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/smtp/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test Smtp */
+        post: operations["test_smtp_api_v1_me_smtp_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/activities": {
@@ -2643,7 +2747,7 @@ export interface components {
          * ActivityType
          * @enum {string}
          */
-        ActivityType: "note" | "stage_change" | "owner_change" | "deal_won" | "deal_lost" | "company_freed" | "ownership_reassigned" | "subscription_change";
+        ActivityType: "note" | "stage_change" | "owner_change" | "deal_won" | "deal_lost" | "company_freed" | "ownership_reassigned" | "subscription_change" | "email_sent";
         /** AdminAccessLogList */
         AdminAccessLogList: {
             /** Items */
@@ -3360,6 +3464,13 @@ export interface components {
             /** Bulk Owner User Id */
             bulk_owner_user_id?: string | null;
         };
+        /** Body_send_api_v1_companies_bulk_email_send_post */
+        Body_send_api_v1_companies_bulk_email_send_post: {
+            /** Payload */
+            payload: string;
+            /** Attachment */
+            attachment?: string | null;
+        };
         /** Body_submit_feedback_api_v1_feedback_post */
         Body_submit_feedback_api_v1_feedback_post: {
             kind: components["schemas"]["FeedbackKind"];
@@ -3369,6 +3480,23 @@ export interface components {
             body: string;
             /** Attachments */
             attachments?: string[] | null;
+        };
+        /**
+         * BulkEmailFilters
+         * @description Filter criteria for choosing target companies. Always restricted to
+         *     owned companies in the caller's scope (enforced server-side).
+         */
+        BulkEmailFilters: {
+            /** Industry */
+            industry?: string | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Stage Id */
+            stage_id?: string | null;
+            /** Has Won Deal */
+            has_won_deal?: boolean | null;
+            /** No Order Since Days */
+            no_order_since_days?: number | null;
         };
         /** CalendarEventCreate */
         CalendarEventCreate: {
@@ -3464,6 +3592,78 @@ export interface components {
             ends_at?: string | null;
             /** Add To Google */
             add_to_google?: boolean | null;
+        };
+        /** CampaignDetailOut */
+        CampaignDetailOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Subject */
+            subject: string;
+            /** From Email */
+            from_email: string;
+            /** Attachment Filename */
+            attachment_filename?: string | null;
+            /** Total */
+            total: number;
+            /** Sent Count */
+            sent_count: number;
+            /** Failed Count */
+            failed_count: number;
+            /** Skipped Count */
+            skipped_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Body */
+            body: string;
+            /** Recipients */
+            recipients: components["schemas"]["CampaignRecipientOut"][];
+        };
+        /** CampaignOut */
+        CampaignOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Subject */
+            subject: string;
+            /** From Email */
+            from_email: string;
+            /** Attachment Filename */
+            attachment_filename?: string | null;
+            /** Total */
+            total: number;
+            /** Sent Count */
+            sent_count: number;
+            /** Failed Count */
+            failed_count: number;
+            /** Skipped Count */
+            skipped_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** CampaignRecipientOut */
+        CampaignRecipientOut: {
+            /** Company Id */
+            company_id?: string | null;
+            /** Company Name */
+            company_name: string;
+            /** Email */
+            email: string;
+            status: components["schemas"]["EmailRecipientStatus"];
+            /** Error */
+            error?: string | null;
+            /** Sent At */
+            sent_at?: string | null;
         };
         /**
          * CancelSelfServeIn
@@ -4102,6 +4302,11 @@ export interface components {
             /** Currency */
             currency: string;
         };
+        /**
+         * EmailRecipientStatus
+         * @enum {string}
+         */
+        EmailRecipientStatus: "sent" | "failed" | "skipped";
         /** ExtendTrialIn */
         ExtendTrialIn: {
             /** Days */
@@ -4771,6 +4976,17 @@ export interface components {
             /** Offset */
             offset: number;
         };
+        /** Page[CampaignOut] */
+        Page_CampaignOut_: {
+            /** Items */
+            items: components["schemas"]["CampaignOut"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
         /** Page[CompanyOut] */
         Page_CompanyOut_: {
             /** Items */
@@ -5014,6 +5230,28 @@ export interface components {
             /** Savings Percent */
             savings_percent?: number | null;
         };
+        /**
+         * RecipientCandidate
+         * @description A matched company with its resolved default recipient + contacts, so
+         *     the wizard can let the user hand-pick which addresses to mail.
+         */
+        RecipientCandidate: {
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Company Name */
+            company_name: string;
+            /** Default Email */
+            default_email: string | null;
+            /** Contacts */
+            contacts: components["schemas"]["ContactOut"][];
+            /** Emailable */
+            emailable: boolean;
+            /** Skip Reason */
+            skip_reason?: string | null;
+        };
         /** RefreshResponse */
         RefreshResponse: {
             /** Access Token */
@@ -5228,6 +5466,13 @@ export interface components {
             password: string;
             /** Name */
             name: string;
+        };
+        /** SmtpTestResult */
+        SmtpTestResult: {
+            /** Ok */
+            ok: boolean;
+            /** Error */
+            error?: string | null;
         };
         /** SparklineBucket */
         SparklineBucket: {
@@ -5763,6 +6008,57 @@ export interface components {
          * @enum {string}
          */
         UserRole: "salesperson" | "manager" | "admin";
+        /** UserSmtpSettingsIn */
+        UserSmtpSettingsIn: {
+            /** Host */
+            host: string;
+            /** Port */
+            port: number;
+            /**
+             * Use Ssl
+             * @default true
+             */
+            use_ssl: boolean;
+            /**
+             * Use Starttls
+             * @default false
+             */
+            use_starttls: boolean;
+            /** Username */
+            username: string;
+            /** Password */
+            password?: string | null;
+            /**
+             * From Email
+             * Format: email
+             */
+            from_email: string;
+            /** From Name */
+            from_name?: string | null;
+        };
+        /** UserSmtpSettingsOut */
+        UserSmtpSettingsOut: {
+            /** Host */
+            host: string;
+            /** Port */
+            port: number;
+            /** Use Ssl */
+            use_ssl: boolean;
+            /** Use Starttls */
+            use_starttls: boolean;
+            /** Username */
+            username: string;
+            /** From Email */
+            from_email: string;
+            /** From Name */
+            from_name?: string | null;
+            /** Has Password */
+            has_password: boolean;
+            /** Verified */
+            verified: boolean;
+            /** Verified At */
+            verified_at?: string | null;
+        };
         /** UserUpdate */
         UserUpdate: {
             role?: components["schemas"]["UserRole"] | null;
@@ -6765,6 +7061,135 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OrganizationEraseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_recipients_api_v1_companies_bulk_email_recipients_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkEmailFilters"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipientCandidate"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_api_v1_companies_bulk_email_send_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_send_api_v1_companies_bulk_email_send_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_campaigns_api_v1_companies_bulk_email_campaigns_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_CampaignOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_campaign_api_v1_companies_bulk_email_campaigns__campaign_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignDetailOut"];
                 };
             };
             /** @description Validation Error */
@@ -8973,6 +9398,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_smtp_api_v1_me_smtp_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSmtpSettingsOut"] | {
+                        [key: string]: boolean;
+                    };
+                };
+            };
+        };
+    };
+    put_smtp_api_v1_me_smtp_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserSmtpSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSmtpSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_smtp_api_v1_me_smtp_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    test_smtp_api_v1_me_smtp_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmtpTestResult"];
                 };
             };
         };

@@ -12,6 +12,7 @@ import {
   useUpdateStage,
 } from "@/app/settings/usePipelineSettings";
 import { InvoiceDetailsCard } from "@/app/settings/InvoiceDetailsCard";
+import { SmtpSettingsCard } from "@/app/settings/SmtpSettingsCard";
 import { InvitationsSection } from "@/app/settings/InvitationsSection";
 import { BlockedCompaniesSection } from "@/app/settings/BlockedCompaniesSection";
 import { PrivacySection } from "@/app/settings/PrivacySection";
@@ -2400,6 +2401,7 @@ function IntegrationsSection() {
         </p>
       </header>
       <ul className="space-y-3">
+        <SmtpSettingsCard />
         <GoogleCalendarCard />
         {integrations.map((i) => (
           <li
