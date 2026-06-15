@@ -469,6 +469,14 @@ export function PipelinePage() {
     [board?.stages],
   );
 
+  // Global "add deal" entry points default to the first OPEN stage so a new
+  // lead never lands in a won/lost column (the per-column "+" still targets
+  // its own stage).
+  const firstOpenStageId = useMemo(
+    () => board?.stages.find((s) => s.stage_type === "open")?.id ?? board?.stages[0]?.id,
+    [board?.stages],
+  );
+
   const hasActiveFilter = ownerFilter !== "all" || searchTerm.trim().length > 0;
   const canPickOwner = user?.role === "admin" || user?.role === "manager";
 
@@ -522,7 +530,7 @@ export function PipelinePage() {
             <button
               type="button"
               onClick={() => {
-                setAddDealStageId(undefined);
+                setAddDealStageId(firstOpenStageId);
                 setAddDealOpen(true);
               }}
               className="hidden h-9 items-center gap-1 rounded-md bg-accent px-3 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover md:inline-flex"
@@ -620,7 +628,7 @@ export function PipelinePage() {
             primary={{
               label: "+ Přidat obchod",
               onClick: () => {
-                setAddDealStageId(undefined);
+                setAddDealStageId(firstOpenStageId);
                 setAddDealOpen(true);
               },
             }}
@@ -680,7 +688,7 @@ export function PipelinePage() {
         <button
           type="button"
           onClick={() => {
-            setAddDealStageId(undefined);
+            setAddDealStageId(firstOpenStageId);
             setAddDealOpen(true);
           }}
           aria-label="Přidat obchod"

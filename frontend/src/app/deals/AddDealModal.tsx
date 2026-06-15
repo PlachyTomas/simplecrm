@@ -5,6 +5,7 @@ import { useCompanies } from "@/app/companies/useCompanies";
 import { useCreateCompany } from "@/app/companies/useCreateCompany";
 import { useLookupRegistry } from "@/app/companies/useLookupRegistry";
 import { useContacts } from "@/app/contacts/useContacts";
+import { useCreateContact } from "@/app/contacts/useCreateContact";
 import { useCreateDeal } from "@/app/deals/useCreateDeal";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
@@ -55,6 +56,20 @@ const EMPTY_NEW_COMPANY: NewCompanyDraft = {
   address_city: "",
   address_zip: "",
   legal_form: "",
+};
+
+interface NewContactDraft {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+}
+
+const EMPTY_NEW_CONTACT: NewContactDraft = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
 };
 
 function describeLookupError(error: unknown, ico: string): string {
@@ -111,6 +126,13 @@ export function AddDealModal({
   const [newCompany, setNewCompany] = useState<NewCompanyDraft>(EMPTY_NEW_COMPANY);
   const lastFilledIcoRef = useRef<string | null>(null);
   const createCompany = useCreateCompany();
+  // Inline "create contact person" sub-form so a brand-new lead's company
+  // *and* its contact are captured in one submit. `showNewContact` only
+  // gates the existing-company case (toggle to add a fresh person); for a
+  // new company the fields are always shown.
+  const [newContact, setNewContact] = useState<NewContactDraft>(EMPTY_NEW_CONTACT);
+  const [showNewContact, setShowNewContact] = useState(false);
+  const createContact = useCreateContact();
 
   useEffect(() => {
     if (open) {
@@ -118,6 +140,8 @@ export function AddDealModal({
       setCompanySearch("");
       setShowNewCompany(false);
       setNewCompany(EMPTY_NEW_COMPANY);
+      setNewContact(EMPTY_NEW_CONTACT);
+      setShowNewContact(false);
       lastFilledIcoRef.current = null;
       createDeal.reset();
       createCompany.reset();
@@ -186,14 +210,23 @@ export function AddDealModal({
   if (!open) return null;
 
   const newCompanyReady = showNewCompany && !!newCompany.name.trim();
-  const hasName = !!form.name.trim();
   const hasCompany = !!form.companyId || newCompanyReady;
   const hasStage = !!form.stageId;
-  const canSubmit = hasName && hasStage && hasCompany;
+  // Lead capture stays fast: only a company + stage are required. The deal
+  // name defaults to the company name when left blank.
+  const canSubmit = hasCompany && hasStage;
   const missingLabels: string[] = [];
-  if (!hasName) missingLabels.push("název obchodu");
   if (!hasCompany) missingLabels.push("firma");
   if (!hasStage) missingLabels.push("fáze");
+
+  // Show the new-contact fields when there's no existing contact to pick:
+  // a brand-new company, an existing company with no contacts yet, or when
+  // the user explicitly opts to add a fresh person.
+  const useNewContactFields =
+    newCompanyReady || (!!form.companyId && (showNewContact || companyContacts.length === 0));
+  const newContactProvided =
+    useNewContactFields && !!newContact.firstName.trim() && !!newContact.lastName.trim();
+  const resolvedCompanyName = (newCompanyReady ? newCompany.name : companySearch).trim();
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -229,16 +262,39 @@ export function AddDealModal({
       }
     }
 
+    // Create the contact person inline when its name fields are filled, then
+    // attach it as the deal's primary contact. A contact failure never blocks
+    // the deal — we save the deal without it and warn.
+    let primaryContactId = form.primaryContactId || null;
+    if (newContactProvided && companyId) {
+      try {
+        const createdContact = await createContact.mutateAsync({
+          company_id: companyId,
+          first_name: newContact.firstName.trim(),
+          last_name: newContact.lastName.trim(),
+          email: newContact.email.trim() || null,
+          phone: newContact.phone.trim() || null,
+        });
+        primaryContactId = createdContact.id;
+      } catch {
+        toast.error("Kontaktní osobu se nepodařilo uložit — obchod uložíme bez ní.");
+      }
+    }
+
+    // Deal name defaults to the company name so a lead can be logged without
+    // inventing a title.
+    const effectiveName = form.name.trim() || resolvedCompanyName || "Nový obchod";
+
     try {
       const created = await createDeal.mutateAsync({
-        name: form.name.trim(),
+        name: effectiveName,
         company_id: companyId,
         stage_id: form.stageId,
         owner_user_id: form.ownerId || null,
         value: String(valueNumber),
         expected_close_date: form.expectedCloseDate || null,
         currency: null,
-        primary_contact_id: form.primaryContactId || null,
+        primary_contact_id: primaryContactId,
         probability_override: null,
       });
       toast.success("Obchod uložen.");
@@ -302,18 +358,14 @@ export function AddDealModal({
 
         <div className="mt-6 space-y-5">
           <label className="block">
-            <span className="text-xs font-medium text-text-secondary">
-              Název obchodu <span className="text-danger">*</span>
-            </span>
+            <span className="text-xs font-medium text-text-secondary">Název obchodu</span>
             <input
               type="text"
-              required
-              aria-required="true"
               data-testid={testIds.deals.addModal.nameInput}
               value={form.name}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
               className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
-              placeholder="např. Údržba CRM 2026"
+              placeholder="Volitelné — doplní se podle názvu firmy"
             />
           </label>
 
@@ -367,13 +419,13 @@ export function AddDealModal({
                     type="button"
                     onClick={() => {
                       setShowNewCompany(true);
-                      // Seed nothing — IČO is the only useful prefilling
-                      // when the search is a name.
-                      setNewCompany(EMPTY_NEW_COMPANY);
+                      // Carry the typed name across so it isn't lost; IČO is
+                      // optional enrichment from there.
+                      setNewCompany({ ...EMPTY_NEW_COMPANY, name: companySearch.trim() });
                     }}
                     className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover"
                   >
-                    <Plus size={12} strokeWidth={1.75} /> Vytvořit přes IČO
+                    <Plus size={12} strokeWidth={1.75} /> Vytvořit firmu „{companySearch.trim()}"
                   </button>
                 ) : null}
               </div>
@@ -490,6 +542,7 @@ export function AddDealModal({
               <span className="text-xs font-medium text-text-secondary">Očekávané uzavření</span>
               <input
                 type="date"
+                lang="cs-CZ"
                 value={form.expectedCloseDate}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, expectedCloseDate: e.target.value }))
@@ -499,30 +552,108 @@ export function AddDealModal({
             </label>
           </div>
 
-          {form.companyId ? (
-            <label className="block">
+          {hasCompany ? (
+            <div className="space-y-2">
               <span className="text-xs font-medium text-text-secondary">
-                Hlavní kontakt (volitelné)
+                Kontaktní osoba (volitelné)
               </span>
-              <select
-                value={form.primaryContactId}
-                onChange={(e) => setForm((prev) => ({ ...prev, primaryContactId: e.target.value }))}
-                className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
-              >
-                <option value="">— bez kontaktu —</option>
-                {companyContacts.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.first_name} {c.last_name}
-                    {c.position ? ` · ${c.position}` : ""}
-                  </option>
-                ))}
-              </select>
-              {companyContacts.length === 0 ? (
-                <span className="mt-1 block text-xs text-text-tertiary">
-                  Tato firma zatím nemá kontakty. Můžete je doplnit později z detailu firmy.
-                </span>
-              ) : null}
-            </label>
+              {useNewContactFields ? (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      aria-label="Jméno kontaktní osoby"
+                      autoComplete="given-name"
+                      value={newContact.firstName}
+                      onChange={(e) =>
+                        setNewContact((prev) => ({ ...prev, firstName: e.target.value }))
+                      }
+                      placeholder="Jméno"
+                      className="block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
+                    />
+                    <input
+                      type="text"
+                      aria-label="Příjmení kontaktní osoby"
+                      autoComplete="family-name"
+                      value={newContact.lastName}
+                      onChange={(e) =>
+                        setNewContact((prev) => ({ ...prev, lastName: e.target.value }))
+                      }
+                      placeholder="Příjmení"
+                      className="block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      type="email"
+                      aria-label="E-mail kontaktní osoby"
+                      autoComplete="email"
+                      value={newContact.email}
+                      onChange={(e) =>
+                        setNewContact((prev) => ({ ...prev, email: e.target.value }))
+                      }
+                      placeholder="E-mail"
+                      className="block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
+                    />
+                    <input
+                      type="tel"
+                      aria-label="Telefon kontaktní osoby"
+                      autoComplete="tel"
+                      value={newContact.phone}
+                      onChange={(e) =>
+                        setNewContact((prev) => ({ ...prev, phone: e.target.value }))
+                      }
+                      placeholder="Telefon"
+                      className="block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
+                    />
+                  </div>
+                  {!!form.companyId && companyContacts.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowNewContact(false);
+                        setNewContact(EMPTY_NEW_CONTACT);
+                      }}
+                      className="text-xs font-medium text-accent hover:text-accent-hover"
+                    >
+                      Vybrat z existujících kontaktů
+                    </button>
+                  ) : (
+                    <p className="text-xs text-text-tertiary">
+                      Vyplňte jméno i příjmení — uložíme osobu jako kontakt firmy.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <select
+                    value={form.primaryContactId}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, primaryContactId: e.target.value }))
+                    }
+                    className="block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
+                  >
+                    <option value="">— bez kontaktu —</option>
+                    {companyContacts.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.first_name} {c.last_name}
+                        {c.position ? ` · ${c.position}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNewContact(true);
+                      setForm((prev) => ({ ...prev, primaryContactId: "" }));
+                    }}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:text-accent-hover"
+                  >
+                    <Plus size={12} strokeWidth={1.75} /> Přidat novou osobu
+                  </button>
+                </>
+              )}
+            </div>
           ) : null}
 
           <div className="grid grid-cols-2 gap-3">
