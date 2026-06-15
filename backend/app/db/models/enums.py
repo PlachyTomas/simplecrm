@@ -68,3 +68,10 @@ class ActivityType(StrEnum):
     company_freed = "company_freed"
     ownership_reassigned = "ownership_reassigned"
     subscription_change = "subscription_change"
+    email_sent = "email_sent"
+
+
+class EmailRecipientStatus(StrEnum):
+    sent = "sent"
+    failed = "failed"
+    skipped = "skipped"

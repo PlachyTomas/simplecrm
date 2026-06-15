@@ -13,10 +13,12 @@ from app.db.models.charge import Charge
 from app.db.models.company import Company
 from app.db.models.contact import Contact
 from app.db.models.deal import Deal
+from app.db.models.email_campaign import EmailCampaign, EmailCampaignRecipient
 from app.db.models.enums import (
     ActivityEntityType,
     ActivityType,
     BlockedCompanyReason,
+    EmailRecipientStatus,
     GoogleSyncStatus,
     OwnershipChangeReason,
     Region,
@@ -56,6 +58,9 @@ __all__ = [
     "Company",
     "Contact",
     "Deal",
+    "EmailCampaign",
+    "EmailCampaignRecipient",
+    "EmailRecipientStatus",
     "GoogleCalendarConnection",
     "GoogleSyncStatus",
     "Invitation",
