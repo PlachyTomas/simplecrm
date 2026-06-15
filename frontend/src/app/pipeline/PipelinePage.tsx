@@ -192,6 +192,204 @@ function DealCard({
   );
 }
 
+// Mobile-only card. Unlike DealCard it isn't draggable (the mobile board
+// shows one stage at a time, so cross-stage moves use a select instead of
+// drag), which also means it can live outside the DndContext.
+function MobileDealCard({
+  deal,
+  locale,
+  stageType,
+  stages,
+  onWin,
+  onLose,
+  onTogglePaid,
+  onMove,
+  winning,
+  losing,
+  paymentPending,
+}: {
+  deal: BoardDeal;
+  locale: string;
+  stageType: BoardStage["stage_type"];
+  stages: BoardStage[];
+  onWin?: () => void;
+  onLose?: () => void;
+  onTogglePaid?: (next: boolean) => void;
+  onMove: (dealId: string, stageId: string) => void;
+  winning?: boolean;
+  losing?: boolean;
+  paymentPending?: boolean;
+}) {
+  const valueShown = hasValue(deal.value);
+  return (
+    <article
+      className={cn(
+        "rounded-md border px-3 py-2.5 shadow-sm",
+        deal.is_paid
+          ? "border-brand-accent-border bg-brand-accent-subtle"
+          : "border-border bg-surface",
+      )}
+    >
+      <p className="text-sm font-medium text-text-primary">{deal.name}</p>
+      {valueShown ? (
+        <p className="mt-1 font-mono text-xs tabular-nums text-text-secondary">
+          {formatMoney(deal.value, deal.currency, locale)}
+        </p>
+      ) : null}
+      {stageType === "won" ? (
+        <label className="mt-2 inline-flex select-none items-center gap-2 text-xs text-text-secondary">
+          <input
+            type="checkbox"
+            checked={deal.is_paid}
+            disabled={paymentPending}
+            onChange={(e) => onTogglePaid?.(e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-border text-brand-accent focus:ring-brand-accent"
+          />
+          Zaplaceno
+        </label>
+      ) : (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onWin?.()}
+            disabled={winning}
+            className="inline-flex h-7 items-center gap-1 rounded-md bg-brand-accent px-2 text-xs font-semibold text-text-on-brand-accent transition-colors duration-fast hover:bg-brand-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Check size={12} strokeWidth={2} aria-hidden /> Vyhráno
+          </button>
+          <button
+            type="button"
+            onClick={() => onLose?.()}
+            disabled={losing}
+            className="inline-flex h-7 items-center gap-1 rounded-md border border-border bg-surface-overlay px-2 text-xs font-medium text-text-secondary transition-colors duration-fast hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <X size={12} strokeWidth={2} aria-hidden /> Neúspěch
+          </button>
+        </div>
+      )}
+      <label className="mt-2 block">
+        <span className="sr-only">Přesunout obchod do jiné fáze</span>
+        <select
+          value={deal.stage_id}
+          onChange={(e) => {
+            if (e.target.value !== deal.stage_id) onMove(deal.id, e.target.value);
+          }}
+          className="mt-1 block w-full rounded-md border border-border bg-surface-overlay px-2 py-1.5 text-xs text-text-secondary focus:border-accent focus:outline-none"
+        >
+          {stages.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      </label>
+    </article>
+  );
+}
+
+interface MobileBoardProps {
+  stages: BoardStage[];
+  activeIndex: number;
+  onSelectStage: (index: number) => void;
+  locale: string;
+  boardCurrency: string;
+  onWinDeal: (deal: BoardDeal, anchor: HTMLElement | null) => void;
+  onLoseDeal: (deal: BoardDeal) => void;
+  onTogglePayment: (deal: BoardDeal, next: boolean) => void;
+  onMoveDeal: (dealId: string, stageId: string) => void;
+  winningDealId: string | null;
+  losingDealId: string | null;
+  payingDealId: string | null;
+}
+
+// Single-stage mobile view: a chip switcher picks the stage, its deals show
+// as a vertical list. Replaces the old two-axis (vertical stages × horizontal
+// cards) scroll that hid cards off-screen.
+function MobileBoard({
+  stages,
+  activeIndex,
+  onSelectStage,
+  locale,
+  boardCurrency,
+  onWinDeal,
+  onLoseDeal,
+  onTogglePayment,
+  onMoveDeal,
+  winningDealId,
+  losingDealId,
+  payingDealId,
+}: MobileBoardProps) {
+  const active = stages[activeIndex];
+  return (
+    <div className="flex flex-col gap-3 px-4 pb-24 md:hidden">
+      <div
+        role="tablist"
+        aria-label="Fáze pipeline"
+        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+      >
+        {stages.map((s, i) => (
+          <button
+            key={s.id}
+            type="button"
+            role="tab"
+            aria-selected={i === activeIndex}
+            onClick={() => onSelectStage(i)}
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-fast",
+              i === activeIndex
+                ? "bg-accent text-text-on-accent"
+                : "border border-border bg-surface text-text-secondary",
+            )}
+          >
+            <span
+              aria-hidden
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: stageColor(s.position, s.color) }}
+            />
+            {s.name}
+            <span className="tabular-nums opacity-70">{s.deal_count}</span>
+          </button>
+        ))}
+      </div>
+      {active ? (
+        <>
+          <p className="text-xs text-text-tertiary">
+            {active.deal_count} {csNoun(active.deal_count, "obchod")} ·{" "}
+            {formatMoney(active.total_value, boardCurrency, locale)}
+          </p>
+          {active.deals.length === 0 ? (
+            <p className="py-8 text-center text-xs text-text-tertiary">Zatím žádné obchody.</p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {active.deals.map((deal) => (
+                <li key={deal.id}>
+                  <MobileDealCard
+                    deal={deal}
+                    locale={locale}
+                    stageType={active.stage_type}
+                    stages={stages}
+                    onWin={active.stage_type === "won" ? undefined : () => onWinDeal(deal, null)}
+                    onLose={active.stage_type === "won" ? undefined : () => onLoseDeal(deal)}
+                    onTogglePaid={
+                      active.stage_type === "won"
+                        ? (next) => onTogglePayment(deal, next)
+                        : undefined
+                    }
+                    onMove={onMoveDeal}
+                    winning={winningDealId === deal.id}
+                    losing={losingDealId === deal.id}
+                    paymentPending={payingDealId === deal.id}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 interface StageColumnProps {
   stage: BoardStage;
   locale: string;
@@ -319,6 +517,8 @@ export function PipelinePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [addDealOpen, setAddDealOpen] = useState(false);
   const [addDealStageId, setAddDealStageId] = useState<string | undefined>(undefined);
+  // Which stage the mobile single-stage view is showing.
+  const [mobileStageIndex, setMobileStageIndex] = useState(0);
   const [winningDealId, setWinningDealId] = useState<string | null>(null);
   const [winToast, setWinToast] = useState<string | null>(null);
   const [losingDealTarget, setLosingDealTarget] = useState<BoardDeal | null>(null);
@@ -480,6 +680,13 @@ export function PipelinePage() {
   const hasActiveFilter = ownerFilter !== "all" || searchTerm.trim().length > 0;
   const canPickOwner = user?.role === "admin" || user?.role === "manager";
 
+  const handleMoveDeal = useCallback(
+    (dealId: string, stageId: string) => {
+      moveMutation.mutate({ dealId, stageId });
+    },
+    [moveMutation],
+  );
+
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveDealId(null);
     const { active, over } = event;
@@ -635,51 +842,68 @@ export function PipelinePage() {
           />
         </div>
       ) : (
-        <DndContext
-          sensors={sensors}
-          onDragStart={(event) => setActiveDealId(String(event.active.id))}
-          onDragEnd={handleDragEnd}
-          onDragCancel={() => setActiveDealId(null)}
-        >
-          <div
-            className={cn(
-              "flex flex-1 gap-3 px-4 pb-6 md:px-8",
-              "max-md:flex-col max-md:overflow-y-auto",
-              "md:min-h-0 md:overflow-hidden",
-            )}
+        <>
+          {/* Desktop: drag-and-drop kanban. */}
+          <DndContext
+            sensors={sensors}
+            onDragStart={(event) => setActiveDealId(String(event.active.id))}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => setActiveDealId(null)}
           >
-            {filteredStages.map((stage) => (
-              <StageColumn
-                key={stage.id}
-                stage={stage}
-                locale={locale}
-                boardCurrency={board.currency}
-                draggingId={activeDealId}
-                onAddDeal={(stageId) => {
-                  setAddDealStageId(stageId);
-                  setAddDealOpen(true);
-                }}
-                onWinDeal={handleWinDeal}
-                onLoseDeal={handleLoseDeal}
-                onTogglePayment={handleTogglePayment}
-                winningDealId={winningDealId}
-                losingDealId={losingDealTarget?.id ?? null}
-                payingDealId={payingDealId}
-              />
-            ))}
-          </div>
+            <div
+              className={cn(
+                "hidden flex-1 gap-3 px-4 pb-6 md:flex md:px-8",
+                "md:min-h-0 md:overflow-hidden",
+              )}
+            >
+              {filteredStages.map((stage) => (
+                <StageColumn
+                  key={stage.id}
+                  stage={stage}
+                  locale={locale}
+                  boardCurrency={board.currency}
+                  draggingId={activeDealId}
+                  onAddDeal={(stageId) => {
+                    setAddDealStageId(stageId);
+                    setAddDealOpen(true);
+                  }}
+                  onWinDeal={handleWinDeal}
+                  onLoseDeal={handleLoseDeal}
+                  onTogglePayment={handleTogglePayment}
+                  winningDealId={winningDealId}
+                  losingDealId={losingDealTarget?.id ?? null}
+                  payingDealId={payingDealId}
+                />
+              ))}
+            </div>
+            <TrashDropZone visible={activeDealId !== null} />
+            <DragOverlay>
+              {activeDeal ? <DealCard deal={activeDeal} locale={locale} /> : null}
+            </DragOverlay>
+          </DndContext>
+
+          {/* Mobile: single-stage view with a chip switcher. */}
+          <MobileBoard
+            stages={filteredStages}
+            activeIndex={Math.min(mobileStageIndex, Math.max(0, filteredStages.length - 1))}
+            onSelectStage={setMobileStageIndex}
+            locale={locale}
+            boardCurrency={board.currency}
+            onWinDeal={handleWinDeal}
+            onLoseDeal={handleLoseDeal}
+            onTogglePayment={handleTogglePayment}
+            onMoveDeal={handleMoveDeal}
+            winningDealId={winningDealId}
+            losingDealId={losingDealTarget?.id ?? null}
+            payingDealId={payingDealId}
+          />
+
           {!hasFilteredDeals ? (
             <p className="px-4 pb-4 text-center text-sm text-text-tertiary md:px-8" role="status">
               Žádné obchody neodpovídají filtru.
             </p>
           ) : null}
-
-          <TrashDropZone visible={activeDealId !== null} />
-
-          <DragOverlay>
-            {activeDeal ? <DealCard deal={activeDeal} locale={locale} /> : null}
-          </DragOverlay>
-        </DndContext>
+        </>
       )}
 
       {/* Mobile FAB — header CTA collapses to bottom-right at <768px when

@@ -47,7 +47,8 @@ export function TrialBanner({ daysRemaining, endsOn, onUpgrade }: TrialBannerPro
       <div className="flex min-w-0 items-center gap-2 text-sm text-danger">
         <AlertTriangle size={16} strokeWidth={1.75} aria-hidden />
         <span className="truncate">
-          Zkušební verze končí za {daysRemaining} {csNoun(daysRemaining, "den")} — vyprší {endsOn}
+          Zkušební verze končí za {daysRemaining} {csNoun(daysRemaining, "den")}
+          <span className="hidden sm:inline"> — vyprší {endsOn}</span>
         </span>
       </div>
       <div className="flex shrink-0 items-center gap-2">
