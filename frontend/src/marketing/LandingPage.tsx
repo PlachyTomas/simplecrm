@@ -374,9 +374,15 @@ const DIFFS: Differentiator[] = [
     tone: "warning",
   },
   {
+    icon: Mail,
+    title: "Hromadné nabídky e-mailem",
+    body: "Pošlete novou nabídku všem svým klientům najednou. Vyfiltrujte firmy podle oboru i aktivity a odešlete e-mail ze své vlastní adresy.",
+    tone: "accent",
+  },
+  {
     icon: Scissors,
     title: "Bez zbytečností",
-    body: "Žádné kalendáře, žádné e-mailové sekvence, žádná marketingová automatizace. Na to máte jiné nástroje.",
+    body: "Žádné složité workflow ani marketingová automatizace. Jen nástroje, které obchodník opravdu denně potřebuje.",
     tone: "lime",
   },
 ];
@@ -395,9 +401,9 @@ function Differentiators() {
         <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
           Proč SimpleCRM
         </p>
-        <h2 className="mt-2 text-3xl font-bold md:text-4xl">Tři věci, které jinde nenajdete</h2>
+        <h2 className="mt-2 text-3xl font-bold md:text-4xl">Co u nás najdete (a jinde ne)</h2>
       </div>
-      <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
+      <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-4">
         {DIFFS.map(({ icon: Icon, title, body, tone }) => (
           <article
             key={title}

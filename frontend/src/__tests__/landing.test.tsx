@@ -24,7 +24,13 @@ describe("Landing page", () => {
   it("renders the hero, differentiators, pricing, and FAQ sections", () => {
     renderAt("/");
     expect(screen.getByRole("heading", { level: 1, name: /CRM pro prodej/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 2, name: /Tři věci/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: /Co u nás najdete/i }),
+    ).toBeInTheDocument();
+    // Bulk email is mentioned among the differentiators.
+    expect(
+      screen.getByRole("heading", { level: 3, name: /Hromadné nabídky e-mailem/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: /Jedna cena/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: /Časté otázky/i })).toBeInTheDocument();
     // The price per user appears on the paid tier card.

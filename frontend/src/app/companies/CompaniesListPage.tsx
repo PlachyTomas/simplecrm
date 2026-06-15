@@ -13,15 +13,18 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  History,
   LayoutGrid,
+  Mail,
   Plus,
   Search,
   Table2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { AddCompanyModal } from "@/app/companies/AddCompanyModal";
+import { BulkEmailWizard } from "@/app/companies/bulk-email/BulkEmailWizard";
 import { OwnershipBadge } from "@/app/companies/OwnershipBadge";
 import {
   type CompanyOut,
@@ -29,6 +32,7 @@ import {
   type CompanySortKey,
   useCompanies,
 } from "@/app/companies/useCompanies";
+import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -74,6 +78,8 @@ function readStoredViewMode(): ViewMode {
 export function CompaniesListPage() {
   usePageTitle("Firmy");
   const [modalOpen, setModalOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [smtpPromptOpen, setSmtpPromptOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebouncedValue(searchInput, 300);
   const [page, setPage] = useState(0);
@@ -89,6 +95,10 @@ export function CompaniesListPage() {
   const navigate = useNavigate();
   const { data: user } = useCurrentUser();
   const { data: usersPage } = useOrgUsers();
+  const { data: smtp } = useSmtpSettings();
+  const smtpReady = isSmtpVerified(smtp);
+
+  const onBulkClick = () => (smtpReady ? setBulkOpen(true) : setSmtpPromptOpen(true));
   // Translate the React Table sort state into the backend's sort/order
   // params. We always carry a single sort spec (multi-column server sort
   // isn't supported and the UI never produces it).
@@ -426,13 +436,29 @@ export function CompaniesListPage() {
           <h1 className="text-2xl font-semibold">Firmy</h1>
           <p className="mt-1 text-sm text-text-tertiary">{pluralizeCompanies(total)}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
-        >
-          <Plus size={16} strokeWidth={1.75} /> Přidat firmu
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/app/email-campaigns"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface-overlay px-3 text-sm font-medium text-text-secondary transition-colors duration-fast hover:text-text-primary"
+            title="Historie hromadných e-mailů"
+          >
+            <History size={16} strokeWidth={1.75} /> Historie
+          </Link>
+          <button
+            type="button"
+            onClick={onBulkClick}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:text-text-primary"
+          >
+            <Mail size={16} strokeWidth={1.75} /> Hromadný e-mail
+          </button>
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
+          >
+            <Plus size={16} strokeWidth={1.75} /> Přidat firmu
+          </button>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -718,6 +744,42 @@ export function CompaniesListPage() {
         onClose={() => setModalOpen(false)}
         onCreated={handleCreated}
       />
+
+      <BulkEmailWizard open={bulkOpen} onClose={() => setBulkOpen(false)} />
+
+      {smtpPromptOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="smtp-prompt-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-xl">
+            <h2 id="smtp-prompt-title" className="text-base font-semibold text-text-primary">
+              Nejdřív nastavte odesílání e-mailů
+            </h2>
+            <p className="mt-2 text-sm text-text-secondary">
+              Hromadné e-maily se odesílají z vaší vlastní schránky. Nastavte a ověřte své SMTP
+              připojení v nastavení integrací.
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setSmtpPromptOpen(false)}
+                className="h-9 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary hover:text-text-primary"
+              >
+                Zavřít
+              </button>
+              <Link
+                to="/app/settings?tab=integrations"
+                className="inline-flex h-9 items-center rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent hover:opacity-90"
+              >
+                Nastavit SMTP
+              </Link>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
