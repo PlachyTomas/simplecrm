@@ -53,7 +53,6 @@
       "Bash(rm -rf *)",
       "Bash(rm -rf /)",
       "Bash(sudo *)",
-      "Bash(git push *)",
       "Bash(git reset --hard*)",
       "Bash(git clean *)",
       "Bash(curl * | sh)",
@@ -66,6 +65,7 @@
       "Read(.env)",
       "Read(.env.production)",
       "Read(.env.local)"
-    ]
+    ],
+    "ask": ["Bash(git push *)"]
   }
 }
