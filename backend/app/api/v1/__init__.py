@@ -6,6 +6,7 @@ from app.api.v1 import (
     admin_invoices,
     auth,
     blocked_companies,
+    bulk_email,
     companies,
     contacts,
     data_export,
@@ -63,6 +64,9 @@ api_router.include_router(feedback.router)
 # gates inside the router.
 api_router.include_router(google_calendar.router)
 api_router.include_router(organizations.router, dependencies=PROTECTED_DEPS)
+# Bulk email mounted before companies so its `/companies/bulk-email/...`
+# paths aren't shadowed by the companies `/{company_id}` route.
+api_router.include_router(bulk_email.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(companies.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(contacts.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(deals.router, dependencies=PROTECTED_DEPS)
