@@ -3,7 +3,6 @@ import { ArrowLeft, ArrowRight, Building2, Check, Sparkles, Users } from "lucide
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { UnverifiedEmailBanner } from "@/auth/UnverifiedEmailBanner";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { formatCzkMinor } from "@/components/billing/format";
@@ -125,7 +124,6 @@ export function CreateOrgPage() {
 
   return (
     <div className="relative flex min-h-screen flex-col bg-bg">
-      <UnverifiedEmailBanner />
       <div className="relative flex flex-1 items-center justify-center px-4 py-8">
         <div className="absolute right-4 top-4 flex items-center gap-3">
           <ThemeToggle variant="compact" />
