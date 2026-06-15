@@ -168,15 +168,22 @@ Frontend lint/typecheck/tests (127) + build all pass.
 
 ## 5. Prioritized backlog
 
-| # | Item | Priority | Size | Notes |
-|---|------|----------|------|-------|
-| 1 | Add-lead: inline contact capture (§1A) + carry typed name (§1B) + default deal name (§1C) | **P0** | M | core ask; one focused change |
-| 2 | Add-lead: verify FAB default stage isn't "Won" (§1.6) | **P0** | S | data-correctness bug if real |
-| 3 | Settings IA: grouped sub-nav / mobile drill-in (§2A) + role filtering (§2D) | **P1** | M–L | durable fix as settings grow |
-| 4 | Email nag removal (§3) | **P1** | — | ✅ done this session |
-| 5 | Localize date input to cs (§1E) | **P2** | S | i18n polish |
-| 6 | Trial banner → header badge except final days (§4) | **P2** | S | de-nag |
-| 7 | Mobile pipeline scroll model (§4) | **P3** | M | UX refinement |
+| # | Item | Priority | Size | Status |
+|---|------|----------|------|--------|
+| 1 | Add-lead: inline contact capture (§1A) + carry typed name (§1B) + default deal name (§1C) | **P0** | M | ✅ done (`b972070`) — verified end-to-end: one submit creates company + contact + deal |
+| 2 | Add-lead: FAB default stage isn't "Won" (§1.6) | **P0** | S | ✅ done (`b972070`) — was a mis-click in audit; hardened to default to first OPEN stage |
+| 3 | Settings IA: grouped nav + role access (§2A/§2D) | **P1** | M–L | ✅ done (`916dc0d`) — grouped nav (desktop pills / mobile dropdown) + personal settings opened to non-admins |
+| 4 | Email nag removal (§3) | **P1** | — | ✅ done (`017a206`) |
+| 5 | Localize date input to cs (§1E) | **P2** | S | ⚠️ partial — added `lang="cs-CZ"`; native date display stays browser-locale-controlled (value is ISO, correct). Custom picker would be the only full fix. |
+| 6 | Trial banner de-nag (§4) | **P2** | S | ✅ done (`0646473`) — banner already gated to ≤3 days + dismissible (audit saw an expired demo org); fixed mobile truncation |
+| 7 | Mobile pipeline scroll model (§4) | **P3** | M | ✅ done (`0646473`) — chip stage-switcher + vertical single-stage list + per-card move; desktop keeps DnD kanban |
 
-**Done now:** #4. **Recommend next:** #1 + #2 as a small "fast lead capture" spec, then
-#3. Happy to brainstorm/spec #1 on request.
+**All backlog items addressed (2026-06-15).** Only #5 is partial — the native
+`<input type="date">` display format is governed by the browser locale, not the
+app; the stored value is already ISO/correct. A full fix needs a custom date
+picker, deferred as low-value.
+
+**Notable bonus fix:** §2 surfaced that Settings was entirely admin-gated, which
+meant salespeople could never reach Settings → Integrace to configure the
+per-user SMTP that bulk email requires — a dead-end for the bulk-email feature.
+Opening personal settings to non-admins (#3) resolves that.
