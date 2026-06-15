@@ -26,6 +26,7 @@ from app.api.v1 import (
     reports_widgets,
     subscription,
     teams,
+    user_smtp,
     users,
 )
 from app.core.deps import require_active_trial_or_subscription, require_org_membership
@@ -76,6 +77,9 @@ api_router.include_router(reports.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(reports_widgets.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(teams.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(users.router, dependencies=PROTECTED_DEPS)
+# Per-user outbound SMTP settings (used by bulk email). Org-membership +
+# trial gated like the rest of the in-app surfaces.
+api_router.include_router(user_smtp.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(activities.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(blocked_companies.router, dependencies=PROTECTED_DEPS)
 # Admin CSV import. Trial-gated because import-on-an-expired-trial would
