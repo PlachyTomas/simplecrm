@@ -77,63 +77,109 @@ type SettingsTab =
   | "integrations"
   | "privacy";
 
-const TABS: { key: SettingsTab; label: string; description: string }[] = [
-  {
-    key: "pipeline",
-    label: "Pipeline",
-    description: "Spravujte fáze pipeline a jejich pořadí.",
-  },
-  {
-    key: "teams",
-    label: "Týmy",
-    description: "Sdružujte obchodníky pod manažery.",
-  },
-  {
-    key: "users",
-    label: "Uživatelé",
-    description: "Spravujte role, týmovou příslušnost a aktivitu členů.",
-  },
-  {
-    key: "invitations",
-    label: "Pozvánky",
-    description: "Pozvěte nové členy a spravujte oprávnění.",
-  },
+// Settings groups give the (now 11) tabs an information architecture instead
+// of one flat row. `personal` tabs are per-user and reachable by everyone;
+// the rest are admin-only (see `visibleTabKeys`).
+type SettingsGroup = "personal" | "organization" | "sales" | "billing";
+
+const GROUP_ORDER: SettingsGroup[] = ["personal", "organization", "sales", "billing"];
+
+const GROUP_LABELS: Record<SettingsGroup, string> = {
+  personal: "Osobní",
+  organization: "Organizace",
+  sales: "Prodej & data",
+  billing: "Předplatné",
+};
+
+interface SettingsTabMeta {
+  key: SettingsTab;
+  label: string;
+  description: string;
+  group: SettingsGroup;
+  /** Per-user setting reachable by any role (not just admins). */
+  personal?: boolean;
+}
+
+const TABS: SettingsTabMeta[] = [
   {
     key: "appearance",
     label: "Vzhled",
     description: "Motiv, barvy a další vizuální nastavení.",
+    group: "personal",
+    personal: true,
   },
   {
-    key: "permissions",
-    label: "Oprávnění",
-    description: "Pravidla, kdo a co může v aplikaci dělat.",
-  },
-  {
-    key: "blocked-companies",
-    label: "Blokovaná IČO",
-    description: "Seznam IČO, která obchodníci nemohou přidat jako firmu.",
+    key: "integrations",
+    label: "Integrace",
+    description: "Propojení s externími službami a odesílání e-mailů (SMTP).",
+    group: "personal",
+    personal: true,
   },
   {
     key: "organization",
     label: "Organizace",
     description: "Smluvní počet uživatelů a způsob fakturace.",
+    group: "organization",
   },
   {
-    key: "billing",
-    label: "Fakturace",
-    description: "Detaily plánu, faktur a způsobu platby.",
+    key: "teams",
+    label: "Týmy",
+    description: "Sdružujte obchodníky pod manažery.",
+    group: "organization",
   },
   {
-    key: "integrations",
-    label: "Integrace",
-    description: "Propojení s externími službami.",
+    key: "users",
+    label: "Uživatelé",
+    description: "Spravujte role, týmovou příslušnost a aktivitu členů.",
+    group: "organization",
+  },
+  {
+    key: "invitations",
+    label: "Pozvánky",
+    description: "Pozvěte nové členy a spravujte oprávnění.",
+    group: "organization",
+  },
+  {
+    key: "permissions",
+    label: "Oprávnění",
+    description: "Pravidla, kdo a co může v aplikaci dělat.",
+    group: "organization",
+  },
+  {
+    key: "pipeline",
+    label: "Pipeline",
+    description: "Spravujte fáze pipeline a jejich pořadí.",
+    group: "sales",
+  },
+  {
+    key: "blocked-companies",
+    label: "Blokovaná IČO",
+    description: "Seznam IČO, která obchodníci nemohou přidat jako firmu.",
+    group: "sales",
   },
   {
     key: "privacy",
     label: "Soukromí",
     description: "Historie přístupů týmu SimpleCRM k Vašim datům a zrušení organizace.",
+    group: "sales",
+  },
+  {
+    key: "billing",
+    label: "Fakturace",
+    description: "Detaily plánu, faktur a způsobu platby.",
+    group: "billing",
   },
 ];
+
+/** Which tabs a user may see. Admins get everything; everyone else gets their
+ * personal settings (so e.g. salespeople can set up their own SMTP), plus
+ * Pozvánky when they hold the invite privilege. */
+function visibleTabKeys(role: string, canInvite: boolean): SettingsTab[] {
+  if (role === "admin") return TABS.map((t) => t.key);
+  const keys: SettingsTab[] = TABS.filter((t) => t.personal).map((t) => t.key);
+  if (canInvite) keys.push("invitations");
+  return keys;
+}
 
 type StageType = "open" | "won" | "lost";
 
@@ -384,19 +430,23 @@ export function SettingsPage({ initialTab = "pipeline" }: SettingsPageProps = {}
   const activeTabMeta = TABS.find((t) => t.key === activeTab) ?? TABS[0]!;
   usePageTitle(`Nastavení — ${activeTabMeta.label}`);
 
-  // Admins see the full Settings page. Non-admins with `can_invite=true`
-  // get a stripped-down view that only exposes the Invitations tab; that's
-  // the one privilege they own. Everyone else gets the admin-only message.
-  const canInviteOnly = !!user && user.role !== "admin" && user.can_invite;
+  // Which tabs this user may see. Admins get everything; everyone else gets
+  // their personal settings (Vzhled, Integrace — so e.g. salespeople can set
+  // up their own SMTP for bulk email) plus Pozvánky when they may invite.
+  const visibleKeys = useMemo(
+    () => (user ? visibleTabKeys(user.role, user.can_invite) : []),
+    [user],
+  );
+  const visibleTabs = TABS.filter((t) => visibleKeys.includes(t.key));
 
-  // Force can_invite-only users onto the invitations tab if they land
-  // somewhere else (e.g. via deep-link). useEffect avoids a setState-in-render
-  // warning, and lives above the early returns so hook order stays stable.
+  // If the active tab isn't available to this user (non-admin deep-linking an
+  // admin tab, or the default "pipeline"), fall back to their first visible
+  // tab. Above the early returns so hook order stays stable.
   useEffect(() => {
-    if (canInviteOnly && activeTab !== "invitations") {
-      setActiveTab("invitations");
+    if (visibleKeys.length > 0 && !visibleKeys.includes(activeTab)) {
+      setActiveTab(visibleKeys[0]!);
     }
-  }, [canInviteOnly, activeTab]);
+  }, [visibleKeys, activeTab]);
 
   if (!user) {
     return (
@@ -405,18 +455,6 @@ export function SettingsPage({ initialTab = "pipeline" }: SettingsPageProps = {}
       </div>
     );
   }
-
-  if (user.role !== "admin" && !canInviteOnly) {
-    return (
-      <div className="p-8">
-        <h1 className="text-2xl font-semibold">Nastavení</h1>
-        <p className="mt-3 text-sm text-text-secondary">
-          Úpravy pipeline může provádět pouze administrátor.
-        </p>
-      </div>
-    );
-  }
-  const visibleTabs = canInviteOnly ? TABS.filter((t) => t.key === "invitations") : TABS;
 
   const stagesReady = !isPending && !isError && pipeline;
   const stages = stagesReady ? [...pipeline.stages].sort((a, b) => a.position - b.position) : [];
@@ -457,7 +495,7 @@ export function SettingsPage({ initialTab = "pipeline" }: SettingsPageProps = {}
       <header className="mb-6">
         <h1 className="text-2xl font-semibold">Nastavení — {activeTabMeta.label}</h1>
         <p className="mt-1 text-sm text-text-tertiary">{activeTabMeta.description}</p>
-        {user?.role === "admin" ? (
+        {user?.role === "admin" && activeTabMeta.group === "sales" ? (
           <p className="mt-2 text-xs text-text-tertiary">
             <Link
               to="/app/settings/import"
@@ -470,30 +508,72 @@ export function SettingsPage({ initialTab = "pipeline" }: SettingsPageProps = {}
         ) : null}
       </header>
 
-      <nav aria-label="Karty nastavení" className="mb-6 border-b border-border-subtle">
-        <ul role="tablist" className="-mb-px flex gap-1 overflow-x-auto">
-          {visibleTabs.map((tab) => {
-            const isActive = activeTab === tab.key;
+      <nav aria-label="Sekce nastavení" className="mb-6">
+        {/* Mobile: grouped dropdown — replaces the old horizontal-scroll strip
+            that hid most of the (11) tabs behind an off-screen scrollbar. */}
+        <div className="md:hidden">
+          <label htmlFor="settings-section" className="sr-only">
+            Sekce nastavení
+          </label>
+          <select
+            id="settings-section"
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value as SettingsTab)}
+            className="block w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+          >
+            {GROUP_ORDER.map((group) => {
+              const items = visibleTabs.filter((t) => t.group === group);
+              if (items.length === 0) return null;
+              return (
+                <optgroup key={group} label={GROUP_LABELS[group]}>
+                  {items.map((tab) => (
+                    <option key={tab.key} value={tab.key}>
+                      {tab.label}
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
+          </select>
+        </div>
+
+        {/* Desktop: tabs grouped under section labels instead of one flat row. */}
+        <div className="hidden flex-wrap gap-x-6 gap-y-3 border-b border-border-subtle pb-3 md:flex">
+          {GROUP_ORDER.map((group) => {
+            const items = visibleTabs.filter((t) => t.group === group);
+            if (items.length === 0) return null;
             return (
-              <li key={tab.key} role="presentation">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={cn(
-                    "inline-flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium transition-colors duration-fast",
-                    isActive
-                      ? "border-accent text-accent"
-                      : "border-transparent text-text-secondary hover:text-text-primary",
-                  )}
-                >
-                  {tab.label}
-                </button>
-              </li>
+              <div key={group} className="flex items-center gap-2">
+                <span className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
+                  {GROUP_LABELS[group]}
+                </span>
+                <ul role="tablist" aria-label={GROUP_LABELS[group]} className="flex gap-1">
+                  {items.map((tab) => {
+                    const isActive = activeTab === tab.key;
+                    return (
+                      <li key={tab.key} role="presentation">
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          onClick={() => setActiveTab(tab.key)}
+                          className={cn(
+                            "rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-fast",
+                            isActive
+                              ? "bg-accent-subtle text-accent"
+                              : "text-text-secondary hover:bg-surface-overlay hover:text-text-primary",
+                          )}
+                        >
+                          {tab.label}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             );
           })}
-        </ul>
+        </div>
       </nav>
 
       {globalError ? (
