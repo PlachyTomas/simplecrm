@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from httpx import AsyncClient
@@ -112,6 +113,64 @@ async def test_billing_summary_returns_user_count_and_monthly(
     assert body["is_vat_payer"] is False
     # Effective price for trial is 0 → monthly_total 0
     assert body["effective_price_per_user_minor"] == 0
+
+
+# ---------------------------------------------------------------------------
+# /auth/me trial gate — super-admin + comp ("free to use") bypasses
+# ---------------------------------------------------------------------------
+
+
+async def _expire_trial(session: AsyncSession, org: Organization) -> None:
+    past = datetime.now(tz=UTC) - timedelta(days=7)
+    org.trial_ends_at = past
+    sub = (
+        await session.execute(select(Subscription).where(Subscription.organization_id == org.id))
+    ).scalar_one()
+    sub.current_period_ends_at = past
+    await session.commit()
+
+
+async def test_me_402s_for_expired_trial_regular_admin(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    org, admin = await _seed_org_with_admin(db_session, owned_emails)
+    await _expire_trial(db_session, org)
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    resp = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 402, resp.text
+    assert resp.json()["detail"]["code"] == "subscription_required"
+
+
+async def test_me_allows_super_admin_on_expired_trial(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """A super-admin is never trial-gated — otherwise /auth/me 402s and the
+    frontend bounces them off the /admin surface to /login."""
+    org, admin = await _seed_org_with_admin(db_session, owned_emails)
+    admin.is_super_admin = True
+    await _expire_trial(db_session, org)
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    resp = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["is_super_admin"] is True
+
+
+async def test_me_allows_comp_org_after_period_ended(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """An org a super-admin marked free to use (is_comp) bypasses the gate even
+    once its period has lapsed."""
+    org, admin = await _seed_org_with_admin(db_session, owned_emails)
+    await _expire_trial(db_session, org)
+    sub = (
+        await db_session.execute(select(Subscription).where(Subscription.organization_id == org.id))
+    ).scalar_one()
+    sub.is_comp = True
+    sub.status = "active"
+    await db_session.commit()
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    resp = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200, resp.text
 
 
 # ---------------------------------------------------------------------------

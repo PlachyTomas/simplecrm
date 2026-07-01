@@ -170,9 +170,13 @@ async def require_active_trial_or_subscription(
     """Reject access when the org's subscription doesn't allow it.
 
     Source of truth: `BillingService.is_app_access_allowed` — comp orgs
-    always pass; trialing/active orgs pass while their period is open;
-    past-due orgs get a 7-day grace; pending_activation and canceled
-    deny.
+    (an org a super-admin marked free to use) always pass; trialing/active
+    orgs pass while their period is open; past-due orgs get a 7-day grace;
+    pending_activation and canceled deny.
+
+    Super-admins are never gated: they're cross-organization platform
+    operators, so an expired org trial must not 402 `/auth/me` and bounce
+    them off the /admin surface to /login.
 
     Users without an organization (post-signup, pre-create-org) bypass
     this gate so `/auth/me` can return their record and the frontend
@@ -184,6 +188,9 @@ async def require_active_trial_or_subscription(
     directly) fall back to an `Organization.trial_ends_at` check so
     the legacy contract still holds.
     """
+    if user.is_super_admin:
+        return user
+
     if user.organization_id is None or user.organization is None:
         return user
 

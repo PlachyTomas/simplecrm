@@ -129,134 +129,137 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
     <div
       role="alertdialog"
       aria-labelledby="trial-expired-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 py-8 backdrop-blur-md"
+      className="fixed inset-0 z-50 overflow-y-auto bg-bg/80 backdrop-blur-md"
     >
-      <div className="w-full max-w-2xl rounded-xl border border-border bg-surface p-6 shadow-lg sm:p-8">
-        {submitted ? (
-          <ConfirmationCard onExport={onExport} />
-        ) : isEnterpriseExpired ? (
-          <EnterpriseExpiredBody onContact={openContactModal} onExport={onExport} />
-        ) : (
-          <>
-            <header className="text-center">
-              <h1 id="trial-expired-title" className="text-2xl font-semibold text-text-primary">
-                Vaše zkušební doba skončila.
-              </h1>
-              <p className="mt-2 text-sm text-text-secondary">
-                Pokračujte výběrem plánu. Vaše data zůstávají v bezpečí.
-              </p>
-            </header>
+      <div className="flex min-h-full items-center justify-center px-4 py-8">
+        <div className="w-full max-w-2xl rounded-xl border border-border bg-surface p-6 shadow-lg sm:p-8">
+          {submitted ? (
+            <ConfirmationCard onExport={onExport} />
+          ) : isEnterpriseExpired ? (
+            <EnterpriseExpiredBody onContact={openContactModal} onExport={onExport} />
+          ) : (
+            <>
+              <header className="text-center">
+                <h1 id="trial-expired-title" className="text-2xl font-semibold text-text-primary">
+                  Vaše zkušební doba skončila.
+                </h1>
+                <p className="mt-2 text-sm text-text-secondary">
+                  Pokračujte výběrem plánu. Vaše data zůstávají v bezpečí.
+                </p>
+              </header>
 
-            <div
-              role="radiogroup"
-              aria-label="Vyberte plán"
-              className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2"
-            >
-              <PlanRadioCard
-                code="monthly"
-                title="Měsíční"
-                priceMinor={monthlyPlan?.price_per_user_minor ?? null}
-                priceInterval="monthly"
-                selected={selected === "monthly"}
-                disabled={submitting}
-                onSelect={() => setSelected("monthly")}
-              />
-              <PlanRadioCard
-                code="annual"
-                title="Roční"
-                priceMinor={annualPlan?.price_per_user_minor ?? null}
-                priceInterval="annual"
-                selected={selected === "annual"}
-                disabled={submitting}
-                onSelect={() => setSelected("annual")}
-                badge="Ušetříte 16 %"
-                caption={
-                  summary.data && summary.data.savings_minor != null ? (
-                    <p className="text-sm text-text-secondary">
-                      {userCountPhrase(summary.data.user_count)} ušetříte{" "}
-                      <span className="font-semibold text-text-primary">
-                        {formatCzkMinor(summary.data.savings_minor)}
-                      </span>{" "}
-                      ročně.
-                    </p>
-                  ) : null
-                }
-              />
-            </div>
-
-            <div className="mt-6">
-              <RecurringPaymentConsent
-                selected={selected}
-                checked={recurringConsent}
-                onChange={(v) => {
-                  setRecurringConsent(v);
-                  if (v) setError(null);
-                }}
-                disabled={submitting}
-              />
-            </div>
-
-            <div className="mt-6">
-              <h2 className="text-sm font-semibold text-text-primary">Fakturační údaje</h2>
-              <p className="mt-1 text-xs text-text-secondary">
-                Tyto údaje použijeme na daňový doklad. Vyplnění je povinné pro pokračování k platbě.
-              </p>
-              <div className="mt-4">
-                <OrgBillingFields
-                  value={billing}
-                  onChange={setBilling}
-                  orgName={orgQuery.data?.name ?? ""}
-                  savedIco={orgQuery.data?.ico ?? ""}
+              <div
+                role="radiogroup"
+                aria-label="Vyberte plán"
+                className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2"
+              >
+                <PlanRadioCard
+                  code="monthly"
+                  title="Měsíční"
+                  priceMinor={monthlyPlan?.price_per_user_minor ?? null}
+                  priceInterval="monthly"
+                  selected={selected === "monthly"}
+                  disabled={submitting}
+                  onSelect={() => setSelected("monthly")}
+                />
+                <PlanRadioCard
+                  code="annual"
+                  title="Roční"
+                  priceMinor={annualPlan?.price_per_user_minor ?? null}
+                  priceInterval="annual"
+                  selected={selected === "annual"}
+                  disabled={submitting}
+                  onSelect={() => setSelected("annual")}
+                  badge="Ušetříte 16 %"
+                  caption={
+                    summary.data && summary.data.savings_minor != null ? (
+                      <p className="text-sm text-text-secondary">
+                        {userCountPhrase(summary.data.user_count)} ušetříte{" "}
+                        <span className="font-semibold text-text-primary">
+                          {formatCzkMinor(summary.data.savings_minor)}
+                        </span>{" "}
+                        ročně.
+                      </p>
+                    ) : null
+                  }
                 />
               </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={openContactModal}
-              className="mt-6 inline-flex w-full items-center justify-center text-sm text-text-secondary underline-offset-4 hover:text-text-primary hover:underline"
-            >
-              Potřebujete víc? Domluvte se na enterprise balíčku.
-            </button>
+              <div className="mt-6">
+                <RecurringPaymentConsent
+                  selected={selected}
+                  checked={recurringConsent}
+                  onChange={(v) => {
+                    setRecurringConsent(v);
+                    if (v) setError(null);
+                  }}
+                  disabled={submitting}
+                />
+              </div>
 
-            {error ? (
-              <p
-                role="alert"
-                className="mt-4 rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
+              <div className="mt-6">
+                <h2 className="text-sm font-semibold text-text-primary">Fakturační údaje</h2>
+                <p className="mt-1 text-xs text-text-secondary">
+                  Tyto údaje použijeme na daňový doklad. Vyplnění je povinné pro pokračování k
+                  platbě.
+                </p>
+                <div className="mt-4">
+                  <OrgBillingFields
+                    value={billing}
+                    onChange={setBilling}
+                    orgName={orgQuery.data?.name ?? ""}
+                    savedIco={orgQuery.data?.ico ?? ""}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={openContactModal}
+                className="mt-6 inline-flex w-full items-center justify-center text-sm text-text-secondary underline-offset-4 hover:text-text-primary hover:underline"
               >
-                {error}
+                Potřebujete víc? Domluvte se na enterprise balíčku.
+              </button>
+
+              {error ? (
+                <p
+                  role="alert"
+                  className="mt-4 rounded-md border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
+                >
+                  {error}
+                </p>
+              ) : null}
+
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                <button
+                  type="button"
+                  onClick={() => void onSubmitChoosePlan()}
+                  disabled={
+                    !selected || submitting || !recurringConsent || !isBillingFormValid(billing)
+                  }
+                  className="inline-flex h-11 items-center justify-center rounded-md bg-accent px-6 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {submitting ? "Přesměrování…" : "Pokračovat na platbu"}
+                </button>
+                <button
+                  type="button"
+                  onClick={onExport}
+                  disabled={submitting || !onExport}
+                  className="inline-flex h-11 items-center justify-center rounded-md bg-transparent px-6 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Exportovat data
+                </button>
+              </div>
+
+              <p className="mt-6 text-center text-xs text-text-tertiary">
+                Máte otázky? Napište nám na{" "}
+                <a className="text-accent hover:text-accent-hover" href={`mailto:${SUPPORT_EMAIL}`}>
+                  {SUPPORT_EMAIL}
+                </a>
               </p>
-            ) : null}
-
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <button
-                type="button"
-                onClick={() => void onSubmitChoosePlan()}
-                disabled={
-                  !selected || submitting || !recurringConsent || !isBillingFormValid(billing)
-                }
-                className="inline-flex h-11 items-center justify-center rounded-md bg-accent px-6 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {submitting ? "Přesměrování…" : "Pokračovat na platbu"}
-              </button>
-              <button
-                type="button"
-                onClick={onExport}
-                disabled={submitting || !onExport}
-                className="inline-flex h-11 items-center justify-center rounded-md bg-transparent px-6 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Exportovat data
-              </button>
-            </div>
-
-            <p className="mt-6 text-center text-xs text-text-tertiary">
-              Máte otázky? Napište nám na{" "}
-              <a className="text-accent hover:text-accent-hover" href={`mailto:${SUPPORT_EMAIL}`}>
-                {SUPPORT_EMAIL}
-              </a>
-            </p>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
 
       <ContactEnterpriseDialog
