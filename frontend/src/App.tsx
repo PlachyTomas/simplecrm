@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "@/app/AppShell";
 import { MorePage } from "@/app/MorePage";
@@ -16,7 +16,9 @@ import { FeedbackPage } from "@/app/feedback/FeedbackPage";
 import { PipelinePage } from "@/app/pipeline/PipelinePage";
 import { ReportsPage } from "@/app/reports/ReportsPage";
 import { ImportPage } from "@/app/settings/import/ImportPage";
-import { SettingsPage } from "@/app/settings/SettingsPage";
+import { SettingsHome } from "@/app/settings/SettingsHome";
+import { SettingsLayout } from "@/app/settings/SettingsLayout";
+import { SettingsSectionPage } from "@/app/settings/SettingsSectionPage";
 import { AuthProvider } from "@/auth/AuthContext";
 import { ForgotPasswordPage } from "@/auth/ForgotPasswordPage";
 import { LoginPage } from "@/auth/LoginPage";
@@ -94,9 +96,15 @@ export function AppRoutes() {
         <Route path="deals/:dealId" element={<DealDetailPage />} />
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="reports" element={<ReportsPage />} />
-        <Route path="settings" element={<SettingsPage />} />
+        <Route path="settings" element={<SettingsLayout />}>
+          <Route index element={<SettingsHome />} />
+          <Route path=":section" element={<SettingsSectionPage />} />
+        </Route>
         <Route path="settings/import" element={<ImportPage />} />
-        <Route path="nastaveni/predplatne" element={<SettingsPage initialTab="billing" />} />
+        <Route
+          path="nastaveni/predplatne"
+          element={<Navigate to="/app/settings/billing" replace />}
+        />
         <Route path="feedback" element={<FeedbackPage />} />
         <Route path="billing/return" element={<BillingReturnPage />} />
         <Route path="more" element={<MorePage />} />

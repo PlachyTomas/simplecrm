@@ -108,7 +108,7 @@ describe("Ownership-window setting", () => {
   it("renders the current org's ownership_window_days as the input value", async () => {
     setupFetch({ windowDays: 90 });
     renderSettings();
-    fireEvent.click(await screen.findByRole("tab", { name: /^Oprávnění$/ }));
+    fireEvent.click(await screen.findByRole("link", { name: /Oprávnění/ }));
     const input = await screen.findByLabelText(/^Doba držení firem/i);
     expect((input as HTMLInputElement).value).toBe("90");
   });
@@ -116,7 +116,7 @@ describe("Ownership-window setting", () => {
   it("submits a valid new value and PUT body matches", async () => {
     const { calls } = setupFetch({ windowDays: 365 });
     renderSettings();
-    fireEvent.click(await screen.findByRole("tab", { name: /^Oprávnění$/ }));
+    fireEvent.click(await screen.findByRole("link", { name: /Oprávnění/ }));
     const input = await screen.findByLabelText(/^Doba držení firem/i);
     fireEvent.change(input, { target: { value: "180" } });
     const saveBtn = screen
@@ -131,7 +131,7 @@ describe("Ownership-window setting", () => {
   it("rejects out-of-bounds values without firing PUT", async () => {
     const { calls } = setupFetch({ windowDays: 365 });
     renderSettings();
-    fireEvent.click(await screen.findByRole("tab", { name: /^Oprávnění$/ }));
+    fireEvent.click(await screen.findByRole("link", { name: /Oprávnění/ }));
     const input = await screen.findByLabelText(/^Doba držení firem/i);
     fireEvent.change(input, { target: { value: "0" } });
     fireEvent.submit(input.closest("form")!);
@@ -142,7 +142,7 @@ describe("Ownership-window setting", () => {
   it("disables Uložit when the value matches the current setting (no-op)", async () => {
     setupFetch({ windowDays: 365 });
     renderSettings();
-    fireEvent.click(await screen.findByRole("tab", { name: /^Oprávnění$/ }));
+    fireEvent.click(await screen.findByRole("link", { name: /Oprávnění/ }));
     await screen.findByLabelText(/^Doba držení firem/i);
     // The form's Save button should be disabled when input value === initial.
     const form = screen.getByLabelText(/^Doba držení firem/i).closest("form")!;

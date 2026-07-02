@@ -286,15 +286,15 @@ describe("Billing settings page", () => {
       "href",
       expect.stringContaining("mailto:"),
     );
-    // Účtování shows projection (monthly active).
-    expect(screen.getByText(/Pokud byste platili ročně/i)).toBeInTheDocument();
+    // Účtování shows projection (monthly active) once the billing summary resolves.
+    await waitFor(() => expect(screen.getByText(/Pokud byste platili ročně/i)).toBeInTheDocument());
   });
 
   it("active annual → Aktivní pill + savings caption (no projection link)", async () => {
     setupFetch({ status: "active", planCode: "annual", userCount: 8 });
     renderBillingTab();
     await waitFor(() => expect(screen.getByText(/^Aktivní$/)).toBeInTheDocument());
-    expect(screen.getByText(/Šetříte/i)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Šetříte/i)).toBeInTheDocument());
     expect(screen.queryByText(/Pokud byste platili ročně/i)).toBeNull();
   });
 

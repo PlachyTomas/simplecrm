@@ -146,12 +146,10 @@ describe("Responsive app shell", () => {
     }
   });
 
-  it("renders the Nastavení page for admins with the Pipeline tab active", async () => {
-    renderAt("/app/settings");
+  it("renders the Pipeline settings section for admins", async () => {
+    renderAt("/app/settings/pipeline");
     await waitFor(() =>
-      expect(
-        screen.getByRole("heading", { level: 1, name: /^Nastavení — Pipeline$/ }),
-      ).toBeInTheDocument(),
+      expect(screen.getByRole("heading", { level: 1, name: /^Pipeline$/ })).toBeInTheDocument(),
     );
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /přidat fázi/i })).toBeInTheDocument(),
