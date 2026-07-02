@@ -130,8 +130,6 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
   },
 ];
 
-/** Import z CSV is a standalone page (/app/settings/import) but appears in the
- * settings nav as a first-class item under Prodej & data. Admin-only. */
 export const IMPORT_NAV_ITEM = {
   label: "Import z CSV",
   description: "Hromadný import firem a kontaktů z CSV souborů.",

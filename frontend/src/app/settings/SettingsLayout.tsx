@@ -47,7 +47,6 @@ export function SettingsLayout() {
     setSearchParams(next, { replace: true });
   }, [tabParam, searchParams, setSearchParams, toast]);
 
-  // Legacy `?tab=X` deep links (gcal OAuth callback) become section routes; other params survive
   if (isSettingsSectionKey(tabParam)) {
     const rest = new URLSearchParams(searchParams);
     rest.delete("tab");
