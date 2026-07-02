@@ -27,10 +27,12 @@ export function SettingsLayout() {
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const tabParam = searchParams.get("tab");
+  // An invalid ?tab= is never consumed by the redirect below, so treat it as absent.
+  const pendingTab = isSettingsSectionKey(tabParam) ? tabParam : null;
 
-  // One-shot gcal OAuth toast; skipped while ?tab= is pending so it can't race the redirect below
+  // One-shot gcal OAuth toast; skipped while a valid ?tab= is pending so it can't race the redirect below
   useEffect(() => {
-    if (tabParam) return;
+    if (pendingTab) return;
     const connected = searchParams.get("gcal");
     const errorCode = searchParams.get("gcal_error");
     if (!connected && !errorCode) return;
@@ -44,14 +46,15 @@ export function SettingsLayout() {
     const next = new URLSearchParams(searchParams);
     next.delete("gcal");
     next.delete("gcal_error");
+    next.delete("tab");
     setSearchParams(next, { replace: true });
-  }, [tabParam, searchParams, setSearchParams, toast]);
+  }, [pendingTab, searchParams, setSearchParams, toast]);
 
-  if (isSettingsSectionKey(tabParam)) {
+  if (pendingTab) {
     const rest = new URLSearchParams(searchParams);
     rest.delete("tab");
     const suffix = rest.toString();
-    return <Navigate to={`/app/settings/${tabParam}${suffix ? `?${suffix}` : ""}`} replace />;
+    return <Navigate to={`/app/settings/${pendingTab}${suffix ? `?${suffix}` : ""}`} replace />;
   }
 
   if (!user) {

@@ -1,5 +1,5 @@
 import { ChevronRight, type LucideIcon } from "lucide-react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 
 import {
   defaultSectionKey,
@@ -50,6 +50,7 @@ export function SettingsHome() {
   const { data: user } = useCurrentUser();
   usePageTitle("Nastavení");
   const isDesktop = useMediaQuery("(min-width: 768px)");
+  const location = useLocation();
 
   if (!user) {
     return (
@@ -62,7 +63,10 @@ export function SettingsHome() {
   // Desktop already has the sub-nav for orientation; the home list is the mobile drill-in entry
   if (isDesktop) {
     return (
-      <Navigate to={`/app/settings/${defaultSectionKey(user.role, user.can_invite)}`} replace />
+      <Navigate
+        to={`/app/settings/${defaultSectionKey(user.role, user.can_invite)}${location.search}`}
+        replace
+      />
     );
   }
 

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AppRoutes } from "@/App";
 import { AuthProvider } from "@/auth/AuthContext";
+import { ToastProvider } from "@/lib/toast";
 
 function jsonResponse(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), {
@@ -48,13 +49,15 @@ function setupFetch(role = "admin", canInvite = true) {
 function renderAt(path: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <QueryClientProvider client={qc}>
-      <AuthProvider initialToken="fake-token">
-        <MemoryRouter initialEntries={[path]}>
-          <AppRoutes />
-        </MemoryRouter>
-      </AuthProvider>
-    </QueryClientProvider>,
+    <ToastProvider>
+      <QueryClientProvider client={qc}>
+        <AuthProvider initialToken="fake-token">
+          <MemoryRouter initialEntries={[path]}>
+            <AppRoutes />
+          </MemoryRouter>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ToastProvider>,
   );
 }
 
@@ -77,6 +80,14 @@ describe("Settings navigation", () => {
     setupFetch();
     renderAt("/app/settings?tab=integrations&gcal=connected");
     expect(await screen.findByRole("heading", { level: 1, name: "Integrace" })).toBeInTheDocument();
+    await screen.findByText("Google Kalendář byl propojen");
+  });
+
+  it("treats an invalid ?tab= as absent so the gcal toast still fires", async () => {
+    setupFetch();
+    renderAt("/app/settings?tab=garbage&gcal=connected");
+    expect(await screen.findByRole("heading", { level: 1, name: "Nastavení" })).toBeInTheDocument();
+    await screen.findByText("Google Kalendář byl propojen");
   });
 
   it("redirects /app/nastaveni/predplatne to the billing section", async () => {
