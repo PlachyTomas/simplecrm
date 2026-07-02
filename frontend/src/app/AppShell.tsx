@@ -82,7 +82,7 @@ export function AppShell() {
           fluidLayout ? "h-screen overflow-hidden" : "min-h-screen",
         )}
       >
-        <TrialBanner daysRemaining={daysRemaining} endsOn={trialEndsAt} />
+        {showTrialBadge ? <TrialBanner daysRemaining={daysRemaining} endsOn={trialEndsAt} /> : null}
         <header className="sticky top-0 z-30 border-b border-border-subtle bg-bg/70 backdrop-blur">
           <div className="flex h-16 items-center justify-between gap-3 px-4 md:px-8">
             <div className="flex min-w-0 items-center gap-3">
