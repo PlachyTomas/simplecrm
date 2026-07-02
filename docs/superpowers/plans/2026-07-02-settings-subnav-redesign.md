@@ -14,7 +14,7 @@
 - Colors/spacing via design tokens only (`bg-surface`, `text-text-tertiary`, `bg-accent-subtle`, `duration-fast`, …) — never raw hex/named colors.
 - lucide icons: `size={16}` in nav rows, `strokeWidth={1.75}` everywhere.
 - Section *contents* must not change — extraction tasks are pure moves (same JSX, same strings, same hooks).
-- Frontend checks from repo root `frontend/`: `npx tsc --noEmit`, `npx eslint <files>`, `pnpm test`, `pnpm build`.
+- Frontend checks from repo root `frontend/`: `pnpm typecheck`, `npx eslint <files>`, `pnpm test`, `pnpm build`.
 - Commit after every task (small chunks; owner's machine crashes often).
 - Baseline before Task 1: 127/127 tests pass.
 
@@ -269,7 +269,7 @@ Expected: PASS (6 tests).
 
 - [ ] **Step 5: Typecheck + commit**
 
-Run: `cd frontend && npx tsc --noEmit && npx eslint src/app/settings/settingsNav.ts src/__tests__/settingsNav.test.ts`
+Run: `cd frontend && pnpm typecheck && npx eslint src/app/settings/settingsNav.ts src/__tests__/settingsNav.test.ts`
 
 ```bash
 git add frontend/src/app/settings/settingsNav.ts frontend/src/__tests__/settingsNav.test.ts
@@ -299,7 +299,7 @@ Move from `SettingsPage.tsx` lines 913–964: types `SubscriptionOut`, `PlanCode
 
 - [ ] **Step 2: Create `BillingSection.tsx`**
 
-Move from `SettingsPage.tsx` these components verbatim (line refs pre-move): `BillingSection` (966), `PaidThroughBlock` (1015), `CurrentPlanCard` (1078), `BillingDetailsCard` (1184), `PAYMENT_KIND_LABEL`/`PAYMENT_STATUS_PILL` (1257–1268), `PaymentsCard` (1270), `TAX_INVOICE_KIND_LABEL`/`TAX_INVOICE_STATUS_PILL` (1326–1341), `TaxInvoicesCard` (1343), `CancelSubscriptionCard` (1434), `ChoosePlanModal` (1573), `PlanModalCard` (1779). Export only `BillingSection`; the rest stay module-private. Shared helpers import from `./billingShared`. Carry over the needed imports from the monolith's header (usePayments, useTaxInvoices, useBillingSummary, useCurrentSubscription, usePublicPlans, PriceDisplay, RecurringPaymentConsent, formatCzkMinor, csNoun, cn, lucide icons, react/useState, ApiError if used) — let `npx tsc --noEmit` report anything missed.
+Move from `SettingsPage.tsx` these components verbatim (line refs pre-move): `BillingSection` (966), `PaidThroughBlock` (1015), `CurrentPlanCard` (1078), `BillingDetailsCard` (1184), `PAYMENT_KIND_LABEL`/`PAYMENT_STATUS_PILL` (1257–1268), `PaymentsCard` (1270), `TAX_INVOICE_KIND_LABEL`/`TAX_INVOICE_STATUS_PILL` (1326–1341), `TaxInvoicesCard` (1343), `CancelSubscriptionCard` (1434), `ChoosePlanModal` (1573), `PlanModalCard` (1779). Export only `BillingSection`; the rest stay module-private. Shared helpers import from `./billingShared`. Carry over the needed imports from the monolith's header (usePayments, useTaxInvoices, useBillingSummary, useCurrentSubscription, usePublicPlans, PriceDisplay, RecurringPaymentConsent, formatCzkMinor, csNoun, cn, lucide icons, react/useState, ApiError if used) — let `pnpm typecheck` report anything missed.
 
 - [ ] **Step 3: Slim the monolith**
 
@@ -307,7 +307,7 @@ In `SettingsPage.tsx`: delete everything moved in Steps 1–2, add `import { Bil
 
 - [ ] **Step 4: Verify green + commit**
 
-Run: `cd frontend && npx tsc --noEmit && pnpm test`
+Run: `cd frontend && pnpm typecheck && pnpm test`
 Expected: 0 type errors; 133/133 tests pass (127 baseline + 6 from Task 1). `billingSettings.test.tsx` is the real gate here.
 
 ```bash
@@ -375,7 +375,7 @@ export function PipelineSection() {
 
 - [ ] **Step 7: Verify green + commit**
 
-Run: `cd frontend && npx tsc --noEmit && pnpm test && npx eslint src/app/settings`
+Run: `cd frontend && pnpm typecheck && pnpm test && npx eslint src/app/settings`
 Expected: all pass (ownershipWindow + smtpSettings + billingSettings cover the moved sections).
 
 ```bash
@@ -889,7 +889,7 @@ fireEvent.click(await screen.findByRole("link", { name: /Oprávnění/ }));
 - [ ] **Step 8: Run the full suite**
 
 Run: `cd frontend && npx vitest run src/__tests__/settingsNavigation.test.tsx` → PASS (6 tests).
-Run: `cd frontend && npx tsc --noEmit && pnpm test` → all pass (139 total expected).
+Run: `cd frontend && pnpm typecheck && pnpm test` → all pass (139 total expected).
 If `billingSettings.test.tsx` fails on the heading (it may assert old copy "Nastavení — Fakturace"), update its assertions to the new `h1` "Fakturace" — check with `grep -n "Nastavení" src/__tests__/billingSettings.test.tsx`.
 
 - [ ] **Step 9: Commit**
@@ -941,7 +941,7 @@ git commit -m "polish(settings): visual tweaks from Playwright verification"
 
 - [ ] **Step 2: CI mirror (owner's global rule — mirrors `.github/workflows/ci.yml`)**
 
-Run from `frontend/`: `npx eslint src --max-warnings 0 && npx prettier --check src && npx tsc --noEmit && pnpm test && pnpm build`
+Run from `frontend/`: `npx eslint src --max-warnings 0 && npx prettier --check src && pnpm typecheck && pnpm test && pnpm build`
 Also run whatever `ci.yml` additionally lists (check `types:check` script in `package.json`).
 Expected: everything green.
 
