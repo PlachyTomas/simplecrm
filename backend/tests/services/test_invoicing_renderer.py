@@ -110,6 +110,33 @@ def test_render_pdf_is_deterministic_byte_for_byte() -> None:
     assert hashlib.sha256(pdf_a).hexdigest() == hashlib.sha256(pdf_b).hexdigest()
 
 
+def test_render_pdf_deterministic_through_fonttools_subset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression guard for a CI-only determinism break.
+
+    When the system Harfbuzz predates 4.1.0 (as on the CI image), WeasyPrint
+    subsets fonts through fontTools, whose ``TTFont.save()`` stamps the
+    subset's ``head.modified`` with the wall clock — so two renders seconds
+    apart used to byte-differ. Force that path and advance the fontTools clock
+    between renders; the renderer's ``SOURCE_DATE_EPOCH`` pin must keep the
+    output byte-identical. Without the pin this assertion fails.
+    """
+    import types
+    from itertools import count
+
+    from fontTools.misc import timeTools
+
+    monkeypatch.setattr("weasyprint.pdf.fonts.harfbuzz_subset", None)
+    clock = count(1_700_000_000, 100)
+    monkeypatch.setattr(timeTools, "time", types.SimpleNamespace(time=lambda: float(next(clock))))
+
+    invoice = _make_invoice()
+    line = _make_line(invoice.id)
+    r = InvoiceRenderer()
+    assert r.render_pdf(invoice, [line]) == r.render_pdf(invoice, [line])
+
+
 def test_render_pdf_supports_czech_diacritics() -> None:
     """A customer named `Žďár nad Sázavou s.r.o.` exercises every
     significant Czech diacritic (Ž, ď, á, S, á, z, a, v, ou). The Inter

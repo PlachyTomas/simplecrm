@@ -17,6 +17,9 @@ every read. The contract is preserved by:
     from `invoice.issued_at` (so two renders moments apart still match).
   - Embedding all fonts via `@font-face` in the template — no system
     fonts, no fallback.
+  - Pinning ``SOURCE_DATE_EPOCH`` (see below) so the embedded font
+    subsets carry a fixed ``head.modified`` timestamp instead of the
+    wall clock.
   - Disabling presentational-hints heuristics (`presentational_hints=False`
     is the WeasyPrint default; we don't override).
 
@@ -28,6 +31,7 @@ accountant doesn't need are omitted to keep the document small.
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterable
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -47,6 +51,13 @@ if TYPE_CHECKING:
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
 _FONTS_DIR = _TEMPLATES_DIR / "fonts"
+
+# WeasyPrint's fontTools subset fallback (taken when the system harfbuzz
+# predates 4.1.0, as on CI) stamps each subset's head.modified with the wall
+# clock, so renders seconds apart byte-differ and break the pdf_sha256
+# integrity check. fontTools honours SOURCE_DATE_EPOCH for that timestamp;
+# setdefault respects a value a reproducible-build pipeline already set.
+os.environ.setdefault("SOURCE_DATE_EPOCH", "1577836800")  # 2020-01-01T00:00:00Z
 
 # ISDOC 6.0.1 namespace.
 _ISDOC_NS = "http://isdoc.cz/namespace/2013"
