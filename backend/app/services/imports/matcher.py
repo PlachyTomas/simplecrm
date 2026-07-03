@@ -65,14 +65,23 @@ def _build_index(
     existing_by_ico: dict[str, uuid.UUID],
     existing_by_name: dict[str, uuid.UUID],
     source: MatchSource,
+    candidate_existing_ids: dict[int, uuid.UUID],
 ) -> dict[str, list[CompanyKey]]:
     """Build a `normalized-key → [CompanyKey, ...]` index.
 
     Returns a *list* per key so the matcher can detect `ambiguous_match`
     (multiple companies — typically two file rows with the same name —
     both claim the same key).
+
+    `candidate_existing_ids` maps a candidate's index to the existing DB
+    company it will update (when re-importing a company that already
+    exists). Such a candidate and that existing row are the *same*
+    company, so we drop the standalone existing entry under that key —
+    otherwise a contact keyed to it would look ambiguously matched
+    against "two" companies that are really one.
     """
-    index: dict[str, list[CompanyKey]] = {}
+    # key -> [(CompanyKey, existing-id it represents or None)]
+    raw_index: dict[str, list[tuple[CompanyKey, uuid.UUID | None]]] = {}
     for cand_idx, cand in enumerate(candidates):
         raw = cand.fields.get(source)
         if raw is None:
@@ -80,11 +89,14 @@ def _build_index(
         key = _normalize(raw, source=source)
         if not key:
             continue
-        index.setdefault(key, []).append(
-            CompanyKey(
-                company_index=cand_idx,
-                existing_company_id=None,
-                label=cand.fields.get("name") or f"row {cand.row_index}",
+        raw_index.setdefault(key, []).append(
+            (
+                CompanyKey(
+                    company_index=cand_idx,
+                    existing_company_id=None,
+                    label=cand.fields.get("name") or f"row {cand.row_index}",
+                ),
+                candidate_existing_ids.get(cand_idx),
             )
         )
 
@@ -93,13 +105,23 @@ def _build_index(
         key = _normalize(raw_key, source=source)
         if not key:
             continue
-        index.setdefault(key, []).append(
-            CompanyKey(
-                company_index=None,
-                existing_company_id=existing_id,
-                label=f"existing company {existing_id}",
+        raw_index.setdefault(key, []).append(
+            (
+                CompanyKey(
+                    company_index=None,
+                    existing_company_id=existing_id,
+                    label=f"existing company {existing_id}",
+                ),
+                existing_id,
             )
         )
+
+    index: dict[str, list[CompanyKey]] = {}
+    for key, pairs in raw_index.items():
+        covered = {eid for ck, eid in pairs if ck.company_index is not None and eid is not None}
+        index[key] = [
+            ck for ck, _eid in pairs if not (ck.is_existing() and ck.existing_company_id in covered)
+        ]
     return index
 
 
@@ -110,6 +132,7 @@ def match_contacts_to_companies(
     existing_companies_by_ico: dict[str, uuid.UUID],
     existing_companies_by_name: dict[str, uuid.UUID],
     match_source: MatchSource | None,
+    candidate_existing_ids: dict[int, uuid.UUID] | None = None,
 ) -> MatcherResult:
     """Resolve each contact to either a CSV candidate or an existing DB row.
 
@@ -117,6 +140,10 @@ def match_contacts_to_companies(
     match-key pair (e.g. they uploaded only a companies CSV). In that case
     every contact is reported as ``no_company_key``; this is by design
     because Mode B/C cannot produce contacts without a way to link them.
+
+    ``candidate_existing_ids`` maps a company candidate's index to the
+    existing DB company it updates, so the index can treat "re-uploaded
+    company" and "existing company" as one (see :func:`_build_index`).
     """
     result = MatcherResult()
 
@@ -139,6 +166,7 @@ def match_contacts_to_companies(
         existing_by_ico=existing_companies_by_ico,
         existing_by_name=existing_companies_by_name,
         source=match_source,
+        candidate_existing_ids=candidate_existing_ids or {},
     )
 
     for contact in contacts:

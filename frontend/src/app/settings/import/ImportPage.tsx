@@ -142,7 +142,8 @@ function ImportPageInner() {
 
   const canRunPreview = useMemo(() => {
     if (!canGoToStep2) return false;
-    if (!entries.some((e) => e.role === "companies" || e.role === "combined")) return false;
+    // A contacts-only file is allowed on its own — its rows attach to
+    // firms that already exist in the DB, matched by the chosen key.
     for (const e of entries) {
       if (e.role === "companies" || e.role === "combined") {
         if (!Object.values(e.mappingCompany).some((v) => v && v !== "ignore")) return false;
@@ -605,8 +606,8 @@ function MatchSourcePicker(props: {
         </select>
       </label>
       <p className="text-xs text-text-tertiary">
-        Sloupec u firem musí být zároveň namapovaný na pole „{props.matchSource}". Hodnoty se
-        porovnávají napříč všemi nahranými soubory.
+        Podle této hodnoty kontakt najde svou firmu — buď mezi firmami v nahraných souborech, nebo
+        mezi firmami, které už v CRM máte. Stačí tedy nahrát jen kontakty.
       </p>
     </fieldset>
   );

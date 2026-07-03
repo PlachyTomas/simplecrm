@@ -315,6 +315,103 @@ async def test_commit_separate_files_link_contacts_to_companies(
         assert all(c.company_id is not None for c in contacts)
 
 
+async def test_commit_contacts_only_links_to_existing_company(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """A contacts-only file attaches to a firm that already exists in the
+    DB — no company file needed in the batch."""
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    existing = Company(organization_id=org.id, name="Acme s.r.o.", ico="12345678")
+    db_session.add(existing)
+    await db_session.commit()
+    await db_session.refresh(existing)
+
+    contacts_csv = "Jméno,Příjmení,FirmaIČO\nAnna,Nováková,12345678\n"
+    files = [("files", _csv(contacts_csv, "contacts.csv"))]
+    data = {
+        "file_specs_json": json.dumps(
+            [
+                _spec_contacts(
+                    {"Jméno": "first_name", "Příjmení": "last_name"},
+                    match_key_contact="FirmaIČO",
+                )
+            ]
+        ),
+        "match_source": "ico",
+        "skip_unmatched": "true",
+    }
+    r = await client.post(
+        "/api/v1/admin/imports/commit", headers=_auth(admin), files=files, data=data
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert len(body["created_company_ids"]) == 0
+    assert len(body["created_contact_ids"]) == 1
+
+    async with AsyncSessionLocal() as s:
+        contacts = (
+            (await s.execute(select(Contact).where(Contact.organization_id == org.id)))
+            .scalars()
+            .all()
+        )
+        assert len(contacts) == 1
+        assert contacts[0].company_id == existing.id
+
+
+async def test_commit_combined_reupload_of_existing_company_links_contact(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Combined row whose company already exists updates that firm and
+    attaches the contact — the old double-match no longer fires."""
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    existing = Company(organization_id=org.id, name="Acme s.r.o.", ico="12345678")
+    db_session.add(existing)
+    await db_session.commit()
+    await db_session.refresh(existing)
+
+    combined_csv = "Název,IČO,Jméno,Příjmení\nAcme s.r.o.,12345678,Anna,Nováková\n"
+    files = [("files", _csv(combined_csv, "combined.csv"))]
+    data = {
+        "file_specs_json": json.dumps(
+            [
+                _spec_combined(
+                    {"Název": "name", "IČO": "ico"},
+                    {"Jméno": "first_name", "Příjmení": "last_name"},
+                    match_key_contact="IČO",
+                )
+            ]
+        ),
+        "match_source": "ico",
+        "skip_unmatched": "false",
+    }
+    r = await client.post(
+        "/api/v1/admin/imports/commit", headers=_auth(admin), files=files, data=data
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["counts"]["unmatched_contacts"] == 0
+    assert not any(e["code"] == "ambiguous_match" for e in body["errors"])
+    assert len(body["created_company_ids"]) == 0  # matched existing, not duplicated
+    assert len(body["created_contact_ids"]) == 1
+
+    async with AsyncSessionLocal() as s:
+        companies = (
+            (await s.execute(select(Company).where(Company.organization_id == org.id)))
+            .scalars()
+            .all()
+        )
+        assert len(companies) == 1  # no duplicate firm
+        contacts = (
+            (await s.execute(select(Contact).where(Contact.organization_id == org.id)))
+            .scalars()
+            .all()
+        )
+        assert len(contacts) == 1
+        assert contacts[0].company_id == existing.id
+
+
 async def test_preview_concatenates_two_companies_files(
     client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
 ) -> None:

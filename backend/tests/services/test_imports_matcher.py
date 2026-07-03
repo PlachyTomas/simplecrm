@@ -200,6 +200,44 @@ def test_matcher_matches_against_existing_db_company_by_ico() -> None:
     assert key.existing_company_id == existing_id
 
 
+def test_matcher_collapses_reuploaded_company_with_existing_row() -> None:
+    """A candidate that updates an existing firm and that existing row are
+    one company — a contact keyed to them must resolve, not read ambiguous."""
+    existing_id = uuid.uuid4()
+    contacts = [_make_contact({"first_name": "A", "last_name": "B"}, "12345678")]
+    companies = [_make_company({"name": "Acme", "ico": "12345678"}, row_index=2)]
+    res = match_contacts_to_companies(
+        contacts=contacts,
+        company_candidates=companies,
+        existing_companies_by_ico={"12345678": existing_id},
+        existing_companies_by_name={},
+        match_source="ico",
+        candidate_existing_ids={0: existing_id},
+    )
+    assert not any(e.code == "ambiguous_match" for e in res.errors)
+    key = res.matches[2]
+    assert key is not None
+    assert key.company_index == 0
+
+
+def test_matcher_still_ambiguous_for_two_genuinely_distinct_companies() -> None:
+    """The collapse is scoped to a candidate + the existing row it updates;
+    a candidate that maps to a *different* existing firm stays ambiguous."""
+    other_existing = uuid.uuid4()
+    contacts = [_make_contact({"first_name": "A", "last_name": "B"}, "Acme")]
+    companies = [_make_company({"name": "Acme", "ico": "11111111"}, row_index=2)]
+    res = match_contacts_to_companies(
+        contacts=contacts,
+        company_candidates=companies,
+        existing_companies_by_ico={},
+        existing_companies_by_name={"acme": other_existing},
+        match_source="name",
+        candidate_existing_ids={},  # candidate does not resolve to other_existing
+    )
+    assert res.matches[2] is None
+    assert any(e.code == "ambiguous_match" for e in res.errors)
+
+
 def test_dedup_first_wins_subsequent_get_duplicate_in_file() -> None:
     candidates = [
         _make_company({"name": "A", "ico": "12345678"}, row_index=2),

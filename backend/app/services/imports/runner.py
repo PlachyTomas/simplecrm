@@ -248,8 +248,19 @@ async def _run_pipeline(
     names_in_file: set[str] = {
         name.lower() for c in deduped_companies if (name := c.fields.get("name")) is not None
     }
+    # Resolve firms referenced only by contacts' keys too, so a contacts-only
+    # import can attach to companies that already exist in the DB.
+    contact_keys: set[str] = {
+        key for c in payload.contact_candidates if (key := (c.match_key_value or "").strip())
+    }
+    icos_to_resolve = set(icos_in_file)
+    names_to_resolve = set(names_in_file)
+    if payload.match_source == "ico":
+        icos_to_resolve |= contact_keys
+    elif payload.match_source == "name":
+        names_to_resolve |= {k.lower() for k in contact_keys}
     existing_by_ico, existing_by_name = await _load_existing_companies(
-        session, payload.organization_id, icos_in_file, names_in_file
+        session, payload.organization_id, icos_to_resolve, names_to_resolve
     )
     blocked = await _load_blocked_icos(session, payload.organization_id, icos_in_file)
 
@@ -419,12 +430,23 @@ async def _run_pipeline(
 
     matcher_existing_by_ico = {ico: row.id for ico, row in existing_by_ico.items()}
     matcher_existing_by_name = {name: row.id for name, row in existing_by_name.items()}
+    # A candidate that updates an existing firm is that firm — let the matcher
+    # collapse the two so a contact keyed to it doesn't read as ambiguous.
+    candidate_existing_ids: dict[int, uuid.UUID] = {}
+    for cand_idx, cand in enumerate(deduped_companies):
+        ico = cand.fields.get("ico")
+        existing = (existing_by_ico.get(ico) if ico else None) or existing_by_name.get(
+            (cand.fields.get("name") or "").lower()
+        )
+        if existing is not None:
+            candidate_existing_ids[cand_idx] = existing.id
     matcher_result = match_contacts_to_companies(
         contacts=contacts_for_matcher,
         company_candidates=deduped_companies,
         existing_companies_by_ico=matcher_existing_by_ico,
         existing_companies_by_name=matcher_existing_by_name,
         match_source=payload.match_source,
+        candidate_existing_ids=candidate_existing_ids,
     )
     result.errors.extend(matcher_result.errors)
 
