@@ -10,7 +10,7 @@
  */
 
 import { ArrowLeft, FileText, Loader2, ShieldAlert, UserCheck, X } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 
 import { sniffCsvHeaders } from "@/app/settings/import/csvSniff";
@@ -91,6 +91,12 @@ function ImportPageInner() {
   const [previewResult, setPreviewResult] = useState<ImportPreviewOut | null>(null);
 
   const needsContactSide = entries.some((e) => e.role === "contacts" || e.role === "combined");
+  // Matching by e-mail only works against companies in the same batch — a
+  // contacts-only import matches existing firms, which support IČO/name only.
+  const hasCompanySource = entries.some((e) => e.role === "companies" || e.role === "combined");
+  useEffect(() => {
+    if (!hasCompanySource && matchSource === "email") setMatchSource("ico");
+  }, [hasCompanySource, matchSource]);
 
   const handleAddFiles = useCallback(
     async (files: FileList | File[]) => {
@@ -265,6 +271,7 @@ function ImportPageInner() {
           needsContactSide={needsContactSide}
           matchSource={matchSource}
           setMatchSource={setMatchSource}
+          allowEmailKey={hasCompanySource}
           bulkOwnerUserId={bulkOwnerUserId}
           setBulkOwnerUserId={setBulkOwnerUserId}
           onBack={() => setStep(1)}
@@ -452,6 +459,7 @@ function StepMapping(props: {
   needsContactSide: boolean;
   matchSource: MatchSource;
   setMatchSource: (s: MatchSource) => void;
+  allowEmailKey: boolean;
   bulkOwnerUserId: string | null;
   setBulkOwnerUserId: (id: string | null) => void;
   onBack: () => void;
@@ -482,7 +490,11 @@ function StepMapping(props: {
       ))}
 
       {props.needsContactSide && (
-        <MatchSourcePicker matchSource={props.matchSource} setMatchSource={props.setMatchSource} />
+        <MatchSourcePicker
+          matchSource={props.matchSource}
+          setMatchSource={props.setMatchSource}
+          allowEmailKey={props.allowEmailKey}
+        />
       )}
 
       <BulkOwnerPicker
@@ -585,6 +597,7 @@ function FileMapping(props: {
 function MatchSourcePicker(props: {
   matchSource: MatchSource;
   setMatchSource: (s: MatchSource) => void;
+  allowEmailKey: boolean;
 }) {
   return (
     <fieldset className="space-y-3 rounded-md border border-border bg-surface p-4">
@@ -602,7 +615,7 @@ function MatchSourcePicker(props: {
         >
           <option value="ico">IČO</option>
           <option value="name">Název firmy</option>
-          <option value="email">E-mail</option>
+          {props.allowEmailKey && <option value="email">E-mail</option>}
         </select>
       </label>
       <p className="text-xs text-text-tertiary">
