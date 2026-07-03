@@ -10,7 +10,6 @@ import {
   useSendBulkEmail,
 } from "@/app/companies/bulk-email/useBulkEmail";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
-import { useCurrentUser } from "@/auth/useCurrentUser";
 import { ApiError } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -57,18 +56,22 @@ const SKIP_LABELS: Record<string, string> = {
   blocked: "na blocklistu",
 };
 
-export function BulkEmailWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function BulkEmailWizard({
+  open,
+  onClose,
+  initialFilters,
+}: {
+  open: boolean;
+  onClose: () => void;
+  initialFilters: BulkEmailFilters;
+}) {
   const toast = useToast();
   const navigate = useNavigate();
-  const { data: user } = useCurrentUser();
   const { data: usersPage } = useOrgUsers();
   const resolve = useResolveRecipients();
   const send = useSendBulkEmail();
 
-  const isManagerOrAdmin = user?.role === "admin" || user?.role === "manager";
-
   const [step, setStep] = useState(1);
-  const [filters, setFilters] = useState<BulkEmailFilters>({});
   const [candidates, setCandidates] = useState<RecipientCandidate[] | null>(null);
   const [selected, setSelected] = useState<Record<string, string[]>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -79,11 +82,10 @@ export function BulkEmailWizard({ open, onClose }: { open: boolean; onClose: () 
   const [dealTitle, setDealTitle] = useState("");
   const [result, setResult] = useState<CampaignOut | null>(null);
 
-  // Reset everything whenever the modal is (re)opened.
+  // On open, auto-resolve recipients from the handed-in Firmy filters (no filter step).
   useEffect(() => {
     if (!open) return;
     setStep(1);
-    setFilters({});
     setCandidates(null);
     setSelected({});
     setExpanded(new Set());
@@ -93,6 +95,18 @@ export function BulkEmailWizard({ open, onClose }: { open: boolean; onClose: () 
     setCreateDeals(false);
     setDealTitle("");
     setResult(null);
+    resolve.mutate(initialFilters, {
+      onSuccess: (cands) => {
+        setCandidates(cands);
+        const initial: Record<string, string[]> = {};
+        for (const c of cands) {
+          if (c.emailable && c.default_email) initial[c.company_id] = [c.default_email];
+        }
+        setSelected(initial);
+      },
+      onError: () => toast.error("Načtení firem se nezdařilo, zkuste to prosím znovu."),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -111,26 +125,23 @@ export function BulkEmailWizard({ open, onClose }: { open: boolean; onClose: () 
 
   if (!open) return null;
 
-  const runResolve = () => {
-    const payload: BulkEmailFilters = {
-      industry: filters.industry?.trim() || null,
-      owner_user_id: filters.owner_user_id ?? null,
-      has_won_deal: filters.has_won_deal ?? null,
-      no_order_since_days: filters.no_order_since_days ?? null,
-    };
-    resolve.mutate(payload, {
-      onSuccess: (cands) => {
-        setCandidates(cands);
-        const initial: Record<string, string[]> = {};
-        for (const c of cands) {
-          if (c.emailable && c.default_email) initial[c.company_id] = [c.default_email];
-        }
-        setSelected(initial);
-        setStep(2);
-      },
-      onError: () => toast.error("Načtení firem se nezdařilo, zkuste to prosím znovu."),
-    });
+  const selectAllCompanies = () => {
+    const next: Record<string, string[]> = {};
+    for (const c of candidates ?? []) {
+      if (c.emailable && c.default_email) next[c.company_id] = [c.default_email];
+    }
+    setSelected(next);
   };
+  const selectNoCompanies = () => setSelected({});
+
+  const usersById = new Map((usersPage?.items ?? []).map((u) => [u.id, u.name] as const));
+  const summaryParts: string[] = [];
+  if (initialFilters.unowned) summaryParts.push("Nezabrané");
+  else if (initialFilters.owner_user_id)
+    summaryParts.push(usersById.get(initialFilters.owner_user_id) ?? "vybraný vlastník");
+  if (initialFilters.industry) summaryParts.push(initialFilters.industry);
+  if (initialFilters.city) summaryParts.push(initialFilters.city);
+  const filterSummary = summaryParts.length ? summaryParts.join(" · ") : "vaše celé portfolio";
 
   const toggleEmail = (companyId: string, email: string) => {
     setSelected((prev) => {
@@ -222,7 +233,7 @@ export function BulkEmailWizard({ open, onClose }: { open: boolean; onClose: () 
           <>
             <div className="border-b border-border-subtle px-5 py-2">
               <ol className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-tertiary">
-                {["Filtr", "Příjemci", "Text", "Odeslání"].map((label, i) => (
+                {["Příjemci", "Text", "Odeslání"].map((label, i) => (
                   <li
                     key={label}
                     className={cn(
@@ -238,71 +249,34 @@ export function BulkEmailWizard({ open, onClose }: { open: boolean; onClose: () 
 
             <div className="flex-1 overflow-y-auto px-5 py-4">
               {step === 1 ? (
-                <div className="space-y-3">
-                  <p className="text-sm text-text-secondary">
-                    Vyfiltrujte firmy ze svého portfolia, kterým chcete e-mail poslat.
-                  </p>
-                  <label className="block">
-                    <span className="text-xs font-medium text-text-secondary">Obor</span>
-                    <input
-                      className={inputClass}
-                      value={filters.industry ?? ""}
-                      onChange={(e) => setFilters((f) => ({ ...f, industry: e.target.value }))}
-                      placeholder="např. IT, Stavebnictví…"
-                    />
-                  </label>
-                  {isManagerOrAdmin ? (
-                    <label className="block">
-                      <span className="text-xs font-medium text-text-secondary">Vlastník</span>
-                      <select
-                        className={inputClass}
-                        value={filters.owner_user_id ?? ""}
-                        onChange={(e) =>
-                          setFilters((f) => ({ ...f, owner_user_id: e.target.value || null }))
-                        }
-                      >
-                        <option value="">Všichni vlastníci</option>
-                        {(usersPage?.items ?? []).map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  ) : null}
-                  <label className="flex items-center gap-2 text-sm text-text-secondary">
-                    <input
-                      type="checkbox"
-                      checked={filters.has_won_deal ?? false}
-                      onChange={(e) =>
-                        setFilters((f) => ({ ...f, has_won_deal: e.target.checked || null }))
-                      }
-                    />
-                    Pouze firmy s vyhraným obchodem
-                  </label>
-                  <label className="block">
-                    <span className="text-xs font-medium text-text-secondary">
-                      Bez objednávky déle než (dní)
-                    </span>
-                    <input
-                      className={inputClass}
-                      type="number"
-                      min={1}
-                      value={filters.no_order_since_days ?? ""}
-                      onChange={(e) =>
-                        setFilters((f) => ({
-                          ...f,
-                          no_order_since_days: e.target.value ? Number(e.target.value) : null,
-                        }))
-                      }
-                      placeholder="např. 90"
-                    />
-                  </label>
-                </div>
-              ) : null}
-
-              {step === 2 ? (
                 <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-text-tertiary">
+                      Filtr: <span className="text-text-secondary">{filterSummary}</span>
+                    </p>
+                    {(candidates ?? []).some((c) => c.emailable) ? (
+                      <div className="flex items-center gap-2 text-xs">
+                        <button
+                          type="button"
+                          onClick={selectAllCompanies}
+                          className="text-accent hover:text-accent-hover"
+                        >
+                          Vybrat vše
+                        </button>
+                        <span className="text-text-tertiary">·</span>
+                        <button
+                          type="button"
+                          onClick={selectNoCompanies}
+                          className="text-text-secondary hover:text-text-primary"
+                        >
+                          Zrušit výběr
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                  {resolve.isPending ? (
+                    <p className="py-8 text-center text-sm text-text-tertiary">Načítání firem…</p>
+                  ) : null}
                   {candidates && candidates.length === 0 ? (
                     <p className="py-8 text-center text-sm text-text-tertiary">
                       Žádné firmy neodpovídají filtru.
@@ -375,7 +349,7 @@ export function BulkEmailWizard({ open, onClose }: { open: boolean; onClose: () 
                 </div>
               ) : null}
 
-              {step === 3 ? (
+              {step === 2 ? (
                 <div className="space-y-3">
                   <label className="block">
                     <span className="text-xs font-medium text-text-secondary">Předmět</span>
@@ -415,7 +389,7 @@ export function BulkEmailWizard({ open, onClose }: { open: boolean; onClose: () 
                 </div>
               ) : null}
 
-              {step === 4 ? (
+              {step === 3 ? (
                 <div className="space-y-3">
                   <p className="text-sm text-text-secondary">
                     E-mail bude odeslán <strong>{totalSelected}</strong> příjemcům z vaší vlastní
@@ -456,25 +430,16 @@ export function BulkEmailWizard({ open, onClose }: { open: boolean; onClose: () 
               {step === 1 ? (
                 <button
                   type="button"
-                  onClick={runResolve}
-                  disabled={resolve.isPending}
-                  className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent hover:opacity-90 disabled:opacity-60"
-                >
-                  {resolve.isPending ? "Načítání…" : "Najít firmy"}
-                </button>
-              ) : step === 2 ? (
-                <button
-                  type="button"
-                  onClick={() => setStep(3)}
+                  onClick={() => setStep(2)}
                   disabled={totalSelected === 0}
                   className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Další ({totalSelected})
                 </button>
-              ) : step === 3 ? (
+              ) : step === 2 ? (
                 <button
                   type="button"
-                  onClick={() => setStep(4)}
+                  onClick={() => setStep(3)}
                   disabled={!subject.trim() || !body.trim()}
                   className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -491,7 +456,7 @@ export function BulkEmailWizard({ open, onClose }: { open: boolean; onClose: () 
                 </button>
               )}
             </footer>
-            {step === 2 && emailableCount === 0 && candidates ? (
+            {step === 1 && emailableCount === 0 && candidates ? (
               <p className="px-5 pb-3 text-xs text-text-tertiary">
                 Žádná firma nemá použitelnou e-mailovou adresu.
               </p>

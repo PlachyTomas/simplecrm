@@ -135,11 +135,10 @@ describe("Bulk email", () => {
     renderAt("/app/companies");
 
     await user.click(await screen.findByRole("button", { name: /hromadný e-mail/i }));
-    // Wizard step 1.
+    // Wizard opens on the recipient step and auto-resolves from the Firmy filters.
     expect(await screen.findByRole("heading", { name: /^Hromadný e-mail$/i })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /najít firmy/i }));
 
-    // Step 2: matched company shown, skipped one greyed with reason.
+    // Recipient step: matched company shown, skipped one greyed with reason.
     expect(await screen.findByText(/ACME s\.r\.o\./)).toBeInTheDocument();
     expect(screen.getByText(/bez e-mailu/i)).toBeInTheDocument();
 

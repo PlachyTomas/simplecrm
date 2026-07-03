@@ -710,6 +710,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/filter-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Company Filter Options
+         * @description Distinct industry / city / owner values across the caller's visible
+         *     companies, for the Firmy filter dropdowns.
+         */
+        get: operations["company_filter_options_api_v1_companies_filter_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/lookup-registry": {
         parameters: {
             query?: never;
@@ -3489,8 +3510,15 @@ export interface components {
         BulkEmailFilters: {
             /** Industry */
             industry?: string | null;
+            /** City */
+            city?: string | null;
             /** Owner User Id */
             owner_user_id?: string | null;
+            /**
+             * Unowned
+             * @default false
+             */
+            unowned: boolean;
             /** Stage Id */
             stage_id?: string | null;
             /** Has Won Deal */
@@ -3820,6 +3848,20 @@ export interface components {
             note?: string | null;
             /** Owner User Id */
             owner_user_id?: string | null;
+        };
+        /**
+         * CompanyFilterOptions
+         * @description Distinct values for the Firmy filter dropdowns, drawn from the
+         *     caller's visible companies (so salespeople only see their own book's
+         *     industries, cities, and owners).
+         */
+        CompanyFilterOptions: {
+            /** Industries */
+            industries: string[];
+            /** Cities */
+            cities: string[];
+            /** Owner User Ids */
+            owner_user_ids: string[];
         };
         /** CompanyOut */
         CompanyOut: {
@@ -7213,6 +7255,12 @@ export interface operations {
                 order?: string;
                 /** @description Ownership filter: 'mine' (only my own), 'mine_and_unowned' (mine + pool), or 'unowned' (pool only). */
                 ownership?: string | null;
+                /** @description Filter to companies owned by this specific user. */
+                owner_user_id?: string | null;
+                /** @description Exact industry match. */
+                industry?: string | null;
+                /** @description Exact registered-seat city match. */
+                city?: string | null;
                 limit?: number;
                 offset?: number;
             };
@@ -7271,6 +7319,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    company_filter_options_api_v1_companies_filter_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyFilterOptions"];
                 };
             };
         };

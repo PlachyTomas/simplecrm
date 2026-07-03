@@ -19,6 +19,7 @@ import {
   Plus,
   Search,
   Table2,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -26,11 +27,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { AddCompanyModal } from "@/app/companies/AddCompanyModal";
 import { BulkEmailWizard } from "@/app/companies/bulk-email/BulkEmailWizard";
 import { OwnershipBadge } from "@/app/companies/OwnershipBadge";
+import { type BulkEmailFilters } from "@/app/companies/bulk-email/useBulkEmail";
 import {
   type CompanyOut,
-  type CompanyOwnershipFilter,
   type CompanySortKey,
   useCompanies,
+  useCompanyFilterOptions,
 } from "@/app/companies/useCompanies";
 import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
@@ -42,6 +44,9 @@ import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 25;
+
+const FILTER_SELECT_CLASS =
+  "h-9 max-w-[12rem] truncate rounded-md border border-border bg-surface-overlay px-2 text-xs font-medium text-text-secondary focus:border-accent focus:outline-none";
 
 function pluralizeCompanies(n: number): string {
   return `${n} ${csNoun(n, "firma")}`;
@@ -57,13 +62,6 @@ const SORT_KEY_BY_COLUMN: Record<string, CompanySortKey> = {
   last_order_at: "last_order_at",
   created_at: "created_at",
 };
-
-const OWNERSHIP_OPTIONS: { value: CompanyOwnershipFilter | "all"; label: string }[] = [
-  { value: "all", label: "Vše v mém týmu" },
-  { value: "mine_and_unowned", label: "Moje + nezabrané" },
-  { value: "mine", label: "Jen moje" },
-  { value: "unowned", label: "Jen nezabrané" },
-];
 
 type ViewMode = "cards" | "table";
 
@@ -84,8 +82,21 @@ export function CompaniesListPage() {
   const debouncedSearch = useDebouncedValue(searchInput, 300);
   const [page, setPage] = useState(0);
   const [sorting, setSorting] = useState<SortingState>([{ id: "name", desc: false }]);
-  const [ownership, setOwnership] = useState<CompanyOwnershipFilter | "all">("all");
+  // Vlastník dropdown value: "all" (Vše) | "unowned" (Nezabrané) | a user id.
+  const [ownerFilter, setOwnerFilter] = useState<string>("all");
+  const [industry, setIndustry] = useState("");
+  const [city, setCity] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(readStoredViewMode);
+
+  const clearFilters = () => {
+    setOwnerFilter("all");
+    setIndustry("");
+    setCity("");
+    setSearchInput("");
+    setPage(0);
+  };
+  const hasActiveFilters =
+    ownerFilter !== "all" || industry !== "" || city !== "" || searchInput !== "";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -95,8 +106,17 @@ export function CompaniesListPage() {
   const navigate = useNavigate();
   const { data: user } = useCurrentUser();
   const { data: usersPage } = useOrgUsers();
+  const { data: filterOptions } = useCompanyFilterOptions();
   const { data: smtp } = useSmtpSettings();
   const smtpReady = isSmtpVerified(smtp);
+
+  const ownerUserId = ownerFilter !== "all" && ownerFilter !== "unowned" ? ownerFilter : undefined;
+  const bulkFilters: BulkEmailFilters = {
+    owner_user_id: ownerUserId ?? null,
+    unowned: ownerFilter === "unowned",
+    industry: industry || null,
+    city: city || null,
+  };
 
   const onBulkClick = () => (smtpReady ? setBulkOpen(true) : setSmtpPromptOpen(true));
   // Translate the React Table sort state into the backend's sort/order
@@ -116,7 +136,10 @@ export function CompaniesListPage() {
     search: debouncedSearch,
     sort: sortKey,
     order: sortOrder,
-    ownership: ownership === "all" ? undefined : ownership,
+    ownership: ownerFilter === "unowned" ? "unowned" : undefined,
+    ownerUserId,
+    industry: industry || undefined,
+    city: city || undefined,
   });
 
   const locale = user?.organization?.locale;
@@ -481,34 +504,65 @@ export function CompaniesListPage() {
             className="h-10 w-full rounded-md border border-border bg-surface-overlay pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
           />
         </label>
-        <div
-          role="radiogroup"
-          aria-label="Filtr vlastnictví firem"
-          className="inline-flex flex-wrap gap-1 rounded-md border border-border bg-surface-overlay p-1"
-        >
-          {OWNERSHIP_OPTIONS.map((option) => {
-            const active = ownership === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => {
-                  setOwnership(option.value);
-                  setPage(0);
-                }}
-                className={cn(
-                  "rounded px-3 py-1.5 text-xs font-medium transition-colors duration-fast",
-                  active
-                    ? "bg-surface text-text-primary shadow-sm"
-                    : "text-text-secondary hover:text-text-primary",
-                )}
-              >
-                {option.label}
-              </button>
-            );
-          })}
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            aria-label="Filtr podle vlastníka"
+            value={ownerFilter}
+            onChange={(e) => {
+              setOwnerFilter(e.target.value);
+              setPage(0);
+            }}
+            className={FILTER_SELECT_CLASS}
+          >
+            <option value="all">Vlastník: vše</option>
+            {(filterOptions?.owner_user_ids ?? []).map((id) => (
+              <option key={id} value={id}>
+                {usersById.get(id)?.name ?? "—"}
+              </option>
+            ))}
+            <option value="unowned">Nezabrané</option>
+          </select>
+          <select
+            aria-label="Filtr podle oboru"
+            value={industry}
+            onChange={(e) => {
+              setIndustry(e.target.value);
+              setPage(0);
+            }}
+            className={FILTER_SELECT_CLASS}
+          >
+            <option value="">Obor: vše</option>
+            {(filterOptions?.industries ?? []).map((i) => (
+              <option key={i} value={i}>
+                {i}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Filtr podle sídla"
+            value={city}
+            onChange={(e) => {
+              setCity(e.target.value);
+              setPage(0);
+            }}
+            className={FILTER_SELECT_CLASS}
+          >
+            <option value="">Sídlo: vše</option>
+            {(filterOptions?.cities ?? []).map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+          {hasActiveFilters ? (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex h-9 items-center gap-1 rounded-md px-2 text-xs font-medium text-text-secondary hover:text-text-primary"
+            >
+              <X size={14} strokeWidth={1.75} aria-hidden /> Vymazat filtry
+            </button>
+          ) : null}
         </div>
         <div
           role="radiogroup"
@@ -559,7 +613,7 @@ export function CompaniesListPage() {
         </div>
       ) : total === 0 && !isPending && !isFetching ? (
         <div className="rounded-lg border border-border bg-surface">
-          {debouncedSearch ? (
+          {hasActiveFilters ? (
             <EmptyState
               icon={Building2}
               tone="filtered"
@@ -567,10 +621,7 @@ export function CompaniesListPage() {
               body="Zkuste upravit hledaný výraz nebo zrušte filtr."
               primary={{
                 label: "Vymazat filtry",
-                onClick: () => {
-                  setSearchInput("");
-                  setPage(0);
-                },
+                onClick: clearFilters,
               }}
             />
           ) : (
@@ -745,7 +796,11 @@ export function CompaniesListPage() {
         onCreated={handleCreated}
       />
 
-      <BulkEmailWizard open={bulkOpen} onClose={() => setBulkOpen(false)} />
+      <BulkEmailWizard
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        initialFilters={bulkFilters}
+      />
 
       {smtpPromptOpen ? (
         <div

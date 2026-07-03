@@ -6,6 +6,7 @@ import type { components } from "@/types/api.generated";
 
 export type CompanyOut = components["schemas"]["CompanyOut"];
 export type CompaniesPage = components["schemas"]["Page_CompanyOut_"];
+export type CompanyFilterOptions = components["schemas"]["CompanyFilterOptions"];
 
 export type CompanySortKey =
   | "name"
@@ -23,6 +24,9 @@ interface UseCompaniesOptions {
   sort?: CompanySortKey;
   order?: "asc" | "desc";
   ownership?: CompanyOwnershipFilter;
+  ownerUserId?: string;
+  industry?: string;
+  city?: string;
 }
 
 export function useCompanies({
@@ -32,6 +36,9 @@ export function useCompanies({
   sort = "name",
   order = "asc",
   ownership,
+  ownerUserId,
+  industry,
+  city,
 }: UseCompaniesOptions = {}) {
   const { accessToken } = useAuth();
   const trimmed = search.trim();
@@ -42,14 +49,30 @@ export function useCompanies({
   query.set("sort", sort);
   query.set("order", order);
   if (ownership) query.set("ownership", ownership);
+  if (ownerUserId) query.set("owner_user_id", ownerUserId);
+  if (industry) query.set("industry", industry);
+  if (city) query.set("city", city);
 
   return useQuery<CompaniesPage>({
-    queryKey: ["companies", { limit, offset, search: trimmed, sort, order, ownership }],
+    queryKey: [
+      "companies",
+      { limit, offset, search: trimmed, sort, order, ownership, ownerUserId, industry, city },
+    ],
     enabled: !!accessToken,
     placeholderData: keepPreviousData,
     queryFn: () =>
       apiFetch<CompaniesPage>(`/api/v1/companies?${query.toString()}`, {
         token: accessToken,
       }),
+  });
+}
+
+export function useCompanyFilterOptions() {
+  const { accessToken } = useAuth();
+  return useQuery<CompanyFilterOptions>({
+    queryKey: ["companies", "filter-options"],
+    enabled: !!accessToken,
+    queryFn: () =>
+      apiFetch<CompanyFilterOptions>("/api/v1/companies/filter-options", { token: accessToken }),
   });
 }
