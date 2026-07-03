@@ -142,6 +142,41 @@ async def test_resolve_industry_filter(db_session: AsyncSession) -> None:
     assert {c.company_id for c in cands} == {it.id}
 
 
+async def test_resolve_city_and_unowned_filters(db_session: AsyncSession) -> None:
+    org = await _seed_org(db_session)
+    admin = await _user(db_session, org, UserRole.admin)
+    praha = Company(
+        organization_id=org.id,
+        name="Praha Co",
+        email="p@x.cz",
+        address_city="Praha",
+        owner_user_id=admin.id,
+    )
+    brno = Company(
+        organization_id=org.id,
+        name="Brno Co",
+        email="b@x.cz",
+        address_city="Brno",
+        owner_user_id=admin.id,
+    )
+    pool = Company(
+        organization_id=org.id,
+        name="Pool Co",
+        email="pool@x.cz",
+        address_city="Praha",
+        owner_user_id=None,
+    )
+    db_session.add_all([praha, brno, pool])
+    await db_session.flush()
+
+    by_city = await resolve_recipients(db_session, admin, BulkEmailFilters(city="Praha"))
+    # City "Praha" + owned-only default (admin, no owner filter) → excludes the pool row.
+    assert {c.company_id for c in by_city} == {praha.id}
+
+    unowned = await resolve_recipients(db_session, admin, BulkEmailFilters(unowned=True))
+    assert {c.company_id for c in unowned} == {pool.id}
+
+
 async def test_resolve_no_order_since_days(db_session: AsyncSession) -> None:
     org = await _seed_org(db_session)
     sales = await _user(db_session, org, UserRole.salesperson)

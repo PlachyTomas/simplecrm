@@ -20,9 +20,13 @@ class BulkEmailFilters(BaseModel):
     owned companies in the caller's scope (enforced server-side)."""
 
     industry: str | None = Field(default=None, max_length=120)
+    city: str | None = Field(default=None, max_length=120)
     # Managers/admins may target a specific owner; ignored (forced to self)
     # for salespeople.
     owner_user_id: uuid.UUID | None = None
+    # Target the unowned pool (Nezabrané) instead of an owner. Takes
+    # precedence over `owner_user_id`; ignored for salespeople.
+    unowned: bool = False
     # Company has a deal currently in this stage.
     stage_id: uuid.UUID | None = None
     # Company has at least one won deal.

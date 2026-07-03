@@ -144,17 +144,24 @@ async def _owned_companies_query(
     filters: BulkEmailFilters | None = None,
     only_ids: list[uuid.UUID] | None = None,
 ) -> Select[tuple[Company]]:
-    """Base query for the candidate set: owned companies in the caller's
-    scope. Salespeople are pinned to their own book; managers/admins may
-    target a chosen owner. Optional data filters applied on top."""
-    base = select(Company).where(
-        Company.organization_id == user.organization_id,
-        Company.owner_user_id.is_not(None),
-    )
+    """Base query for the candidate set in the caller's scope. Salespeople
+    are pinned to their own book; managers/admins target a chosen owner, the
+    unowned pool (Nezabrané), or — with no owner filter — their owned
+    companies. Optional data filters applied on top."""
+    base = select(Company).where(Company.organization_id == user.organization_id)
     if user.role is UserRole.salesperson:
         base = base.where(Company.owner_user_id == user.id)
-    elif filters is not None and filters.owner_user_id is not None:
-        base = base.where(Company.owner_user_id == filters.owner_user_id)
+    elif only_ids is None:
+        # Candidate resolution: scope to the chosen owner filter. At send
+        # time (only_ids set) the companies are already hand-picked, so we
+        # honor that selection within the visibility scope instead of
+        # re-imposing an owner filter (which would drop selected Nezabrané).
+        if filters is not None and filters.unowned:
+            base = base.where(Company.owner_user_id.is_(None))
+        elif filters is not None and filters.owner_user_id is not None:
+            base = base.where(Company.owner_user_id == filters.owner_user_id)
+        else:
+            base = base.where(Company.owner_user_id.is_not(None))
 
     if only_ids is not None:
         base = base.where(Company.id.in_(only_ids))
@@ -162,6 +169,8 @@ async def _owned_companies_query(
     if filters is not None:
         if filters.industry:
             base = base.where(Company.industry == filters.industry)
+        if filters.city:
+            base = base.where(Company.address_city == filters.city)
         if filters.stage_id is not None:
             stage_exists = (
                 select(Deal.id)

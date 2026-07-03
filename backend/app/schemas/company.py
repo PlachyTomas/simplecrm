@@ -41,6 +41,16 @@ class CompanyUpdate(BaseModel):
     main_contact_id: uuid.UUID | None = None
 
 
+class CompanyFilterOptions(BaseModel):
+    """Distinct values for the Firmy filter dropdowns, drawn from the
+    caller's visible companies (so salespeople only see their own book's
+    industries, cities, and owners)."""
+
+    industries: list[str]
+    cities: list[str]
+    owner_user_ids: list[uuid.UUID]
+
+
 class CompanyOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

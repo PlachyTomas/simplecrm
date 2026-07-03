@@ -167,6 +167,86 @@ async def test_list_companies_search_filters_by_name_and_ico(
     assert empty.json()["total"] == 0
 
 
+async def test_list_companies_filters_by_owner_industry_city(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    other = await _seed_user(db_session, owned_cleanup, org, UserRole.manager)
+    db_session.add_all(
+        [
+            Company(
+                organization_id=org.id,
+                name="A",
+                owner_user_id=admin.id,
+                industry="IT",
+                address_city="Praha",
+            ),
+            Company(
+                organization_id=org.id,
+                name="B",
+                owner_user_id=other.id,
+                industry="IT",
+                address_city="Brno",
+            ),
+            Company(
+                organization_id=org.id,
+                name="C",
+                owner_user_id=None,
+                industry="Stavebnictví",
+                address_city="Praha",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    by_owner = await client.get(f"/api/v1/companies?owner_user_id={admin.id}", headers=_auth(admin))
+    assert {c["name"] for c in by_owner.json()["items"]} == {"A"}
+
+    by_industry = await client.get("/api/v1/companies?industry=IT", headers=_auth(admin))
+    assert {c["name"] for c in by_industry.json()["items"]} == {"A", "B"}
+
+    by_city = await client.get("/api/v1/companies?city=Praha", headers=_auth(admin))
+    assert {c["name"] for c in by_city.json()["items"]} == {"A", "C"}
+
+    unowned = await client.get("/api/v1/companies?ownership=unowned", headers=_auth(admin))
+    assert {c["name"] for c in unowned.json()["items"]} == {"C"}
+
+
+async def test_filter_options_returns_distinct_scoped_values(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    db_session.add_all(
+        [
+            Company(
+                organization_id=org.id,
+                name="A",
+                owner_user_id=admin.id,
+                industry="IT",
+                address_city="Praha",
+            ),
+            Company(
+                organization_id=org.id,
+                name="B",
+                owner_user_id=admin.id,
+                industry="IT",
+                address_city="Brno",
+            ),
+            Company(organization_id=org.id, name="C", owner_user_id=None, industry=None),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get("/api/v1/companies/filter-options", headers=_auth(admin))
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["industries"] == ["IT"]  # distinct + nulls dropped
+    assert body["cities"] == ["Brno", "Praha"]  # sorted
+    assert body["owner_user_ids"] == [str(admin.id)]  # unowned dropped
+
+
 # ---------------------------------------------------------------------------
 # get_company
 # ---------------------------------------------------------------------------

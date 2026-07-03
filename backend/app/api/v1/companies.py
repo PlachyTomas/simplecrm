@@ -14,7 +14,12 @@ from app.core.deps import get_current_user, require_role
 from app.core.scoping import can_write_row, scope_by_owner
 from app.db import get_db
 from app.db.models import BlockedCompany, Company, Contact, User, UserRole
-from app.schemas.company import CompanyCreate, CompanyOut, CompanyUpdate
+from app.schemas.company import (
+    CompanyCreate,
+    CompanyFilterOptions,
+    CompanyOut,
+    CompanyUpdate,
+)
 from app.schemas.contact import ContactOut
 from app.schemas.pagination import Page, PaginationParams
 from app.schemas.registry import RegistryLookupResult
@@ -225,6 +230,13 @@ async def list_companies(
         ),
         pattern="^(mine|mine_and_unowned|unowned)$",
     ),
+    owner_user_id: uuid.UUID | None = Query(
+        default=None, description="Filter to companies owned by this specific user."
+    ),
+    industry: str | None = Query(default=None, max_length=120, description="Exact industry match."),
+    city: str | None = Query(
+        default=None, max_length=120, description="Exact registered-seat city match."
+    ),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Page[CompanyOut]:
@@ -245,6 +257,13 @@ async def list_companies(
         base = base.where((Company.owner_user_id == user.id) | (Company.owner_user_id.is_(None)))
     elif ownership == "unowned":
         base = base.where(Company.owner_user_id.is_(None))
+
+    if owner_user_id is not None:
+        base = base.where(Company.owner_user_id == owner_user_id)
+    if industry:
+        base = base.where(Company.industry == industry)
+    if city:
+        base = base.where(Company.address_city == city)
 
     scoped = await scope_by_owner(base, session=session, user=user, owner_col=Company.owner_user_id)
     count_stmt = select(func.count()).select_from(scoped.subquery())
@@ -268,6 +287,63 @@ async def list_companies(
         total=total,
         limit=pagination.limit,
         offset=pagination.offset,
+    )
+
+
+@router.get("/filter-options", response_model=CompanyFilterOptions)
+async def company_filter_options(
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> CompanyFilterOptions:
+    """Distinct industry / city / owner values across the caller's visible
+    companies, for the Firmy filter dropdowns."""
+    scoped = await scope_by_owner(
+        select(Company).where(Company.organization_id == user.organization_id),
+        session=session,
+        user=user,
+        owner_col=Company.owner_user_id,
+    )
+    visible = scoped.subquery()
+
+    industries = (
+        (
+            await session.execute(
+                select(visible.c.industry)
+                .where(visible.c.industry.is_not(None))
+                .distinct()
+                .order_by(visible.c.industry)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    cities = (
+        (
+            await session.execute(
+                select(visible.c.address_city)
+                .where(visible.c.address_city.is_not(None))
+                .distinct()
+                .order_by(visible.c.address_city)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    owner_ids = (
+        (
+            await session.execute(
+                select(visible.c.owner_user_id)
+                .where(visible.c.owner_user_id.is_not(None))
+                .distinct()
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return CompanyFilterOptions(
+        industries=list(industries),
+        cities=list(cities),
+        owner_user_ids=list(owner_ids),
     )
 
 

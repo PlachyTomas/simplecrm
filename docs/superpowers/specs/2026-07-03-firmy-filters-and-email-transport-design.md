@@ -52,26 +52,16 @@ Firmy page holds filter state → `useCompanies(...)` for the paged list and
 same filter object to `BulkEmailWizard` → `resolve_recipients` returns all
 matching companies → user checkboxes → send (unchanged).
 
-## B. Transactional email via Resend HTTP API
+## B. Transactional email — SUPERSEDED (no code)
 
-### Backend
-- `send_email` (the transactional/global path — feedback, signup, invoices,
-  system notices) sends via the **Resend HTTP API** (`POST /emails`, port
-  443) when `RESEND_API_KEY` is set, from `info@`/`faktury@simplecrm.cz`
-  (`sender_role`). Order of preference in `send_email`: Resend (if key set)
-  → SMTP (if fully configured) → structured log fallback. Failures are
-  swallowed-and-logged exactly like today so user-facing actions never break.
-- Per-user **bulk** sending (`send_email_via` / `_send_via_smtp_config`) is
-  untouched — bulk stays on the user's own SMTP.
-- Config: `resend_api_key: str = ""` (+ existing sender addresses).
-  `httpx` is already a dependency.
-
-### Notes
-- The domain `simplecrm.cz` must be verified in the Resend account (owner
-  ops step, like the SMTP one) — DKIM/SPF DNS records. Code works without it
-  (Resend returns an error we log), so it's not a code dependency.
-- Test seam: patch the HTTP call (like the SMTP tests patch `_send_via_smtp`)
-  so tests never hit the network.
+Originally scoped as a Resend HTTP-API transport, because the production
+host blocked outbound SMTP. **2026-07-03: Hetzner unblocked outbound SMTP**,
+so transactional email (feedback / signup / invoices) now goes over the
+**existing Zoho SMTP path** — the `send_email` code already sends via SMTP
+once `SMTP_HOST` + `SMTP_USERNAME` + `SMTP_PASSWORD` are set. This is now an
+**ops task only** (see `docs/TODO.md` "Finish the Zoho Mail SMTP setup":
+app password, send-as identities, SPF/DKIM for `simplecrm.cz`). No Resend,
+no new code. Bulk email likewise returns to plain per-user SMTP.
 
 ## Verification
 - Backend: unit + integration tests for each new filter, the filter-options
