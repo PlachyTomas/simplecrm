@@ -129,9 +129,7 @@ async def _blocked_icos(session: AsyncSession, organization_id: uuid.UUID) -> se
     return set(
         (
             await session.execute(
-                select(BlockedCompany.ico).where(
-                    BlockedCompany.organization_id == organization_id
-                )
+                select(BlockedCompany.ico).where(BlockedCompany.organization_id == organization_id)
             )
         )
         .scalars()
@@ -181,13 +179,9 @@ async def _owned_companies_query(
             base = base.where(won_exists)
         if filters.no_order_since_days is not None:
             cutoff = datetime.now(tz=UTC) - timedelta(days=filters.no_order_since_days)
-            base = base.where(
-                or_(Company.last_order_at.is_(None), Company.last_order_at < cutoff)
-            )
+            base = base.where(or_(Company.last_order_at.is_(None), Company.last_order_at < cutoff))
 
-    return await scope_by_owner(
-        base, session=session, user=user, owner_col=Company.owner_user_id
-    )
+    return await scope_by_owner(base, session=session, user=user, owner_col=Company.owner_user_id)
 
 
 async def resolve_recipients(
@@ -254,14 +248,10 @@ def render_message(
 
 async def _require_verified_smtp(session: AsyncSession, user: User) -> SmtpConfig:
     row = (
-        await session.execute(
-            select(UserSmtpSettings).where(UserSmtpSettings.user_id == user.id)
-        )
+        await session.execute(select(UserSmtpSettings).where(UserSmtpSettings.user_id == user.id))
     ).scalar_one_or_none()
     if row is None or row.verified_at is None:
-        raise BulkEmailError(
-            "Nejdřív nastavte a ověřte odesílání e-mailů (SMTP) v nastavení."
-        )
+        raise BulkEmailError("Nejdřív nastavte a ověřte odesílání e-mailů (SMTP) v nastavení.")
     sender = f"{row.from_name} <{row.from_email}>" if row.from_name else row.from_email
     return SmtpConfig(
         host=row.host,
@@ -309,8 +299,11 @@ def _run_send_loop(
 
     for unit in units:
         rendered_subject, rendered_body = render_message(
-            subject, body, company_name=unit.company_name,
-            contact_name=unit.contact_name, sender_name=sender_name,
+            subject,
+            body,
+            company_name=unit.company_name,
+            contact_name=unit.contact_name,
+            sender_name=sender_name,
         )
         message = Email(
             to=unit.email,
@@ -342,9 +335,7 @@ def _run_send_loop(
     return results
 
 
-def _result(
-    unit: _SendUnit, status: EmailRecipientStatus, error: str | None
-) -> dict[str, object]:
+def _result(unit: _SendUnit, status: EmailRecipientStatus, error: str | None) -> dict[str, object]:
     return {
         "company_id": unit.company_id,
         "contact_id": unit.contact_id,
@@ -356,9 +347,7 @@ def _result(
     }
 
 
-async def _first_open_stage(
-    session: AsyncSession, organization_id: uuid.UUID
-) -> Stage | None:
+async def _first_open_stage(session: AsyncSession, organization_id: uuid.UUID) -> Stage | None:
     pipeline = (
         await session.execute(
             select(Pipeline).where(
@@ -420,9 +409,7 @@ async def send_campaign(
             key = str(email).lower()
             if key not in known:
                 # Guard against using the feature to mail arbitrary addresses.
-                skipped.append(
-                    _skip(company.id, company.name, str(email), "invalid_recipient")
-                )
+                skipped.append(_skip(company.id, company.name, str(email), "invalid_recipient"))
                 continue
             contact = known[key]
             units.append(
@@ -436,9 +423,7 @@ async def send_campaign(
             )
 
     if len(units) > MAX_RECIPIENTS:
-        raise BulkEmailError(
-            f"Maximálně {MAX_RECIPIENTS} příjemců na jedno odeslání."
-        )
+        raise BulkEmailError(f"Maximálně {MAX_RECIPIENTS} příjemců na jedno odeslání.")
 
     attachments: tuple[EmailAttachment, ...] = ()
     if attachment is not None:

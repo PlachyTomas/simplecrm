@@ -98,9 +98,7 @@ async def send(
     return CampaignOut.model_validate(campaign)
 
 
-def _campaign_scope(
-    stmt: Select[tuple[EmailCampaign]], user: User
-) -> Select[tuple[EmailCampaign]]:
+def _campaign_scope(stmt: Select[tuple[EmailCampaign]], user: User) -> Select[tuple[EmailCampaign]]:
     """Scope campaigns: everyone sees their org; salespeople see only their
     own sends, managers/admins see the whole org's history."""
     stmt = stmt.where(EmailCampaign.organization_id == user.organization_id)
@@ -116,9 +114,7 @@ async def list_campaigns(
     session: AsyncSession = Depends(get_db),
 ) -> Page[CampaignOut]:
     base = _campaign_scope(select(EmailCampaign), user)
-    total = (
-        await session.execute(select(func.count()).select_from(base.subquery()))
-    ).scalar_one()
+    total = (await session.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
     items = list(
         (
             await session.execute(
@@ -149,7 +145,5 @@ async def get_campaign(
     ).options(selectinload(EmailCampaign.recipients))
     campaign = (await session.execute(stmt)).scalar_one_or_none()
     if campaign is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Kampaň nebyla nalezena."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kampaň nebyla nalezena.")
     return CampaignDetailOut.model_validate(campaign)

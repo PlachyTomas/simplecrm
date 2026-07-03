@@ -114,9 +114,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index(
-        "ix_email_campaign_recipients_campaign", table_name="email_campaign_recipients"
-    )
+    op.drop_index("ix_email_campaign_recipients_campaign", table_name="email_campaign_recipients")
     op.drop_table("email_campaign_recipients")
     op.drop_index("ix_email_campaigns_org_created", table_name="email_campaigns")
     op.drop_table("email_campaigns")

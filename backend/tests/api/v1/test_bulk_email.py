@@ -107,9 +107,7 @@ async def test_recipients_owned_only_with_skip_flags(
     db_session.add_all([mine, pool, no_email])
     await db_session.commit()
 
-    r = await client.post(
-        "/api/v1/companies/bulk-email/recipients", json={}, headers=_auth(sales)
-    )
+    r = await client.post("/api/v1/companies/bulk-email/recipients", json={}, headers=_auth(sales))
     assert r.status_code == 200, r.text
     by_name = {c["company_name"]: c for c in r.json()}
     assert "Mine" in by_name and "Pool" not in by_name

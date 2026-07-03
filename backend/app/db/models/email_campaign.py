@@ -34,9 +34,7 @@ class EmailCampaign(Base):
     """
 
     __tablename__ = "email_campaigns"
-    __table_args__ = (
-        Index("ix_email_campaigns_org_created", "organization_id", "created_at"),
-    )
+    __table_args__ = (Index("ix_email_campaigns_org_created", "organization_id", "created_at"),)
 
     id: Mapped[uuid.UUID] = mapped_column(
         PgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4

@@ -76,9 +76,7 @@ async def test_resolve_only_own_book_for_salesperson(db_session: AsyncSession) -
     other = await _user(db_session, org, UserRole.salesperson)
     mine = Company(organization_id=org.id, name="Mine", email="mine@x.cz", owner_user_id=sales.id)
     pool = Company(organization_id=org.id, name="Pool", email="pool@x.cz", owner_user_id=None)
-    theirs = Company(
-        organization_id=org.id, name="Theirs", email="t@x.cz", owner_user_id=other.id
-    )
+    theirs = Company(organization_id=org.id, name="Theirs", email="t@x.cz", owner_user_id=other.id)
     db_session.add_all([mine, pool, theirs])
     await db_session.flush()
 
@@ -95,7 +93,10 @@ async def test_resolve_marks_no_email_and_blocked(db_session: AsyncSession) -> N
     ok = Company(organization_id=org.id, name="OK", email="ok@x.cz", owner_user_id=sales.id)
     no_email = Company(organization_id=org.id, name="NoEmail", owner_user_id=sales.id)
     blocked = Company(
-        organization_id=org.id, name="Blocked", email="b@x.cz", ico="12345678",
+        organization_id=org.id,
+        name="Blocked",
+        email="b@x.cz",
+        ico="12345678",
         owner_user_id=sales.id,
     )
     db_session.add_all([ok, no_email, blocked])
@@ -108,7 +109,9 @@ async def test_resolve_marks_no_email_and_blocked(db_session: AsyncSession) -> N
     )
     await db_session.flush()
 
-    by_id = {c.company_id: c for c in await resolve_recipients(db_session, sales, BulkEmailFilters())}
+    by_id = {
+        c.company_id: c for c in await resolve_recipients(db_session, sales, BulkEmailFilters())
+    }
     assert by_id[ok.id].emailable is True
     assert by_id[no_email.id].emailable is False
     assert by_id[no_email.id].skip_reason == "no_email"
@@ -120,11 +123,17 @@ async def test_resolve_industry_filter(db_session: AsyncSession) -> None:
     org = await _seed_org(db_session)
     sales = await _user(db_session, org, UserRole.salesperson)
     it = Company(
-        organization_id=org.id, name="IT Co", email="it@x.cz", industry="IT",
+        organization_id=org.id,
+        name="IT Co",
+        email="it@x.cz",
+        industry="IT",
         owner_user_id=sales.id,
     )
     farm = Company(
-        organization_id=org.id, name="Farm", email="f@x.cz", industry="Zemědělství",
+        organization_id=org.id,
+        name="Farm",
+        email="f@x.cz",
+        industry="Zemědělství",
         owner_user_id=sales.id,
     )
     db_session.add_all([it, farm])
@@ -137,19 +146,23 @@ async def test_resolve_no_order_since_days(db_session: AsyncSession) -> None:
     org = await _seed_org(db_session)
     sales = await _user(db_session, org, UserRole.salesperson)
     stale = Company(
-        organization_id=org.id, name="Stale", email="s@x.cz", owner_user_id=sales.id,
+        organization_id=org.id,
+        name="Stale",
+        email="s@x.cz",
+        owner_user_id=sales.id,
         last_order_at=datetime.now(tz=UTC) - timedelta(days=200),
     )
     fresh = Company(
-        organization_id=org.id, name="Fresh", email="fr@x.cz", owner_user_id=sales.id,
+        organization_id=org.id,
+        name="Fresh",
+        email="fr@x.cz",
+        owner_user_id=sales.id,
         last_order_at=datetime.now(tz=UTC) - timedelta(days=5),
     )
     never = Company(organization_id=org.id, name="Never", email="n@x.cz", owner_user_id=sales.id)
     db_session.add_all([stale, fresh, never])
     await db_session.flush()
-    cands = await resolve_recipients(
-        db_session, sales, BulkEmailFilters(no_order_since_days=90)
-    )
+    cands = await resolve_recipients(db_session, sales, BulkEmailFilters(no_order_since_days=90))
     ids = {c.company_id for c in cands}
     assert stale.id in ids and never.id in ids and fresh.id not in ids
 
@@ -230,7 +243,7 @@ async def test_send_campaign_records_status_and_creates_deal(
     assert campaign.total == 1
     assert campaign.recipients[0].status == EmailRecipientStatus.sent
 
-    deals = (await db_session.execute(Deal.__table__.select().where(Deal.company_id == co.id)))
+    deals = await db_session.execute(Deal.__table__.select().where(Deal.company_id == co.id))
     rows = deals.fetchall()
     assert len(rows) == 1
     assert rows[0].name == "Nová nabídka"
@@ -249,9 +262,13 @@ async def test_send_campaign_skips_unknown_email(
     def fake_loop(config, subject, body, sender_name, units, attachments):
         return [
             {
-                "company_id": u.company_id, "contact_id": u.contact_id, "email": u.email,
-                "company_name": u.company_name, "status": EmailRecipientStatus.sent,
-                "error": None, "sent_at": datetime.now(tz=UTC),
+                "company_id": u.company_id,
+                "contact_id": u.contact_id,
+                "email": u.email,
+                "company_name": u.company_name,
+                "status": EmailRecipientStatus.sent,
+                "error": None,
+                "sent_at": datetime.now(tz=UTC),
             }
             for u in units
         ]

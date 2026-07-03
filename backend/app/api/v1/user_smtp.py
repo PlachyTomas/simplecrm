@@ -29,9 +29,7 @@ router = APIRouter(prefix="/me/smtp", tags=["smtp"])
 
 async def _get(session: AsyncSession, user: User) -> UserSmtpSettings | None:
     return (
-        await session.execute(
-            select(UserSmtpSettings).where(UserSmtpSettings.user_id == user.id)
-        )
+        await session.execute(select(UserSmtpSettings).where(UserSmtpSettings.user_id == user.id))
     ).scalar_one_or_none()
 
 
