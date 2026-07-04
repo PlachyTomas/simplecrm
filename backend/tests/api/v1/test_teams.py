@@ -192,6 +192,42 @@ async def test_replace_members_rejects_cross_org_user(
     assert response.status_code == 400
 
 
+async def test_replace_members_manager_cannot_annex_other_team(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    # Review R1 P2: a manager may add unassigned users, but not pull in a user
+    # who already belongs to another team (that would grant scope_by_owner
+    # visibility over that team's data). Only admins can move users across teams.
+    org = await _seed_org(db_session, owned_cleanup)
+    manager = await _seed_user(db_session, owned_cleanup, org, UserRole.manager)
+    team_a = Team(organization_id=org.id, name="A", manager_user_id=manager.id)
+    team_b = Team(organization_id=org.id, name="B")
+    db_session.add_all([team_a, team_b])
+    await db_session.commit()
+    await db_session.refresh(team_a)
+    await db_session.refresh(team_b)
+
+    victim_email = f"victim-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(victim_email)
+    victim = User(
+        email=victim_email,
+        name="Victim",
+        role=UserRole.salesperson,
+        organization_id=org.id,
+        team_id=team_b.id,
+    )
+    db_session.add(victim)
+    await db_session.commit()
+    await db_session.refresh(victim)
+
+    resp = await client.put(
+        f"/api/v1/teams/{team_a.id}/members",
+        headers=_auth(manager),
+        json={"member_ids": [str(victim.id)]},
+    )
+    assert resp.status_code == 403, resp.text
+
+
 async def test_delete_team_admin(
     client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
 ) -> None:

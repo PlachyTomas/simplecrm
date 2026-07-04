@@ -143,6 +143,28 @@ async def replace_team_members(
                 detail="One or more users are not in your organization",
             )
 
+        # A non-admin manager may only pull in users who are unassigned or
+        # already in this team — not annex another team's members (review R1
+        # P2). team_id is otherwise an admin-only field (PUT /users/{id}).
+        if not is_admin:
+            conflicts = (
+                await session.execute(
+                    select(User.id).where(
+                        User.id.in_(payload.member_ids),
+                        User.team_id.is_not(None),
+                        User.team_id != team.id,
+                    )
+                )
+            ).scalars().all()
+            if conflicts:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=(
+                        "Some users already belong to another team; "
+                        "only an admin can move them."
+                    ),
+                )
+
     # Clear existing members (set team_id to null) then reassign.
     await session.execute(update(User).where(User.team_id == team.id).values(team_id=None))
     if payload.member_ids:
