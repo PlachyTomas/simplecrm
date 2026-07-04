@@ -11,6 +11,7 @@ import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { ApiError } from "@/lib/api";
 import { testIds } from "@/lib/testids";
+import { useModalDialog } from "@/lib/useModalDialog";
 import { useToast } from "@/lib/toast";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
@@ -110,6 +111,7 @@ export function AddDealModal({
   stages,
   initialStageId,
 }: AddDealModalProps) {
+  const dialogRef = useModalDialog<HTMLDivElement>(onClose, open);
   const { data: currentUser } = useCurrentUser();
   const { data: usersPage } = useOrgUsers();
   const [companySearch, setCompanySearch] = useState("");
@@ -330,6 +332,8 @@ export function AddDealModal({
 
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-deal-title"

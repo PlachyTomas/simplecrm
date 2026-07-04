@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 
 import { useCreateContact } from "@/app/contacts/useCreateContact";
 import { CompanyCombobox } from "@/components/ui/CompanyCombobox";
+import { useModalDialog } from "@/lib/useModalDialog";
 
 interface AddContactModalProps {
   open: boolean;
@@ -32,6 +33,7 @@ const EMPTY: Form = {
 };
 
 export function AddContactModal({ open, onClose, onCreated, forCompanyId }: AddContactModalProps) {
+  const dialogRef = useModalDialog<HTMLDivElement>(onClose, open);
   const [form, setForm] = useState<Form>(EMPTY);
   const mutation = useCreateContact();
 
@@ -64,6 +66,8 @@ export function AddContactModal({ open, onClose, onCreated, forCompanyId }: AddC
 
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-contact-title"

@@ -6,6 +6,7 @@ import { useLookupRegistry } from "@/app/companies/useLookupRegistry";
 import { useCreateContact } from "@/app/contacts/useCreateContact";
 import { ApiError } from "@/lib/api";
 import { testIds } from "@/lib/testids";
+import { useModalDialog } from "@/lib/useModalDialog";
 import { useToast } from "@/lib/toast";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
@@ -76,6 +77,7 @@ function describeLookupError(error: unknown, ico: string): string {
 }
 
 export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalProps) {
+  const dialogRef = useModalDialog<HTMLDivElement>(onClose, open);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [showContactDraft, setShowContactDraft] = useState(false);
   const [contact, setContact] = useState<ContactDraft>(EMPTY_CONTACT);
@@ -203,6 +205,8 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
 
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-company-title"

@@ -31,6 +31,7 @@ import {
 } from "@/components/billing/useTaxInvoices";
 import { apiFetch } from "@/lib/api";
 import { csNoun } from "@/lib/i18n/nouns";
+import { useModalDialog } from "@/lib/useModalDialog";
 import { cn } from "@/lib/utils";
 import type { components } from "@/types/api.generated";
 
@@ -655,6 +656,7 @@ interface ChoosePlanModalProps {
 }
 
 function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
+  const dialogRef = useModalDialog<HTMLDivElement>(onClose);
   const { accessToken } = useAuth();
   const plans = usePublicPlans();
   const summary = useBillingSummary();
@@ -733,6 +735,8 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
 
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-labelledby="choose-plan-title"

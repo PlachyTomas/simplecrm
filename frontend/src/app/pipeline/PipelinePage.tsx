@@ -33,6 +33,7 @@ import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
 import { celebrateWin } from "@/lib/celebrate";
 import { csNoun } from "@/lib/i18n/nouns";
+import { useModalDialog } from "@/lib/useModalDialog";
 import { useToast } from "@/lib/toast";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
@@ -999,11 +1000,14 @@ function DeleteConfirmDialog({
   onConfirm: () => void;
   moneyFmt: Intl.NumberFormat | null;
 }) {
+  const dialogRef = useModalDialog<HTMLDivElement>(onCancel, Boolean(deal));
   if (!deal) return null;
   const valueShown = hasValue(deal.value);
   const formattedValue = valueShown && moneyFmt ? moneyFmt.format(Number(deal.value)) : null;
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-labelledby="delete-deal-title"

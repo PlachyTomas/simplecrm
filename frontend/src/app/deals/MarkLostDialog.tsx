@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { useModalDialog } from "@/lib/useModalDialog";
+
 const LOST_REASONS = [
   "Cena",
   "Konkurence",
@@ -24,6 +26,7 @@ export function MarkLostDialog({
   pending,
   dealName,
 }: MarkLostDialogProps) {
+  const dialogRef = useModalDialog<HTMLDivElement>(onClose, open);
   const [reason, setReason] = useState(LOST_REASONS[0]);
   const [custom, setCustom] = useState("");
 
@@ -40,6 +43,8 @@ export function MarkLostDialog({
 
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-labelledby="mark-lost-title"

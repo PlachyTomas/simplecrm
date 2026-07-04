@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import { type CalendarEventOut, useCreateEvent, useUpdateEvent } from "@/app/events/useEvents";
 import { useGoogleCalendarStatus } from "@/app/settings/useGoogleCalendar";
+import { useModalDialog } from "@/lib/useModalDialog";
 import { useToast } from "@/lib/toast";
 
 /** Local-naive `YYYY-MM-DD` for `<input type="date">`. */
@@ -49,6 +50,7 @@ interface EventFormModalProps {
 }
 
 export function EventFormModal({ open, onClose, dealId, dealName, event }: EventFormModalProps) {
+  const dialogRef = useModalDialog<HTMLDivElement>(onClose, open);
   const toast = useToast();
   const { data: gcal } = useGoogleCalendarStatus();
   const createEvent = useCreateEvent();
@@ -162,6 +164,8 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
 
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-labelledby="event-form-title"
