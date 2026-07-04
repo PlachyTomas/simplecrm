@@ -321,8 +321,12 @@ aren't re-raised).
 > pending-charge dedup (product decision on retry UX), left as follow-up.
 > (2) `_build_lines_for_charge` now back-calculates net+VAT out of the gross
 > ComGate collected, so the invoice total equals the money taken. **Seat-
-> upgrade money-loss (commit-before-charge) is NOT yet fixed** — needs
-> transaction reordering; still open.
+> upgrade money-loss (commit-before-charge) is now **FIXED** too — the
+> pending charge is committed before ComGate bills the card (so the webhook can
+> always reconcile by refId), a gateway rejection marks it `failed` instead of
+> rolling it back, and `create_recurring_payment` now raises when ComGate omits
+> `transId` instead of colliding on the UNIQUE constraint. Regression test:
+> a rejected upgrade leaves exactly one `failed` charge. Suite 670/670.
 
 ### CONFIRMED (adversarially verified)
 

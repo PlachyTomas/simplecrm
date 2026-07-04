@@ -737,6 +737,51 @@ async def test_charges_requires_auth(client: AsyncClient) -> None:
     assert (await client.get("/api/v1/payments/invoices")).status_code == 401
 
 
+async def test_seat_change_init_keeps_failed_charge_when_gateway_rejects(
+    client: AsyncClient,
+    owned_payments_emails: list[str],
+) -> None:
+    """Regression (review R2 P1): the pending charge is persisted BEFORE the
+    card is billed, so a gateway rejection leaves an auditable failed charge
+    (never a rolled-back row that a later webhook can't reconcile by refId)."""
+    from app.services.comgate import ComGateError, get_comgate_client
+
+    async with AsyncSessionLocal() as session:
+        org, admin, _sub = await _seed_active_org_with_card(session, owned_payments_emails)
+        org_id = org.id
+        token = create_access_token(admin.id, admin.organization_id, UserRole.admin)
+
+    class _RejectingComgate:
+        async def create_recurring_payment(self, **_kwargs: object) -> object:
+            raise ComGateError("card declined")
+
+    app.dependency_overrides[get_comgate_client] = lambda: _RejectingComgate()
+    try:
+        resp = await client.post(
+            "/api/v1/payments/seat-change-init",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"seat_count": 50},
+        )
+        assert resp.status_code == 502, resp.text
+    finally:
+        app.dependency_overrides.pop(get_comgate_client, None)
+
+    async with AsyncSessionLocal() as session:
+        charges = (
+            (
+                await session.execute(
+                    select(Charge).where(
+                        Charge.organization_id == org_id, Charge.kind == "seat_upgrade"
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert len(charges) == 1, "the pending charge must survive a gateway rejection"
+    assert charges[0].status == "failed"
+
+
 async def test_seat_change_init_rejects_when_no_payment_method(
     client: AsyncClient,
     db_session: AsyncSession,

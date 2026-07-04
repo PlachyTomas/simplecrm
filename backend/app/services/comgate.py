@@ -334,8 +334,17 @@ class ComGateClient:
                 "test": self._settings.comgate_test_mode,
             },
         )
+        trans_id = body.get("transId")
+        if not trans_id:
+            # Never fall back to `initial_trans_id`: it equals the initial
+            # charge's already-stored comgate_trans_id, so persisting it on the
+            # new charge collides with the UNIQUE constraint and rolls back the
+            # charge AFTER the card was billed (review R2 P1). Surface the
+            # ambiguity instead so the caller can mark the charge failed and let
+            # the webhook reconcile by refId.
+            raise ComGateError("ComGate recurring response missing transId")
         return RecurringChargeResult(
-            trans_id=str(body.get("transId") or initial_trans_id),
+            trans_id=str(trans_id),
             accepted=True,
             code=body.get("code"),
             message=body.get("message"),

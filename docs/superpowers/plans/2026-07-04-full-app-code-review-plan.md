@@ -86,8 +86,8 @@ afterwards in separate batches.
       accept-side password verify). 3 regression tests. Suite 667/667.
 - [x] **P1 invite→admin privilege escalation** — FIXED (role-authority
       ceiling in `create_invitation`). Same commit as P0.
-- [ ] P1 R2 seat-upgrade money-loss (commit-before-charge ordering) — TODO,
-      higher risk (transaction restructuring).
+- [x] P1 R2 seat-upgrade money-loss — FIXED (commit charge before billing;
+      mark failed on reject; comgate raises on missing transId). Test added.
 - [x] P1 R2 initial-charge double-charge — FIXED (active-guard + paid-charge
       guard + idempotent settlement). Residual: simultaneous-tabs double-
       capture needs pending-charge dedup (product call). Test added.

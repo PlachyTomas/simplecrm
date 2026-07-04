@@ -351,7 +351,13 @@ async def seat_change_init(
         period_ends_at=sub.current_period_ends_at,
     )
     session.add(charge)
-    await session.flush()
+    # Persist the pending charge BEFORE billing the card (review R2 P1).
+    # create_recurring_payment captures money server-side immediately; if the
+    # charge weren't durable first, a later failure would roll it back while the
+    # card stayed charged, and the webhook (which looks the charge up by refId)
+    # would find nothing — silent money loss. Committing first guarantees the
+    # webhook can always reconcile by refId.
+    await session.commit()
 
     label = f"SimpleCRM navýšení na {payload.seat_count} uživatelů"
     try:
@@ -363,7 +369,12 @@ async def seat_change_init(
             label=label,
         )
     except ComGateError as exc:
-        await session.rollback()
+        # ComGate rejected the request (no money moved) — record the failure on
+        # the durable charge rather than deleting it, so there's an auditable
+        # trail. Do NOT roll back the charge itself.
+        charge.status = "failed"
+        charge.failure_reason = str(exc)[:500]
+        await session.commit()
         logger.warning("ComGate create_recurring_payment failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
