@@ -307,13 +307,14 @@ function Hero() {
             "linear-gradient(to bottom, transparent 0, black 12%, black 78%, transparent 100%)",
         }}
       >
-        <div className="animate-hero-drift-a absolute -bottom-32 -left-32 h-[28rem] w-[28rem] rounded-full bg-accent/30 blur-3xl" />
-        <div className="animate-hero-drift-b absolute -right-32 -top-32 h-96 w-96 rounded-full bg-brand-accent/20 blur-3xl" />
-        {/* Third, quieter glow on the upper-left, desynced so the trio never
-            moves in lockstep — fills the otherwise empty left side. */}
+        {/* A colony of four glows, each on its own drift + duration + phase, so
+            they bloom and fade independently — the hero never sits still. */}
+        <div className="animate-hero-mold-a absolute -bottom-32 -left-32 h-[28rem] w-[28rem] rounded-full bg-accent/45 blur-3xl" />
+        <div className="animate-hero-mold-b absolute -right-32 -top-32 h-96 w-96 rounded-full bg-brand-accent/40 blur-3xl" />
+        <div className="animate-hero-mold-c absolute -top-16 left-[12%] h-80 w-80 rounded-full bg-brand-accent/25 blur-3xl" />
         <div
-          className="animate-hero-drift-a absolute -top-16 left-[12%] h-80 w-80 rounded-full bg-brand-accent/12 blur-3xl"
-          style={{ animationDelay: "-13s" }}
+          className="animate-hero-mold-a absolute -bottom-12 right-[22%] h-72 w-72 rounded-full bg-accent/30 blur-3xl"
+          style={{ animationDelay: "-14s" }}
         />
       </div>
       <div className="relative mx-auto max-w-[1200px] px-4 pb-20 pt-16 text-center md:px-8 md:pb-24 md:pt-24">
