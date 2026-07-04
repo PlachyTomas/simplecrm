@@ -22,7 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { AddCompanyModal } from "@/app/companies/AddCompanyModal";
 import { BulkEmailWizard } from "@/app/companies/bulk-email/BulkEmailWizard";
@@ -84,22 +84,60 @@ export function CompaniesListPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [smtpPromptOpen, setSmtpPromptOpen] = useState(false);
-  const [searchInput, setSearchInput] = useState("");
-  const debouncedSearch = useDebouncedValue(searchInput, 300);
-  const [page, setPage] = useState(0);
-  const [sorting, setSorting] = useState<SortingState>([{ id: "name", desc: false }]);
+  // Filters live in the URL (review R6) so a refresh, a shared link, or the
+  // browser Back button all restore the active view. Derive the values from the
+  // query string; `searchInput` stays local for responsive typing and is
+  // reflected into the URL once debounced.
+  const [searchParams, setSearchParams] = useSearchParams();
   // Vlastník dropdown value: "all" (Vše) | "unowned" (Nezabrané) | a user id.
-  const [ownerFilter, setOwnerFilter] = useState<string>("all");
-  const [industry, setIndustry] = useState("");
-  const [city, setCity] = useState("");
+  const ownerFilter = searchParams.get("owner") ?? "all";
+  const industry = searchParams.get("industry") ?? "";
+  const city = searchParams.get("city") ?? "";
+  const page = Math.max(0, Number(searchParams.get("page") ?? "0") || 0);
+  const sorting: SortingState = [
+    { id: searchParams.get("sort") ?? "name", desc: searchParams.get("dir") === "desc" },
+  ];
+  const [searchInput, setSearchInput] = useState(() => searchParams.get("q") ?? "");
+  const debouncedSearch = useDebouncedValue(searchInput, 300);
   const [viewMode, setViewMode] = useState<ViewMode>(readStoredViewMode);
 
+  // Immutably patch the query string. Changing any filter resets pagination
+  // unless the page itself is being set. Empty / default values drop the param
+  // so URLs stay clean.
+  const patchParams = (updates: Record<string, string | null>, resetPage = true) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        for (const [key, value] of Object.entries(updates)) {
+          if (value === null || value === "" || (key === "owner" && value === "all")) {
+            next.delete(key);
+          } else {
+            next.set(key, value);
+          }
+        }
+        if (resetPage && !("page" in updates)) next.delete("page");
+        return next;
+      },
+      { replace: true },
+    );
+  };
+
+  // Reflect the debounced search box into the URL. Skips the mount echo (when
+  // the box was seeded from an existing `q`) so a deep-linked page isn't reset.
+  useEffect(() => {
+    if ((searchParams.get("q") ?? "") === debouncedSearch) return;
+    patchParams({ q: debouncedSearch || null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
+
+  const setPage = (updater: number | ((p: number) => number)) => {
+    const nextPage = typeof updater === "function" ? updater(page) : updater;
+    patchParams({ page: nextPage > 0 ? String(nextPage) : null }, false);
+  };
+
   const clearFilters = () => {
-    setOwnerFilter("all");
-    setIndustry("");
-    setCity("");
     setSearchInput("");
-    setPage(0);
+    patchParams({ owner: null, industry: null, city: null, q: null });
   };
   const hasActiveFilters =
     ownerFilter !== "all" || industry !== "" || city !== "" || searchInput !== "";
@@ -446,7 +484,11 @@ export function CompaniesListPage() {
     data: companies?.items ?? [],
     columns: viewMode === "table" ? tableColumns : columns,
     state: { sorting },
-    onSortingChange: setSorting,
+    onSortingChange: (updater) => {
+      const next = typeof updater === "function" ? updater(sorting) : updater;
+      const spec = next[0];
+      patchParams({ sort: spec?.id ?? null, dir: spec?.desc ? "desc" : null }, false);
+    },
     manualPagination: true,
     manualSorting: true,
     enableSortingRemoval: false,
@@ -505,10 +547,7 @@ export function CompaniesListPage() {
           <input
             type="search"
             value={searchInput}
-            onChange={(e) => {
-              setSearchInput(e.target.value);
-              setPage(0);
-            }}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Hledat podle názvu nebo IČO…"
             className="h-10 w-full rounded-md border border-border bg-surface-overlay pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
           />
@@ -517,10 +556,7 @@ export function CompaniesListPage() {
           <select
             aria-label="Filtr podle vlastníka"
             value={ownerFilter}
-            onChange={(e) => {
-              setOwnerFilter(e.target.value);
-              setPage(0);
-            }}
+            onChange={(e) => patchParams({ owner: e.target.value })}
             className={FILTER_SELECT_CLASS}
           >
             <option value="all">Vlastník: vše</option>
@@ -534,10 +570,7 @@ export function CompaniesListPage() {
           <select
             aria-label="Filtr podle oboru"
             value={industry}
-            onChange={(e) => {
-              setIndustry(e.target.value);
-              setPage(0);
-            }}
+            onChange={(e) => patchParams({ industry: e.target.value })}
             className={FILTER_SELECT_CLASS}
           >
             <option value="">Obor: vše</option>
@@ -550,10 +583,7 @@ export function CompaniesListPage() {
           <select
             aria-label="Filtr podle sídla"
             value={city}
-            onChange={(e) => {
-              setCity(e.target.value);
-              setPage(0);
-            }}
+            onChange={(e) => patchParams({ city: e.target.value })}
             className={FILTER_SELECT_CLASS}
           >
             <option value="">Sídlo: vše</option>
