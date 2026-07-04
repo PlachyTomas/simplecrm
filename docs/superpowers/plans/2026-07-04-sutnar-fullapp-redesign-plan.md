@@ -1,6 +1,9 @@
 # SUTNAR full-app redesign — work plan & progress tracker
 
-Status: DESIGN PHASE COMPLETE (2026-07-04). Next: user reviews refs, then IMPLEMENTATION starting at I0. This file is the single source of truth for
+Status: DESIGN PHASE COMPLETE (2026-07-04). **ON HOLD by user decision
+2026-07-04: do NOT start implementation (I0–I17) or restyle the app to SUTNAR
+unless Tomáš explicitly asks for it in the current session.**
+This file is the single source of truth for
 progress — update checkboxes as batches complete. If a session dies mid-work,
 resume from the first unchecked item.
 

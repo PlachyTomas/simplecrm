@@ -223,6 +223,9 @@ batch call — six calls):
       must not restyle the app).
 - [ ] **Step 5:** Commit `design-batch: P5 app context mocks (<shortlist>)`.
 
+> **ON HOLD (user 2026-07-04): do NOT resume this track or implement any of
+> these logos in code unless Tomáš explicitly asks in the current session.**
+>
 > **STATUS 2026-07-04 (end of session):** P0–P5 done (commits `design-batch: P0…P5b`).
 > B1 has TEN candidates: A–F (round 1) + row 3 "kolo 2" G pipeline/H schody/
 > I spojení/J dvoubarva (round 2, added after user's "too AI" critique +
