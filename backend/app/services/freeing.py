@@ -46,6 +46,7 @@ async def _record_release(
     company: Company,
     released_by: uuid.UUID | None,
     reason: OwnershipChangeReason,
+    activity_type: ActivityType = ActivityType.company_freed,
 ) -> None:
     now = datetime.now(tz=UTC)
     # Close out any open history row for the current owner.
@@ -64,7 +65,7 @@ async def _record_release(
             entity_type=ActivityEntityType.company,
             entity_id=company.id,
             user_id=released_by,
-            activity_type=ActivityType.company_freed,
+            activity_type=activity_type,
             payload={
                 "previous_owner_user_id": str(company.owner_user_id)
                 if company.owner_user_id
@@ -140,7 +141,13 @@ async def reassign_company(
     now = datetime.now(tz=UTC)
     if company.owner_user_id is not None:
         await _record_release(
-            session, company, released_by=released_by, reason=OwnershipChangeReason.reassigned
+            session,
+            company,
+            released_by=released_by,
+            reason=OwnershipChangeReason.reassigned,
+            # Review R4 P3: log this as a reassignment, not a "company freed"
+            # event — the company moved to a new owner, it wasn't released.
+            activity_type=ActivityType.ownership_reassigned,
         )
     session.add(
         OwnershipHistory(

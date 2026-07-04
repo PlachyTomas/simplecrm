@@ -790,6 +790,42 @@ async def test_return_url_redirects_to_frontend_with_status(
     )
 
 
+async def test_return_url_does_not_leak_charge_status(client: AsyncClient) -> None:
+    # Review R1 P3: the unauthenticated return route must NOT reflect a charge's
+    # DB status — that would let anyone holding a Charge UUID probe its payment
+    # status across tenants. It always redirects with a neutral `pending`.
+    async with AsyncSessionLocal() as s:
+        org = Organization(name=f"ReturnLeak-{uuid.uuid4().hex[:6]}")
+        s.add(org)
+        await s.flush()
+        charge = Charge(
+            organization_id=org.id,
+            kind="initial",
+            amount_minor=9900,
+            currency="CZK",
+            status="paid",
+            seats=1,
+        )
+        s.add(charge)
+        await s.commit()
+        charge_id = charge.id
+        org_id = org.id
+
+    try:
+        resp = await client.get(
+            f"/api/v1/payments/return?refId={charge_id}", follow_redirects=False
+        )
+        assert resp.status_code == 302
+        location = resp.headers["location"]
+        assert "status=pending" in location
+        assert "status=paid" not in location
+    finally:
+        async with AsyncSessionLocal() as s:
+            await s.execute(delete(Charge).where(Charge.id == charge_id))
+            await s.execute(delete(Organization).where(Organization.id == org_id))
+            await s.commit()
+
+
 async def test_charges_requires_auth(client: AsyncClient) -> None:
     # Endpoint URL stays `/payments/invoices` (the customer-facing UI labels
     # this as "Faktury"); only the model + response-schema names changed.

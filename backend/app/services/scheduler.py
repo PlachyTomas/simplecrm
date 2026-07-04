@@ -150,7 +150,7 @@ async def run_freeing_sweep() -> int:
         try:
             await send_email(message)
         except Exception:
-            logger.exception("freeing sweep: email send failed for %s", recipient.email)
+            logger.exception("freeing sweep: email send failed for user %s", recipient.id)
 
     logger.info("freeing sweep completed: freed=%d", total)
     return total
@@ -620,7 +620,9 @@ async def run_billing_info_reminder_sweep() -> int:
                     # Stamp regardless: one bounced address shouldn't
                     # keep the org in the retry pool. Stamp-once is the
                     # contract; bounce diagnostics live in SMTP logs.
-                    logger.exception("billing-info reminder: send failed for %s", recipient.email)
+                    logger.exception(
+                        "billing-info reminder: send failed for user %s", recipient.id
+                    )
             org.billing_info_reminder_sent_at = now
             notified += 1
 

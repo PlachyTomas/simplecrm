@@ -423,25 +423,18 @@ async def seat_change_init(
 async def payment_return(
     transId: str | None = Query(default=None),  # noqa: N803 — ComGate's name
     refId: str | None = Query(default=None),  # noqa: N803
-    session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
     """ComGate redirects the customer's browser here after they
     complete (or cancel) the hosted-payment page.
 
-    We don't trust this for billing state — that's the webhook's job.
-    Read the charge if we know its ID, then 302 the customer to the
-    frontend's billing-return route with whatever status we can see.
+    We don't trust this for billing state — that's the webhook's job — and we
+    deliberately do NOT read the charge's status here: this route is
+    unauthenticated, so reflecting DB state would let anyone holding a Charge id
+    learn its payment status across tenants (review R1 P3). We always redirect
+    with a neutral `pending`; the auth-gated in-app billing-return page fetches
+    the real, org-scoped status.
     """
-    target_status: str = "pending"
-    if refId:
-        try:
-            charge_id = uuid.UUID(refId)
-        except ValueError:
-            charge_id = None
-        if charge_id is not None:
-            charge = await session.get(Charge, charge_id)
-            if charge is not None:
-                target_status = charge.status
+    target_status = "pending"
 
     # Demo orders (refId "demo-…") carry their own per-payment return
     # URLs, but if ComGate falls back to the portal-configured URL we
