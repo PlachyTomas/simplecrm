@@ -34,7 +34,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from urllib.parse import parse_qsl
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -154,6 +154,28 @@ async def initial_payment_init(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={"code": "already_active", "detail": "Aktivační platba již proběhla."},
+        )
+    # Reject a second checkout while a recent one is still pending (review R2 P1
+    # residual: two tabs both completing double-captures the card). A pending
+    # charge older than the window is treated as abandoned so an abandoned
+    # checkout doesn't block the customer from retrying.
+    recent_pending = (
+        await session.execute(
+            select(Charge.id).where(
+                Charge.organization_id == org_id,
+                Charge.kind == "initial",
+                Charge.status == "pending",
+                Charge.created_at >= datetime.now(tz=UTC) - timedelta(minutes=15),
+            )
+        )
+    ).first()
+    if recent_pending is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "payment_in_progress",
+                "detail": "Platba již probíhá. Dokončete ji, nebo to zkuste za chvíli znovu.",
+            },
         )
 
     plan = await billing._load_plan_by_code(session, payload.plan_code)

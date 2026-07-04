@@ -279,6 +279,65 @@ async def test_initial_payment_init_rejects_when_already_active(
     assert resp.json()["detail"]["code"] == "already_active"
 
 
+async def test_initial_payment_init_rejects_recent_pending_charge(
+    client: AsyncClient,
+    owned_payments_emails: list[str],
+) -> None:
+    """Regression (review R2 P1 residual): a second checkout while a recent
+    initial charge is still pending is rejected, so two tabs can't both pay and
+    double-capture the card."""
+    async with AsyncSessionLocal() as session:
+        org = Organization(
+            name="Payments Test Org",
+            ico="12345678",
+            address_street="Testovací 1",
+            address_city="Praha",
+            address_zip="100 00",
+        )
+        session.add(org)
+        await session.flush()
+        email = f"pend-{uuid.uuid4().hex[:8]}@ex.cz"
+        owned_payments_emails.append(email)
+        admin = User(email=email, name="A", role=UserRole.admin, organization_id=org.id)
+        session.add(admin)
+        monthly_plan_id = (
+            await session.execute(select(Plan.id).where(Plan.code == "monthly"))
+        ).scalar_one()
+        now = datetime.now(tz=UTC)
+        session.add(
+            Subscription(
+                organization_id=org.id,
+                plan_id=monthly_plan_id,
+                status="trialing",
+                started_at=now,
+                current_period_starts_at=now,
+                current_period_ends_at=now + timedelta(days=10),
+                seat_count=5,
+                contracted_seat_count=5,
+            )
+        )
+        session.add(
+            Charge(
+                organization_id=org.id,
+                kind="initial",
+                amount_minor=49_500,
+                currency="CZK",
+                status="pending",
+                seats=5,
+            )
+        )
+        await session.commit()
+        token = create_access_token(admin.id, org.id, UserRole.admin)
+
+    resp = await client.post(
+        "/api/v1/payments/initial-payment-init",
+        json={"plan_code": "monthly"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["detail"]["code"] == "payment_in_progress"
+
+
 async def test_webhook_initial_paid_promotes_to_active(
     client: AsyncClient,
     owned_payments_emails: list[str],
