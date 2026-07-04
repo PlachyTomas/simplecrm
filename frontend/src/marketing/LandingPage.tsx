@@ -326,6 +326,14 @@ function Hero() {
           firmy zpět do sdíleného pool. 30 dní zdarma, bez kreditky.
         </p>
 
+        <p className="mx-auto mt-6 flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 text-text-secondary">
+          <span className="text-2xl font-bold text-text-primary md:text-3xl">
+            {PRICE_PER_USER_CZK} Kč
+          </span>
+          <span className="text-base md:text-lg">za uživatele měsíčně</span>
+          <span className="text-sm text-text-tertiary">· jeden z nejlevnějších CRM na trhu</span>
+        </p>
+
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link
             to={SIGNUP_PATH}

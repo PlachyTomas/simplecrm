@@ -33,8 +33,9 @@ describe("Landing page", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: /Jedna cena/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: /Časté otázky/i })).toBeInTheDocument();
-    // The price per user appears on the paid tier card.
-    expect(screen.getByText(/99 Kč/)).toBeInTheDocument();
+    // The price per user is surfaced in the hero (above the fold) AND on the
+    // paid tier card — both must render.
+    expect(screen.getAllByText(/99 Kč/).length).toBeGreaterThanOrEqual(2);
     // Trial CTAs route into the signup form (which itself offers email + Google).
     const ctas = screen.getAllByRole("link", { name: /Vyzkoušet 30 dní zdarma|Vyzkoušet zdarma/i });
     expect(ctas.length).toBeGreaterThan(0);
