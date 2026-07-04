@@ -16,9 +16,14 @@ const STORAGE_KEY = "simplecrm-theme";
 const META_THEME = { dark: "#0A0A0B", light: "#FAFAFB" } as const;
 
 function readStored(): Theme {
-  if (typeof window === "undefined") return "system";
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  return raw === "light" || raw === "dark" ? raw : "system";
+  // localStorage can be absent or throw (private mode / storage disabled).
+  // This runs on every page load, so a crash here would white-screen the app.
+  try {
+    const raw = window.localStorage?.getItem(STORAGE_KEY);
+    return raw === "light" || raw === "dark" ? raw : "system";
+  } catch {
+    return "system";
+  }
 }
 
 function systemMatches(): ResolvedTheme {

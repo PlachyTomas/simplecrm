@@ -429,6 +429,15 @@ bug), and the access token is held **in memory only** (AuthContext.tsx:31 —
 never localStorage), refreshed via an httponly cookie on cold-load, which is
 the XSS-safe pattern.
 
+> **FIX STATUS:** **FIXED** on branch `fix/review-p0-p1-security-payments`.
+> Guarded every unguarded `localStorage` access with optional-chaining +
+> try/catch: `CompaniesListPage.tsx`, `PipelinePage.tsx` (loadWonWindow +
+> write — the same bug recurred here, confirming the finding generalizes),
+> and `theme.ts` readStored (runs on every page load — highest prod impact).
+> `cookie-consent.tsx` was already guarded. Frontend suite now **140/140
+> green** (was 128/140). Rendered UI unchanged (verified via the component
+> tests that render both pages).
+
 - [P2] frontend/src/app/companies/CompaniesListPage.tsx:70-73,101-104 —
   **Unguarded `window.localStorage` access — root cause of the 12 red tests
   and a storage-restricted-browser crash.** `readStoredViewMode` guards

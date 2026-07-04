@@ -93,7 +93,13 @@ afterwards in separate batches.
       capture needs pending-charge dedup (product call). Test added.
 - [x] P1 R2 VAT overstatement — FIXED (back-calculate net+VAT from gross in
       `_build_lines_for_charge`). Regression test asserts total == gross.
+- [x] **P2 R6 localStorage crash** — FIXED (guarded CompaniesListPage,
+      PipelinePage ×2, theme.ts; the bug recurred in pipeline/theme). Frontend
+      suite now 140/140 (was 128). Both CI suites green.
 - [ ] P2/P3 remainder — TODO; re-verify the unverified R2 billing P3s first.
+      Candidates: jwt_secret startup guard (R1/R8), CSV formula injection (R3),
+      GDPR erasure gaps (R3), reassign clock (R4), schedulers-in-workers (R5),
+      comp-cancel + choose-plan lockout (R2), manager cross-team leak (R1).
 
 ## User decisions (locked 2026-07-04)
 

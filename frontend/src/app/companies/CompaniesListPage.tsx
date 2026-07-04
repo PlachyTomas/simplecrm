@@ -68,9 +68,15 @@ type ViewMode = "cards" | "table";
 const VIEW_MODE_STORAGE_KEY = "simplecrm.companies.viewMode";
 
 function readStoredViewMode(): ViewMode {
-  if (typeof window === "undefined") return "cards";
-  const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
-  return stored === "table" ? "table" : "cards";
+  // localStorage can be absent (SSR, some webviews) or throw on access
+  // (Safari private mode, storage disabled). Never let a preference read crash
+  // the whole page.
+  try {
+    const stored = window.localStorage?.getItem(VIEW_MODE_STORAGE_KEY);
+    return stored === "table" ? "table" : "cards";
+  } catch {
+    return "cards";
+  }
 }
 
 export function CompaniesListPage() {
@@ -99,8 +105,11 @@ export function CompaniesListPage() {
     ownerFilter !== "all" || industry !== "" || city !== "" || searchInput !== "";
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
+    try {
+      window.localStorage?.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
+    } catch {
+      // Persisting the view preference is best-effort; ignore storage errors.
+    }
   }, [viewMode]);
 
   const navigate = useNavigate();

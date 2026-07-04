@@ -46,8 +46,14 @@ const WON_WINDOW_OPTIONS: { value: WonWindow; label: string }[] = [
 ];
 
 function loadWonWindow(): WonWindow {
-  if (typeof window === "undefined") return 30;
-  const raw = window.localStorage.getItem(WON_WINDOW_STORAGE_KEY);
+  // localStorage can be absent (SSR, some webviews) or throw on access (Safari
+  // private mode, storage disabled) — never let a preference read crash the page.
+  let raw: string | null | undefined;
+  try {
+    raw = window.localStorage?.getItem(WON_WINDOW_STORAGE_KEY);
+  } catch {
+    return 30;
+  }
   if (raw === "all") return "all";
   const n = Number(raw);
   return Number.isFinite(n) && n > 0 ? n : 30;
@@ -764,8 +770,10 @@ export function PipelinePage() {
                 const raw = e.target.value;
                 const next: WonWindow = raw === "all" ? "all" : Number(raw);
                 setWonWindow(next);
-                if (typeof window !== "undefined") {
-                  window.localStorage.setItem(WON_WINDOW_STORAGE_KEY, String(next));
+                try {
+                  window.localStorage?.setItem(WON_WINDOW_STORAGE_KEY, String(next));
+                } catch {
+                  // Persisting the preference is best-effort; ignore storage errors.
                 }
               }}
               className="mt-1 rounded-md border border-border bg-surface px-2 py-1.5 text-sm"
