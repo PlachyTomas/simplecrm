@@ -156,9 +156,18 @@ def is_app_access_allowed(sub: Subscription, now: datetime | None = None) -> boo
     # `pending_activation` = the customer picked a paid plan but hasn't paid yet.
     # They keep their remaining trial access until the trial period ends (review
     # R2 P2) — choosing a plan must not lock a still-trialing customer out.
-    if sub.status in {"trialing", "active", "pending_activation"}:
+    if sub.status in {"trialing", "pending_activation"}:
         ends = sub.current_period_ends_at
         return ends is None or ends >= moment
+    if sub.status == "active":
+        ends = sub.current_period_ends_at
+        if ends is None or ends >= moment:
+            return True
+        # Period ended but still 'active' → a renewal is being retried (dunning
+        # keeps status 'active' until DUNNING_PAST_DUE_THRESHOLD failures). Apply
+        # the SAME 7-day grace as past_due so access doesn't flap off during
+        # early dunning and back on once past_due starts (review R2 P3).
+        return moment - ends < PAST_DUE_GRACE
     if sub.status == "past_due":
         ends = sub.current_period_ends_at
         # past_due with NULL ends → no anchor for the grace window, treat
@@ -451,8 +460,19 @@ async def cancel(
     effective_at: datetime | None = None,
 ) -> Subscription:
     sub = await get_current_subscription(session, org_id)
+    now = datetime.now(tz=UTC)
+    # The super-admin cancel is an immediate hard revoke (fraud / chargeback) —
+    # it flips status to 'canceled' and gates access right away. A future
+    # `effective_at` would therefore lock a paying org out NOW while recording a
+    # misleading future timestamp; reject it rather than silently mis-scheduling
+    # (review R2 P3). Deferred cancellation is `cancel_self_serve`'s job.
+    if effective_at is not None and effective_at > now:
+        raise BillingError(
+            "Super-admin cancel is immediate; a future effective_at is not supported. "
+            "Use the self-serve cancel for end-of-period cancellation."
+        )
     sub.status = "canceled"
-    sub.canceled_at = effective_at or datetime.now(tz=UTC)
+    sub.canceled_at = effective_at or now
     # Clear the comp flag on cancel (review R2 P2). is_app_access_allowed
     # short-circuits is_comp=True to full access BEFORE checking status, so a
     # canceled comp org would otherwise keep unrestricted access forever.

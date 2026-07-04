@@ -153,9 +153,18 @@ def test_access_active_within_period(fresh_sub: Subscription) -> None:
     assert billing.is_app_access_allowed(fresh_sub) is True
 
 
-def test_access_active_expired(fresh_sub: Subscription) -> None:
+def test_access_active_expired_within_grace(fresh_sub: Subscription) -> None:
+    # Review R2 P3: an 'active' sub whose period just ended is mid-dunning (a
+    # renewal is being retried). It gets the same 7-day grace as past_due so
+    # access doesn't flap off during early dunning and back on at past_due.
     fresh_sub.status = "active"
-    fresh_sub.current_period_ends_at = datetime.now(tz=UTC) - timedelta(days=1)
+    fresh_sub.current_period_ends_at = datetime.now(tz=UTC) - timedelta(days=3)
+    assert billing.is_app_access_allowed(fresh_sub) is True
+
+
+def test_access_active_expired_beyond_grace(fresh_sub: Subscription) -> None:
+    fresh_sub.status = "active"
+    fresh_sub.current_period_ends_at = datetime.now(tz=UTC) - timedelta(days=10)
     assert billing.is_app_access_allowed(fresh_sub) is False
 
 
@@ -388,6 +397,20 @@ async def test_cancel_marks_canceled_and_audits(db_session: AsyncSession) -> Non
         .all()
     )
     assert any(a.payload.get("action") == "cancel" for a in activities)
+
+
+async def test_cancel_rejects_future_effective_at(db_session: AsyncSession) -> None:
+    # Review R2 P3: super-admin cancel is an immediate hard revoke. A future
+    # effective_at would gate the paying org NOW while recording a misleading
+    # future timestamp, so it's rejected rather than silently mis-scheduled.
+    org, admin = await _seed_org_with_trial(db_session)
+    with pytest.raises(billing.BillingError, match="immediate"):
+        await billing.cancel(
+            db_session,
+            org_id=org.id,
+            by_admin_id=admin.id,
+            effective_at=datetime.now(tz=UTC) + timedelta(days=30),
+        )
 
 
 async def test_cancel_clears_comp_flag_and_revokes_access(db_session: AsyncSession) -> None:
