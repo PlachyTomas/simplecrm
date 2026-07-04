@@ -309,11 +309,11 @@ function Hero() {
       >
         {/* A colony of four glows, each on its own drift + duration + phase, so
             they bloom and fade independently — the hero never sits still. */}
-        <div className="animate-hero-mold-a absolute -bottom-32 -left-32 h-[28rem] w-[28rem] rounded-full bg-accent/45 blur-3xl" />
-        <div className="animate-hero-mold-b absolute -right-32 -top-32 h-96 w-96 rounded-full bg-brand-accent/40 blur-3xl" />
-        <div className="animate-hero-mold-c absolute -top-16 left-[12%] h-80 w-80 rounded-full bg-brand-accent/25 blur-3xl" />
+        <div className="animate-hero-mold-a absolute -bottom-32 -left-32 h-[28rem] w-[28rem] rounded-full bg-accent/55 blur-3xl" />
+        <div className="animate-hero-mold-b absolute -right-32 -top-32 h-96 w-96 rounded-full bg-brand-accent/50 blur-3xl" />
+        <div className="animate-hero-mold-c absolute -top-16 left-[12%] h-80 w-80 rounded-full bg-brand-accent/35 blur-3xl" />
         <div
-          className="animate-hero-mold-a absolute -bottom-12 right-[22%] h-72 w-72 rounded-full bg-accent/30 blur-3xl"
+          className="animate-hero-mold-a absolute -bottom-12 right-[22%] h-72 w-72 rounded-full bg-accent/40 blur-3xl"
           style={{ animationDelay: "-14s" }}
         />
       </div>
