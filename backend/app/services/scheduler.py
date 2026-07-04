@@ -15,13 +15,15 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import logging
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
+from typing import TypeVar
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.db.models import (
     Activity,
@@ -45,6 +47,50 @@ logger = logging.getLogger("simplecrm.scheduler")
 PRAGUE = ZoneInfo("Europe/Prague")
 DEFAULT_HOUR = 3  # 03:00 local
 
+_T = TypeVar("_T")
+
+# Distinct Postgres advisory-lock keys, one per sweep. The schedulers start in
+# EVERY uvicorn worker (prod runs --workers 2) and would otherwise run each
+# sweep concurrently — double-charging cards, double-sending mail, etc. A
+# session-level advisory lock lets exactly one worker/replica run a given sweep
+# at a time; the rest skip that tick. Correct at any worker/replica count.
+_LOCK_FREEING = 918_2701
+_LOCK_RECURRING = 918_2702
+_LOCK_RENEWAL_DRAFT = 918_2703
+_LOCK_OVERDUE = 918_2704
+_LOCK_BILLING_REMINDER = 918_2705
+_LOCK_INTEGRITY = 918_2706
+
+
+def _single_flight(lock_key: int) -> Callable[[Callable[[], Awaitable[_T]]], Callable[[], Awaitable[_T | int]]]:
+    """Decorator: run the wrapped no-arg sweep only if this process wins the
+    named Postgres advisory lock; otherwise skip (another worker holds it).
+
+    The lock rides on its own session/connection for the whole run and is
+    released in `finally`, so a crash mid-sweep frees it when the connection
+    returns to the pool.
+    """
+
+    def decorate(job: Callable[[], Awaitable[_T]]) -> Callable[[], Awaitable[_T | int]]:
+        @functools.wraps(job)
+        async def wrapper() -> _T | int:
+            async with AsyncSessionLocal() as lock_session:
+                acquired = (
+                    await lock_session.execute(select(func.pg_try_advisory_lock(lock_key)))
+                ).scalar_one()
+                if not acquired:
+                    logger.info("%s: advisory lock held by another worker; skipping", job.__name__)
+                    return 0
+                try:
+                    return await job()
+                finally:
+                    await lock_session.execute(select(func.pg_advisory_unlock(lock_key)))
+                    await lock_session.commit()
+
+        return wrapper
+
+    return decorate
+
 
 def _seconds_until_next_run(*, now: datetime, hour: int) -> float:
     """Return seconds from `now` until the next HH:00 local time."""
@@ -56,6 +102,7 @@ def _seconds_until_next_run(*, now: datetime, hour: int) -> float:
     return max(1.0, delta.total_seconds())
 
 
+@_single_flight(_LOCK_FREEING)
 async def run_freeing_sweep() -> int:
     """Execute the nightly freeing sweep and notify each affected owner.
 
@@ -160,6 +207,7 @@ scheduler = _DailyRunner(hour=DEFAULT_HOUR, job=run_freeing_sweep)
 RECURRING_CHARGE_INTERVAL_SECONDS = 3600
 
 
+@_single_flight(_LOCK_RECURRING)
 async def run_recurring_charges() -> int:
     """For every active subscription whose `next_renewal_charge_at` has
     elapsed, fire a ComGate recurring charge using the saved card.
@@ -313,6 +361,7 @@ RENEWAL_DRAFT_LEAD_DAYS = 7
 RENEWAL_DRAFT_HOUR = 4  # 04:00 local
 
 
+@_single_flight(_LOCK_RENEWAL_DRAFT)
 async def run_renewal_draft_sweep() -> int:
     """Build draft invoices for every active subscription whose current
     period ends within the next `RENEWAL_DRAFT_LEAD_DAYS` days.
@@ -387,6 +436,7 @@ renewal_draft_scheduler = _DailyRunner(hour=RENEWAL_DRAFT_HOUR, job=run_renewal_
 OVERDUE_PAST_DUE_HOUR = 5  # 05:00 local
 
 
+@_single_flight(_LOCK_OVERDUE)
 async def run_overdue_invoice_sweep() -> int:
     """Find issued, subscription-linked invoices past their `due_at` and
     flip the linked subscription to `past_due`.
@@ -488,6 +538,7 @@ BILLING_INFO_REMINDER_MIN_DAYS = 5
 BILLING_INFO_REMINDER_MAX_DAYS = 8
 
 
+@_single_flight(_LOCK_BILLING_REMINDER)
 async def run_billing_info_reminder_sweep() -> int:
     """Email each trialing org's admins once when the trial is ~1 week
     out and billing details are still incomplete.
@@ -596,6 +647,7 @@ billing_info_reminder_scheduler = _DailyRunner(
 INTEGRITY_CHECK_INTERVAL_SECONDS = 7 * 24 * 3600
 
 
+@_single_flight(_LOCK_INTEGRITY)
 async def run_weekly_integrity_check() -> int:
     """Background-runner version of the integrity walk. Returns the
     number of failures (useful for tests + log inspection)."""

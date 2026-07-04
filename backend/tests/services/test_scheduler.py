@@ -7,13 +7,17 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import delete
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Company, Organization, User, UserRole
 from app.db.session import AsyncSessionLocal
 from app.services.email import Email, build_freed_company_email
-from app.services.scheduler import _seconds_until_next_run, run_freeing_sweep
+from app.services.scheduler import (
+    _LOCK_FREEING,
+    _seconds_until_next_run,
+    run_freeing_sweep,
+)
 
 
 @pytest.fixture
@@ -120,3 +124,51 @@ async def test_run_freeing_sweep_frees_and_counts(
     assert by_name["Expired 1"] is None
     assert by_name["Expired 2"] is None
     assert by_name["Still Fresh"] == owner.id
+
+
+async def test_freeing_sweep_skips_when_another_worker_holds_lock(
+    owned_cleanup: dict[str, list],
+) -> None:
+    """Regression (review R5 P1): the sweep is single-flighted behind a Postgres
+    advisory lock, so a second worker running the same tick must skip (return 0)
+    and leave an expired company untouched — no double sweep / double side effects."""
+    async with AsyncSessionLocal() as s:
+        org = Organization(name=f"LockOrg-{uuid.uuid4().hex[:6]}")
+        s.add(org)
+        await s.flush()
+        owned_cleanup["orgs"].append(org.id)
+        email = f"lk-{uuid.uuid4().hex[:8]}@ex.cz"
+        owned_cleanup["emails"].append(email)
+        owner = User(email=email, name="Lk", role=UserRole.salesperson, organization_id=org.id)
+        s.add(owner)
+        await s.flush()
+        s.add(
+            Company(
+                organization_id=org.id,
+                name="Expired-Locked",
+                owner_user_id=owner.id,
+                ownership_expires_at=datetime.now(tz=UTC) - timedelta(days=1),
+            )
+        )
+        await s.commit()
+        owner_id = owner.id
+
+    # Hold the freeing lock on a separate connection, then invoke the sweep:
+    # it must find the lock taken and skip.
+    async with AsyncSessionLocal() as holder:
+        got = (await holder.execute(select(func.pg_try_advisory_lock(_LOCK_FREEING)))).scalar_one()
+        assert got is True
+        try:
+            result = await run_freeing_sweep()
+            assert result == 0  # skipped
+        finally:
+            await holder.execute(select(func.pg_advisory_unlock(_LOCK_FREEING)))
+            await holder.commit()
+
+    async with AsyncSessionLocal() as s:
+        still_owned = (
+            await s.execute(
+                select(Company.owner_user_id).where(Company.name == "Expired-Locked")
+            )
+        ).scalar_one()
+    assert still_owned == owner_id, "sweep must not have freed the company while lock was held"
