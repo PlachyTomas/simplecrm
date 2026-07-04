@@ -53,7 +53,10 @@ def _access_status(sub: Subscription) -> str:
         return "gated"
     if sub.status == "past_due":
         return "grace"
-    if sub.status == "trialing":
+    # A customer who picked a plan but hasn't paid is still in their trial —
+    # keep the trialing UX (countdown, nudges) rather than showing "active"
+    # (review R2 P2).
+    if sub.status in {"trialing", "pending_activation"}:
         return "trialing"
     return "active"
 

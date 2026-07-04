@@ -166,9 +166,19 @@ def test_access_canceled_denied(fresh_sub: Subscription) -> None:
     assert billing.is_app_access_allowed(fresh_sub) is False
 
 
-def test_access_pending_activation_denied(fresh_sub: Subscription) -> None:
+def test_access_pending_activation_keeps_trial_access(fresh_sub: Subscription) -> None:
+    # Review R2 P2: picking a plan (→ pending_activation) must NOT lock a still-
+    # trialing customer out; they keep access until the trial period ends.
     fresh_sub.status = "pending_activation"
     fresh_sub.current_period_ends_at = datetime.now(tz=UTC) + timedelta(days=30)
+    assert billing.is_app_access_allowed(fresh_sub) is True
+
+
+def test_access_pending_activation_denied_after_trial_ends(fresh_sub: Subscription) -> None:
+    # Once the trial period has elapsed, a pending_activation customer who never
+    # paid is gated like everyone else.
+    fresh_sub.status = "pending_activation"
+    fresh_sub.current_period_ends_at = datetime.now(tz=UTC) - timedelta(days=1)
     assert billing.is_app_access_allowed(fresh_sub) is False
 
 
@@ -192,6 +202,24 @@ async def test_get_effective_price_uses_override(db_session: AsyncSession) -> No
     assert billing.get_effective_price_per_user_minor(sub) == 0  # trial price
     sub.override_price_per_user_minor = 12345
     assert billing.get_effective_price_per_user_minor(sub) == 12345
+
+
+async def test_initial_payment_during_trial_stacks_after_trial_end(
+    db_session: AsyncSession,
+) -> None:
+    # Review R2 P2: paying while still in trial must not discard remaining trial
+    # days — the paid period is anchored at the trial end, not now.
+    org, _admin = await _seed_org_with_trial(db_session)
+    sub = await billing.get_current_subscription(db_session, org.id)
+    trial_end = sub.current_period_ends_at
+    assert trial_end is not None and trial_end > datetime.now(tz=UTC)
+
+    updated = await billing.apply_initial_payment_success(
+        db_session, org_id=org.id, plan_code="annual", comgate_trans_id="TX-STACK"
+    )
+    assert updated.status == "active"
+    assert updated.current_period_starts_at == trial_end
+    assert updated.current_period_ends_at > trial_end
 
 
 async def test_choose_plan_marks_pending_and_audits(

@@ -152,7 +152,10 @@ def is_app_access_allowed(sub: Subscription, now: datetime | None = None) -> boo
     if sub.is_comp:
         return True
     moment = now or datetime.now(tz=UTC)
-    if sub.status in {"trialing", "active"}:
+    # `pending_activation` = the customer picked a paid plan but hasn't paid yet.
+    # They keep their remaining trial access until the trial period ends (review
+    # R2 P2) — choosing a plan must not lock a still-trialing customer out.
+    if sub.status in {"trialing", "active", "pending_activation"}:
         ends = sub.current_period_ends_at
         return ends is None or ends >= moment
     if sub.status == "past_due":
@@ -599,13 +602,24 @@ async def apply_initial_payment_success(
     assert months is not None  # noqa: S101 — type-narrowing for mypy after the {monthly,annual} guard
 
     now = datetime.now(tz=UTC)
+    # If the customer pays while still in trial, stack the paid period on top of
+    # the remaining trial instead of discarding it (review R2 P2): they keep the
+    # full free trial AND get a full paid period. Anchor at the later of now and
+    # the current (trial) period end.
+    anchor = now
+    if (
+        sub.status in {"trialing", "pending_activation"}
+        and sub.current_period_ends_at is not None
+        and sub.current_period_ends_at > now
+    ):
+        anchor = sub.current_period_ends_at
     sub.plan_id = plan.id
     sub.plan = plan
     sub.status = "active"
     sub.is_comp = False
     sub.canceled_at = None
-    sub.current_period_starts_at = now
-    sub.current_period_ends_at = _add_months(now, months)
+    sub.current_period_starts_at = anchor
+    sub.current_period_ends_at = _add_months(anchor, months)
     sub.next_renewal_charge_at = sub.current_period_ends_at
     sub.contracted_seat_count = sub.seat_count
     sub.dunning_attempts = 0

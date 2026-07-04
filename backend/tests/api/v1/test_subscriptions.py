@@ -192,7 +192,9 @@ async def test_choose_plan_admin_marks_pending(
     body = response.json()
     assert body["status"] == "pending_activation"
     assert body["plan"]["code"] == "annual"
-    assert body["access_status"] == "gated"  # pending denies access
+    # Review R2 P2: choosing a plan keeps the customer's remaining trial access
+    # (they can still pay immediately; the paid period then stacks after trial).
+    assert body["access_status"] == "trialing"
 
 
 async def test_choose_plan_rejects_invalid_code(
