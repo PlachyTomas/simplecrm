@@ -1,0 +1,176 @@
+{
+  "version": "2.14",
+  "children": [
+    {
+      "type": "frame",
+      "id": "RmJaU",
+      "x": 0,
+      "y": 0,
+      "name": "B1 logos",
+      "clip": true,
+      "width": 3200,
+      "height": 2400,
+      "fill": "#ECECEF",
+      "layout": "none",
+      "children": [
+        {
+          "type": "text",
+          "id": "jJp5o",
+          "x": 40,
+          "y": 28,
+          "name": "b1-label",
+          "fill": "#6B6B76",
+          "content": "(b1) logos — kandidáti a–f + typový vzorník",
+          "fontFamily": "JetBrains Mono",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "L0z9I2",
+      "x": 3300,
+      "y": 0,
+      "name": "B2 favicony",
+      "clip": true,
+      "width": 1600,
+      "height": 1100,
+      "fill": "#ECECEF",
+      "layout": "none",
+      "children": [
+        {
+          "type": "text",
+          "id": "OGX6J",
+          "x": 40,
+          "y": 28,
+          "name": "b2-label",
+          "fill": "#6B6B76",
+          "content": "(b2) favicony — 16 / 32 / 180",
+          "fontFamily": "JetBrains Mono",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "i0dDg",
+      "x": 0,
+      "y": 2500,
+      "name": "B3 v aplikaci",
+      "clip": true,
+      "width": 3400,
+      "height": 1400,
+      "fill": "#ECECEF",
+      "layout": "none",
+      "children": [
+        {
+          "type": "text",
+          "id": "a7pzQ",
+          "x": 40,
+          "y": 28,
+          "name": "b3-label",
+          "fill": "#6B6B76",
+          "content": "(b3) v aplikaci — kontextové mocky",
+          "fontFamily": "JetBrains Mono",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "McYCx",
+      "x": 3500,
+      "y": 2500,
+      "name": "B4 brand sheet",
+      "clip": true,
+      "width": 1600,
+      "height": 1200,
+      "fill": "#ECECEF",
+      "layout": "none",
+      "children": [
+        {
+          "type": "text",
+          "id": "khGeS",
+          "x": 40,
+          "y": 28,
+          "name": "b4-label",
+          "fill": "#6B6B76",
+          "content": "(b4) brand sheet — vítěz",
+          "fontFamily": "JetBrains Mono",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "font-mono": {
+      "type": "string",
+      "value": "JetBrains Mono"
+    },
+    "brand-magenta": {
+      "type": "color",
+      "value": "#EC4899"
+    },
+    "app-bg-dark": {
+      "type": "color",
+      "value": "#0A0A0B"
+    },
+    "app-surface-dark": {
+      "type": "color",
+      "value": "#141416"
+    },
+    "app-elevated-dark": {
+      "type": "color",
+      "value": "#1C1C20"
+    },
+    "app-border-dark": {
+      "type": "color",
+      "value": "#26262B"
+    },
+    "app-bg-light": {
+      "type": "color",
+      "value": "#FAFAFB"
+    },
+    "app-surface-light": {
+      "type": "color",
+      "value": "#FFFFFF"
+    },
+    "app-border-light": {
+      "type": "color",
+      "value": "#E8E8EC"
+    },
+    "app-indigo-dark": {
+      "type": "color",
+      "value": "#818CF8"
+    },
+    "app-indigo-light": {
+      "type": "color",
+      "value": "#5B5BD6"
+    },
+    "app-ink": {
+      "type": "color",
+      "value": "#0A0A0B"
+    },
+    "app-paper": {
+      "type": "color",
+      "value": "#F5F5F7"
+    },
+    "app-text-sec-dark": {
+      "type": "color",
+      "value": "#A8A8B3"
+    },
+    "app-text-sec-light": {
+      "type": "color",
+      "value": "#4A4A55"
+    },
+    "font-ui": {
+      "type": "string",
+      "value": "Inter"
+    }
+  },
+  "fileToken": "ce23d7d8-abfb-4068-a4cc-7555cf5cd792"
+}
