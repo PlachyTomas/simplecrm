@@ -19,6 +19,7 @@ from app.schemas.invitation import (
 )
 from app.schemas.pagination import Page, PaginationParams
 from app.services.invitations import (
+    InsufficientInviterPrivilegeError,
     InvitationNotFoundError,
     SeatLimitReachedError,
     UserAlreadyInOrganizationError,
@@ -96,11 +97,19 @@ async def create(
             team_id=payload.team_id,
             can_invite=payload.can_invite,
         )
+    except InsufficientInviterPrivilegeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "detail": "Nemáte oprávnění udělit tuto roli.",
+                "code": "insufficient_inviter_privilege",
+            },
+        ) from exc
     except UserAlreadyInOrganizationError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
-                "detail": "Tento e-mail už patří k jiné organizaci.",
+                "detail": "Tento e-mail už patří k některé organizaci.",
                 "code": "user_already_in_organization",
             },
         ) from exc

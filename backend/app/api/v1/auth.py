@@ -69,6 +69,7 @@ from app.services.email_auth import (
 )
 from app.services.google_oauth import GoogleOAuthClient, get_google_oauth_client
 from app.services.invitations import (
+    InvitationPasswordMismatchError,
     accept_invitation_for_email_signup,
 )
 
@@ -644,5 +645,10 @@ async def invite_accept(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={"code": "user_already_in_organization"},
+        ) from exc
+    except InvitationPasswordMismatchError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "invitation_password_mismatch"},
         ) from exc
     return await _issue_session(session, response, user)

@@ -71,6 +71,26 @@ class SeatLimitReachedError(InvitationError):
     """
 
 
+class InsufficientInviterPrivilegeError(InvitationError):
+    """The inviter tried to grant a role/flag above their own authority.
+
+    Only admins may create `role=admin` or `can_invite=True` invitations.
+    Without this ceiling a delegated `can_invite` non-admin could mint an
+    org admin (privilege escalation). The API returns 403.
+    """
+
+
+class InvitationPasswordMismatchError(InvitationError):
+    """Invite-accept was attempted for a user who already has a password,
+    but the supplied password didn't match.
+
+    The invite token proves inbox ownership (enough to attach an org), but
+    minting a login session for an already-credentialed account additionally
+    requires that account's real password — otherwise anyone who can read an
+    invite token could take the account over. The API returns 401.
+    """
+
+
 @dataclass(frozen=True)
 class IssuedInvitation:
     invitation: Invitation
@@ -124,20 +144,25 @@ async def create_invitation(
     """
     normalized_email = email.strip().lower()
 
+    # Privilege ceiling: a non-admin (delegated `can_invite`) may only invite
+    # peers. Granting admin or can_invite is admin-only — otherwise the invite
+    # flow becomes a way around the admin-only role gate on PUT /users/{id}.
+    if inviter.role is not UserRole.admin and (role is UserRole.admin or can_invite):
+        raise InsufficientInviterPrivilegeError()
+
     if team_id is not None:
         team = await session.get(Team, team_id)
         if team is None or team.organization_id != organization_id:
             raise ValueError("Team does not exist in your organization")
 
-    # Reject cross-org takeovers up-front so admins don't waste an invite
-    # on someone they can't actually onboard.
+    # An email that already maps to a User who belongs to ANY org is already
+    # onboarded — there's nothing to invite them to. Blocking this (not just
+    # the cross-org case) closes the account-takeover vector where a can_invite
+    # user invites an existing member (e.g. the org admin) and then accepts the
+    # invite to mint a session as them.
     existing_user_stmt = select(User).where(User.email == normalized_email)
     existing_user = (await session.execute(existing_user_stmt)).scalar_one_or_none()
-    if (
-        existing_user is not None
-        and existing_user.organization_id is not None
-        and existing_user.organization_id != organization_id
-    ):
+    if existing_user is not None and existing_user.organization_id is not None:
         raise UserAlreadyInOrganizationError()
 
     # Reject duplicate open invitation for the same (org, email).
@@ -347,18 +372,24 @@ async def accept_invitation_for_email_signup(
     if user is not None:
         if user.organization_id is not None and user.organization_id != invitation.organization_id:
             raise UserAlreadyInOrganizationError()
-        # Adopt the invite. Preserve any existing password — the invite click
-        # is enough to justify the org change, but not enough to overwrite a
-        # credential the user might still rely on.
+        # Defer the heavy import so module load stays cheap.
+        from app.core.passwords import hash_password, verify_password
+
+        # Credential check BEFORE any mutation or session mint. The invite
+        # click proves inbox ownership (enough to attach the org), but if the
+        # account already has a password, we must confirm the caller actually
+        # knows it — otherwise reading an invite token would be enough to take
+        # the account over. A password-less account (Google-only) gets this
+        # first password set with no prior credential to protect.
+        if user.password_hash is None:
+            user.password_hash = hash_password(password)
+        elif not verify_password(password, user.password_hash):
+            raise InvitationPasswordMismatchError()
+        # Adopt the invite.
         user.organization_id = invitation.organization_id
         user.role = invitation.role
         user.team_id = invitation.team_id
         user.can_invite = invitation.can_invite
-        if user.password_hash is None:
-            # Defer the heavy import so module load stays cheap.
-            from app.core.passwords import hash_password
-
-            user.password_hash = hash_password(password)
         if name and name != user.name:
             user.name = name
         if not user.email_verified:

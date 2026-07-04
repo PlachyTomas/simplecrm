@@ -242,6 +242,148 @@ async def test_create_invite_requires_admin_or_can_invite(
             await s.commit()
 
 
+async def test_can_invite_nonadmin_cannot_grant_admin_role(
+    client: AsyncClient, admin_token: str
+) -> None:
+    """Regression (review P1): a non-admin holding can_invite must NOT be able
+    to mint an admin (or another can_invite) via an invitation — that would be
+    a privilege escalation past the admin-only role gate on PUT /users/{id}."""
+    from app.core.security import create_access_token
+
+    async with AsyncSessionLocal() as s:
+        org = (
+            await s.execute(select(Organization).where(Organization.name == "Inv Org"))
+        ).scalar_one()
+        delegate = User(
+            email="delegate@example.cz",
+            name="Delegate",
+            role=UserRole.salesperson,
+            organization_id=org.id,
+            can_invite=True,  # allowed to invite, but only peers
+        )
+        s.add(delegate)
+        await s.commit()
+        delegate_id = delegate.id
+        delegate_token = create_access_token(delegate.id, org.id, UserRole.salesperson)
+
+    try:
+        resp = await client.post(
+            "/api/v1/invitations",
+            json={
+                "email": "escalate@example.cz",
+                "role": "admin",
+                "team_id": None,
+                "can_invite": True,
+            },
+            headers={"Authorization": f"Bearer {delegate_token}"},
+        )
+        assert resp.status_code == 403, resp.text
+    finally:
+        async with AsyncSessionLocal() as s:
+            await s.execute(delete(User).where(User.id == delegate_id))
+            await s.commit()
+
+
+async def test_cannot_invite_email_already_in_this_org(
+    client: AsyncClient, admin_token: str
+) -> None:
+    """Regression (review P0): inviting an email that already maps to a member
+    of your own org must be rejected. Otherwise the invite-accept flow can mint
+    a session for that existing member (e.g. the org admin) = account takeover."""
+    async with AsyncSessionLocal() as s:
+        org = (
+            await s.execute(select(Organization).where(Organization.name == "Inv Org"))
+        ).scalar_one()
+        member = User(
+            email="existing-member@example.cz",
+            name="Existing Member",
+            role=UserRole.manager,
+            organization_id=org.id,
+        )
+        s.add(member)
+        await s.commit()
+        member_id = member.id
+
+    try:
+        resp = await client.post(
+            "/api/v1/invitations",
+            json={
+                "email": "existing-member@example.cz",
+                "role": "salesperson",
+                "team_id": None,
+                "can_invite": False,
+            },
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert resp.status_code in (400, 409), resp.text
+    finally:
+        async with AsyncSessionLocal() as s:
+            await s.execute(delete(User).where(User.id == member_id))
+            await s.commit()
+
+
+async def test_invite_accept_rejects_wrong_password_for_existing_credentialed_user(
+    admin_token: str,
+) -> None:
+    """Regression (review P0): accepting an invite for a user who ALREADY has a
+    password must verify that password before adopting the org + issuing a
+    session. A pre-org self-signup (org_id=None, password set) is the reachable
+    case; an arbitrary password must NOT log the attacker in as that user."""
+    from app.core.passwords import hash_password
+    from app.services.invitations import (
+        InvitationPasswordMismatchError,
+        create_invitation,
+    )
+
+    async with AsyncSessionLocal() as s:
+        org = (
+            await s.execute(select(Organization).where(Organization.name == "Inv Org"))
+        ).scalar_one()
+        admin = (
+            await s.execute(
+                select(User).where(User.organization_id == org.id, User.role == UserRole.admin)
+            )
+        ).scalars().first()
+        assert admin is not None
+        victim = User(
+            email="preorg-victim@example.cz",
+            name="Pre-org Victim",
+            role=UserRole.salesperson,
+            organization_id=None,  # self-signed-up, not yet in an org
+            password_hash=hash_password("the-real-password"),
+        )
+        s.add(victim)
+        await s.flush()
+        issued = await create_invitation(
+            s,
+            organization_id=org.id,
+            inviter=admin,
+            email="preorg-victim@example.cz",
+            role=UserRole.salesperson,
+            team_id=None,
+            can_invite=False,
+        )
+        token = issued.token
+        victim_id = victim.id
+        await s.commit()
+
+    try:
+        async with AsyncSessionLocal() as s:
+            from app.services.invitations import accept_invitation_for_email_signup
+
+            with pytest.raises(InvitationPasswordMismatchError):
+                await accept_invitation_for_email_signup(
+                    s, token=token, password="attacker-guess", name="Attacker"
+                )
+    finally:
+        async with AsyncSessionLocal() as s:
+            from app.db.models import Invitation
+
+            await s.execute(delete(Invitation).where(Invitation.email == "preorg-victim@example.cz"))
+            await s.execute(delete(User).where(User.id == victim_id))
+            await s.commit()
+
+
 async def test_invite_returns_422_when_seat_limit_reached(
     client: AsyncClient,
 ) -> None:
