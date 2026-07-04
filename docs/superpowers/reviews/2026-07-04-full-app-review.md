@@ -311,6 +311,19 @@ re-verified the two highest-impact ones by hand and tag the remainder
 UNVERIFIED for triage. 2 findings were correctly refuted (recorded so they
 aren't re-raised).
 
+> **FIX STATUS (branch `fix/review-p0-p1-security-payments`):** Initial
+> double-charge and VAT overstatement below are **FIXED** with regression
+> tests (669/669 green). (1) `initial_payment_init` now 409s when the sub is
+> already active or a paid initial charge exists, and `apply_initial_payment_
+> success` is idempotent (early-returns if already active) so a duplicate
+> webhook can't re-anchor the period. Residual: two *simultaneous* pre-
+> activation tabs both completing still double-captures at ComGate — needs a
+> pending-charge dedup (product decision on retry UX), left as follow-up.
+> (2) `_build_lines_for_charge` now back-calculates net+VAT out of the gross
+> ComGate collected, so the invoice total equals the money taken. **Seat-
+> upgrade money-loss (commit-before-charge) is NOT yet fixed** — needs
+> transaction reordering; still open.
+
 ### CONFIRMED (adversarially verified)
 
 - [P1] backend/app/api/v1/payments.py:330-350 (+ comgate.py:338) — **Seat-

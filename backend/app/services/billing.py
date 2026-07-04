@@ -587,6 +587,13 @@ async def apply_initial_payment_success(
     if plan_code not in {"monthly", "annual"}:
         raise BillingError(f"plan_code must be 'monthly' or 'annual', got {plan_code!r}")
     sub = await get_current_subscription(session, org_id)
+    # Idempotency (review R2 P1): if a prior initial webhook already activated
+    # this subscription, a second in-flight webhook must not re-anchor the
+    # period (which would silently grant an extra billing period). The Charge
+    # row is still marked paid by the caller; only the state transition is
+    # skipped.
+    if sub.status == "active":
+        return sub
     plan = await _load_plan_by_code(session, plan_code)
     months = _PLAN_PERIOD_MONTHS[plan_code]
     assert months is not None  # noqa: S101 — type-narrowing for mypy after the {monthly,annual} guard

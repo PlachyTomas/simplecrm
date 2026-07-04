@@ -259,6 +259,26 @@ async def test_webhook_missing_transid_is_400(client: AsyncClient, comgate_statu
 # ---------------------------------------------------------------------------
 
 
+async def test_initial_payment_init_rejects_when_already_active(
+    client: AsyncClient,
+    owned_payments_emails: list[str],
+) -> None:
+    """Regression (review R2 P1): an org whose subscription is already active
+    must not be able to start another initial payment — that would double-charge
+    the card and issue a duplicate tax invoice."""
+    async with AsyncSessionLocal() as session:
+        _org, admin, _sub = await _seed_active_org_with_card(session, owned_payments_emails)
+        token = create_access_token(admin.id, admin.organization_id, UserRole.admin)
+
+    resp = await client.post(
+        "/api/v1/payments/initial-payment-init",
+        json={"plan_code": "monthly"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["detail"]["code"] == "already_active"
+
+
 async def test_webhook_initial_paid_promotes_to_active(
     client: AsyncClient,
     owned_payments_emails: list[str],

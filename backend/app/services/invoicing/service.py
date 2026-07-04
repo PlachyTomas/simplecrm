@@ -486,7 +486,6 @@ class InvoiceService:
         unit price = charge.amount_minor // seats (defends against zero
         seats if the column is malformed)."""
         seats = charge.seats or 1
-        unit_price_minor = charge.amount_minor // max(seats, 1)
         plan_label = plan.display_name_cs if plan else charge.kind
         period_str = ""
         if charge.period_starts_at and charge.period_ends_at:
@@ -500,14 +499,34 @@ class InvoiceService:
         else:
             description = f"SimpleCRM, plán {plan_label}, {seats} {_user_word(seats)}{period_str}"
 
-        line_in = ManualLineIn(
-            description=description,
-            quantity=Decimal(seats),
-            unit_price_minor=unit_price_minor,
-            unit_label="uživatel",
-            vat_rate_percent=None,  # use BillingSettings default
-        )
-        return [self._materialise_line(line_in, billing, position=1)]
+        # `charge.amount_minor` is the GROSS the customer already paid via
+        # ComGate — VAT is NOT added on top of it (review R2 P1). When the
+        # seller is a VAT payer we back-calculate the net base and VAT out of
+        # that gross so the invoice total equals the money collected; adding
+        # VAT on top would overstate the total by the VAT rate. When not a VAT
+        # payer, net == gross and VAT == 0 (unchanged behaviour).
+        gross = charge.amount_minor
+        rate = billing.vat_rate_percent if billing.is_vat_payer else Decimal("0.00")
+        if billing.is_vat_payer and rate > 0:
+            net_base = int(
+                (Decimal(gross) / (Decimal(1) + rate / Decimal(100))).to_integral_value()
+            )
+        else:
+            net_base = gross
+        vat = gross - net_base
+        return [
+            InvoiceLine(
+                position=1,
+                description=description,
+                quantity=Decimal(seats),
+                unit_label="uživatel",
+                unit_price_minor=net_base // max(seats, 1),
+                vat_rate_percent=rate,
+                line_subtotal_minor=net_base,
+                line_vat_minor=vat,
+                line_total_minor=gross,
+            )
+        ]
 
     @staticmethod
     def _materialise_line(

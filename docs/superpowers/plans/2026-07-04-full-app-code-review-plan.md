@@ -88,9 +88,11 @@ afterwards in separate batches.
       ceiling in `create_invitation`). Same commit as P0.
 - [ ] P1 R2 seat-upgrade money-loss (commit-before-charge ordering) — TODO,
       higher risk (transaction restructuring).
-- [ ] P1 R2 initial-charge double-charge (dedup guard) — TODO.
-- [ ] P1 R2 VAT overstatement (back-calculate net from gross) — TODO, needs
-      careful money-rounding + tests.
+- [x] P1 R2 initial-charge double-charge — FIXED (active-guard + paid-charge
+      guard + idempotent settlement). Residual: simultaneous-tabs double-
+      capture needs pending-charge dedup (product call). Test added.
+- [x] P1 R2 VAT overstatement — FIXED (back-calculate net+VAT from gross in
+      `_build_lines_for_charge`). Regression test asserts total == gross.
 - [ ] P2/P3 remainder — TODO; re-verify the unverified R2 billing P3s first.
 
 ## User decisions (locked 2026-07-04)

@@ -25,6 +25,7 @@ from app.db.models import (
     Charge,
     Invoice,
     InvoiceAuditLog,
+    InvoiceLine,
     Organization,
 )
 from app.db.session import AsyncSessionLocal
@@ -183,6 +184,46 @@ async def test_issue_for_charge_creates_issued_invoice_with_audit_trail(
         )
         # `allocated`, `pdf_stored`, `issued` — the standard issuance trio.
         assert set(events) >= {"allocated", "pdf_stored", "issued"}
+
+
+async def test_issue_for_charge_vat_payer_totals_match_gross_collected(
+    cleanup_orgs: list[uuid.UUID], tmp_path: Path
+) -> None:
+    """Regression (review R2 P1): for a ComGate charge the amount is the GROSS
+    the customer already paid. When the seller is a VAT payer the invoice must
+    back-calculate net + VAT out of that gross — total must equal the money
+    collected, NOT gross * 1.21."""
+    async with AsyncSessionLocal() as s:
+        await _configure_issuer(s)
+        await s.execute(
+            update(BillingSettings).values(is_vat_payer=True, vat_rate_percent=Decimal("21.00"))
+        )
+        await s.commit()
+    try:
+        async with AsyncSessionLocal() as s:
+            org, charge = await _make_org_and_charge(s)  # amount_minor = 99_900
+            cleanup_orgs.append(org.id)
+
+        async with AsyncSessionLocal() as s:
+            svc = InvoiceService(storage=_local_storage(tmp_path))
+            invoice = await svc.issue_for_charge(s, charge)
+            lines = (
+                (await s.execute(select(InvoiceLine).where(InvoiceLine.invoice_id == invoice.id)))
+                .scalars()
+                .all()
+            )
+        assert len(lines) == 1
+        line = lines[0]
+        # 99_900 gross @ 21% → net 82_562 + vat 17_338 = 99_900 (money collected).
+        assert line.line_total_minor == 99_900
+        assert line.line_subtotal_minor == 82_562
+        assert line.line_vat_minor == 17_338
+        assert line.line_subtotal_minor + line.line_vat_minor == charge.amount_minor
+    finally:
+        # Restore the shared singleton so VAT doesn't leak into other tests.
+        async with AsyncSessionLocal() as s:
+            await s.execute(update(BillingSettings).values(is_vat_payer=False))
+            await s.commit()
 
 
 async def test_issue_for_charge_uses_billing_name_when_set(

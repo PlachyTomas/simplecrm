@@ -132,6 +132,30 @@ async def initial_payment_init(
             detail="Comp subscriptions are managed by support.",
         )
 
+    # Guard against re-charging an already-activated org (review R2 P1). An
+    # active subscription or an already-paid initial charge means activation
+    # already happened; a second initial payment would double-charge the card
+    # and issue a duplicate tax invoice.
+    if sub.status == "active":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "already_active", "detail": "Předplatné je již aktivní."},
+        )
+    already_paid = (
+        await session.execute(
+            select(Charge.id).where(
+                Charge.organization_id == org_id,
+                Charge.kind == "initial",
+                Charge.status == "paid",
+            )
+        )
+    ).first()
+    if already_paid is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "already_active", "detail": "Aktivační platba již proběhla."},
+        )
+
     plan = await billing._load_plan_by_code(session, payload.plan_code)
     if plan.price_per_user_minor is None:
         raise HTTPException(
