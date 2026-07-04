@@ -121,13 +121,24 @@ lint-clean, across 11 commits on `fix/review-p0-p1-security-payments`.
 - [x] Security headers (R5 P3) — FIXED (middleware).
 - [x] pnpm field (R7 P3) — resolved (pnpm-workspace.yaml committed).
 
-## Still open (lower value / need verification or decisions)
-- GDPR: revoke Google tokens at Google (best-effort network call) — our stored
-  copies are deleted; revocation-at-source is a follow-up.
-- Unverified R2 billing P3s: deferred-cancel gates immediately; dunning
-  lockout-flap — re-verify then fix.
-- P3 tail: activity-type label on reassign (R4), PII (email) in scheduler logs
-  (R8), unauth charge-status oracle (R1).
+## Third fix batch (branch `fix/review-p3-tail`) — verified on Fable 5
+- [x] Unverified R2 billing P3s re-verified (both real) & FIXED: deferred
+      super-admin cancel now rejects a future effective_at; dunning-flap fixed
+      by giving an 'active'-but-period-ended sub the same 7-day grace as
+      past_due (so access doesn't flap off then on).
+- [x] Reassign activity label (R4 P3) — FIXED (ownership_reassigned).
+- [x] PII in scheduler logs (R8 P3) — FIXED (log user id, not email).
+- [x] Unauth charge-status oracle (R1 P3) — FIXED (return route no longer
+      reflects DB status; always `pending`).
+- [x] GDPR revoke Google tokens at source (R3 P2) — FIXED (best-effort revoke
+      on erasure before deleting the connection rows).
+
+## ALL REVIEW FINDINGS RESOLVED (2026-07-04)
+Every P0/P1/P2/P3 from the review is fixed, tested, and on `main`. Backend
+689/689, frontend 140/140, both lint-clean. Only remaining follow-up (a genuine
+enhancement, not a finding): the manager no-filter org-wide aggregate in reports
+still needs a visibility scope threaded through the 12 compute functions — a
+refactor, tracked separately.
 
 ## User decisions (locked 2026-07-04)
 
