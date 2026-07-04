@@ -22,6 +22,14 @@ async def test_healthz_happy_path(client: AsyncClient) -> None:
     assert response.headers["content-type"].startswith("application/json")
 
 
+async def test_responses_carry_security_headers(client: AsyncClient) -> None:
+    # Review R5 P3: baseline security headers on every response.
+    response = await client.get("/api/v1/healthz")
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["x-frame-options"] == "DENY"
+    assert response.headers["referrer-policy"] == "strict-origin-when-cross-origin"
+
+
 async def test_healthz_method_not_allowed(client: AsyncClient) -> None:
     response = await client.post("/api/v1/healthz")
     assert response.status_code == 405

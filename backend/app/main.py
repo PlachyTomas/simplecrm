@@ -83,6 +83,23 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    is_prod = settings.app_env != "dev"
+
+    @app.middleware("http")
+    async def _security_headers(request, call_next):  # type: ignore[no-untyped-def]
+        """Baseline security headers (review R5 P3). This app sets an httponly
+        refresh cookie, so hardening the responses is worthwhile even for a JSON
+        API. HSTS is only sent in non-dev (prod is HTTPS; dev is plain http)."""
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        if is_prod:
+            response.headers.setdefault(
+                "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+            )
+        return response
+
     app.include_router(api_router, prefix=settings.api_v1_prefix)
     return app
 
