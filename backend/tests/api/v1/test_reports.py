@@ -494,6 +494,35 @@ async def test_team_leaderboard_scopes_to_managed_teams_for_manager(
     assert Decimal(rows[0]["won_value"]) == Decimal("250")
 
 
+async def test_widget_rejects_manager_drilling_into_unmanaged_team(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    # Review R1 P2: a manager may query a widget for a team they manage, but
+    # not drill into another team's (or rep's) metrics via team_id/owner_user_id.
+    org, _admin, _open_stage, _won_stage, _company = await _setup(db_session, owned_cleanup)
+    manager_email = f"mgrw-{uuid.uuid4().hex[:6]}@ex.cz"
+    owned_cleanup["emails"].append(manager_email)
+    manager = User(
+        email=manager_email, name="MgrW", role=UserRole.manager, organization_id=org.id
+    )
+    db_session.add(manager)
+    await db_session.commit()
+    await db_session.refresh(manager)
+
+    managed = Team(organization_id=org.id, name="MgrWManaged", manager_user_id=manager.id)
+    other = Team(organization_id=org.id, name="MgrWOther")
+    db_session.add_all([managed, other])
+    await db_session.commit()
+    await db_session.refresh(managed)
+    await db_session.refresh(other)
+
+    base = "/api/v1/reports/widgets/pipeline-value?from=2026-01-01&to=2026-12-31"
+    ok = await client.get(f"{base}&team_id={managed.id}", headers=_auth(manager))
+    assert ok.status_code == 200, ok.text
+    denied = await client.get(f"{base}&team_id={other.id}", headers=_auth(manager))
+    assert denied.status_code == 404, denied.text
+
+
 async def test_team_leaderboard_blocked_for_salesperson_when_toggle_off(
     client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
 ) -> None:

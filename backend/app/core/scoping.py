@@ -72,6 +72,48 @@ async def scope_by_owner(
     return stmt.where(or_(owner_col.in_(visible_ids), owner_col.is_(None)))
 
 
+async def assert_report_scope(
+    session: AsyncSession,
+    user: User,
+    *,
+    team_id: uuid.UUID | None,
+    owner_user_id: uuid.UUID | None,
+) -> None:
+    """Reject caller-supplied report filters that reach outside the caller's
+    visibility (review R1 P2).
+
+    The report/widget/export endpoints accept `team_id` / `owner_user_id`
+    filters and forward them to the compute layer, which only scopes by
+    `organization_id`. Without this guard a manager could pass another team's id
+    (or another team's rep's id) and read that team's deal-level and per-rep
+    metrics. Admins are unrestricted; managers/salespeople may only reference a
+    team they manage / belong to and an owner within their team scope.
+    """
+    if user.role is UserRole.admin:
+        return
+    from fastapi import HTTPException, status
+
+    from app.db.models import Team
+
+    if team_id is not None:
+        team = await session.get(Team, team_id)
+        visible = (
+            team is not None
+            and team.organization_id == user.organization_id
+            and (
+                (user.role is UserRole.manager and team.manager_user_id == user.id)
+                or (user.role is UserRole.salesperson and user.team_id == team_id)
+            )
+        )
+        if not visible:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+
+    if owner_user_id is not None and owner_user_id not in set(
+        await team_member_ids(session, user)
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+
 async def can_write_row(
     session: AsyncSession,
     user: User,

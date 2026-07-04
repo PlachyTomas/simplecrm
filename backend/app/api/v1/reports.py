@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, require_leaderboard_visibility, require_role
-from app.core.scoping import scope_by_owner
+from app.core.scoping import assert_report_scope, scope_by_owner
 from app.db import get_db
 from app.db.models import Company, Deal, Organization, Stage, Team, User
 from app.db.models.enums import StageType, UserRole
@@ -666,6 +666,11 @@ async def export_widgets_csv(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="`to` must be on or after `from`",
         )
+    # Reject filters outside the caller's team/rep visibility (review R1 P2) —
+    # same guard the widget endpoints get at the router level.
+    await assert_report_scope(
+        session, user, team_id=payload.team_id, owner_user_id=payload.owner_user_id
+    )
 
     body = await render_widget_csv(
         session,

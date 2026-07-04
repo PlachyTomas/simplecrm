@@ -24,7 +24,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import require_role
+from app.core.deps import get_current_user, require_role
+from app.core.scoping import assert_report_scope
 from app.db import get_db
 from app.db.models import User
 from app.db.models.enums import UserRole
@@ -73,9 +74,28 @@ from app.services.reports.sales_leaderboard import compute_sales_leaderboard
 from app.services.reports.stale_deals import compute_stale_deals
 from app.services.reports.win_rate import compute_win_rate
 
+
+async def _enforce_widget_scope(
+    team_id: UUID | None = Query(default=None),
+    owner_user_id: UUID | None = Query(default=None),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    """Router-level guard: reject a caller drilling into a team/rep outside
+    their visibility (review R1 P2). Applies to every widget endpoint, which
+    all accept the same `team_id` / `owner_user_id` query params."""
+    await assert_report_scope(
+        session, user, team_id=team_id, owner_user_id=owner_user_id
+    )
+
+
 # Mounted under /reports in routes.py — leading slash here makes the
 # resulting paths /reports/widgets/<name>.
-router = APIRouter(prefix="/reports/widgets", tags=["reports"])
+router = APIRouter(
+    prefix="/reports/widgets",
+    tags=["reports"],
+    dependencies=[Depends(_enforce_widget_scope)],
+)
 
 
 def _validate_window(from_: date, to: date) -> None:
