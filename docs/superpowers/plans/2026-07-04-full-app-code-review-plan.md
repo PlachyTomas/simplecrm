@@ -112,15 +112,22 @@ afterwards in separate batches.
 ALL decided + autonomous fixes DONE. Backend 682/682, frontend 140/140, both
 lint-clean, across 11 commits on `fix/review-p0-p1-security-payments`.
 
-## Still open (deliberately not done — need decisions or are lower value)
-- Manager cross-team report leak (R1 P2) + team-annex (R1 P2) — need a scoping
-  design pass; larger than the other fixes.
+## Second fix batch (branch `fix/review-p2-reports-scoping`)
+- [x] Manager cross-team report leak (R1 P2) — FIXED (assert_report_scope on
+      widgets router + export-csv). Residual: no-filter org-wide aggregate for
+      managers still needs a scope threaded through the 12 compute fns.
+- [x] Team-annex (R1 P2) — FIXED (manager can't pull another team's members).
+- [x] `_add_months` 360-day annual overcharge (R2 P3) — FIXED (calendar math).
+- [x] Security headers (R5 P3) — FIXED (middleware).
+- [x] pnpm field (R7 P3) — resolved (pnpm-workspace.yaml committed).
+
+## Still open (lower value / need verification or decisions)
 - GDPR: revoke Google tokens at Google (best-effort network call) — our stored
-  copies are now deleted; revocation-at-source is a follow-up.
-- Unverified R2 billing P3s (deferred-cancel, dunning-flap, `_add_months`
-  360-day) — re-verify then fix.
-- P3 tail: security headers (R5), activity-type label (R4), PII in logs (R8),
-  charge-status oracle (R1), pnpm field (R7).
+  copies are deleted; revocation-at-source is a follow-up.
+- Unverified R2 billing P3s: deferred-cancel gates immediately; dunning
+  lockout-flap — re-verify then fix.
+- P3 tail: activity-type label on reassign (R4), PII (email) in scheduler logs
+  (R8), unauth charge-status oracle (R1).
 
 ## User decisions (locked 2026-07-04)
 
