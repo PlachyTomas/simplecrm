@@ -185,6 +185,19 @@ batch call — six calls):
 - Modify: `design/app-brand.pen` → `B3 v aplikaci`
 - Reference (read-only, for fidelity): `frontend/src/app/Sidebar.tsx`,
   `frontend/src/app/AppShell.tsx`, `frontend/src/auth/LoginPage.tsx`
+- Visual ground truth (older but real): `qa-artifacts/post-create-org-dashboard.png`
+  (app shell: sidebar "PRODEJ" + Přehled/Pipeline/Firmy/Kontakty/Obchody/
+  Reporty, bottom Nastavení/Odhlásit se + theme toggle; topbar = org name +
+  trial line left, user block right) and
+  `qa-artifacts/2026-04-28/snapshots/03-login-1280.png` (login = centered card,
+  magenta tile w/ sparkles placeholder, "Vítejte v SimpleCRM", indigo
+  "Přihlásit se přes Google" button). These PNGs are from 2026-04/05 and may
+  be stale: BEFORE building mocks, verify them against current code (nav
+  items/order in `Sidebar.tsx`, login copy/structure in `LoginPage.tsx`,
+  topbar in `AppShell.tsx`). If drifted, capture fresh ground truth via
+  `pnpm dev` + `pnpm exec playwright` CLI screenshots (playwright MCP exposes
+  no tools on this host — see memory `local-toolchain`). Code wins where any
+  screenshot disagrees.
 
 **Interfaces:**
 - Consumes: shortlist note from P4; marks/lockups from P2.
@@ -193,10 +206,10 @@ batch call — six calls):
   from `Sidebar.tsx` (read the file first; include icons as simple 18 px
   placeholders), topbar, empty content area with page title; (2) mobile
   topbar strip 390×64 with solo mark replacing today's Sparkles; (3) login
-  card 390×520 per `LoginPage.tsx` structure ("Přihlášení do SimpleCRM",
-  e-mail + password fields, indigo primary button) with lockup above the
-  title. Dark theme primary; one light-theme duplicate of the desktop frame
-  for the leading candidate only.
+  card ~450×560 per the real login (see QA screenshot): candidate mark tile
+  replacing the sparkles tile, "Vítejte v SimpleCRM" title, subtitle, indigo
+  "Přihlásit se přes Google" button. Dark theme primary; one light-theme
+  duplicate of the desktop frame for the leading candidate only.
 
 - [ ] **Step 1:** Read the three frontend files; extract nav labels, order,
       login copy. Build ONE un-branded template frame set (desktop, mobile

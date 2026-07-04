@@ -24,6 +24,264 @@
           "fontFamily": "JetBrains Mono",
           "fontSize": 20,
           "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "x5igWh",
+          "x": 40,
+          "y": 80,
+          "name": "type-specimen",
+          "fill": "#FFFFFF",
+          "cornerRadius": 12,
+          "layout": "vertical",
+          "gap": 28,
+          "padding": 32,
+          "children": [
+            {
+              "type": "frame",
+              "id": "B6JOTi",
+              "name": "row Inter",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Z8dMY",
+                  "name": "label Inter",
+                  "fill": "#6B6B76",
+                  "content": "inter",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "JKvQk",
+                  "name": "wordmark Inter",
+                  "fill": "$app-ink",
+                  "content": "SimpleCRM",
+                  "fontFamily": "Inter",
+                  "fontSize": 64,
+                  "fontWeight": "800"
+                },
+                {
+                  "type": "text",
+                  "id": "fG3ug",
+                  "name": "glyphs Inter",
+                  "fill": "$app-text-sec-light",
+                  "content": "ěščřžýáíéůú ĚŠČŘŽÝÁÍÉŮÚ abcdefg 0123456789",
+                  "fontFamily": "Inter",
+                  "fontSize": 20,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Oq7Q8",
+              "name": "row Space Grotesk",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "mumK3",
+                  "name": "label Space Grotesk",
+                  "fill": "#6B6B76",
+                  "content": "space grotesk",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "eAEDk",
+                  "name": "wordmark Space Grotesk",
+                  "fill": "$app-ink",
+                  "content": "SimpleCRM",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 64,
+                  "fontWeight": "800"
+                },
+                {
+                  "type": "text",
+                  "id": "s9XFT",
+                  "name": "glyphs Space Grotesk",
+                  "fill": "$app-text-sec-light",
+                  "content": "ěščřžýáíéůú ĚŠČŘŽÝÁÍÉŮÚ abcdefg 0123456789",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 20,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "RBGuJ",
+              "name": "row Sora",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "qq4zs",
+                  "name": "label Sora",
+                  "fill": "#6B6B76",
+                  "content": "sora",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "HQkeS",
+                  "name": "wordmark Sora",
+                  "fill": "$app-ink",
+                  "content": "SimpleCRM",
+                  "fontFamily": "Sora",
+                  "fontSize": 64,
+                  "fontWeight": "800"
+                },
+                {
+                  "type": "text",
+                  "id": "iHAJa",
+                  "name": "glyphs Sora",
+                  "fill": "$app-text-sec-light",
+                  "content": "ěščřžýáíéůú ĚŠČŘŽÝÁÍÉŮÚ abcdefg 0123456789",
+                  "fontFamily": "Sora",
+                  "fontSize": 20,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "FdLde",
+              "name": "row Manrope",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Ah51O",
+                  "name": "label Manrope",
+                  "fill": "#6B6B76",
+                  "content": "manrope",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "GlRDw",
+                  "name": "wordmark Manrope",
+                  "fill": "$app-ink",
+                  "content": "SimpleCRM",
+                  "fontFamily": "Manrope",
+                  "fontSize": 64,
+                  "fontWeight": "800"
+                },
+                {
+                  "type": "text",
+                  "id": "c4FRDe",
+                  "name": "glyphs Manrope",
+                  "fill": "$app-text-sec-light",
+                  "content": "ěščřžýáíéůú ĚŠČŘŽÝÁÍÉŮÚ abcdefg 0123456789",
+                  "fontFamily": "Manrope",
+                  "fontSize": 20,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "WbxnC",
+              "name": "row Bricolage Grotesque",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "axUTw",
+                  "name": "label Bricolage Grotesque",
+                  "fill": "#6B6B76",
+                  "content": "bricolage grotesque",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "lQuch",
+                  "name": "wordmark Bricolage Grotesque",
+                  "fill": "$app-ink",
+                  "content": "SimpleCRM",
+                  "fontFamily": "Bricolage Grotesque",
+                  "fontSize": 64,
+                  "fontWeight": "800"
+                },
+                {
+                  "type": "text",
+                  "id": "Vas5C",
+                  "name": "glyphs Bricolage Grotesque",
+                  "fill": "$app-text-sec-light",
+                  "content": "ěščřžýáíéůú ĚŠČŘŽÝÁÍÉŮÚ abcdefg 0123456789",
+                  "fontFamily": "Bricolage Grotesque",
+                  "fontSize": 20,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Y9zqvh",
+              "name": "row Instrument Sans",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "H7y8f5",
+                  "name": "label Instrument Sans",
+                  "fill": "#6B6B76",
+                  "content": "instrument sans",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "qaNNv",
+                  "name": "wordmark Instrument Sans",
+                  "fill": "$app-ink",
+                  "content": "SimpleCRM",
+                  "fontFamily": "Instrument Sans",
+                  "fontSize": 64,
+                  "fontWeight": "800"
+                },
+                {
+                  "type": "text",
+                  "id": "Js9ds",
+                  "name": "glyphs Instrument Sans",
+                  "fill": "$app-text-sec-light",
+                  "content": "ěščřžýáíéůú ĚŠČŘŽÝÁÍÉŮÚ abcdefg 0123456789",
+                  "fontFamily": "Instrument Sans",
+                  "fontSize": 20,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "note",
+          "id": "CVklY",
+          "x": 760,
+          "y": 80,
+          "name": "fonts-note",
+          "width": 420,
+          "height": 120,
+          "content": "fonts: Inter, Space Grotesk, Sora, Manrope, Bricolage Grotesque, Instrument Sans — all render w/ diacritics OK (P1 verified)"
         }
       ]
     },
