@@ -47,7 +47,15 @@ Source of truth: `frontend/src/theme/tokens.css`.
 
 1. **Logo exploration** — 6 distinct candidates, each shown as: full lockup
    (mark + wordmark), solo mark, on dark AND light, plus a 16 px favicon-size
-   legibility row. Candidate directions:
+   legibility row. **Typeface is part of the exploration** (user decision
+   2026-07-04): the wordmark is NOT fixed to Inter — candidates spread across
+   4–6 distinct typefaces (e.g. Inter as baseline, plus geometric-grotesque,
+   humanist, display-serif or rounded options such as Space Grotesk, Sora,
+   Manrope, Clash/General Sans-alikes available to Pencil). A small
+   **type-specimen row** shows `SimpleCRM` set in every explored typeface so
+   font and mark can be judged separately. Any font that could later leak into
+   app UI must support Czech diacritics (ěščřžýáíéůú) — verify in specimen.
+   Candidate directions:
    - A `jiskra` — geometric evolution of the current Sparkles placeholder into
      an ownable 4-point spark.
    - B `dlaždice S` — "S" monogram in a rounded-square tile (app-icon-like).
