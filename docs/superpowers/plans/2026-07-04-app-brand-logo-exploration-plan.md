@@ -223,6 +223,17 @@ batch call — six calls):
       must not restyle the app).
 - [ ] **Step 5:** Commit `design-batch: P5 app context mocks (<shortlist>)`.
 
+> **STATUS 2026-07-04 (end of session):** P0–P5 done (commits `design-batch: P0…P5b`).
+> B1 has TEN candidates: A–F (round 1) + row 3 "kolo 2" G pipeline/H schody/
+> I spojení/J dvoubarva (round 2, added after user's "too AI" critique +
+> web research: 2026 = typography-driven marks, no sparkles/icon-tiles).
+> D tečka won round 1 and has full B3 mocks (as does A jiskra); B4 brand sheet
+> for D is BUILT but the win is now REOPENED pending round-2 comparison.
+> NEXT: user picks direction (Claude recommended J+I system) → mock it on B3 →
+> re-confirm winner → redo/keep B4 sheet → P6 refs export (was interrupted).
+> Pencil gotcha found: renderer goes stale mid-session — new nodes screenshot
+> blank until `code design/app-brand.pen` refocuses the document.
+
 ### Task P6: Winner brand sheet + refs export
 
 **Files:**
