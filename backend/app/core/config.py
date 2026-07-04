@@ -1,6 +1,9 @@
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_DEFAULT_JWT_SECRET = "dev-secret-change-me-in-prod"  # noqa: S105
 
 
 class Settings(BaseSettings):
@@ -20,7 +23,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:5173"]
 
     # JWT / session. Override via env in any non-dev deployment.
-    jwt_secret: str = "dev-secret-change-me-in-prod"  # noqa: S105
+    jwt_secret: str = _DEFAULT_JWT_SECRET
     jwt_algorithm: str = "HS256"
     access_token_ttl_minutes: int = 60
     refresh_token_ttl_days: int = 30
@@ -107,6 +110,18 @@ class Settings(BaseSettings):
     s3_secret_access_key: str = ""
     s3_region: str = "fsn1"  # Hetzner Falkenstein default
     invoice_storage_local_root: str = "var"
+
+    @model_validator(mode="after")
+    def _require_strong_secret_in_prod(self) -> "Settings":
+        """Fail fast when a non-dev deployment forgets to set JWT_SECRET (review
+        R1/R8 P2). The default (or an empty string from an unset compose var)
+        signs every JWT and itsdangerous token, so leaving it in production is a
+        total auth bypass — refuse to boot instead of running insecure."""
+        if self.app_env != "dev" and self.jwt_secret in ("", _DEFAULT_JWT_SECRET):
+            raise ValueError(
+                "JWT_SECRET must be set to a strong, non-default value when APP_ENV != 'dev'."
+            )
+        return self
 
 
 @lru_cache

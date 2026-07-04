@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -128,8 +128,15 @@ async def reassign_company(
     company: Company,
     new_owner_id: uuid.UUID,
     released_by: uuid.UUID,
+    window_days: int = 365,
 ) -> None:
-    """Transfer ownership to a new user and record the change in history."""
+    """Transfer ownership to a new user and record the change in history.
+
+    Resets the ownership clock (review R4 P2): the new owner gets a fresh
+    `window_days` window, matching creation and deal-win. Without this the new
+    owner inherited the previous owner's (possibly already-expired) expiry and
+    could be auto-freed by the nightly sweep before working the company.
+    """
     now = datetime.now(tz=UTC)
     if company.owner_user_id is not None:
         await _record_release(
@@ -144,4 +151,5 @@ async def reassign_company(
         )
     )
     company.owner_user_id = new_owner_id
+    company.ownership_expires_at = now + timedelta(days=window_days)
     await session.commit()

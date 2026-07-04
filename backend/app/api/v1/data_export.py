@@ -12,7 +12,6 @@ with the existing OpenAPI types and frontend `buildExportCsvUrl`.
 
 from __future__ import annotations
 
-import csv
 import io
 from datetime import UTC, date, datetime, time
 
@@ -21,6 +20,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.csv_safety import SafeCsvWriter
 from app.core.deps import get_current_user
 from app.core.scoping import scope_by_owner
 from app.db import get_db
@@ -84,7 +84,7 @@ async def export_deals_csv(
     scoped = await scope_by_owner(stmt, session=session, user=user, owner_col=Deal.owner_user_id)
 
     buffer = io.StringIO()
-    writer = csv.writer(buffer)
+    writer = SafeCsvWriter(buffer)
     writer.writerow(
         [
             "id",

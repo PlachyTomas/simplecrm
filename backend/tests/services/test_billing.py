@@ -379,6 +379,21 @@ async def test_cancel_marks_canceled_and_audits(db_session: AsyncSession) -> Non
     assert any(a.payload.get("action") == "cancel" for a in activities)
 
 
+async def test_cancel_clears_comp_flag_and_revokes_access(db_session: AsyncSession) -> None:
+    # Review R2 P2: canceling a comp org must clear is_comp, else
+    # is_app_access_allowed short-circuits comp → access forever.
+    org, admin = await _seed_org_with_trial(db_session)
+    sub = await billing.get_current_subscription(db_session, org.id)
+    sub.is_comp = True
+    sub.comp_reason = "barter"
+    await db_session.flush()
+
+    canceled = await billing.cancel(db_session, org_id=org.id, by_admin_id=admin.id)
+    assert canceled.status == "canceled"
+    assert canceled.is_comp is False
+    assert billing.is_app_access_allowed(canceled) is False
+
+
 async def test_extend_trial_pushes_dates(db_session: AsyncSession) -> None:
     org, admin = await _seed_org_with_trial(db_session)
     before_trial_ends = org.trial_ends_at

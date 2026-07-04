@@ -560,11 +560,13 @@ async def reassign_company_endpoint(
             detail="new_owner_user_id does not exist in your organization",
         )
     await _assert_owner_cap(session, payload.new_owner_user_id, excluding_company_id=company.id)
+    window_days = user.organization.ownership_window_days if user.organization else 365
     await reassign_company(
         session,
         company=company,
         new_owner_id=payload.new_owner_user_id,
         released_by=user.id,
+        window_days=window_days,
     )
     await session.refresh(company)
     return await _build_out(session, company)

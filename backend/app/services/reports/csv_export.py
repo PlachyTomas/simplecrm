@@ -12,7 +12,6 @@ one value row. Charts / lists render their items as rows.
 
 from __future__ import annotations
 
-import csv
 import io
 from datetime import date
 from decimal import Decimal
@@ -21,6 +20,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.csv_safety import SafeCsvWriter
 from app.schemas.reports import (
     AvgDealSizeConfig,
     CompaniesAtRiskConfig,
@@ -90,7 +90,7 @@ async def render_widget_csv(
 ) -> bytes:
     """Build the multi-section CSV. UTF-8 with BOM."""
     buffer = io.StringIO()
-    writer = csv.writer(buffer)
+    writer = SafeCsvWriter(buffer)
 
     common = {
         "session": session,

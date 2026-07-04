@@ -175,6 +175,9 @@ async def test_reassign_company_transfers_and_records_history() -> None:
         refreshed = await check.get(Company, company_id)
         assert refreshed is not None
         assert refreshed.owner_user_id == new_owner_id
+        # Review R4 P2: reassignment resets the ownership clock, so the new owner
+        # gets a fresh window and isn't auto-freed on the next nightly sweep.
+        assert refreshed.ownership_expires_at > datetime.now(tz=UTC) + timedelta(days=300)
 
         history = (
             (

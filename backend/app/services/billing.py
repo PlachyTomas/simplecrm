@@ -448,6 +448,11 @@ async def cancel(
     sub = await get_current_subscription(session, org_id)
     sub.status = "canceled"
     sub.canceled_at = effective_at or datetime.now(tz=UTC)
+    # Clear the comp flag on cancel (review R2 P2). is_app_access_allowed
+    # short-circuits is_comp=True to full access BEFORE checking status, so a
+    # canceled comp org would otherwise keep unrestricted access forever.
+    sub.is_comp = False
+    sub.comp_reason = None
 
     await _audit(
         session,
