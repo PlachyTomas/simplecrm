@@ -307,8 +307,14 @@ function Hero() {
             "linear-gradient(to bottom, transparent 0, black 12%, black 78%, transparent 100%)",
         }}
       >
-        <div className="absolute -bottom-32 -left-32 h-[28rem] w-[28rem] rounded-full bg-accent/30 blur-3xl" />
-        <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-brand-accent/20 blur-3xl" />
+        <div className="animate-hero-drift-a absolute -bottom-32 -left-32 h-[28rem] w-[28rem] rounded-full bg-accent/30 blur-3xl" />
+        <div className="animate-hero-drift-b absolute -right-32 -top-32 h-96 w-96 rounded-full bg-brand-accent/20 blur-3xl" />
+        {/* Third, quieter glow on the upper-left, desynced so the trio never
+            moves in lockstep — fills the otherwise empty left side. */}
+        <div
+          className="animate-hero-drift-a absolute -top-16 left-[12%] h-80 w-80 rounded-full bg-brand-accent/12 blur-3xl"
+          style={{ animationDelay: "-13s" }}
+        />
       </div>
       <div className="relative mx-auto max-w-[1200px] px-4 pb-20 pt-16 text-center md:px-8 md:pb-24 md:pt-24">
         <p className="mb-4 text-sm font-medium uppercase tracking-wider text-text-tertiary">

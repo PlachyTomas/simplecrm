@@ -185,7 +185,11 @@ export function DealDetailPage() {
             <>
               <button
                 type="button"
-                onClick={() => markWon.mutate()}
+                onClick={() =>
+                  markWon.mutate(undefined, {
+                    onError: () => toast.error("Obchod se nepodařilo označit jako vyhraný."),
+                  })
+                }
                 disabled={markWon.isPending}
                 className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-accent px-5 text-sm font-semibold text-text-on-brand-accent transition-colors duration-fast hover:bg-brand-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -420,7 +424,13 @@ export function DealDetailPage() {
         pending={markLost.isPending}
         dealName={deal.name}
         onConfirm={(reason) => {
-          markLost.mutate({ lost_reason: reason }, { onSuccess: () => setLostDialogOpen(false) });
+          markLost.mutate(
+            { lost_reason: reason },
+            {
+              onSuccess: () => setLostDialogOpen(false),
+              onError: () => toast.error("Obchod se nepodařilo označit jako neúspěšný."),
+            },
+          );
         }}
       />
     </div>

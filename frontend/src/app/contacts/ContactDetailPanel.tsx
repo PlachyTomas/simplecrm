@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { useCompany } from "@/app/companies/useCompany";
 import { useContact, useUpdateContact } from "@/app/contacts/useContacts";
 import { CompanyCombobox } from "@/components/ui/CompanyCombobox";
+import { useToast } from "@/lib/toast";
 
 interface ContactDetailPanelProps {
   contactId: string | undefined;
@@ -14,6 +15,7 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
   const { data: contact, isPending, isError } = useContact(contactId);
   const { data: company } = useCompany(contact?.company_id ?? undefined);
   const updateContact = useUpdateContact(contactId);
+  const toast = useToast();
   const [editingCompany, setEditingCompany] = useState(false);
   const [pendingCompanyId, setPendingCompanyId] = useState("");
 
@@ -56,7 +58,7 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
       setEditingCompany(false);
       setPendingCompanyId("");
     } catch {
-      /* updateContact.isError surfaces */
+      toast.error("Firmu se nepodařilo přiřadit ke kontaktu.");
     }
   }
 

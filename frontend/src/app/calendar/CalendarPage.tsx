@@ -115,7 +115,7 @@ export function CalendarPage() {
 
   const days = useMemo(() => monthGrid(year, month), [year, month]);
   const range = useMemo(() => gridRange(days), [days]);
-  const { data, isPending } = useEvents({ from: range.from, to: range.to });
+  const { data, isPending, isError } = useEvents({ from: range.from, to: range.to });
   const deleteEvent = useDeleteEvent();
 
   const eventsByDay = useMemo(() => {
@@ -244,6 +244,15 @@ export function CalendarPage() {
       {isPending ? (
         <p className="text-sm text-text-tertiary" role="status">
           Načítání…
+        </p>
+      ) : null}
+
+      {isError ? (
+        <p
+          className="rounded-md border border-danger-subtle bg-danger-subtle px-3 py-2 text-sm text-danger"
+          role="alert"
+        >
+          Události se nepodařilo načíst — nejde o prázdný kalendář. Zkuste to prosím znovu.
         </p>
       ) : null}
 

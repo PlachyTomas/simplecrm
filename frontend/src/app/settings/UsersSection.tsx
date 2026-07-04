@@ -145,7 +145,20 @@ function UserRow({
         <div className="flex flex-wrap items-center justify-end gap-1.5">
           <button
             type="button"
-            onClick={() => void onToggleActive()}
+            onClick={() => {
+              // Deactivating revokes the member's login immediately — confirm
+              // first so a stray click doesn't lock a colleague out (review UX
+              // P1). Reactivating is harmless and needs no confirm.
+              if (
+                u.is_active &&
+                !window.confirm(
+                  `Opravdu deaktivovat uživatele ${u.name}? Okamžitě ztratí přístup do aplikace.`,
+                )
+              ) {
+                return;
+              }
+              void onToggleActive();
+            }}
             className={`rounded-md border px-2 py-1 text-xs font-medium ${
               u.is_active
                 ? "border-border text-text-secondary hover:text-text-primary"
