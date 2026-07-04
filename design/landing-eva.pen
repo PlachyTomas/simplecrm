@@ -1,0 +1,2381 @@
+{
+  "version": "2.14",
+  "children": [
+    {
+      "type": "frame",
+      "id": "CAjeA",
+      "x": 0,
+      "y": 0,
+      "name": "EVA — Hero 1440",
+      "clip": true,
+      "width": 1440,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "NlzWI",
+          "name": "Warning strip top",
+          "clip": true,
+          "width": "fill_container",
+          "height": 14,
+          "fill": "#FF6A00",
+          "gap": 22,
+          "children": [
+            {
+              "type": "rectangle",
+              "id": "vulkB",
+              "name": "wst0",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "Eg6za",
+              "name": "wst1",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "rF2AK",
+              "name": "wst2",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "GdWxC",
+              "name": "wst3",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "L7SZZ",
+              "name": "wst4",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "T7oE7",
+              "name": "wst5",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "RpOjo",
+              "name": "wst6",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "KNQW3",
+              "name": "wst7",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "LQn4P",
+              "name": "wst8",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "Ucz1O",
+              "name": "wst9",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "y3GNo",
+              "name": "wst10",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "FtJkP",
+              "name": "wst11",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "UAEAi",
+              "name": "wst12",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "c9vgn",
+              "name": "wst13",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "sQwSd",
+              "name": "wst14",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "cK4p6",
+              "name": "wst15",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "tyZ70",
+              "name": "wst16",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "iZ4et",
+              "name": "wst17",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "sPSxU",
+              "name": "wst18",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "X9ZhHo",
+              "name": "wst19",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "RMCro",
+              "name": "wst20",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "QXy0B",
+              "name": "wst21",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "gUGbm",
+              "name": "wst22",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "GVH2X",
+              "name": "wst23",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "bDEhu",
+              "name": "wst24",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "IVMcQ",
+              "name": "wst25",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "AVuAY",
+              "name": "wst26",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "U1ma7",
+              "name": "wst27",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "RuyAn",
+              "name": "wst28",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "Kk4Mq",
+              "name": "wst29",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "yDQ5X",
+              "name": "wst30",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "z7dsak",
+              "name": "wst31",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "IKKq5",
+              "name": "wst32",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            },
+            {
+              "type": "rectangle",
+              "id": "hNyBB",
+              "name": "wst33",
+              "rotation": 24.000000000000004,
+              "fill": "#07070C",
+              "width": 22,
+              "height": 26
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "BN2SM",
+          "name": "Nav",
+          "width": "fill_container",
+          "padding": [
+            16,
+            56
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "GNljG",
+              "name": "Nav logo",
+              "gap": 14,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "polygon",
+                  "polygonCount": 6,
+                  "id": "nbEhZ",
+                  "name": "Nav hex",
+                  "fill": "$purple",
+                  "width": 30,
+                  "height": 30
+                },
+                {
+                  "type": "text",
+                  "id": "tDN2B",
+                  "name": "Nav word",
+                  "fill": "$white",
+                  "content": "SIMPLECRM",
+                  "fontFamily": "$font-display",
+                  "fontSize": 22,
+                  "fontWeight": "800",
+                  "letterSpacing": 1
+                },
+                {
+                  "type": "text",
+                  "id": "H6bLd",
+                  "name": "Nav jp",
+                  "fill": "$dim",
+                  "content": "シンプル・シーアールエム",
+                  "fontFamily": "$font-jp",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "t8Ckw",
+              "name": "Nav right",
+              "gap": 26,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "S2FKg2",
+                  "name": "NL FUNKCE",
+                  "fill": "$dim",
+                  "content": "FUNKCE",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "letterSpacing": 1
+                },
+                {
+                  "type": "text",
+                  "id": "M2C0NZ",
+                  "name": "NL CENÍK",
+                  "fill": "$dim",
+                  "content": "CENÍK",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "letterSpacing": 1
+                },
+                {
+                  "type": "text",
+                  "id": "on8nr",
+                  "name": "NL FAQ",
+                  "fill": "$dim",
+                  "content": "FAQ",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "letterSpacing": 1
+                },
+                {
+                  "type": "text",
+                  "id": "ZAxbx",
+                  "name": "NL sync",
+                  "fill": "$green",
+                  "content": "SYNC: 99,9 %",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "HcDiq",
+                  "name": "Nav CTA",
+                  "stroke": "$green",
+                  "strokeWidth": 1.5,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    10,
+                    18
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "zgQev",
+                      "name": "Nav CTA t",
+                      "fill": "$green",
+                      "content": "SPUSTIT ZDARMA",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 13,
+                      "fontWeight": "700",
+                      "letterSpacing": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "Nx027",
+          "name": "Nav rule",
+          "fill": "#7C3AED66",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "ECvbp",
+          "name": "Hero",
+          "width": "fill_container",
+          "gap": 64,
+          "padding": [
+            72,
+            56
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "Z525sA",
+              "name": "Hero left",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 26,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "vcBfW",
+                  "name": "Ep",
+                  "fill": "$green",
+                  "content": "EPIZODA:01 — ČESKÝ CRM PRO PRODEJ",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 14,
+                  "fontWeight": "normal",
+                  "letterSpacing": 2
+                },
+                {
+                  "type": "frame",
+                  "id": "kjZRE",
+                  "name": "H1",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Jum1f",
+                      "name": "H1 l1",
+                      "fill": "$white",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "OBCHODNÍK",
+                      "lineHeight": 0.98,
+                      "fontFamily": "$font-display",
+                      "fontSize": 92,
+                      "fontWeight": "900",
+                      "letterSpacing": -1
+                    },
+                    {
+                      "type": "text",
+                      "id": "DnCV0",
+                      "name": "H1 l2",
+                      "fill": "$white",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "MÁ PRODÁVAT.",
+                      "lineHeight": 1.04,
+                      "fontFamily": "$font-display",
+                      "fontSize": 92,
+                      "fontWeight": "900",
+                      "letterSpacing": -1
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "D0S2f",
+                  "name": "H1 rule",
+                  "fill": "$red",
+                  "width": 220,
+                  "height": 6
+                },
+                {
+                  "type": "text",
+                  "id": "Y4u6N",
+                  "name": "Hero sub",
+                  "fill": "$dim",
+                  "textGrowth": "fixed-width",
+                  "width": 540,
+                  "content": "> zadáte IČO — ARES doplní zbytek\n> firma bez pohybu se po 365 dnech vrací do poolu\n> hromadné nabídky jedním mailem",
+                  "lineHeight": 1.7,
+                  "fontFamily": "$font-mono",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "GjlXY",
+                  "name": "CTA row",
+                  "gap": 18,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Rhwqk",
+                      "name": "CTA1",
+                      "fill": "$green",
+                      "padding": [
+                        15,
+                        26
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "oNjJ9",
+                          "name": "CTA1 t",
+                          "fill": "#07070C",
+                          "content": "SPUSTIT 30 DNÍ ZDARMA",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 15,
+                          "fontWeight": "700",
+                          "letterSpacing": 1
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "gazhF",
+                      "name": "CTA2",
+                      "stroke": "$purple",
+                      "strokeWidth": 1.5,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        15,
+                        26
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "I8jJR",
+                          "name": "CTA2 t",
+                          "fill": "$purple",
+                          "content": "ANALÝZA FUNKCÍ",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 15,
+                          "fontWeight": "700",
+                          "letterSpacing": 1
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "Xzu72",
+                  "name": "Micro",
+                  "fill": "$dim",
+                  "content": "BEZ KARTY / ZRUŠENÍ KDYKOLIV / DATA V EU",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "eGVIw",
+              "name": "HUD",
+              "width": 460,
+              "fill": "$panel",
+              "stroke": "$green",
+              "strokeWidth": 1.5,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "mE5lW",
+                  "name": "HUD head",
+                  "width": "fill_container",
+                  "fill": "$green",
+                  "padding": [
+                    8,
+                    16
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "D0BUJn",
+                      "name": "HUD title",
+                      "fill": "#07070C",
+                      "content": "TAKTICKÝ DISPLEJ — PIPELINE",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 13,
+                      "fontWeight": "700",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "text",
+                      "id": "h0P2f",
+                      "name": "HUD id",
+                      "fill": "#07070C",
+                      "content": "CRM-01",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 13,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "q6ARQ",
+                  "name": "HUD body",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": [
+                    20,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "vuFOJ",
+                      "name": "HUD r PATTERN",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "justifyContent": "space_between",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "eur12",
+                          "name": "HUD k PATTERN",
+                          "fill": "$dim",
+                          "content": "PATTERN",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "gZuBH",
+                          "name": "HUD v PATTERN",
+                          "fill": "$green",
+                          "content": "MODRÁ — NOVÝ LEAD",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "l9SWsL",
+                      "name": "HUD r IČO",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "justifyContent": "space_between",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "OL8jU",
+                          "name": "HUD k IČO",
+                          "fill": "$dim",
+                          "content": "IČO",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "HTFHT",
+                          "name": "HUD v IČO",
+                          "fill": "$white",
+                          "content": "048 37 858",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "pl7ts",
+                      "name": "HUD r ARES SYNC",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "justifyContent": "space_between",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "VQIXt",
+                          "name": "HUD k ARES SYNC",
+                          "fill": "$dim",
+                          "content": "ARES SYNC",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "e5KNj",
+                          "name": "HUD v ARES SYNC",
+                          "fill": "$green",
+                          "content": "DOKONČENO ......... OK",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "gOY4u",
+                      "name": "HUD r FIRMA",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "justifyContent": "space_between",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "pdvGc",
+                          "name": "HUD k FIRMA",
+                          "fill": "$dim",
+                          "content": "FIRMA",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "tkw1v",
+                          "name": "HUD v FIRMA",
+                          "fill": "$white",
+                          "content": "KOVOVÝROBA BENEŠ S.R.O.",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "GeNWS",
+                      "name": "HUD r VLASTNÍK",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "justifyContent": "space_between",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "fHqqp",
+                          "name": "HUD k VLASTNÍK",
+                          "fill": "$dim",
+                          "content": "VLASTNÍK",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "I6UwA5",
+                          "name": "HUD v VLASTNÍK",
+                          "fill": "$white",
+                          "content": "NOVÁK J. / DNŮ ZBÝVÁ: 212",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "dLBRw",
+                      "name": "HUD r NABÍDKA",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "justifyContent": "space_between",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Daybe",
+                          "name": "HUD k NABÍDKA",
+                          "fill": "$dim",
+                          "content": "NABÍDKA",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "VMa5d",
+                          "name": "HUD v NABÍDKA",
+                          "fill": "$purple",
+                          "content": "ODESLÁNA 63 PŘÍJEMCŮM",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "DMMVv",
+                      "name": "HUD r STAV",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "justifyContent": "space_between",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Dpyp5",
+                          "name": "HUD k STAV",
+                          "fill": "$dim",
+                          "content": "STAV",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Dg3pH",
+                          "name": "HUD v STAV",
+                          "fill": "$orange",
+                          "content": "VYHRÁNO +220 000 KČ",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "Bi37N",
+                      "name": "HUD sep",
+                      "fill": "#00FF6633",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "frame",
+                      "id": "L4qjt",
+                      "name": "HUD sync",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Dq03p",
+                          "name": "HUD sync l",
+                          "fill": "$dim",
+                          "content": "SYNCHRONIZACE TÝMU",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "WhjQ8",
+                          "name": "HUD track",
+                          "width": "fill_container",
+                          "height": 14,
+                          "stroke": "$green",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "id": "n4upIg",
+                              "name": "HUD fill",
+                              "fill": "$green",
+                              "width": 388,
+                              "height": "fill_container"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "yqxxl",
+                          "name": "HUD sync v",
+                          "fill": "$green",
+                          "content": "99,9 % — HRANICE PŘEKROČENA",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "GE8ua",
+          "name": "MAGI",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 40,
+          "padding": [
+            64,
+            56,
+            80,
+            56
+          ],
+          "children": [
+            {
+              "type": "rectangle",
+              "id": "yY9zP",
+              "name": "MAGI rule",
+              "fill": "#7C3AED66",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "pGBF2",
+              "name": "MAGI head",
+              "width": "fill_container",
+              "padding": [
+                24,
+                0,
+                0,
+                0
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "end",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "OBstq",
+                  "name": "MAGI headL",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "p5lkxy",
+                      "name": "MAGI kicker",
+                      "fill": "$purple",
+                      "content": "SYSTÉM MAGI — TŘI JÁDRA ROZHODUJÍ",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "letterSpacing": 2
+                    },
+                    {
+                      "type": "text",
+                      "id": "qlyly",
+                      "name": "MAGI title",
+                      "fill": "$white",
+                      "content": "TŘI FUNKCE. JEDEN VERDIKT.",
+                      "fontFamily": "$font-display",
+                      "fontSize": 48,
+                      "fontWeight": "900"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "D7E5F",
+                  "name": "MAGI jp",
+                  "fill": "$dim",
+                  "content": "三賢者システム",
+                  "fontFamily": "$font-jp",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "G42LO9",
+              "name": "MAGI grid",
+              "width": "fill_container",
+              "gap": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "d5NXT",
+                  "name": "MAGI MELCHIOR·01",
+                  "width": "fill_container",
+                  "fill": "$panel",
+                  "stroke": "$green",
+                  "strokeWidth": 1.5,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "yPGwV",
+                      "name": "MAGI h MELCHIOR·01",
+                      "width": "fill_container",
+                      "stroke": "$green",
+                      "strokeWidth": {
+                        "bottom": 1.5
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        10,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "sFF4e",
+                          "name": "MAGI hn MELCHIOR·01",
+                          "fill": "$green",
+                          "content": "MELCHIOR·01",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "700",
+                          "letterSpacing": 1
+                        },
+                        {
+                          "type": "polygon",
+                          "polygonCount": 6,
+                          "id": "cvWlC",
+                          "name": "MAGI hex MELCHIOR·01",
+                          "fill": "$green",
+                          "width": 16,
+                          "height": 16
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "F0pvE",
+                      "name": "MAGI b MELCHIOR·01",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "padding": [
+                        20,
+                        16
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "BxwAs",
+                          "name": "MAGI t MELCHIOR·01",
+                          "fill": "$white",
+                          "content": "ARES INTEGRACE",
+                          "fontFamily": "$font-display",
+                          "fontSize": 22,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "text",
+                          "id": "MCz6Y",
+                          "name": "MAGI bd MELCHIOR·01",
+                          "fill": "$dim",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "zadáte IČO → název, adresa, DIČ, právní forma. nulové přepisování. čas: 30 s.",
+                          "lineHeight": 1.6,
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "bHiDW",
+                  "name": "MAGI BALTHASAR·02",
+                  "width": "fill_container",
+                  "fill": "$panel",
+                  "stroke": "$purple",
+                  "strokeWidth": 1.5,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "oS0tm",
+                      "name": "MAGI h BALTHASAR·02",
+                      "width": "fill_container",
+                      "stroke": "$purple",
+                      "strokeWidth": {
+                        "bottom": 1.5
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        10,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "WjwnI",
+                          "name": "MAGI hn BALTHASAR·02",
+                          "fill": "$purple",
+                          "content": "BALTHASAR·02",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "700",
+                          "letterSpacing": 1
+                        },
+                        {
+                          "type": "polygon",
+                          "polygonCount": 6,
+                          "id": "vTgvY",
+                          "name": "MAGI hex BALTHASAR·02",
+                          "fill": "$purple",
+                          "width": 16,
+                          "height": 16
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "s0kmX",
+                      "name": "MAGI b BALTHASAR·02",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "padding": [
+                        20,
+                        16
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "nPx43",
+                          "name": "MAGI t BALTHASAR·02",
+                          "fill": "$white",
+                          "content": "365DENNÍ POOL",
+                          "fontFamily": "$font-display",
+                          "fontSize": 22,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "text",
+                          "id": "FUsjV",
+                          "name": "MAGI bd BALTHASAR·02",
+                          "fill": "$dim",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "firma bez obchodu 365 dní se vrací do sdíleného poolu. žádné mrtvé leady.",
+                          "lineHeight": 1.6,
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "I2gC3Z",
+                  "name": "MAGI CASPER·03",
+                  "width": "fill_container",
+                  "fill": "$panel",
+                  "stroke": "$orange",
+                  "strokeWidth": 1.5,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Y3dMm",
+                      "name": "MAGI h CASPER·03",
+                      "width": "fill_container",
+                      "stroke": "$orange",
+                      "strokeWidth": {
+                        "bottom": 1.5
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        10,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "BOfmi",
+                          "name": "MAGI hn CASPER·03",
+                          "fill": "$orange",
+                          "content": "CASPER·03",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "700",
+                          "letterSpacing": 1
+                        },
+                        {
+                          "type": "polygon",
+                          "polygonCount": 6,
+                          "id": "SQpXp",
+                          "name": "MAGI hex CASPER·03",
+                          "fill": "$orange",
+                          "width": 16,
+                          "height": 16
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ubM2K",
+                      "name": "MAGI b CASPER·03",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "padding": [
+                        20,
+                        16
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "XFZ3f",
+                          "name": "MAGI t CASPER·03",
+                          "fill": "$white",
+                          "content": "HROMADNÉ NABÍDKY",
+                          "fontFamily": "$font-display",
+                          "fontSize": 22,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "text",
+                          "id": "E9bwuP",
+                          "name": "MAGI bd CASPER·03",
+                          "fill": "$dim",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "filtr podle oboru a aktivity → nabídka všem najednou, z vaší adresy.",
+                          "lineHeight": 1.6,
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "a6F20V",
+              "name": "MAGI consensus",
+              "width": "fill_container",
+              "stroke": "$green",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "padding": [
+                12,
+                20
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "SpX2V",
+                  "name": "Cons t",
+                  "fill": "$green",
+                  "content": "KONSENSUS MAGI: 3/3 — NASAZENÍ SCHVÁLENO",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "q6WZS",
+                  "name": "Cons jp",
+                  "fill": "$green",
+                  "content": "全会一致",
+                  "fontFamily": "$font-jp",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "TgvsG",
+          "name": "Emergency",
+          "width": "fill_container",
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "Yc8jO",
+              "name": "Warn2",
+              "clip": true,
+              "width": "fill_container",
+              "height": 14,
+              "fill": "#FF6A00",
+              "gap": 22,
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "zHSj0",
+                  "name": "w2s0",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "B2PAcT",
+                  "name": "w2s1",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "Qxnyp",
+                  "name": "w2s2",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "s71cR",
+                  "name": "w2s3",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "edRya",
+                  "name": "w2s4",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "wYPid",
+                  "name": "w2s5",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "qb2NS",
+                  "name": "w2s6",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "h6xLAs",
+                  "name": "w2s7",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "P3xkwK",
+                  "name": "w2s8",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "JgnLm",
+                  "name": "w2s9",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "OxgHE",
+                  "name": "w2s10",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "ezsC3",
+                  "name": "w2s11",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "TmFj4",
+                  "name": "w2s12",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "Bo7Mf",
+                  "name": "w2s13",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "VQbD2",
+                  "name": "w2s14",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "w5q8m",
+                  "name": "w2s15",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "asG5j",
+                  "name": "w2s16",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "W8Q8R5",
+                  "name": "w2s17",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "MHtZe",
+                  "name": "w2s18",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "f1rix",
+                  "name": "w2s19",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "jGTxO",
+                  "name": "w2s20",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "Vtjz5",
+                  "name": "w2s21",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "mnMGa",
+                  "name": "w2s22",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "I2g2bk",
+                  "name": "w2s23",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "A2QRU",
+                  "name": "w2s24",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "L3nXyg",
+                  "name": "w2s25",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "GUuba",
+                  "name": "w2s26",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "vKzXC",
+                  "name": "w2s27",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "e8F2P",
+                  "name": "w2s28",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "fuxNu",
+                  "name": "w2s29",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "OcfxJ",
+                  "name": "w2s30",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "AnFzA",
+                  "name": "w2s31",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "IAeQR",
+                  "name": "w2s32",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "vSFAs",
+                  "name": "w2s33",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "DZvoM",
+              "name": "Em body",
+              "width": "fill_container",
+              "fill": "$red",
+              "gap": 48,
+              "padding": 56,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "aqPrf",
+                  "name": "Em left",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "f9RCQ",
+                      "name": "Em kick",
+                      "fill": "#FFD9CF",
+                      "content": "STAV NOUZE PRO KONKURENCI",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 14,
+                      "fontWeight": "700",
+                      "letterSpacing": 2
+                    },
+                    {
+                      "type": "text",
+                      "id": "XG1NQ",
+                      "name": "Em title",
+                      "fill": "$white",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "99 KČ / UŽIVATEL. AT-FIELD CENÍKŮ PROLOMEN.",
+                      "lineHeight": 1.02,
+                      "fontFamily": "$font-display",
+                      "fontSize": 60,
+                      "fontWeight": "900"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Ik19z",
+                      "name": "Em sub",
+                      "fill": "#FFD9CF",
+                      "content": "30 dní zdarma → pak jedna cena pro všechny. žádné tarify, žádké moduly navíc.",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "otZUE",
+                  "name": "Em CTA",
+                  "fill": "$white",
+                  "padding": [
+                    18,
+                    30
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "t13uw3",
+                      "name": "Em CTA t",
+                      "fill": "$red",
+                      "content": "SPUSTIT 30 DNÍ ZDARMA",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 15,
+                      "fontWeight": "700",
+                      "letterSpacing": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "H4HBHD",
+              "name": "Warn3",
+              "clip": true,
+              "width": "fill_container",
+              "height": 14,
+              "fill": "#FF6A00",
+              "gap": 22,
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "QxSaX",
+                  "name": "w3s0",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "GJEMj",
+                  "name": "w3s1",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "Pa192",
+                  "name": "w3s2",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "WpiKu",
+                  "name": "w3s3",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "wUOCh",
+                  "name": "w3s4",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "wOvdy",
+                  "name": "w3s5",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "h9ex8I",
+                  "name": "w3s6",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "R3M3BR",
+                  "name": "w3s7",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "Wu7Yy",
+                  "name": "w3s8",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "z468P",
+                  "name": "w3s9",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "h8jC9",
+                  "name": "w3s10",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "PUHch",
+                  "name": "w3s11",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "YBg4B",
+                  "name": "w3s12",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "V5gUH",
+                  "name": "w3s13",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "RMgkX",
+                  "name": "w3s14",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "dfcoR",
+                  "name": "w3s15",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "QYamy",
+                  "name": "w3s16",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "htVbE",
+                  "name": "w3s17",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "weG4Z",
+                  "name": "w3s18",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "a2DRy",
+                  "name": "w3s19",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "kNttG",
+                  "name": "w3s20",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "jW72W",
+                  "name": "w3s21",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "Brdjj",
+                  "name": "w3s22",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "jrsz8",
+                  "name": "w3s23",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "CAlct",
+                  "name": "w3s24",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "r9hBdb",
+                  "name": "w3s25",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "x7cX7U",
+                  "name": "w3s26",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "u9ryDu",
+                  "name": "w3s27",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "j7JNtm",
+                  "name": "w3s28",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "zQ1UR",
+                  "name": "w3s29",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "eMv27",
+                  "name": "w3s30",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "RZXvK",
+                  "name": "w3s31",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "LDhMa",
+                  "name": "w3s32",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                },
+                {
+                  "type": "rectangle",
+                  "id": "fxI8N",
+                  "name": "w3s33",
+                  "rotation": 24.000000000000004,
+                  "fill": "#07070C",
+                  "width": 22,
+                  "height": 26
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "r08SIV",
+          "name": "Foot",
+          "width": "fill_container",
+          "padding": [
+            18,
+            56
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "SSNvw",
+              "name": "Foot l",
+              "fill": "$dim",
+              "content": "© 2026 SIMPLECRM / NERV NEDODÁVÁ",
+              "fontFamily": "$font-mono",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "qAmQQ",
+              "name": "Foot c",
+              "fill": "$dim",
+              "content": "DATA V EU — FRANKFURT / NORIMBERK",
+              "fontFamily": "$font-mono",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "npskE",
+              "name": "Foot r",
+              "fill": "$purple",
+              "content": "逃げちゃダメだ — neutíkej před CRM",
+              "fontFamily": "$font-jp",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "t8st6h",
+      "x": 1560,
+      "y": 0,
+      "name": "EVA — Style key",
+      "width": 480,
+      "fill": "$panel",
+      "stroke": "$purple",
+      "strokeWidth": 1.5,
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 32,
+      "children": [
+        {
+          "type": "text",
+          "id": "A62YR",
+          "name": "K title",
+          "fill": "$white",
+          "content": "VARIANTA E — EVA",
+          "fontFamily": "$font-display",
+          "fontSize": 24,
+          "fontWeight": "900"
+        },
+        {
+          "type": "text",
+          "id": "YC9Pf",
+          "name": "K desc",
+          "fill": "$dim",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "neon genesis evangelion: title-card serif, HUD terminál, MAGI trojice, výstražné pruhy, katakana akcenty. hlas: technologický patos s ironií.",
+          "lineHeight": 1.6,
+          "fontFamily": "$font-mono",
+          "fontSize": 13,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "Ma7OS",
+          "name": "K swatches",
+          "width": "fill_container",
+          "gap": 10,
+          "children": [
+            {
+              "type": "frame",
+              "id": "gBDdI",
+              "name": "K sw void",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "FeSDg",
+                  "name": "K chip void",
+                  "width": "fill_container",
+                  "height": 52,
+                  "fill": "#07070C",
+                  "stroke": "#F2F2F022",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "text",
+                  "id": "DnSkc",
+                  "name": "K swl void",
+                  "fill": "$white",
+                  "content": "void",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "jgiTP",
+              "name": "K sw eva-01",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "kU1pH",
+                  "name": "K chip eva-01",
+                  "width": "fill_container",
+                  "height": 52,
+                  "fill": "#7C3AED",
+                  "stroke": "#F2F2F022",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "text",
+                  "id": "zqhsO",
+                  "name": "K swl eva-01",
+                  "fill": "$white",
+                  "content": "eva-01",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "VblYM",
+              "name": "K sw terminal",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "x99Ca",
+                  "name": "K chip terminal",
+                  "width": "fill_container",
+                  "height": 52,
+                  "fill": "#00FF66",
+                  "stroke": "#F2F2F022",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "text",
+                  "id": "o9f4N",
+                  "name": "K swl terminal",
+                  "fill": "$white",
+                  "content": "terminal",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "QRNPp",
+              "name": "K sw výstraha",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "P74ica",
+                  "name": "K chip výstraha",
+                  "width": "fill_container",
+                  "height": 52,
+                  "fill": "#FF6A00",
+                  "stroke": "#F2F2F022",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "text",
+                  "id": "ao5bj",
+                  "name": "K swl výstraha",
+                  "fill": "$white",
+                  "content": "výstraha",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "JCXik",
+              "name": "K sw nouze",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "c79dF",
+                  "name": "K chip nouze",
+                  "width": "fill_container",
+                  "height": 52,
+                  "fill": "#E4002B",
+                  "stroke": "#F2F2F022",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "text",
+                  "id": "p9zUM",
+                  "name": "K swl nouze",
+                  "fill": "$white",
+                  "content": "nouze",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "xbuJI",
+          "name": "K fonts",
+          "fill": "$white",
+          "content": "DISPLAY: BESLEY 900 (title cards)\nJP: SHIPPORI MINCHO B1\nMONO/HUD: IBM PLEX MONO\n⚠ fanouškovská estetika — před produkcí posoudit IP odstup od NGE",
+          "lineHeight": 1.7,
+          "fontFamily": "$font-mono",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "bg": {
+      "type": "color",
+      "value": "#07070C"
+    },
+    "panel": {
+      "type": "color",
+      "value": "#0D0D16"
+    },
+    "white": {
+      "type": "color",
+      "value": "#F2F2F0"
+    },
+    "green": {
+      "type": "color",
+      "value": "#00FF66"
+    },
+    "purple": {
+      "type": "color",
+      "value": "#7C3AED"
+    },
+    "orange": {
+      "type": "color",
+      "value": "#FF6A00"
+    },
+    "red": {
+      "type": "color",
+      "value": "#E4002B"
+    },
+    "dim": {
+      "type": "color",
+      "value": "#8B8B95"
+    },
+    "font-display": {
+      "type": "string",
+      "value": "Besley"
+    },
+    "font-jp": {
+      "type": "string",
+      "value": "Shippori Mincho B1"
+    },
+    "font-mono": {
+      "type": "string",
+      "value": "IBM Plex Mono"
+    }
+  },
+  "fileToken": "ce23d7d8-abfb-4068-a4cc-7555cf5cd792"
+}

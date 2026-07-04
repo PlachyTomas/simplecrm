@@ -1,0 +1,1176 @@
+{
+  "version": "2.14",
+  "children": [
+    {
+      "type": "frame",
+      "id": "D4AU3",
+      "x": 0,
+      "y": 0,
+      "name": "BETON — Hero 1440",
+      "clip": true,
+      "width": 1440,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "dmayu",
+          "name": "Marquee",
+          "clip": true,
+          "width": "fill_container",
+          "height": 44,
+          "fill": "$ink",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "BgElq",
+              "name": "Marquee text",
+              "fill": "$acid",
+              "content": "CRM PRO PRODEJ ★ 99 KČ / UŽIVATEL ★ ARES NA JEDEN KLIK ★ 30 DNÍ ZDARMA ★ DATA V EU ★ CRM PRO PRODEJ ★ 99 KČ / UŽIVATEL ★ ARES NA JEDEN KLIK ★ 30 DNÍ ZDARMA ★ DATA V EU ★",
+              "fontFamily": "$font-mono",
+              "fontSize": 14,
+              "fontWeight": "700",
+              "letterSpacing": 1
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "W7zJGB",
+          "name": "Nav",
+          "width": "fill_container",
+          "padding": [
+            16,
+            48
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "Lw2nF",
+              "name": "Logo",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "YcNko",
+                  "name": "Logo sq",
+                  "width": 40,
+                  "height": 40,
+                  "fill": "$ink",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "G1l7GQ",
+                      "name": "Logo 365",
+                      "fill": "$acid",
+                      "content": "365",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 13,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "x1AvzQ",
+                  "name": "Logo word",
+                  "fill": "$ink",
+                  "content": "SIMPLECRM",
+                  "fontFamily": "$font-display",
+                  "fontSize": 22,
+                  "fontWeight": "700",
+                  "letterSpacing": 0.5
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "XQNww",
+              "name": "Nav right",
+              "gap": 28,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "W8NHP5",
+                  "name": "L FUNKCE",
+                  "fill": "$ink",
+                  "content": "FUNKCE",
+                  "fontFamily": "$font-body",
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "letterSpacing": 0.5
+                },
+                {
+                  "type": "text",
+                  "id": "cUtV1",
+                  "name": "L CENÍK",
+                  "fill": "$ink",
+                  "content": "CENÍK",
+                  "fontFamily": "$font-body",
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "letterSpacing": 0.5
+                },
+                {
+                  "type": "text",
+                  "id": "Er6O5",
+                  "name": "L FAQ",
+                  "fill": "$ink",
+                  "content": "FAQ",
+                  "fontFamily": "$font-body",
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "letterSpacing": 0.5
+                },
+                {
+                  "type": "frame",
+                  "id": "qAb28",
+                  "name": "Nav CTA",
+                  "fill": "$blue",
+                  "stroke": "$ink",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#0A0A0A",
+                    "offset": {
+                      "x": 4,
+                      "y": 4
+                    }
+                  },
+                  "padding": [
+                    12,
+                    20
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "CMI2Z",
+                      "name": "Nav CTA label",
+                      "fill": "$white",
+                      "content": "VYZKOUŠET ZDARMA",
+                      "fontFamily": "$font-display",
+                      "fontSize": 14,
+                      "fontWeight": "700",
+                      "letterSpacing": 0.5
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "Mo2bg",
+          "name": "Nav border",
+          "fill": "$ink",
+          "width": "fill_container",
+          "height": 3
+        },
+        {
+          "type": "frame",
+          "id": "jBpDJ",
+          "name": "Hero",
+          "width": "fill_container",
+          "gap": 56,
+          "padding": [
+            72,
+            48,
+            64,
+            48
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "e2sqd",
+              "name": "Hero left",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 28,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "tc6bk",
+                  "name": "Hero tag",
+                  "rotation": 2,
+                  "fill": "$acid",
+                  "stroke": "$ink",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    6,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "L3Ymt",
+                      "name": "Hero tag t",
+                      "fill": "$ink",
+                      "content": "ČESKÝ CRM · OD ČECHŮ · ZA KAČKY",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 13,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "HRLJL",
+                  "name": "H1",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "jtJCu",
+                      "name": "H1 l1",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "CRM BEZ",
+                      "lineHeight": 0.98,
+                      "fontFamily": "$font-display",
+                      "fontSize": 100,
+                      "fontWeight": "700",
+                      "letterSpacing": -3
+                    },
+                    {
+                      "type": "text",
+                      "id": "zluUa",
+                      "name": "H1 l2",
+                      "fill": "$blue",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "KECŮ.",
+                      "lineHeight": 1.02,
+                      "fontFamily": "$font-display",
+                      "fontSize": 100,
+                      "fontWeight": "700",
+                      "letterSpacing": -3
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "D4Iw3E",
+                  "name": "Hero sub",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": 520,
+                  "content": "Firmy přes ARES, pipeline přes drag-and-drop, hromadné nabídky jedním mailem. Žádná školení, žádný konzultant, žádných 14 modulů navíc.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "fJVsm",
+                  "name": "CTA row",
+                  "gap": 20,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "vfMQ9",
+                      "name": "CTA1",
+                      "fill": "$blue",
+                      "stroke": "$ink",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#0A0A0A",
+                        "offset": {
+                          "x": 5,
+                          "y": 5
+                        }
+                      },
+                      "padding": [
+                        16,
+                        28
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "FdsOd",
+                          "name": "CTA1 t",
+                          "fill": "$white",
+                          "content": "30 DNÍ ZDARMA →",
+                          "fontFamily": "$font-display",
+                          "fontSize": 16,
+                          "fontWeight": "700",
+                          "letterSpacing": 0.5
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "s7KIF",
+                      "name": "CTA2",
+                      "fill": "$white",
+                      "stroke": "$ink",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#0A0A0A",
+                        "offset": {
+                          "x": 5,
+                          "y": 5
+                        }
+                      },
+                      "padding": [
+                        16,
+                        28
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "jcE3D",
+                          "name": "CTA2 t",
+                          "fill": "$ink",
+                          "content": "FUNKCE",
+                          "fontFamily": "$font-display",
+                          "fontSize": 16,
+                          "fontWeight": "700",
+                          "letterSpacing": 0.5
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "R1w0g",
+                  "name": "Micro",
+                  "fill": "$text-secondary",
+                  "content": "BEZ KARTY / ZRUŠENÍ KDYKOLIV / DATA V EU",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "k7RjT",
+              "name": "Hero right",
+              "width": 440,
+              "layout": "vertical",
+              "gap": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "t6hu3",
+                  "name": "Kanban card",
+                  "width": "fill_container",
+                  "fill": "$white",
+                  "stroke": "$ink",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#0A0A0A",
+                    "offset": {
+                      "x": 6,
+                      "y": 6
+                    }
+                  },
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "BAaZW",
+                      "name": "KB head",
+                      "width": "fill_container",
+                      "fill": "$ink",
+                      "padding": [
+                        10,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "QF39S",
+                          "name": "KB title",
+                          "fill": "$white",
+                          "content": "PIPELINE / ČERVENEC",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "xBq1n",
+                          "name": "KB count",
+                          "fill": "$acid",
+                          "content": "54 OBCHODŮ",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "S2t4W",
+                      "name": "Deal JEDNÁNÍ",
+                      "width": "fill_container",
+                      "fill": "$white",
+                      "stroke": "$ink",
+                      "strokeWidth": {
+                        "top": 2
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        14,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "rtfNR",
+                          "name": "Deal t JEDNÁNÍ",
+                          "fill": "$ink",
+                          "content": "Kovovýroba Beneš — 220 000 Kč",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Gno7b",
+                          "name": "Deal s JEDNÁNÍ",
+                          "fill": "$ink",
+                          "content": "JEDNÁNÍ",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "w47wSS",
+                      "name": "Deal NABÍDKA",
+                      "width": "fill_container",
+                      "fill": "$white",
+                      "stroke": "$ink",
+                      "strokeWidth": {
+                        "top": 2
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        14,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "N7p9t",
+                          "name": "Deal t NABÍDKA",
+                          "fill": "$ink",
+                          "content": "Pekárna Skála — 84 000 Kč",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "DOCX1",
+                          "name": "Deal s NABÍDKA",
+                          "fill": "$ink",
+                          "content": "NABÍDKA",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "n5fxr",
+                      "name": "Deal VYHRÁNO",
+                      "width": "fill_container",
+                      "fill": "$acid",
+                      "stroke": "$ink",
+                      "strokeWidth": {
+                        "top": 2
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        14,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "YcjVe",
+                          "name": "Deal t VYHRÁNO",
+                          "fill": "$ink",
+                          "content": "AutoServis Malý — 99 000 Kč",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "rm8kw",
+                          "name": "Deal s VYHRÁNO",
+                          "fill": "$ink",
+                          "content": "VYHRÁNO",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "m9NNq",
+                  "name": "365 block",
+                  "width": "fill_container",
+                  "fill": "$blue",
+                  "stroke": "$ink",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#0A0A0A",
+                    "offset": {
+                      "x": 6,
+                      "y": 6
+                    }
+                  },
+                  "padding": [
+                    20,
+                    24
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "uEYlk",
+                      "name": "365 num",
+                      "fill": "$white",
+                      "content": "365",
+                      "fontFamily": "$font-display",
+                      "fontSize": 56,
+                      "fontWeight": "700",
+                      "letterSpacing": -1
+                    },
+                    {
+                      "type": "text",
+                      "id": "IBVGQ",
+                      "name": "365 t",
+                      "fill": "$acid",
+                      "textGrowth": "fixed-width",
+                      "width": 220,
+                      "content": "DNÍ BEZ OBCHODU A FIRMA SE VRACÍ DO SDÍLENÉHO POOLU",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "I8XcCu",
+          "name": "Stats bar",
+          "width": "fill_container",
+          "fill": "$ink",
+          "padding": [
+            0,
+            48
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "yob6F",
+              "name": "St 0",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [
+                22,
+                0
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "iFLTH",
+                  "name": "St n 0",
+                  "fill": "$acid",
+                  "content": "99 KČ",
+                  "fontFamily": "$font-display",
+                  "fontSize": 36,
+                  "fontWeight": "700",
+                  "letterSpacing": -1
+                },
+                {
+                  "type": "text",
+                  "id": "fP04g",
+                  "name": "St l 0",
+                  "fill": "$white",
+                  "content": "UŽIVATEL / MĚSÍC",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "EzSc8",
+              "name": "St rule 1",
+              "fill": "#F2F1EC",
+              "width": 2,
+              "height": 96
+            },
+            {
+              "type": "frame",
+              "id": "usikt",
+              "name": "St 1",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [
+                22,
+                28
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "enVjF",
+                  "name": "St n 1",
+                  "fill": "$acid",
+                  "content": "365",
+                  "fontFamily": "$font-display",
+                  "fontSize": 36,
+                  "fontWeight": "700",
+                  "letterSpacing": -1
+                },
+                {
+                  "type": "text",
+                  "id": "p3CNfV",
+                  "name": "St l 1",
+                  "fill": "$white",
+                  "content": "DNÍ A FIRMA SE UVOLNÍ",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "Y6lLm",
+              "name": "St rule 2",
+              "fill": "#F2F1EC",
+              "width": 2,
+              "height": 96
+            },
+            {
+              "type": "frame",
+              "id": "rZWFb",
+              "name": "St 2",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [
+                22,
+                28
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "n3FQxQ",
+                  "name": "St n 2",
+                  "fill": "$acid",
+                  "content": "30 S",
+                  "fontFamily": "$font-display",
+                  "fontSize": 36,
+                  "fontWeight": "700",
+                  "letterSpacing": -1
+                },
+                {
+                  "type": "text",
+                  "id": "uB1v0",
+                  "name": "St l 2",
+                  "fill": "$white",
+                  "content": "IČO → FIRMA PŘES ARES",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "k92zR",
+              "name": "St rule 3",
+              "fill": "#F2F1EC",
+              "width": 2,
+              "height": 96
+            },
+            {
+              "type": "frame",
+              "id": "uWUrW",
+              "name": "St 3",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [
+                22,
+                28
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Ljmh9",
+                  "name": "St n 3",
+                  "fill": "$acid",
+                  "content": "0",
+                  "fontFamily": "$font-display",
+                  "fontSize": 36,
+                  "fontWeight": "700",
+                  "letterSpacing": -1
+                },
+                {
+                  "type": "text",
+                  "id": "qjWuy",
+                  "name": "St l 3",
+                  "fill": "$white",
+                  "content": "ŠKOLENÍ POTŘEBA",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "e1yLGi",
+          "name": "Pricing strip",
+          "width": "fill_container",
+          "gap": 48,
+          "padding": [
+            64,
+            48
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "zeoxX",
+              "name": "Price card",
+              "width": "fill_container",
+              "fill": "$white",
+              "stroke": "$ink",
+              "strokeWidth": 3,
+              "strokeAlignment": "inner",
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#0A0A0A",
+                "offset": {
+                  "x": 8,
+                  "y": 8
+                }
+              },
+              "layout": "vertical",
+              "gap": 16,
+              "padding": [
+                36,
+                40
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "EeJD8",
+                  "name": "P tag",
+                  "fill": "$blue",
+                  "content": "JEDNA CENA. ŽÁDNÉ TARIFNÍ HRY.",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "cIgSA",
+                  "name": "P row",
+                  "gap": 16,
+                  "alignItems": "end",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "zBgYs",
+                      "name": "P price",
+                      "fill": "$ink",
+                      "content": "99 Kč",
+                      "lineHeight": 0.95,
+                      "fontFamily": "$font-display",
+                      "fontSize": 88,
+                      "fontWeight": "700",
+                      "letterSpacing": -3
+                    },
+                    {
+                      "type": "frame",
+                      "id": "nphBK",
+                      "name": "P per wrap",
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        0,
+                        12,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "lRrEF",
+                          "name": "P per",
+                          "fill": "$text-secondary",
+                          "content": "/ UŽIVATEL / MĚSÍC",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "ruf40",
+                  "name": "P note",
+                  "fill": "$text-secondary",
+                  "content": "Prvních 30 dní zdarma. Bez karty, zrušení jedním klikem, export dat kdykoliv.",
+                  "fontFamily": "$font-body",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "q3dQa",
+              "name": "P side",
+              "width": 420,
+              "layout": "vertical",
+              "gap": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "nN9iB",
+                  "name": "P CTA",
+                  "width": "fill_container",
+                  "fill": "$blue",
+                  "stroke": "$ink",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#0A0A0A",
+                    "offset": {
+                      "x": 5,
+                      "y": 5
+                    }
+                  },
+                  "padding": [
+                    18,
+                    28
+                  ],
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "X97vI",
+                      "name": "P CTA t",
+                      "fill": "$white",
+                      "content": "ZAČÍT HNED →",
+                      "fontFamily": "$font-display",
+                      "fontSize": 17,
+                      "fontWeight": "700",
+                      "letterSpacing": 0.5
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "H4sft",
+                  "name": "P side note",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "REGISTRACE PŘES GOOGLE NEBO E-MAIL. ZA 30 SEKUND JSTE UVNITŘ.",
+                  "lineHeight": 1.6,
+                  "fontFamily": "$font-mono",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "zpOMk",
+      "x": 1560,
+      "y": 0,
+      "name": "BETON — Style key",
+      "width": 480,
+      "fill": "$white",
+      "stroke": "$ink",
+      "strokeWidth": 2,
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 32,
+      "children": [
+        {
+          "type": "text",
+          "id": "h759l",
+          "name": "K title",
+          "fill": "$ink",
+          "content": "VARIANTA B — BETON",
+          "fontFamily": "$font-display",
+          "fontSize": 24,
+          "fontWeight": "700"
+        },
+        {
+          "type": "text",
+          "id": "wIFPN",
+          "name": "K desc",
+          "fill": "$text-secondary",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Euro-brutalismus: tvrdé stíny, 2–3px linky, žluté akcenty na černé, Klein blue. Hlas značky: drzý, přímý, bez korporátní vaty.",
+          "lineHeight": 1.5,
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "m773l",
+          "name": "K swatches",
+          "width": "fill_container",
+          "gap": 10,
+          "children": [
+            {
+              "type": "frame",
+              "id": "BviB5",
+              "name": "K sw OFF-WHITE",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "zksQm",
+                  "name": "K chip OFF-WHITE",
+                  "width": "fill_container",
+                  "height": 56,
+                  "fill": "#F2F1EC",
+                  "stroke": "$ink",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "text",
+                  "id": "hjYu7",
+                  "name": "K swl OFF-WHITE",
+                  "fill": "$ink",
+                  "content": "OFF-WHITE",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "SZfrR",
+              "name": "K sw INK",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "vprZM",
+                  "name": "K chip INK",
+                  "width": "fill_container",
+                  "height": 56,
+                  "fill": "#0A0A0A",
+                  "stroke": "$ink",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "text",
+                  "id": "uugpx",
+                  "name": "K swl INK",
+                  "fill": "$ink",
+                  "content": "INK",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "S2MHbH",
+              "name": "K sw KLEIN",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "QwFbQ",
+                  "name": "K chip KLEIN",
+                  "width": "fill_container",
+                  "height": 56,
+                  "fill": "#2B2BFF",
+                  "stroke": "$ink",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "text",
+                  "id": "jsDDL",
+                  "name": "K swl KLEIN",
+                  "fill": "$ink",
+                  "content": "KLEIN",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "xSRHn",
+              "name": "K sw ACID",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "AFZXi",
+                  "name": "K chip ACID",
+                  "width": "fill_container",
+                  "height": 56,
+                  "fill": "#D8FF3E",
+                  "stroke": "$ink",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "text",
+                  "id": "rAO1m",
+                  "name": "K swl ACID",
+                  "fill": "$ink",
+                  "content": "ACID",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "UYvBf",
+          "name": "K fonts",
+          "fill": "$ink",
+          "content": "DISPLAY: SPACE GROTESK 700\nBODY: ARCHIVO\nMONO: SPACE MONO",
+          "lineHeight": 1.7,
+          "fontFamily": "$font-mono",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "bg": {
+      "type": "color",
+      "value": "#F2F1EC"
+    },
+    "ink": {
+      "type": "color",
+      "value": "#0A0A0A"
+    },
+    "blue": {
+      "type": "color",
+      "value": "#2B2BFF"
+    },
+    "acid": {
+      "type": "color",
+      "value": "#D8FF3E"
+    },
+    "text-secondary": {
+      "type": "color",
+      "value": "#45453F"
+    },
+    "white": {
+      "type": "color",
+      "value": "#FFFFFF"
+    },
+    "font-display": {
+      "type": "string",
+      "value": "Space Grotesk"
+    },
+    "font-body": {
+      "type": "string",
+      "value": "Archivo"
+    },
+    "font-mono": {
+      "type": "string",
+      "value": "Space Mono"
+    }
+  },
+  "fileToken": "70c6077e-5e0f-474e-9847-48138a5d02a5"
+}

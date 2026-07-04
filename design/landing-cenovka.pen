@@ -1,0 +1,1874 @@
+{
+  "version": "2.14",
+  "children": [
+    {
+      "type": "frame",
+      "id": "z6YCe",
+      "x": 0,
+      "y": 0,
+      "name": "CENOVKA — Hero 1440",
+      "clip": true,
+      "width": 1440,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "zHtzF",
+          "name": "Topbar",
+          "width": "fill_container",
+          "fill": "$red",
+          "padding": [
+            8,
+            0
+          ],
+          "justifyContent": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "bOuZW",
+              "name": "Topbar t",
+              "fill": "$white",
+              "content": "Nejlevnější český CRM — 99 Kč za uživatele. Když najdete levnější, napište nám a dorovnáme.",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "KlvQ3",
+          "name": "Nav",
+          "width": "fill_container",
+          "padding": [
+            16,
+            56
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "PCW2c",
+              "name": "Logo",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "DlnnM",
+                  "name": "Logo 99",
+                  "rotation": -4,
+                  "fill": "$yellow",
+                  "padding": [
+                    6,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "uBkQa",
+                      "name": "Logo 99 t",
+                      "fill": "$ink",
+                      "content": "99,-",
+                      "fontFamily": "$font-display",
+                      "fontSize": 18,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "wWnJB",
+                  "name": "Logo word",
+                  "fill": "$ink",
+                  "content": "SIMPLECRM",
+                  "fontFamily": "$font-display",
+                  "fontSize": 24,
+                  "fontWeight": "normal",
+                  "letterSpacing": 0.5
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "A9tPv",
+              "name": "Nav right",
+              "gap": 28,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "PD4ZR",
+                  "name": "L Funkce",
+                  "fill": "$ink",
+                  "content": "Funkce",
+                  "fontFamily": "$font-body",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "uyrmb",
+                  "name": "L Srovnání",
+                  "fill": "$ink",
+                  "content": "Srovnání",
+                  "fontFamily": "$font-body",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "iJPu8",
+                  "name": "L Ceník",
+                  "fill": "$ink",
+                  "content": "Ceník",
+                  "fontFamily": "$font-body",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "xba2Z",
+                  "name": "L FAQ",
+                  "fill": "$ink",
+                  "content": "FAQ",
+                  "fontFamily": "$font-body",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "FhRbC",
+                  "name": "Nav CTA",
+                  "fill": "$red",
+                  "cornerRadius": 4,
+                  "padding": [
+                    12,
+                    22
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "d7I7EE",
+                      "name": "Nav CTA t",
+                      "fill": "$white",
+                      "content": "Vyzkoušet zdarma",
+                      "fontFamily": "$font-body",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "y8H1T",
+          "name": "Hero",
+          "width": "fill_container",
+          "gap": 64,
+          "padding": [
+            64,
+            56,
+            72,
+            56
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "JA0cm",
+              "name": "Hero left",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 26,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "vDeGK",
+                  "name": "Sticker",
+                  "rotation": 2,
+                  "fill": "$yellow",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    18
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hbnSn",
+                      "name": "Sticker t1",
+                      "fill": "$ink",
+                      "content": "AKCE KAŽDÝ DEN:",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "w19QlC",
+                      "name": "Sticker t2",
+                      "fill": "$red",
+                      "content": "99 KČ / UŽIVATEL / MĚSÍC",
+                      "fontFamily": "$font-display",
+                      "fontSize": 20,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "oDmV6",
+                  "name": "H1",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "N8wqnS",
+                      "name": "H1 hl wrap",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "QXmjL",
+                          "name": "H1 hlbox",
+                          "fill": "$red",
+                          "padding": [
+                            4,
+                            14
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "moWOq",
+                              "name": "H1 l1",
+                              "fill": "$white",
+                              "content": "NEJLEVNĚJŠÍ",
+                              "lineHeight": 1.05,
+                              "fontFamily": "$font-display",
+                              "fontSize": 76,
+                              "fontWeight": "normal",
+                              "letterSpacing": 0.5
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "jdapA",
+                      "name": "H1 l2",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "CRM NA TRHU.",
+                      "lineHeight": 1.1,
+                      "fontFamily": "$font-display",
+                      "fontSize": 76,
+                      "fontWeight": "normal",
+                      "letterSpacing": 0.5
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "Luu2s",
+                  "name": "Sub",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": 520,
+                  "content": "Stejná práce, třetina ceny. Jedna cena pro všechny — žádné tarify Basic, Pro ani Enterprise. ARES, pipeline i hromadné nabídky v ceně.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "bA1Kb",
+                  "name": "CTA row",
+                  "gap": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "io1XT",
+                      "name": "CTA1",
+                      "fill": "$red",
+                      "cornerRadius": 4,
+                      "padding": [
+                        16,
+                        28
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "pHTj9",
+                          "name": "CTA1 t",
+                          "fill": "$white",
+                          "content": "Vyzkoušet 30 dní zdarma",
+                          "fontFamily": "$font-body",
+                          "fontSize": 16,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hYKPW",
+                      "name": "CTA2",
+                      "cornerRadius": 4,
+                      "stroke": "$ink",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        16,
+                        28
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "SEEGc",
+                          "name": "CTA2 t",
+                          "fill": "$ink",
+                          "content": "Spočítat úsporu",
+                          "fontFamily": "$font-body",
+                          "fontSize": 16,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "SOIVp",
+                  "name": "Micro",
+                  "fill": "$text-secondary",
+                  "content": "Bez karty · zrušení kdykoliv · když odejdete, data si odnesete",
+                  "fontFamily": "$font-body",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "V9XUNb",
+              "name": "Receipt wrap",
+              "width": 460,
+              "height": 600,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Cspjz",
+                  "x": 30,
+                  "y": 10,
+                  "name": "Receipt",
+                  "rotation": -2,
+                  "width": 400,
+                  "fill": "$white",
+                  "stroke": "#11111122",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#11111126",
+                    "offset": {
+                      "x": 0,
+                      "y": 14
+                    },
+                    "blur": 34
+                  },
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": [
+                    28,
+                    26
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "JU4v3",
+                      "name": "R head",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "* SIMPLECRM — ÚČTENKA *",
+                      "textAlign": "center",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Y77KF2",
+                      "name": "R sub",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "srovnání ceny za 1 uživatele / měsíc",
+                      "textAlign": "center",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "x08m7z",
+                      "name": "R dash1",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "----------------------------------------",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "g4wZQi",
+                      "name": "R item SIMPLECRM",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "CJdQU",
+                          "name": "R in SIMPLECRM",
+                          "fill": "$ink",
+                          "content": "SIMPLECRM",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "rkLGY",
+                          "name": "R ip SIMPLECRM",
+                          "fill": "$red",
+                          "content": "99,00",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "TbTSK",
+                      "name": "R item Raynet Start",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Ub0UC",
+                          "name": "R in Raynet Start",
+                          "fill": "$text-secondary",
+                          "content": "Raynet Start",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "l64257",
+                          "name": "R ip Raynet Start",
+                          "fill": "$text-secondary",
+                          "content": "od 490,00",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "kDC7q",
+                      "name": "R item Pipedrive Essential",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "doW3s",
+                          "name": "R in Pipedrive Essential",
+                          "fill": "$text-secondary",
+                          "content": "Pipedrive Essential",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "ullxr",
+                          "name": "R ip Pipedrive Essential",
+                          "fill": "$text-secondary",
+                          "content": "od 390,00",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "MkbMf",
+                      "name": "R dash2",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "----------------------------------------",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "dKLx2",
+                      "name": "R total",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "qzWW6",
+                          "name": "R tn",
+                          "fill": "$ink",
+                          "content": "ÚSPORA / ROK / UŽIV.",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "pZadG",
+                          "name": "R tp",
+                          "fill": "$red",
+                          "content": "4 692,00",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 18,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "p9MKgN",
+                      "name": "R note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "* ceníky konkurence 07/2026, tarify pro malé týmy; přepočteno na Kč",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-mono",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "o5Ssq",
+                      "name": "R barcode",
+                      "width": "fill_container",
+                      "gap": 2,
+                      "padding": [
+                        10,
+                        0,
+                        0,
+                        0
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "w4c5iS",
+                          "name": "bc0",
+                          "fill": "$ink",
+                          "width": 3,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "N7Wuov",
+                          "name": "bc1",
+                          "fill": "$ink",
+                          "width": 1,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "bFJVf",
+                          "name": "bc2",
+                          "fill": "$ink",
+                          "width": 2,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "uhNr4",
+                          "name": "bc3",
+                          "fill": "$ink",
+                          "width": 1,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "tUVYn",
+                          "name": "bc4",
+                          "fill": "$ink",
+                          "width": 4,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "E6RtZ6",
+                          "name": "bc5",
+                          "fill": "$ink",
+                          "width": 1,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "Xzvau",
+                          "name": "bc6",
+                          "fill": "$ink",
+                          "width": 1,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "MgvvZ",
+                          "name": "bc7",
+                          "fill": "$ink",
+                          "width": 2,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "Ub9mZ",
+                          "name": "bc8",
+                          "fill": "$ink",
+                          "width": 3,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "Q51VsU",
+                          "name": "bc9",
+                          "fill": "$ink",
+                          "width": 1,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "KztGs",
+                          "name": "bc10",
+                          "fill": "$ink",
+                          "width": 2,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "G5YM2P",
+                          "name": "bc11",
+                          "fill": "$ink",
+                          "width": 4,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "zGrmH",
+                          "name": "bc12",
+                          "fill": "$ink",
+                          "width": 1,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "Id8qM",
+                          "name": "bc13",
+                          "fill": "$ink",
+                          "width": 1,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "sNVRG",
+                          "name": "bc14",
+                          "fill": "$ink",
+                          "width": 3,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "I31ys",
+                          "name": "bc15",
+                          "fill": "$ink",
+                          "width": 2,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "uuMHs",
+                          "name": "bc16",
+                          "fill": "$ink",
+                          "width": 1,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "j3qAY",
+                          "name": "bc17",
+                          "fill": "$ink",
+                          "width": 1,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "NFcCG",
+                          "name": "bc18",
+                          "fill": "$ink",
+                          "width": 4,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "EdBNa",
+                          "name": "bc19",
+                          "fill": "$ink",
+                          "width": 2,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "uOkH5",
+                          "name": "bc20",
+                          "fill": "$ink",
+                          "width": 1,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "W6uAR",
+                          "name": "bc21",
+                          "fill": "$ink",
+                          "width": 3,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "NEO6T",
+                          "name": "bc22",
+                          "fill": "$ink",
+                          "width": 1,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "xUdit",
+                          "name": "bc23",
+                          "fill": "$ink",
+                          "width": 2,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "WKpEy",
+                          "name": "bc24",
+                          "fill": "$ink",
+                          "width": 1,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "u9wuQ",
+                          "name": "bc25",
+                          "fill": "$ink",
+                          "width": 1,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "i1lofV",
+                          "name": "bc26",
+                          "fill": "$ink",
+                          "width": 3,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "K53W7D",
+                          "name": "bc27",
+                          "fill": "$ink",
+                          "width": 1,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "Q6E2N",
+                          "name": "bc28",
+                          "fill": "$ink",
+                          "width": 2,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "wbD4N",
+                          "name": "bc29",
+                          "fill": "$ink",
+                          "width": 1,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "J5yQv",
+                          "name": "bc30",
+                          "fill": "$ink",
+                          "width": 4,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "ts5yj",
+                          "name": "bc31",
+                          "fill": "$ink",
+                          "width": 1,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "pp6gC",
+                          "name": "bc32",
+                          "fill": "$ink",
+                          "width": 2,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "a7ER0",
+                          "name": "bc33",
+                          "fill": "$ink",
+                          "width": 3,
+                          "height": 44
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "ooYte",
+                          "name": "bc34",
+                          "fill": "$ink",
+                          "width": 1,
+                          "height": 44
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "CjXiw",
+                      "name": "R thanks",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "DĚKUJEME, ŽE ŠETŘÍTE",
+                      "textAlign": "center",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "I1TgFb",
+          "name": "Srovnani",
+          "width": "fill_container",
+          "fill": "$surface",
+          "layout": "vertical",
+          "gap": 36,
+          "padding": [
+            64,
+            56
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "JNkOU",
+              "name": "C head",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "krmYJ",
+                  "name": "C title",
+                  "fill": "$ink",
+                  "content": "SCHVÁLNĚ SI TO PŘEPOČÍTEJTE",
+                  "fontFamily": "$font-display",
+                  "fontSize": 44,
+                  "fontWeight": "normal",
+                  "letterSpacing": 0.5
+                },
+                {
+                  "type": "text",
+                  "id": "vUNXg",
+                  "name": "C sub",
+                  "fill": "$text-secondary",
+                  "content": "Ceny za jednoho uživatele měsíčně. Funkce, které obchodník opravdu používá.",
+                  "fontFamily": "$font-body",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "YWNGp",
+              "name": "C table",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "$white",
+              "cornerRadius": 8,
+              "stroke": "#11111118",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "v0T7Jq",
+                  "name": "C hrow",
+                  "width": "fill_container",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "l79ct",
+                      "name": "C hc x",
+                      "width": 520,
+                      "height": "fill_container",
+                      "fill": "$white",
+                      "padding": [
+                        16,
+                        24
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "I2JZO8",
+                      "name": "C hc SIMPLECRM",
+                      "width": "fill_container",
+                      "fill": "$red",
+                      "padding": [
+                        16,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "IxZEO",
+                          "name": "C ht SIMPLECRM",
+                          "fill": "$white",
+                          "content": "SIMPLECRM",
+                          "fontFamily": "$font-display",
+                          "fontSize": 18,
+                          "fontWeight": "normal",
+                          "letterSpacing": 0.5
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "dI5AR",
+                      "name": "C hc RAYNET",
+                      "width": "fill_container",
+                      "fill": "$white",
+                      "padding": [
+                        16,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "lyjFN",
+                          "name": "C ht RAYNET",
+                          "fill": "$ink",
+                          "content": "RAYNET",
+                          "fontFamily": "$font-display",
+                          "fontSize": 18,
+                          "fontWeight": "normal",
+                          "letterSpacing": 0.5
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ykFE9",
+                      "name": "C hc PIPEDRIVE",
+                      "width": "fill_container",
+                      "fill": "$white",
+                      "padding": [
+                        16,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Q7hsck",
+                          "name": "C ht PIPEDRIVE",
+                          "fill": "$ink",
+                          "content": "PIPEDRIVE",
+                          "fontFamily": "$font-display",
+                          "fontSize": 18,
+                          "fontWeight": "normal",
+                          "letterSpacing": 0.5
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "r5Ls79",
+                  "name": "C r0",
+                  "width": "fill_container",
+                  "stroke": "#11111112",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "SZtxt",
+                      "name": "C rl0",
+                      "width": 520,
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "WONdE",
+                          "name": "C rlt0",
+                          "fill": "$ink",
+                          "content": "Cena / uživatel / měsíc",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "BVuao",
+                      "name": "C rv00",
+                      "width": "fill_container",
+                      "fill": "#FFD40022",
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "uDD9e",
+                          "name": "C rvt00",
+                          "fill": "$red",
+                          "content": "99 Kč",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "UqQTF",
+                      "name": "C rv01",
+                      "width": "fill_container",
+                      "fill": "$white",
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "iTZuX",
+                          "name": "C rvt01",
+                          "fill": "$ink",
+                          "content": "od 490 Kč",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "s0tY3",
+                      "name": "C rv02",
+                      "width": "fill_container",
+                      "fill": "$white",
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "EtwCF",
+                          "name": "C rvt02",
+                          "fill": "$ink",
+                          "content": "od 390 Kč",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "efuX1",
+                  "name": "C r1",
+                  "width": "fill_container",
+                  "stroke": "#11111112",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "W0ZE3U",
+                      "name": "C rl1",
+                      "width": 520,
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "TQ7Lp",
+                          "name": "C rlt1",
+                          "fill": "$ink",
+                          "content": "ARES — firma z IČO",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ZzwFt",
+                      "name": "C rv10",
+                      "width": "fill_container",
+                      "fill": "#FFD40022",
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "w5lfP",
+                          "name": "C rvt10",
+                          "fill": "$red",
+                          "content": "✓",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "UU3kv",
+                      "name": "C rv11",
+                      "width": "fill_container",
+                      "fill": "$white",
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "NavzQ",
+                          "name": "C rvt11",
+                          "fill": "#B0B0AA",
+                          "content": "✗",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "LA8NH",
+                      "name": "C rv12",
+                      "width": "fill_container",
+                      "fill": "$white",
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "D0K8Gg",
+                          "name": "C rvt12",
+                          "fill": "#B0B0AA",
+                          "content": "✗",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Ff8Bd",
+                  "name": "C r2",
+                  "width": "fill_container",
+                  "stroke": "#11111112",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Y9Y7Pi",
+                      "name": "C rl2",
+                      "width": 520,
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "iE7fZ",
+                          "name": "C rlt2",
+                          "fill": "$ink",
+                          "content": "Automatické uvolňování firem",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "OiEtt",
+                      "name": "C rv20",
+                      "width": "fill_container",
+                      "fill": "#FFD40022",
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "h5Snj",
+                          "name": "C rvt20",
+                          "fill": "$red",
+                          "content": "✓",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "E9Usr1",
+                      "name": "C rv21",
+                      "width": "fill_container",
+                      "fill": "$white",
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "vfCYn",
+                          "name": "C rvt21",
+                          "fill": "#B0B0AA",
+                          "content": "✗",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "F6zSZD",
+                      "name": "C rv22",
+                      "width": "fill_container",
+                      "fill": "$white",
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "XU8Jt",
+                          "name": "C rvt22",
+                          "fill": "#B0B0AA",
+                          "content": "✗",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "rK3m8",
+                  "name": "C r3",
+                  "width": "fill_container",
+                  "stroke": "#11111112",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "DYurk",
+                      "name": "C rl3",
+                      "width": 520,
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "eyflX",
+                          "name": "C rlt3",
+                          "fill": "$ink",
+                          "content": "Čeština a česká podpora",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "FEv3Z",
+                      "name": "C rv30",
+                      "width": "fill_container",
+                      "fill": "#FFD40022",
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "dbR6I",
+                          "name": "C rvt30",
+                          "fill": "$red",
+                          "content": "✓",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "iyFgx",
+                      "name": "C rv31",
+                      "width": "fill_container",
+                      "fill": "$white",
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "s4TXAI",
+                          "name": "C rvt31",
+                          "fill": "$ink",
+                          "content": "✓",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "pPsTw",
+                      "name": "C rv32",
+                      "width": "fill_container",
+                      "fill": "$white",
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "efNCl",
+                          "name": "C rvt32",
+                          "fill": "#B0B0AA",
+                          "content": "✗",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "N1kyY",
+                  "name": "C r4",
+                  "width": "fill_container",
+                  "stroke": "#11111112",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "k78jT",
+                      "name": "C rl4",
+                      "width": 520,
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "njtL0",
+                          "name": "C rlt4",
+                          "fill": "$ink",
+                          "content": "Jedna cena pro všechny",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Z8JcNl",
+                      "name": "C rv40",
+                      "width": "fill_container",
+                      "fill": "#FFD40022",
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "MLeN8",
+                          "name": "C rvt40",
+                          "fill": "$red",
+                          "content": "✓",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "wk9gD",
+                      "name": "C rv41",
+                      "width": "fill_container",
+                      "fill": "$white",
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "zMDOw",
+                          "name": "C rvt41",
+                          "fill": "#B0B0AA",
+                          "content": "✗",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "btgE5",
+                      "name": "C rv42",
+                      "width": "fill_container",
+                      "fill": "$white",
+                      "padding": [
+                        15,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "yDkxV",
+                          "name": "C rvt42",
+                          "fill": "#B0B0AA",
+                          "content": "✗",
+                          "fontFamily": "$font-body",
+                          "fontSize": 15,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "Db0tQ",
+              "name": "C foot",
+              "fill": "$text-secondary",
+              "content": "* Ceníky konkurence k červenci 2026, vstupní tarify, přepočet na Kč. Detailní srovnání na /cenik.",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "D3dKq6",
+          "name": "Guarantee",
+          "width": "fill_container",
+          "fill": "$red",
+          "gap": 40,
+          "padding": [
+            48,
+            56
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "RHNz6",
+              "name": "G t",
+              "fill": "$white",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "NAJDETE LEVNĚJŠÍ ČESKÝ CRM? DOROVNÁME HO A PŘIDÁME MĚSÍC ZDARMA.",
+              "lineHeight": 1.15,
+              "fontFamily": "$font-display",
+              "fontSize": 40,
+              "fontWeight": "normal",
+              "letterSpacing": 0.5
+            },
+            {
+              "type": "frame",
+              "id": "OdbXC",
+              "name": "G btn",
+              "fill": "$yellow",
+              "cornerRadius": 4,
+              "padding": [
+                18,
+                30
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "rERfn",
+                  "name": "G btn t",
+                  "fill": "$ink",
+                  "content": "Vyzkoušet 30 dní zdarma",
+                  "fontFamily": "$font-body",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "GgRbY",
+      "x": 1560,
+      "y": 0,
+      "name": "CENOVKA — Style key",
+      "width": 480,
+      "fill": "$white",
+      "cornerRadius": 8,
+      "stroke": "#11111122",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 32,
+      "children": [
+        {
+          "type": "text",
+          "id": "v8HcGW",
+          "name": "K title",
+          "fill": "$ink",
+          "content": "VARIANTA D — CENOVKA",
+          "fontFamily": "$font-display",
+          "fontSize": 26,
+          "fontWeight": "normal",
+          "letterSpacing": 0.5
+        },
+        {
+          "type": "text",
+          "id": "EBCAg",
+          "name": "K desc",
+          "fill": "$text-secondary",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Cenové vůdcovství jako identita: letáková červená, žluté cenovky, účtenka jako hero vizuál a srovnávací tabulka hned pod ní. Hlas značky: sebevědomý počtář — „schválně si to přepočítejte“.",
+          "lineHeight": 1.55,
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "jzo8v",
+          "name": "K swatches",
+          "width": "fill_container",
+          "gap": 10,
+          "children": [
+            {
+              "type": "frame",
+              "id": "F1FhVV",
+              "name": "K sw bílá",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "o94qjL",
+                  "name": "K chip bílá",
+                  "width": "fill_container",
+                  "height": 56,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 4,
+                  "stroke": "#11111122",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "text",
+                  "id": "baV6E",
+                  "name": "K swl bílá",
+                  "fill": "$ink",
+                  "content": "bílá",
+                  "fontFamily": "$font-body",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "SxQek",
+              "name": "K sw ink",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "AGIVj",
+                  "name": "K chip ink",
+                  "width": "fill_container",
+                  "height": 56,
+                  "fill": "#111111",
+                  "cornerRadius": 4,
+                  "stroke": "#11111122",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "text",
+                  "id": "PrAdH",
+                  "name": "K swl ink",
+                  "fill": "$ink",
+                  "content": "ink",
+                  "fontFamily": "$font-body",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "o58sI",
+              "name": "K sw letáková",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "nw8Qv",
+                  "name": "K chip letáková",
+                  "width": "fill_container",
+                  "height": 56,
+                  "fill": "#E30613",
+                  "cornerRadius": 4,
+                  "stroke": "#11111122",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "text",
+                  "id": "Gu5en",
+                  "name": "K swl letáková",
+                  "fill": "$ink",
+                  "content": "letáková",
+                  "fontFamily": "$font-body",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "NlhNS",
+              "name": "K sw cenovka",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "OAJk7",
+                  "name": "K chip cenovka",
+                  "width": "fill_container",
+                  "height": 56,
+                  "fill": "#FFD400",
+                  "cornerRadius": 4,
+                  "stroke": "#11111122",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "text",
+                  "id": "ihr4j",
+                  "name": "K swl cenovka",
+                  "fill": "$ink",
+                  "content": "cenovka",
+                  "fontFamily": "$font-body",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "e2pkw",
+          "name": "K fonts",
+          "fill": "$ink",
+          "content": "Display: Anton (letákové titulky)\nBody: Barlow · Účtenka: IBM Plex Mono\nPozn.: garanci dorovnání ceny nutno schválit byznysem",
+          "lineHeight": 1.7,
+          "fontFamily": "$font-body",
+          "fontSize": 13,
+          "fontWeight": "normal"
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "bg": {
+      "type": "color",
+      "value": "#FFFFFF"
+    },
+    "surface": {
+      "type": "color",
+      "value": "#F5F5F2"
+    },
+    "ink": {
+      "type": "color",
+      "value": "#111111"
+    },
+    "red": {
+      "type": "color",
+      "value": "#E30613"
+    },
+    "yellow": {
+      "type": "color",
+      "value": "#FFD400"
+    },
+    "text-secondary": {
+      "type": "color",
+      "value": "#55554F"
+    },
+    "white": {
+      "type": "color",
+      "value": "#FFFFFF"
+    },
+    "font-display": {
+      "type": "string",
+      "value": "Anton"
+    },
+    "font-body": {
+      "type": "string",
+      "value": "Barlow"
+    },
+    "font-mono": {
+      "type": "string",
+      "value": "IBM Plex Mono"
+    }
+  },
+  "fileToken": "e059692e-f1e1-4950-9dd3-692e27790e4e"
+}

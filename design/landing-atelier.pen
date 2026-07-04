@@ -1,0 +1,749 @@
+{
+  "version": "2.14",
+  "children": [
+    {
+      "type": "frame",
+      "id": "oHDnB",
+      "x": 0,
+      "y": 0,
+      "name": "ATELIÉR — Hero 1440",
+      "clip": true,
+      "width": 1440,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "bEqmo",
+          "name": "Nav",
+          "width": "fill_container",
+          "padding": [
+            24,
+            72
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "EI5lM",
+              "name": "Logo",
+              "fill": "$ink",
+              "content": "SimpleCRM",
+              "fontFamily": "$font-display",
+              "fontSize": 26,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "uwjA0",
+              "name": "Nav right",
+              "gap": 32,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "zpM6m",
+                  "name": "L Funkce",
+                  "fill": "$text-secondary",
+                  "content": "Funkce",
+                  "fontFamily": "$font-body",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "pwsDA",
+                  "name": "L Ceník",
+                  "fill": "$text-secondary",
+                  "content": "Ceník",
+                  "fontFamily": "$font-body",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "db7ZB",
+                  "name": "L Příběh",
+                  "fill": "$text-secondary",
+                  "content": "Příběh",
+                  "fontFamily": "$font-body",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "E6qnyK",
+                  "name": "L Kontakt",
+                  "fill": "$text-secondary",
+                  "content": "Kontakt",
+                  "fontFamily": "$font-body",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "xtZRc",
+                  "name": "Nav CTA",
+                  "fill": "$terra",
+                  "cornerRadius": 999,
+                  "padding": [
+                    12,
+                    24
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "vyipt",
+                      "name": "Nav CTA t",
+                      "fill": "$cream",
+                      "content": "Vyzkoušet zdarma",
+                      "fontFamily": "$font-body",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "q0Z54",
+          "name": "Hero",
+          "width": "fill_container",
+          "gap": 80,
+          "padding": [
+            64,
+            72,
+            88,
+            72
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "zgApU",
+              "name": "Hero left",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 26,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Las8x",
+                  "name": "Kicker",
+                  "fill": "$terra",
+                  "content": "Český CRM pro malé prodejní týmy",
+                  "fontFamily": "$font-display",
+                  "fontSize": 18,
+                  "fontWeight": "normal",
+                  "fontStyle": "italic"
+                },
+                {
+                  "type": "frame",
+                  "id": "H1hkrK",
+                  "name": "H1",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "iezEi",
+                      "name": "H1 l1",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Obchod je vztah.",
+                      "lineHeight": 1.08,
+                      "fontFamily": "$font-display",
+                      "fontSize": 66,
+                      "fontWeight": "600",
+                      "letterSpacing": -1
+                    },
+                    {
+                      "type": "text",
+                      "id": "nVnXI",
+                      "name": "H1 l2",
+                      "fill": "$terra",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Ne tabulka.",
+                      "lineHeight": 1.12,
+                      "fontFamily": "$font-display",
+                      "fontSize": 66,
+                      "fontWeight": "600",
+                      "letterSpacing": -1,
+                      "fontStyle": "italic"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "LZoFs",
+                  "name": "Sub",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": 500,
+                  "content": "SimpleCRM hlídá papírování, abyste se mohli věnovat lidem. IČO doplní ARES, spící firmy se po roce vrací kolegům, nabídky odejdou jedním mailem.",
+                  "lineHeight": 1.6,
+                  "fontFamily": "$font-body",
+                  "fontSize": 17,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "gi2aZ",
+                  "name": "CTA row",
+                  "gap": 24,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "gUp5l",
+                      "name": "CTA1",
+                      "fill": "$terra",
+                      "cornerRadius": 999,
+                      "padding": [
+                        16,
+                        32
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "SivZ3",
+                          "name": "CTA1 t",
+                          "fill": "$cream",
+                          "content": "Vyzkoušet 30 dní zdarma",
+                          "fontFamily": "$font-body",
+                          "fontSize": 16,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "YLOiP",
+                      "name": "CTA2",
+                      "fill": "$ink",
+                      "content": "Prohlédnout funkce",
+                      "fontFamily": "$font-body",
+                      "fontSize": 16,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "CZOwX",
+                  "name": "Micro",
+                  "fill": "$text-secondary",
+                  "content": "Bez kreditní karty · zrušení kdykoliv · data v EU",
+                  "fontFamily": "$font-body",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "GPgm2",
+              "name": "Hero photo wrap",
+              "width": 460,
+              "height": 560,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": [
+                    210,
+                    210,
+                    18,
+                    18
+                  ],
+                  "id": "GdW4o",
+                  "x": 20,
+                  "y": 0,
+                  "name": "Hero photo",
+                  "metadata": {
+                    "type": "unsplash",
+                    "username": "quynhlmph14759",
+                    "link": "https://unsplash.com/@quynhlmph14759",
+                    "author": "Quỳnh Lê Mạnh"
+                  },
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "https://images.unsplash.com/photo-1676012101858-fec7203619ca?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3ODMxMTQ5Mzd8&ixlib=rb-4.1.0&q=80&w=1080",
+                    "mode": "fill"
+                  },
+                  "width": 420,
+                  "height": 540
+                },
+                {
+                  "type": "frame",
+                  "id": "V0srOb",
+                  "x": 0,
+                  "y": 420,
+                  "name": "Photo badge",
+                  "fill": "$cream",
+                  "cornerRadius": 14,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#33261C22",
+                    "offset": {
+                      "x": 0,
+                      "y": 8
+                    },
+                    "blur": 24
+                  },
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": [
+                    16,
+                    20
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "IbqvY",
+                      "name": "Badge n",
+                      "fill": "$terra",
+                      "content": "365 dní",
+                      "fontFamily": "$font-display",
+                      "fontSize": 30,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "RoqEY",
+                      "name": "Badge t",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": 200,
+                      "content": "a firma bez pohybu se vrátí kolegům do hry",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "EAAMQ",
+          "name": "Feature line",
+          "width": "fill_container",
+          "padding": [
+            0,
+            72,
+            72,
+            72
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "s746sh",
+              "name": "Feature inner",
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": 24,
+              "padding": [
+                36,
+                44
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "sIrX3",
+                  "name": "F col 0",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "thSoa",
+                      "name": "F n 0",
+                      "fill": "$sage",
+                      "content": "I.",
+                      "fontFamily": "$font-display",
+                      "fontSize": 22,
+                      "fontWeight": "normal",
+                      "fontStyle": "italic"
+                    },
+                    {
+                      "type": "text",
+                      "id": "C9GPsl",
+                      "name": "F t 0",
+                      "fill": "$ink",
+                      "content": "ARES na jedno IČO",
+                      "fontFamily": "$font-display",
+                      "fontSize": 22,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Ku4Jw",
+                      "name": "F b 0",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Firma se založí sama — název, adresa, DIČ.",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "sM3X3",
+                  "name": "F rule 1",
+                  "fill": "#33261C22",
+                  "width": 1,
+                  "height": 110
+                },
+                {
+                  "type": "frame",
+                  "id": "jjRTq",
+                  "name": "F col 1",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    36
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "pZqTo",
+                      "name": "F n 1",
+                      "fill": "$sage",
+                      "content": "II.",
+                      "fontFamily": "$font-display",
+                      "fontSize": 22,
+                      "fontWeight": "normal",
+                      "fontStyle": "italic"
+                    },
+                    {
+                      "type": "text",
+                      "id": "EfohA",
+                      "name": "F t 1",
+                      "fill": "$ink",
+                      "content": "Pipeline bez školení",
+                      "fontFamily": "$font-display",
+                      "fontSize": 22,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "acV8g",
+                      "name": "F b 1",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Kanban, který pochopíte za minutu.",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "w7INug",
+                  "name": "F rule 2",
+                  "fill": "#33261C22",
+                  "width": 1,
+                  "height": 110
+                },
+                {
+                  "type": "frame",
+                  "id": "fsMEJ",
+                  "name": "F col 2",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    36
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "zYpZO",
+                      "name": "F n 2",
+                      "fill": "$sage",
+                      "content": "III.",
+                      "fontFamily": "$font-display",
+                      "fontSize": 22,
+                      "fontWeight": "normal",
+                      "fontStyle": "italic"
+                    },
+                    {
+                      "type": "text",
+                      "id": "pdVDZ",
+                      "name": "F t 2",
+                      "fill": "$ink",
+                      "content": "Nabídky jedním mailem",
+                      "fontFamily": "$font-display",
+                      "fontSize": 22,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Tfi5C",
+                      "name": "F b 2",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Vyfiltrujte firmy a pošlete všem najednou.",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "q5Nv6",
+      "x": 1560,
+      "y": 0,
+      "name": "ATELIÉR — Style key",
+      "width": 480,
+      "fill": "$cream",
+      "cornerRadius": 20,
+      "stroke": "#33261C33",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 32,
+      "children": [
+        {
+          "type": "text",
+          "id": "MZIs5",
+          "name": "K title",
+          "fill": "$ink",
+          "content": "Varianta C — Ateliér",
+          "fontFamily": "$font-display",
+          "fontSize": 26,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "ZBLJE",
+          "name": "K desc",
+          "fill": "$text-secondary",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Teplý editorial: serif Fraunces, krémový papír, terakota a šalvěj, oblouková fotografie. Hlas značky: lidský, důvěryhodný, řemeslný.",
+          "lineHeight": 1.55,
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "p8Z0Bv",
+          "name": "K swatches",
+          "width": "fill_container",
+          "gap": 10,
+          "children": [
+            {
+              "type": "frame",
+              "id": "fNYqd",
+              "name": "K sw krém",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "p9Voh3",
+                  "name": "K chip krém",
+                  "width": "fill_container",
+                  "height": 56,
+                  "fill": "#FBF5EA",
+                  "cornerRadius": 10,
+                  "stroke": "#33261C22",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "text",
+                  "id": "Z8niD",
+                  "name": "K swl krém",
+                  "fill": "$ink",
+                  "content": "krém",
+                  "fontFamily": "$font-body",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ynALw",
+              "name": "K sw espresso",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "C2BpRq",
+                  "name": "K chip espresso",
+                  "width": "fill_container",
+                  "height": 56,
+                  "fill": "#33261C",
+                  "cornerRadius": 10,
+                  "stroke": "#33261C22",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "text",
+                  "id": "egTF6",
+                  "name": "K swl espresso",
+                  "fill": "$ink",
+                  "content": "espresso",
+                  "fontFamily": "$font-body",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "QteHE",
+              "name": "K sw terakota",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "R9ev3",
+                  "name": "K chip terakota",
+                  "width": "fill_container",
+                  "height": 56,
+                  "fill": "#C25E35",
+                  "cornerRadius": 10,
+                  "stroke": "#33261C22",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "text",
+                  "id": "Usbw1",
+                  "name": "K swl terakota",
+                  "fill": "$ink",
+                  "content": "terakota",
+                  "fontFamily": "$font-body",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "gnjFv",
+              "name": "K sw šalvěj",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "BLgk7",
+                  "name": "K chip šalvěj",
+                  "width": "fill_container",
+                  "height": 56,
+                  "fill": "#7A8B6F",
+                  "cornerRadius": 10,
+                  "stroke": "#33261C22",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "text",
+                  "id": "yiTch",
+                  "name": "K swl šalvěj",
+                  "fill": "$ink",
+                  "content": "šalvěj",
+                  "fontFamily": "$font-body",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "G0X9Fh",
+          "name": "K fonts",
+          "fill": "$ink",
+          "content": "Display: Fraunces 600 (+ italic)\nBody: Albert Sans\nRadius: 14–24 · stíny měkké, jen na fotce",
+          "lineHeight": 1.7,
+          "fontFamily": "$font-body",
+          "fontSize": 13,
+          "fontWeight": "normal"
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "bg": {
+      "type": "color",
+      "value": "#FBF5EA"
+    },
+    "surface": {
+      "type": "color",
+      "value": "#F3EADA"
+    },
+    "ink": {
+      "type": "color",
+      "value": "#33261C"
+    },
+    "terra": {
+      "type": "color",
+      "value": "#C25E35"
+    },
+    "sage": {
+      "type": "color",
+      "value": "#7A8B6F"
+    },
+    "text-secondary": {
+      "type": "color",
+      "value": "#6E5F52"
+    },
+    "cream": {
+      "type": "color",
+      "value": "#FBF5EA"
+    },
+    "font-display": {
+      "type": "string",
+      "value": "Fraunces"
+    },
+    "font-body": {
+      "type": "string",
+      "value": "Albert Sans"
+    }
+  },
+  "fileToken": "1f74f411-b1b7-4a5f-8fee-6d21a4efe680"
+}
