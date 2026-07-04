@@ -12,6 +12,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
+from app.core.token_crypto import encrypt_token
 from app.db.models import (
     Charge,
     Company,
@@ -27,6 +28,7 @@ from app.db.models import (
 from app.db.session import AsyncSessionLocal
 from app.main import app
 from app.services.comgate import ComGateClient, get_comgate_client
+from app.services.google_calendar import get_google_calendar_client
 
 
 @pytest.fixture(autouse=True)
@@ -41,6 +43,23 @@ def _stub_comgate(monkeypatch: pytest.MonkeyPatch) -> None:
     app.dependency_overrides[get_comgate_client] = lambda: _Stub()
     yield
     app.dependency_overrides.pop(get_comgate_client, None)
+
+
+# Records tokens the erasure asks Google to revoke, so tests can assert the
+# revoke happened without hitting the network.
+_revoked_tokens: list[str] = []
+
+
+@pytest.fixture(autouse=True)
+def _stub_gcal() -> AsyncIterator[None]:
+    class _StubGcal:
+        async def revoke_token(self, token: str) -> None:
+            _revoked_tokens.append(token)
+
+    _revoked_tokens.clear()
+    app.dependency_overrides[get_google_calendar_client] = lambda: _StubGcal()
+    yield
+    app.dependency_overrides.pop(get_google_calendar_client, None)
 
 
 @pytest.fixture
@@ -132,7 +151,7 @@ async def test_erase_blanks_pii_and_keeps_invoice(
             user_id=admin.id,
             organization_id=org.id,
             google_email="admin@gmail.com",
-            refresh_token_encrypted="enc-refresh-token",
+            refresh_token_encrypted=encrypt_token("real-refresh-token"),
         )
     )
     db_session.add(
@@ -199,6 +218,8 @@ async def test_erase_blanks_pii_and_keeps_invoice(
                 )
             )
         ).scalars().all() == []
+        # Google's access was revoked at the source, not just deleted locally.
+        assert "real-refresh-token" in _revoked_tokens
         assert (
             await s.execute(
                 select(UserSmtpSettings).where(UserSmtpSettings.organization_id == org.id)

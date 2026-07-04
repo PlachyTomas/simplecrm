@@ -27,6 +27,7 @@ from app.schemas.organization import (
 )
 from app.services import org_erasure
 from app.services.comgate import ComGateClient, get_comgate_client
+from app.services.google_calendar import GoogleCalendarClient, get_google_calendar_client
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
@@ -103,6 +104,7 @@ async def erase_current_organization(
     user: User = Depends(require_role(UserRole.admin)),
     session: AsyncSession = Depends(get_db),
     comgate: ComGateClient = Depends(get_comgate_client),
+    gcal_client: GoogleCalendarClient = Depends(get_google_calendar_client),
 ) -> OrganizationEraseOut:
     """GDPR Art. 17 erasure for the caller's organization.
 
@@ -127,6 +129,7 @@ async def erase_current_organization(
             confirmation_name=payload.confirmation_name,
             by_admin_id=user.id,
             comgate=comgate,
+            gcal_client=gcal_client,
         )
     except org_erasure.ErasureError as exc:
         raise HTTPException(

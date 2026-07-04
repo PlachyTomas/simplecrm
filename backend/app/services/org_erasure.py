@@ -25,6 +25,7 @@ from datetime import UTC, datetime
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.token_crypto import decrypt_token
 from app.db.models import (
     Activity,
     AuthActionToken,
@@ -45,6 +46,7 @@ from app.db.models import (
 )
 from app.services import billing
 from app.services.comgate import ComGateClient
+from app.services.google_calendar import GoogleCalendarClient
 
 
 class ErasureError(Exception):
@@ -62,6 +64,7 @@ async def erase_organization(
     confirmation_name: str,
     by_admin_id: uuid.UUID,
     comgate: ComGateClient,
+    gcal_client: GoogleCalendarClient,
 ) -> Organization:
     """Anonymize an organization and hard-delete its PII satellites.
 
@@ -122,6 +125,24 @@ async def erase_organization(
     #   - google_calendar_connections — encrypted Google OAuth tokens + email
     #   - user_smtp_settings — encrypted SMTP password + host/username
     await session.execute(delete(EmailCampaign).where(EmailCampaign.organization_id == org_id))
+    # Revoke Google's access at the source before deleting our stored tokens
+    # (review R3 P2): a "deleted" user's calendar access must actually stop, not
+    # just be forgotten locally. Best-effort — a failed revoke (network, already
+    # expired, undecryptable) must never block the erasure.
+    gcal_connections = (
+        (
+            await session.execute(
+                select(GoogleCalendarConnection).where(
+                    GoogleCalendarConnection.organization_id == org_id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for conn in gcal_connections:
+        with contextlib.suppress(Exception):
+            await gcal_client.revoke_token(decrypt_token(conn.refresh_token_encrypted))
     await session.execute(
         delete(GoogleCalendarConnection).where(
             GoogleCalendarConnection.organization_id == org_id
