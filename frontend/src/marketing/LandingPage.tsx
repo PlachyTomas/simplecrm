@@ -329,15 +329,23 @@ function Hero() {
           firmy zpět do sdíleného pool. 30 dní zdarma, bez kreditky.
         </p>
 
-        <p className="mx-auto mt-6 flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 text-text-secondary">
-          <span className="text-2xl font-bold text-text-primary md:text-3xl">
-            {PRICE_PER_USER_ANNUAL_MONTHLY_CZK} Kč
+        <div className="mt-8 flex flex-col items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-accent">
+            <Sparkles size={13} strokeWidth={2} aria-hidden />
+            Nejlevnější CRM na trhu
           </span>
-          <span className="text-base md:text-lg">za uživatele měsíčně při roční platbě</span>
-          <span className="w-full text-sm text-text-tertiary">
-            {PRICE_PER_USER_CZK} Kč při měsíční platbě · jeden z nejlevnějších CRM na trhu
-          </span>
-        </p>
+          <p className="flex items-baseline justify-center gap-2">
+            <span className="text-5xl font-extrabold leading-none tracking-tight text-brand-accent md:text-6xl">
+              {PRICE_PER_USER_ANNUAL_MONTHLY_CZK}&nbsp;Kč
+            </span>
+            <span className="text-base font-medium text-text-secondary md:text-lg">
+              / uživatel / měsíc
+            </span>
+          </p>
+          <p className="text-sm text-text-tertiary">
+            při roční platbě · {PRICE_PER_USER_CZK} Kč při měsíční platbě
+          </p>
+        </div>
 
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link
