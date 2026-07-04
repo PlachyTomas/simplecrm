@@ -61,13 +61,13 @@ describe("/cenik pricing page", () => {
       .getByRole("heading", { level: 2, name: /^Enterprise$/ })
       .closest("article")!;
 
-    // Prices via PriceDisplay (Intl.NumberFormat → "99 Kč", "999 Kč" with cs-CZ NBSP).
+    // Prices via PriceDisplay (Intl.NumberFormat → "99 Kč", "996 Kč" with cs-CZ NBSP).
     expect(within(monthlyCard).getByText(/99\s?Kč/)).toBeInTheDocument();
-    expect(within(annualCard).getByText(/999\s?Kč/)).toBeInTheDocument();
+    expect(within(annualCard).getByText(/996\s?Kč/)).toBeInTheDocument();
     expect(within(enterpriseCard).getByText(/Vlastní balíček/)).toBeInTheDocument();
 
     // Annual savings caption.
-    expect(screen.getByText(/Ušetříte 189 Kč na uživatele/)).toBeInTheDocument();
+    expect(screen.getByText(/Ušetříte 192 Kč na uživatele/)).toBeInTheDocument();
 
     // Recommended badge appears exactly once.
     expect(screen.getAllByText(/Doporučujeme/i)).toHaveLength(1);

@@ -27,7 +27,10 @@ import { InteractivePipeline } from "@/marketing/InteractivePipeline";
 import { ReportsDemoSection } from "@/marketing/ReportsDemoSection";
 
 const SIGNUP_PATH = "/signup";
+// Monthly list price; the annual plan (996 Kč/yr) works out to 83 Kč/mo, which
+// is what we lead with on the landing page.
 const PRICE_PER_USER_CZK = 99;
+const PRICE_PER_USER_ANNUAL_MONTHLY_CZK = 83;
 
 type NavLink =
   | { kind: "anchor"; href: string; label: string }
@@ -328,10 +331,12 @@ function Hero() {
 
         <p className="mx-auto mt-6 flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 text-text-secondary">
           <span className="text-2xl font-bold text-text-primary md:text-3xl">
-            {PRICE_PER_USER_CZK} Kč
+            {PRICE_PER_USER_ANNUAL_MONTHLY_CZK} Kč
           </span>
-          <span className="text-base md:text-lg">za uživatele měsíčně</span>
-          <span className="text-sm text-text-tertiary">· jeden z nejlevnějších CRM na trhu</span>
+          <span className="text-base md:text-lg">za uživatele měsíčně při roční platbě</span>
+          <span className="w-full text-sm text-text-tertiary">
+            {PRICE_PER_USER_CZK} Kč při měsíční platbě · jeden z nejlevnějších CRM na trhu
+          </span>
         </p>
 
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -532,11 +537,11 @@ function Pricing() {
             Po zkušební době
           </p>
           <p className="mt-3 text-4xl font-bold tabular-nums">
-            {PRICE_PER_USER_CZK} Kč{" "}
+            {PRICE_PER_USER_ANNUAL_MONTHLY_CZK} Kč{" "}
             <span className="text-base font-normal text-text-tertiary">/ uživatel / měsíc</span>
           </p>
           <p className="mt-1 text-sm text-text-secondary">
-            Bez závazků. Zrušení kdykoliv. Data v EU.
+            Při roční platbě. {PRICE_PER_USER_CZK} Kč při měsíční platbě. Zrušení kdykoliv, data v EU.
           </p>
           <ul className="mt-6 space-y-3 text-sm text-text-primary">
             {[

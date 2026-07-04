@@ -74,7 +74,7 @@ async def test_public_plans_no_auth_returns_monthly_and_annual(
     assert codes == {"monthly", "annual"}
     annual = next(p for p in body if p["code"] == "annual")
     assert annual["monthly_equivalent_minor"] == 9900 * 12
-    assert annual["savings_minor"] == 9900 * 12 - 99900
+    assert annual["savings_minor"] == 9900 * 12 - 99600
 
 
 # ---------------------------------------------------------------------------

@@ -171,10 +171,10 @@ export function CenikPage() {
               eyebrow="Ročně"
               title="Roční"
               highlighted
-              price={<PriceDisplay baseMinor={99900} interval="annual" size="xl" hideVatLine />}
+              price={<PriceDisplay baseMinor={99600} interval="annual" size="xl" hideVatLine />}
               caption={
                 <p className="text-sm font-medium text-success">
-                  Ušetříte 189 Kč na uživatele · 2 měsíce zdarma
+                  Ušetříte 192 Kč na uživatele · téměř 2 měsíce zdarma
                 </p>
               }
               bullets={ANNUAL_BULLETS}

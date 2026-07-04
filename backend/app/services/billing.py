@@ -105,13 +105,14 @@ def get_effective_price_per_user_minor(sub: Subscription) -> int | None:
 def compute_savings(user_count: int) -> SavingsBreakdown:
     """Annual-vs-monthly savings for `user_count` seats.
 
-    Hardcodes the public price ladder (99 Kč / 999 Kč). Anyone on a
-    negotiated price computes savings off their override at the call site.
+    Hardcodes the public price ladder (99 Kč/mo · 996 Kč/yr = 83 Kč/mo).
+    Anyone on a negotiated price computes savings off their override at the
+    call site.
     """
     if user_count < 0:
         raise BillingError("user_count must be non-negative")
     monthly_per_user = 9900  # minor units
-    annual_per_user = 99900
+    annual_per_user = 99600  # 996 Kč/yr = 83 Kč/mo
     monthly_total = monthly_per_user * 12 * user_count
     annual_total = annual_per_user * user_count
     savings = monthly_total - annual_total

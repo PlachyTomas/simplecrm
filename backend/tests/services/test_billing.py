@@ -68,15 +68,15 @@ async def _seed_org_with_trial(db_session: AsyncSession) -> tuple[Organization, 
 def test_compute_savings_one_user() -> None:
     s = billing.compute_savings(1)
     assert s.monthly_total_minor == 9900 * 12  # 118 800
-    assert s.annual_total_minor == 99900
-    assert s.savings_minor == 18900
+    assert s.annual_total_minor == 99600
+    assert s.savings_minor == 19200  # 118 800 − 99 600 = 192 Kč
     assert 15.0 < s.savings_percent < 16.5
 
 
 def test_compute_savings_eight_users() -> None:
     s = billing.compute_savings(8)
-    # 8 × 18 900 = 151 200 minor (1 512 Kč) — matches the prompt example.
-    assert s.savings_minor == 8 * 18900
+    # 8 × 19 200 = 153 600 minor (1 536 Kč).
+    assert s.savings_minor == 8 * 19200
     assert s.savings_percent == billing.compute_savings(1).savings_percent
 
 

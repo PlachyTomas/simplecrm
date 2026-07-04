@@ -433,12 +433,12 @@ function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
   const isTrial = sub.plan.code === "trial";
   const switchTakesEffect = isTrial ? "po skončení zkušební doby" : "při dalším zúčtovacím období";
 
-  // Published price ladder: 99 Kč / month vs 999 Kč / year. Mirrors
+  // Published price ladder: 99 Kč / month vs 996 Kč / year. Mirrors
   // `compute_savings` on the backend. We render both the percent and
   // the absolute koruna amount the org would save this year on its
   // current seat count.
   const MONTHLY_PER_USER_MINOR = 9900;
-  const ANNUAL_PER_USER_MINOR = 99900;
+  const ANNUAL_PER_USER_MINOR = 99600;
   const annualSavingsMinor =
     Math.max(0, MONTHLY_PER_USER_MINOR * 12 - ANNUAL_PER_USER_MINOR) * sub.seat_count;
   const annualSubtitle =

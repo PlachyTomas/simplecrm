@@ -17,7 +17,7 @@ type DemoOrderOut = components["schemas"]["DemoOrderOut"];
  *  is unavailable — must mirror the seeded plans (Ceník shows the same). */
 const FALLBACK_PRICE_MINOR: Record<PlanCode, number> = {
   monthly: 9900,
-  annual: 99900,
+  annual: 99600,
 };
 
 const PLAN_LABEL: Record<PlanCode, string> = {

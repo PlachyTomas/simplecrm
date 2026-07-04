@@ -27,7 +27,7 @@ async def test_default_plans_are_seeded(db_session: AsyncSession) -> None:
     assert plans["monthly"].price_per_user_minor == 9900
     assert plans["monthly"].billing_interval == "monthly"
     assert plans["monthly"].is_public is True
-    assert plans["annual"].price_per_user_minor == 99900
+    assert plans["annual"].price_per_user_minor == 99600
     assert plans["annual"].is_public is True
     assert plans["enterprise"].price_per_user_minor is None
     assert plans["enterprise"].billing_interval == "custom"
