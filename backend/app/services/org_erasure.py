@@ -32,6 +32,8 @@ from app.db.models import (
     Company,
     Contact,
     Deal,
+    EmailCampaign,
+    GoogleCalendarConnection,
     Invitation,
     Organization,
     PaymentMethod,
@@ -39,6 +41,7 @@ from app.db.models import (
     RefreshToken,
     Team,
     User,
+    UserSmtpSettings,
 )
 from app.services import billing
 from app.services.comgate import ComGateClient
@@ -112,6 +115,21 @@ async def erase_organization(
     await session.execute(delete(Invitation).where(Invitation.organization_id == org_id))
     await session.execute(delete(Pipeline).where(Pipeline.organization_id == org_id))
     await session.execute(delete(Team).where(Team.organization_id == org_id))
+    # PII/credential satellites added after the original erasure list (review
+    # R3 P2). These carry the org's contact emails and stored third-party
+    # credentials, so they must be hard-deleted too:
+    #   - email_campaigns (+ recipients cascade) — recipient email addresses
+    #   - google_calendar_connections — encrypted Google OAuth tokens + email
+    #   - user_smtp_settings — encrypted SMTP password + host/username
+    await session.execute(delete(EmailCampaign).where(EmailCampaign.organization_id == org_id))
+    await session.execute(
+        delete(GoogleCalendarConnection).where(
+            GoogleCalendarConnection.organization_id == org_id
+        )
+    )
+    await session.execute(
+        delete(UserSmtpSettings).where(UserSmtpSettings.organization_id == org_id)
+    )
     if payment_method is not None:
         await session.execute(delete(PaymentMethod).where(PaymentMethod.organization_id == org_id))
 

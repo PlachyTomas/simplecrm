@@ -16,10 +16,13 @@ from app.db.models import (
     Charge,
     Company,
     Contact,
+    EmailCampaign,
+    GoogleCalendarConnection,
     Invoice,
     Organization,
     User,
     UserRole,
+    UserSmtpSettings,
 )
 from app.db.session import AsyncSessionLocal
 from app.main import app
@@ -123,6 +126,34 @@ async def test_erase_blanks_pii_and_keeps_invoice(
         total_minor=10000,
     )
     db_session.add(invoice)
+    # PII/credential satellites that must also be erased (review R3 P2).
+    db_session.add(
+        GoogleCalendarConnection(
+            user_id=admin.id,
+            organization_id=org.id,
+            google_email="admin@gmail.com",
+            refresh_token_encrypted="enc-refresh-token",
+        )
+    )
+    db_session.add(
+        UserSmtpSettings(
+            user_id=admin.id,
+            organization_id=org.id,
+            host="smtp.example.com",
+            port=465,
+            username="smtp-user",
+            password_encrypted="enc-smtp-password",
+            from_email="from@example.com",
+        )
+    )
+    db_session.add(
+        EmailCampaign(
+            organization_id=org.id,
+            subject="Kampaň",
+            body="Text",
+            from_email="from@example.com",
+        )
+    )
     await db_session.commit()
     invoice_id = invoice.id
 
@@ -159,6 +190,22 @@ async def test_erase_blanks_pii_and_keeps_invoice(
         ).scalars().all() == []
         assert (
             await s.execute(select(Company).where(Company.organization_id == org.id))
+        ).scalars().all() == []
+        # The PII/credential satellites must be gone too (review R3 P2).
+        assert (
+            await s.execute(
+                select(GoogleCalendarConnection).where(
+                    GoogleCalendarConnection.organization_id == org.id
+                )
+            )
+        ).scalars().all() == []
+        assert (
+            await s.execute(
+                select(UserSmtpSettings).where(UserSmtpSettings.organization_id == org.id)
+            )
+        ).scalars().all() == []
+        assert (
+            await s.execute(select(EmailCampaign).where(EmailCampaign.organization_id == org.id))
         ).scalars().all() == []
 
         surviving = (await s.execute(select(Invoice).where(Invoice.id == invoice_id))).scalar_one()
