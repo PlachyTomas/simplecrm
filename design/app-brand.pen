@@ -4273,7 +4273,7 @@
           "type": "frame",
           "id": "lpgZP",
           "x": 40,
-          "y": 1150,
+          "y": 1880,
           "name": "G trychtyr",
           "layout": "vertical",
           "gap": 16,
@@ -6912,6 +6912,18 @@
               ]
             }
           ]
+        },
+        {
+          "type": "text",
+          "id": "lcyGa",
+          "x": 40,
+          "y": 1840,
+          "name": "row3-label",
+          "fill": "#3A3A44",
+          "content": "—— kolo 2 (po rešerši): g pipeline · h schody · i spojení · j dvoubarva ——",
+          "fontFamily": "JetBrains Mono",
+          "fontSize": 16,
+          "fontWeight": "normal"
         }
       ]
     },
@@ -9283,8 +9295,8 @@
     {
       "type": "frame",
       "id": "i0dDg",
-      "x": 0,
-      "y": 2500,
+      "x": -377,
+      "y": 2852,
       "name": "B3 v aplikaci",
       "clip": true,
       "width": 3600,
