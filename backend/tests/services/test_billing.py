@@ -85,6 +85,17 @@ def test_compute_savings_rejects_negative() -> None:
         billing.compute_savings(-1)
 
 
+def test_add_months_uses_real_calendar() -> None:
+    # Review R2 P3: 12 months = same date next year (365/366 days), not 360.
+    start = datetime(2026, 1, 15, 12, 0, tzinfo=UTC)
+    assert billing._add_months(start, 12) == datetime(2027, 1, 15, 12, 0, tzinfo=UTC)
+    assert billing._add_months(start, 1) == datetime(2026, 2, 15, 12, 0, tzinfo=UTC)
+    # Month-end clamps: Jan 31 + 1 month → Feb 28 (2026 is not a leap year).
+    assert billing._add_months(datetime(2026, 1, 31, tzinfo=UTC), 1) == datetime(
+        2026, 2, 28, tzinfo=UTC
+    )
+
+
 async def test_compute_with_vat_off(db_session: AsyncSession) -> None:
     out = await billing.compute_with_vat(db_session, base_minor=9900)
     assert out.with_vat_minor == 9900
@@ -303,8 +314,8 @@ async def test_activate_subscription_sets_period(db_session: AsyncSession) -> No
     assert sub.current_period_starts_at is not None
     assert sub.current_period_ends_at is not None
     delta = sub.current_period_ends_at - sub.current_period_starts_at
-    # 30-day months — close to 30 days.
-    assert 29 * 86400 < delta.total_seconds() < 31 * 86400
+    # Real calendar month — 28 to 31 days depending on the current month.
+    assert 28 * 86400 - 60 < delta.total_seconds() < 31 * 86400 + 60
 
 
 async def test_activate_enterprise_requires_override(db_session: AsyncSession) -> None:

@@ -118,8 +118,8 @@ async def test_apply_manual_payment_success_extends_active_monthly_sub(
 
     assert result is not None
     assert result.status == "active"
-    # 30 days from now (anchored at now because period had already ended).
-    expected_end = datetime.now(tz=UTC) + timedelta(days=30)
+    # One calendar month from now (anchored at now because period had ended).
+    expected_end = billing._add_months(datetime.now(tz=UTC), 1)
     assert abs((result.current_period_ends_at - expected_end).total_seconds()) < 60
 
 
@@ -141,8 +141,7 @@ async def test_apply_manual_payment_anchors_at_period_end_when_still_open(
         await s.commit()
 
     assert result is not None
-    expected = future_end + timedelta(days=30)
-    # Allow a small drift for the 30-day approximation (`_add_months`).
+    expected = billing._add_months(future_end, 1)
     assert abs((result.current_period_ends_at - expected).total_seconds()) < 60
 
 

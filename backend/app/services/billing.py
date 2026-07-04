@@ -16,6 +16,7 @@ super-admin endpoints, and the eventual scheduled-job that flips
 
 from __future__ import annotations
 
+import calendar
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -249,14 +250,18 @@ async def _apply_queued_downsize(session: AsyncSession, sub: Subscription) -> li
 
 
 def _add_months(start: datetime, months: int) -> datetime:
-    """Approximate calendar-month addition (30-day months).
+    """Add calendar months, clamping the day to the target month's length.
 
-    Real billing systems would use a proper calendar walk, but for a
-    bank-transfer-only flow with manual activation the founder picks
-    the renewal date by hand if it matters. 30-day months keep the
-    math honest enough for sub-period mid-cycle changes.
+    Real calendar arithmetic (review R2 P3): 30-day months made an annual
+    period only 360 days, so annual subscribers were recharged ~5 days early
+    every cycle (a recurring overcharge). A month-walk keeps "1 month" / "12
+    months" aligned to the calendar; Jan 31 + 1 month clamps to Feb 28/29.
     """
-    return start + timedelta(days=30 * months)
+    month_index = start.month - 1 + months
+    year = start.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(start.day, calendar.monthrange(year, month)[1])
+    return start.replace(year=year, month=month, day=day)
 
 
 # ---------------------------------------------------------------------------
