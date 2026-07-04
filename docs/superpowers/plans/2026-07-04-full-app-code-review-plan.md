@@ -96,10 +96,31 @@ afterwards in separate batches.
 - [x] **P2 R6 localStorage crash** — FIXED (guarded CompaniesListPage,
       PipelinePage ×2, theme.ts; the bug recurred in pipeline/theme). Frontend
       suite now 140/140 (was 128). Both CI suites green.
-- [ ] P2/P3 remainder — TODO; re-verify the unverified R2 billing P3s first.
-      Candidates: jwt_secret startup guard (R1/R8), CSV formula injection (R3),
-      GDPR erasure gaps (R3), reassign clock (R4), schedulers-in-workers (R5),
-      comp-cancel + choose-plan lockout (R2), manager cross-team leak (R1).
+- [x] **R5 schedulers-in-workers** — FIXED (Postgres advisory locks, one key
+      per sweep). Decision #3(b). Test added.
+- [x] **R2 choose-plan lockout** — FIXED (pending_activation keeps trial
+      access; pay-immediately stacks paid period after trial). Decision #1.
+- [x] **R2 two-tabs double-capture** — FIXED (15-min pending-charge guard).
+      Decision #2(c).
+- [x] Decision #4 — filter URL-sync (useSearchParams) — FIXED.
+- [x] jwt_secret startup guard (R1/R8) — FIXED.
+- [x] CSV formula injection (R3) — FIXED (SafeCsvWriter, both exporters).
+- [x] comp-cancel access guard (R2) — FIXED.
+- [x] reassign ownership clock (R4) — FIXED.
+- [x] GDPR erasure gaps (R3) — FIXED (3 tables now deleted).
+
+ALL decided + autonomous fixes DONE. Backend 682/682, frontend 140/140, both
+lint-clean, across 11 commits on `fix/review-p0-p1-security-payments`.
+
+## Still open (deliberately not done — need decisions or are lower value)
+- Manager cross-team report leak (R1 P2) + team-annex (R1 P2) — need a scoping
+  design pass; larger than the other fixes.
+- GDPR: revoke Google tokens at Google (best-effort network call) — our stored
+  copies are now deleted; revocation-at-source is a follow-up.
+- Unverified R2 billing P3s (deferred-cancel, dunning-flap, `_add_months`
+  360-day) — re-verify then fix.
+- P3 tail: security headers (R5), activity-type label (R4), PII in logs (R8),
+  charge-status oracle (R1), pnpm field (R7).
 
 ## User decisions (locked 2026-07-04)
 
