@@ -31,5 +31,5 @@ def test_safe_writer_neutralizes_malicious_cell() -> None:
     buffer.seek(0)
     rows = list(csv.reader(buffer))
     # The dangerous cell is stored/parsed with the neutralizing leading quote.
-    assert rows[1][0] == "'=cmd|\"/c calc\"!A1"
+    assert rows[1][0] == '\'=cmd|"/c calc"!A1'
     assert rows[1][1] == "9900"

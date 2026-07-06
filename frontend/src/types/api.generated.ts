@@ -2123,9 +2123,12 @@ export interface paths {
          * @description ComGate redirects the customer's browser here after they
          *     complete (or cancel) the hosted-payment page.
          *
-         *     We don't trust this for billing state — that's the webhook's job.
-         *     Read the charge if we know its ID, then 302 the customer to the
-         *     frontend's billing-return route with whatever status we can see.
+         *     We don't trust this for billing state — that's the webhook's job — and we
+         *     deliberately do NOT read the charge's status here: this route is
+         *     unauthenticated, so reflecting DB state would let anyone holding a Charge id
+         *     learn its payment status across tenants (review R1 P3). We always redirect
+         *     with a neutral `pending`; the auth-gated in-app billing-return page fetches
+         *     the real, org-scoped status.
          */
         get: operations["payment_return_api_v1_payments_return_get"];
         put?: never;

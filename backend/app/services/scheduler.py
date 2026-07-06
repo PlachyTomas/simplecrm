@@ -62,7 +62,9 @@ _LOCK_BILLING_REMINDER = 918_2705
 _LOCK_INTEGRITY = 918_2706
 
 
-def _single_flight(lock_key: int) -> Callable[[Callable[[], Awaitable[_T]]], Callable[[], Awaitable[_T | int]]]:
+def _single_flight(
+    lock_key: int,
+) -> Callable[[Callable[[], Awaitable[_T]]], Callable[[], Awaitable[_T | int]]]:
     """Decorator: run the wrapped no-arg sweep only if this process wins the
     named Postgres advisory lock; otherwise skip (another worker holds it).
 
@@ -620,9 +622,7 @@ async def run_billing_info_reminder_sweep() -> int:
                     # Stamp regardless: one bounced address shouldn't
                     # keep the org in the retry pool. Stamp-once is the
                     # contract; bounce diagnostics live in SMTP logs.
-                    logger.exception(
-                        "billing-info reminder: send failed for user %s", recipient.id
-                    )
+                    logger.exception("billing-info reminder: send failed for user %s", recipient.id)
             org.billing_info_reminder_sent_at = now
             notified += 1
 

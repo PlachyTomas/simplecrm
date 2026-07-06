@@ -84,9 +84,7 @@ async def _enforce_widget_scope(
     """Router-level guard: reject a caller drilling into a team/rep outside
     their visibility (review R1 P2). Applies to every widget endpoint, which
     all accept the same `team_id` / `owner_user_id` query params."""
-    await assert_report_scope(
-        session, user, team_id=team_id, owner_user_id=owner_user_id
-    )
+    await assert_report_scope(session, user, team_id=team_id, owner_user_id=owner_user_id)
 
 
 # Mounted under /reports in routes.py — leading slash here makes the

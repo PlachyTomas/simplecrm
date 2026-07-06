@@ -148,20 +148,23 @@ async def replace_team_members(
         # P2). team_id is otherwise an admin-only field (PUT /users/{id}).
         if not is_admin:
             conflicts = (
-                await session.execute(
-                    select(User.id).where(
-                        User.id.in_(payload.member_ids),
-                        User.team_id.is_not(None),
-                        User.team_id != team.id,
+                (
+                    await session.execute(
+                        select(User.id).where(
+                            User.id.in_(payload.member_ids),
+                            User.team_id.is_not(None),
+                            User.team_id != team.id,
+                        )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             if conflicts:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=(
-                        "Some users already belong to another team; "
-                        "only an admin can move them."
+                        "Some users already belong to another team; only an admin can move them."
                     ),
                 )
 

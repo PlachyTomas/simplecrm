@@ -144,9 +144,7 @@ async def erase_organization(
         with contextlib.suppress(Exception):
             await gcal_client.revoke_token(decrypt_token(conn.refresh_token_encrypted))
     await session.execute(
-        delete(GoogleCalendarConnection).where(
-            GoogleCalendarConnection.organization_id == org_id
-        )
+        delete(GoogleCalendarConnection).where(GoogleCalendarConnection.organization_id == org_id)
     )
     await session.execute(
         delete(UserSmtpSettings).where(UserSmtpSettings.organization_id == org_id)

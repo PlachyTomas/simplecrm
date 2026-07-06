@@ -502,9 +502,7 @@ async def test_widget_rejects_manager_drilling_into_unmanaged_team(
     org, _admin, _open_stage, _won_stage, _company = await _setup(db_session, owned_cleanup)
     manager_email = f"mgrw-{uuid.uuid4().hex[:6]}@ex.cz"
     owned_cleanup["emails"].append(manager_email)
-    manager = User(
-        email=manager_email, name="MgrW", role=UserRole.manager, organization_id=org.id
-    )
+    manager = User(email=manager_email, name="MgrW", role=UserRole.manager, organization_id=org.id)
     db_session.add(manager)
     await db_session.commit()
     await db_session.refresh(manager)

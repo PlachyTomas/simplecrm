@@ -340,10 +340,14 @@ async def test_invite_accept_rejects_wrong_password_for_existing_credentialed_us
             await s.execute(select(Organization).where(Organization.name == "Inv Org"))
         ).scalar_one()
         admin = (
-            await s.execute(
-                select(User).where(User.organization_id == org.id, User.role == UserRole.admin)
+            (
+                await s.execute(
+                    select(User).where(User.organization_id == org.id, User.role == UserRole.admin)
+                )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         assert admin is not None
         victim = User(
             email="preorg-victim@example.cz",
@@ -379,7 +383,9 @@ async def test_invite_accept_rejects_wrong_password_for_existing_credentialed_us
         async with AsyncSessionLocal() as s:
             from app.db.models import Invitation
 
-            await s.execute(delete(Invitation).where(Invitation.email == "preorg-victim@example.cz"))
+            await s.execute(
+                delete(Invitation).where(Invitation.email == "preorg-victim@example.cz")
+            )
             await s.execute(delete(User).where(User.id == victim_id))
             await s.commit()
 

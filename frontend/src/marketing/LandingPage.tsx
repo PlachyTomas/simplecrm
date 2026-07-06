@@ -556,7 +556,8 @@ function Pricing() {
             <span className="text-base font-normal text-text-tertiary">/ uživatel / měsíc</span>
           </p>
           <p className="mt-1 text-sm text-text-secondary">
-            Při roční platbě. {PRICE_PER_USER_CZK} Kč při měsíční platbě. Zrušení kdykoliv, data v EU.
+            Při roční platbě. {PRICE_PER_USER_CZK} Kč při měsíční platbě. Zrušení kdykoliv, data v
+            EU.
           </p>
           <ul className="mt-6 space-y-3 text-sm text-text-primary">
             {[

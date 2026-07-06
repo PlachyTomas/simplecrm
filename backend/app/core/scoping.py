@@ -108,9 +108,7 @@ async def assert_report_scope(
         if not visible:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
 
-    if owner_user_id is not None and owner_user_id not in set(
-        await team_member_ids(session, user)
-    ):
+    if owner_user_id is not None and owner_user_id not in set(await team_member_ids(session, user)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
 

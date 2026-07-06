@@ -167,8 +167,6 @@ async def test_freeing_sweep_skips_when_another_worker_holds_lock(
 
     async with AsyncSessionLocal() as s:
         still_owned = (
-            await s.execute(
-                select(Company.owner_user_id).where(Company.name == "Expired-Locked")
-            )
+            await s.execute(select(Company.owner_user_id).where(Company.name == "Expired-Locked"))
         ).scalar_one()
     assert still_owned == owner_id, "sweep must not have freed the company while lock was held"
