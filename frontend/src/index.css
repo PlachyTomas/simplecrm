@@ -41,7 +41,6 @@
 .hero-blob {
   position: absolute;
   border-radius: 9999px;
-  filter: blur(44px);
   mix-blend-mode: screen;
   will-change: transform, opacity;
 }
