@@ -36,105 +36,109 @@
   }
 }
 
-/* Hero background glows — a slow living "mold colony": each blob grows and
-   drifts out to explore, reaches a bloom, then shrinks and fades ("dies"),
-   and repeats. Keyframes live at the TOP LEVEL (not inside @layer — Tailwind
-   v3 can drop @keyframes nested in a layer, which is why nothing moved).
-   reduced-motion disables it entirely. */
-@keyframes hero-mold-a {
+/* screen adds the glows on dark; multiply tints them on light (straight alpha
+   would wash out over the near-white background). */
+.hero-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(44px);
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+}
+:root[data-theme="light"] .hero-blob {
+  mix-blend-mode: multiply;
+}
+
+@keyframes hero-blob-1 {
   0% {
-    transform: translate(0, 0) scale(0.72);
-    opacity: 0.2;
+    transform: translate(0, 0) scale(0.85);
+    opacity: 0;
   }
-  22% {
-    transform: translate(9%, -7%) scale(1.08);
-    opacity: 0.85;
+  14% {
+    opacity: 0.9;
   }
-  44% {
-    transform: translate(16%, 6%) scale(1.4);
-    opacity: 0.98;
+  50% {
+    transform: translate(17vw, -7vh) scale(1.12);
+    opacity: 1;
   }
-  64% {
-    transform: translate(5%, 13%) scale(1.12);
-    opacity: 0.55;
-  }
-  82% {
-    transform: translate(-8%, 3%) scale(0.8);
-    opacity: 0.28;
+  80% {
+    transform: translate(27vw, 6vh) scale(0.92);
+    opacity: 0.25;
   }
   100% {
-    transform: translate(0, 0) scale(0.72);
-    opacity: 0.2;
+    transform: translate(35vw, 11vh) scale(0.8);
+    opacity: 0;
   }
 }
 
-@keyframes hero-mold-b {
+@keyframes hero-blob-2 {
   0% {
-    transform: translate(0, 0) scale(0.66);
-    opacity: 0.18;
+    transform: translate(0, 0) scale(0.9);
+    opacity: 0;
   }
-  25% {
-    transform: translate(-12%, 7%) scale(1.16);
-    opacity: 0.72;
+  16% {
+    opacity: 0.85;
+  }
+  48% {
+    transform: translate(-15vw, 9vh) scale(1.15);
+    opacity: 1;
+  }
+  82% {
+    transform: translate(-24vw, -5vh) scale(0.95);
+    opacity: 0.22;
+  }
+  100% {
+    transform: translate(-31vw, -12vh) scale(0.82);
+    opacity: 0;
+  }
+}
+
+@keyframes hero-blob-3 {
+  0% {
+    transform: translate(0, 0) scale(0.8);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.9;
+  }
+  52% {
+    transform: translate(10vw, 12vh) scale(1.2);
+    opacity: 1;
+  }
+  84% {
+    transform: translate(3vw, 22vh) scale(0.9);
+    opacity: 0.2;
+  }
+  100% {
+    transform: translate(-6vw, 30vh) scale(0.8);
+    opacity: 0;
+  }
+}
+
+@keyframes hero-blob-4 {
+  0% {
+    transform: translate(0, 0) scale(0.88);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
   }
   50% {
-    transform: translate(-4%, -10%) scale(1.44);
-    opacity: 0.95;
+    transform: translate(-12vw, -11vh) scale(1.14);
+    opacity: 1;
   }
-  72% {
-    transform: translate(9%, -3%) scale(1);
-    opacity: 0.5;
-  }
-  88% {
-    transform: translate(3%, 8%) scale(0.76);
+  80% {
+    transform: translate(-20vw, -20vh) scale(0.95);
     opacity: 0.24;
   }
   100% {
-    transform: translate(0, 0) scale(0.66);
-    opacity: 0.18;
+    transform: translate(-27vw, -27vh) scale(0.82);
+    opacity: 0;
   }
-}
-
-@keyframes hero-mold-c {
-  0% {
-    transform: translate(0, 0) scale(0.8);
-    opacity: 0.16;
-  }
-  30% {
-    transform: translate(8%, 9%) scale(1.28);
-    opacity: 0.72;
-  }
-  55% {
-    transform: translate(-10%, 4%) scale(1.04);
-    opacity: 0.4;
-  }
-  78% {
-    transform: translate(-3%, -9%) scale(1.34);
-    opacity: 0.82;
-  }
-  100% {
-    transform: translate(0, 0) scale(0.8);
-    opacity: 0.16;
-  }
-}
-
-.animate-hero-mold-a {
-  animation: hero-mold-a 22s ease-in-out infinite;
-  will-change: transform, opacity;
-}
-.animate-hero-mold-b {
-  animation: hero-mold-b 29s ease-in-out infinite;
-  will-change: transform, opacity;
-}
-.animate-hero-mold-c {
-  animation: hero-mold-c 34s ease-in-out infinite;
-  will-change: transform, opacity;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-hero-mold-a,
-  .animate-hero-mold-b,
-  .animate-hero-mold-c {
-    animation: none;
+  .hero-blob {
+    animation: none !important;
   }
 }

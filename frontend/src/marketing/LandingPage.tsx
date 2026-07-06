@@ -18,6 +18,8 @@ import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 
 import { ThemeToggle } from "@/lib/ThemeToggle";
+
+import { HeroPlasma } from "./HeroPlasma";
 import { cn } from "@/lib/utils";
 import { openCookieSettings } from "@/marketing/cookie-consent-controls";
 import { COMGATE_INFO, LEGAL_ENTITY } from "@/marketing/legal-entity";
@@ -289,14 +291,10 @@ function MobileDrawer({
 function Hero() {
   return (
     <section className="relative overflow-hidden">
-      {/* Dual radial glow behind the hero — indigo bottom-left, magenta
-          top-right — only the marketing hero is allowed this gradient
-          combo per brief §2 anti-patterns.
-
-          The container carries a vertical mask so each glow fades to
-          transparent before reaching the section's clipped edges,
-          replacing the hard arc that `overflow-hidden` would otherwise
-          carve at the section boundary. */}
+      {/* Living blobs behind the hero — only the marketing hero is allowed
+          this gradient combo per brief §2 anti-patterns. The container's
+          vertical mask fades them out before the section's clipped edges,
+          avoiding the hard arc `overflow-hidden` would carve. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
@@ -307,15 +305,7 @@ function Hero() {
             "linear-gradient(to bottom, transparent 0, black 12%, black 78%, transparent 100%)",
         }}
       >
-        {/* A colony of four glows, each on its own drift + duration + phase, so
-            they bloom and fade independently — the hero never sits still. */}
-        <div className="animate-hero-mold-a absolute -bottom-32 -left-32 h-[28rem] w-[28rem] rounded-full bg-accent/55 blur-3xl" />
-        <div className="animate-hero-mold-b absolute -right-32 -top-32 h-96 w-96 rounded-full bg-brand-accent/50 blur-3xl" />
-        <div className="animate-hero-mold-c absolute -top-16 left-[12%] h-80 w-80 rounded-full bg-brand-accent/35 blur-3xl" />
-        <div
-          className="animate-hero-mold-a absolute -bottom-12 right-[22%] h-72 w-72 rounded-full bg-accent/40 blur-3xl"
-          style={{ animationDelay: "-14s" }}
-        />
+        <HeroPlasma />
       </div>
       <div className="relative mx-auto max-w-[1200px] px-4 pb-20 pt-16 text-center md:px-8 md:pb-24 md:pt-24">
         <p className="mb-4 text-sm font-medium uppercase tracking-wider text-text-tertiary">
