@@ -36,98 +36,151 @@
   }
 }
 
-/* Hero background glows — a slow living "mold colony": each blob grows and
+/* Hero background glows — a living "mold colony": each blob grows and
    drifts out to explore, reaches a bloom, then shrinks and fades ("dies"),
    and repeats. Keyframes live at the TOP LEVEL (not inside @layer — Tailwind
    v3 can drop @keyframes nested in a layer, which is why nothing moved).
+
+   Three custom properties tune the motion; they're set on the hero glow
+   container from JS (parsed from Vite env, see marketing/heroBlobs.ts) and
+   inherited by the blob elements. The `var()` fallbacks below mirror the JS
+   defaults so the animation is correct even if the properties are unset:
+     --hero-blob-speed       divides the per-blob base duration (higher = faster)
+     --hero-blob-travel      scales the translate() drift offsets
+     --hero-blob-erraticity  scales each keyframe's scale-departure from 1
+   Per-blob base durations (22/29/34s) stay distinct so the blobs never sync.
    reduced-motion disables it entirely. */
 @keyframes hero-mold-a {
   0% {
-    transform: translate(0, 0) scale(0.72);
+    transform: translate(0, 0) scale(calc(1 - 0.28 * var(--hero-blob-erraticity, 1)));
     opacity: 0.2;
   }
   22% {
-    transform: translate(9%, -7%) scale(1.08);
+    transform: translate(
+        calc(9% * var(--hero-blob-travel, 1)),
+        calc(-7% * var(--hero-blob-travel, 1))
+      )
+      scale(calc(1 + 0.08 * var(--hero-blob-erraticity, 1)));
     opacity: 0.85;
   }
   44% {
-    transform: translate(16%, 6%) scale(1.4);
+    transform: translate(
+        calc(16% * var(--hero-blob-travel, 1)),
+        calc(6% * var(--hero-blob-travel, 1))
+      )
+      scale(calc(1 + 0.4 * var(--hero-blob-erraticity, 1)));
     opacity: 0.98;
   }
   64% {
-    transform: translate(5%, 13%) scale(1.12);
+    transform: translate(
+        calc(5% * var(--hero-blob-travel, 1)),
+        calc(13% * var(--hero-blob-travel, 1))
+      )
+      scale(calc(1 + 0.12 * var(--hero-blob-erraticity, 1)));
     opacity: 0.55;
   }
   82% {
-    transform: translate(-8%, 3%) scale(0.8);
+    transform: translate(
+        calc(-8% * var(--hero-blob-travel, 1)),
+        calc(3% * var(--hero-blob-travel, 1))
+      )
+      scale(calc(1 - 0.2 * var(--hero-blob-erraticity, 1)));
     opacity: 0.28;
   }
   100% {
-    transform: translate(0, 0) scale(0.72);
+    transform: translate(0, 0) scale(calc(1 - 0.28 * var(--hero-blob-erraticity, 1)));
     opacity: 0.2;
   }
 }
 
 @keyframes hero-mold-b {
   0% {
-    transform: translate(0, 0) scale(0.66);
+    transform: translate(0, 0) scale(calc(1 - 0.34 * var(--hero-blob-erraticity, 1)));
     opacity: 0.18;
   }
   25% {
-    transform: translate(-12%, 7%) scale(1.16);
+    transform: translate(
+        calc(-12% * var(--hero-blob-travel, 1)),
+        calc(7% * var(--hero-blob-travel, 1))
+      )
+      scale(calc(1 + 0.16 * var(--hero-blob-erraticity, 1)));
     opacity: 0.72;
   }
   50% {
-    transform: translate(-4%, -10%) scale(1.44);
+    transform: translate(
+        calc(-4% * var(--hero-blob-travel, 1)),
+        calc(-10% * var(--hero-blob-travel, 1))
+      )
+      scale(calc(1 + 0.44 * var(--hero-blob-erraticity, 1)));
     opacity: 0.95;
   }
   72% {
-    transform: translate(9%, -3%) scale(1);
+    transform: translate(
+        calc(9% * var(--hero-blob-travel, 1)),
+        calc(-3% * var(--hero-blob-travel, 1))
+      )
+      scale(1);
     opacity: 0.5;
   }
   88% {
-    transform: translate(3%, 8%) scale(0.76);
+    transform: translate(
+        calc(3% * var(--hero-blob-travel, 1)),
+        calc(8% * var(--hero-blob-travel, 1))
+      )
+      scale(calc(1 - 0.24 * var(--hero-blob-erraticity, 1)));
     opacity: 0.24;
   }
   100% {
-    transform: translate(0, 0) scale(0.66);
+    transform: translate(0, 0) scale(calc(1 - 0.34 * var(--hero-blob-erraticity, 1)));
     opacity: 0.18;
   }
 }
 
 @keyframes hero-mold-c {
   0% {
-    transform: translate(0, 0) scale(0.8);
+    transform: translate(0, 0) scale(calc(1 - 0.2 * var(--hero-blob-erraticity, 1)));
     opacity: 0.16;
   }
   30% {
-    transform: translate(8%, 9%) scale(1.28);
+    transform: translate(
+        calc(8% * var(--hero-blob-travel, 1)),
+        calc(9% * var(--hero-blob-travel, 1))
+      )
+      scale(calc(1 + 0.28 * var(--hero-blob-erraticity, 1)));
     opacity: 0.72;
   }
   55% {
-    transform: translate(-10%, 4%) scale(1.04);
+    transform: translate(
+        calc(-10% * var(--hero-blob-travel, 1)),
+        calc(4% * var(--hero-blob-travel, 1))
+      )
+      scale(calc(1 + 0.04 * var(--hero-blob-erraticity, 1)));
     opacity: 0.4;
   }
   78% {
-    transform: translate(-3%, -9%) scale(1.34);
+    transform: translate(
+        calc(-3% * var(--hero-blob-travel, 1)),
+        calc(-9% * var(--hero-blob-travel, 1))
+      )
+      scale(calc(1 + 0.34 * var(--hero-blob-erraticity, 1)));
     opacity: 0.82;
   }
   100% {
-    transform: translate(0, 0) scale(0.8);
+    transform: translate(0, 0) scale(calc(1 - 0.2 * var(--hero-blob-erraticity, 1)));
     opacity: 0.16;
   }
 }
 
 .animate-hero-mold-a {
-  animation: hero-mold-a 22s ease-in-out infinite;
+  animation: hero-mold-a calc(22s / var(--hero-blob-speed, 2.5)) ease-in-out infinite;
   will-change: transform, opacity;
 }
 .animate-hero-mold-b {
-  animation: hero-mold-b 29s ease-in-out infinite;
+  animation: hero-mold-b calc(29s / var(--hero-blob-speed, 2.5)) ease-in-out infinite;
   will-change: transform, opacity;
 }
 .animate-hero-mold-c {
-  animation: hero-mold-c 34s ease-in-out infinite;
+  animation: hero-mold-c calc(34s / var(--hero-blob-speed, 2.5)) ease-in-out infinite;
   will-change: transform, opacity;
 }
 

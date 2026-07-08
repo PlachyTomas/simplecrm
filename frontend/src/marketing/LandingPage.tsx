@@ -24,10 +24,17 @@ import { openCookieSettings } from "@/marketing/cookie-consent-controls";
 import { COMGATE_INFO, LEGAL_ENTITY } from "@/marketing/legal-entity";
 import { AresDemoSection } from "@/marketing/AresDemoSection";
 import { CalendarDemoSection } from "@/marketing/CalendarDemoSection";
+import { heroBlobStyle, resolveHeroBlobConfig } from "@/marketing/heroBlobs";
 import { InteractivePipeline } from "@/marketing/InteractivePipeline";
 import { ReportsDemoSection } from "@/marketing/ReportsDemoSection";
 
 const SIGNUP_PATH = "/signup";
+
+// Hero blob tuning is read once from Vite env (inlined at build time). The
+// resolved knobs become CSS custom properties on the glow container; the
+// @keyframes in index.css consume them. Defaults work with no env set.
+const HERO_BLOB_VARS = heroBlobStyle(resolveHeroBlobConfig(import.meta.env));
+
 // Monthly list price; the annual plan (996 Kč/yr) works out to 83 Kč/mo, which
 // is what we lead with on the landing page.
 const PRICE_PER_USER_CZK = 99;
@@ -296,6 +303,7 @@ function Hero() {
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
+          ...HERO_BLOB_VARS,
           maskImage:
             "linear-gradient(to bottom, transparent 0, black 12%, black 78%, transparent 100%)",
           WebkitMaskImage:
