@@ -12,6 +12,7 @@ import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.deps import get_current_user
 from app.db import get_db
@@ -21,6 +22,12 @@ from app.schemas.activity import ActivityOut
 from app.schemas.pagination import Page, PaginationParams
 
 router = APIRouter(prefix="/activities", tags=["activities"])
+
+
+def _activity_out(activity: Activity) -> ActivityOut:
+    out = ActivityOut.model_validate(activity)
+    out.user_name = activity.user.name if activity.user else None
+    return out
 
 
 @router.get("", response_model=Page[ActivityOut])
@@ -48,12 +55,17 @@ async def list_activities(
     count_stmt = select(func.count()).select_from(base.subquery())
     total = (await session.execute(count_stmt)).scalar_one()
 
+    # selectinload the actor so `user_name` is populated in one extra query
+    # for the whole page rather than one fetch per row.
     items_stmt = (
-        base.order_by(Activity.created_at.desc()).limit(pagination.limit).offset(pagination.offset)
+        base.options(selectinload(Activity.user))
+        .order_by(Activity.created_at.desc())
+        .limit(pagination.limit)
+        .offset(pagination.offset)
     )
     items = (await session.execute(items_stmt)).scalars().all()
     return Page[ActivityOut](
-        items=[ActivityOut.model_validate(a) for a in items],
+        items=[_activity_out(a) for a in items],
         total=total,
         limit=pagination.limit,
         offset=pagination.offset,

@@ -72,13 +72,6 @@ async def send_email_endpoint(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.errors()
         ) from exc
 
-    deal = await _visible_deal(session, user, data.deal_id) if data.deal_id else None
-    company = (
-        await _visible_company(session, user, data.company_id)
-        if data.company_id and deal is None
-        else None
-    )
-
     reply_parent: SentEmail | None = None
     if data.reply_to_email_id is not None:
         reply_parent = (
@@ -90,6 +83,33 @@ async def send_email_endpoint(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Reply target not found"
             )
+
+    # A reply stays anchored to its parent's deal + company. Derive them from
+    # the parent when the client omits them; reject an explicit mismatch so a
+    # child can't share a thread_id under a different deal/company.
+    if reply_parent is not None:
+        if data.deal_id is not None and data.deal_id != reply_parent.deal_id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Odpověď musí zůstat u stejného obchodu jako původní e-mail.",
+            )
+        if data.company_id is not None and data.company_id != reply_parent.company_id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Odpověď musí zůstat u stejné firmy jako původní e-mail.",
+            )
+        target_deal_id = reply_parent.deal_id
+        target_company_id = reply_parent.company_id
+    else:
+        target_deal_id = data.deal_id
+        target_company_id = data.company_id
+
+    deal = await _visible_deal(session, user, target_deal_id) if target_deal_id else None
+    company = (
+        await _visible_company(session, user, target_company_id)
+        if target_company_id and deal is None
+        else None
+    )
 
     email_attachments: list[EmailAttachment] = []
     for upload in attachments or []:

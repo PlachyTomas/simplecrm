@@ -14,6 +14,7 @@ import smtplib
 import ssl
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -75,6 +76,30 @@ async def send_user_email(
 
     company_id = deal.company_id if deal else (company.id if company else None)
 
+    # RFC 5322 References: the full chain of Message-IDs already in this thread,
+    # oldest first, so the recipient's client threads the follow-up correctly.
+    # A parent's single Message-ID alone loses the ancestry on the 2nd+ reply.
+    references = in_reply_to
+    if reply_parent is not None:
+        prior_ids = (
+            (
+                await session.execute(
+                    select(SentEmail.message_id)
+                    .where(
+                        SentEmail.organization_id == user.organization_id,
+                        SentEmail.thread_id == thread_id,
+                    )
+                    .order_by(SentEmail.created_at.asc())
+                )
+            )
+            .scalars()
+            .all()
+        )
+        chain = [mid for mid in prior_ids if mid]
+        if in_reply_to and in_reply_to not in chain:
+            chain.append(in_reply_to)
+        references = " ".join(chain) if chain else in_reply_to
+
     message = Email(
         to=", ".join(str(addr) for addr in payload.to),
         subject=payload.subject,
@@ -83,19 +108,31 @@ async def send_user_email(
         bcc=tuple(str(a) for a in payload.bcc),
         message_id=message_id,
         in_reply_to=in_reply_to,
-        references=in_reply_to,
+        references=references,
         attachments=tuple(attachments),
     )
 
     status = SentEmailStatus.sent
     error: str | None = None
     sent_at: datetime | None = datetime.now(tz=UTC)
+    unexpected: Exception | None = None
     try:
         await send_email_via(message, config)
     except (smtplib.SMTPException, OSError, ssl.SSLError) as exc:
+        # Expected transport failures: record a `failed` row and return it so
+        # the composer can surface "odeslání selhalo" (AC-3.4). No re-raise.
         status = SentEmailStatus.failed
         error = str(exc)[:500]
         sent_at = None
+    except Exception as exc:
+        # Any build/encode error still needs an audit row.
+        # MIME/encoding or other unexpected errors must not vanish as a bare
+        # 500 with no trace: persist a `failed` row, then re-raise below (after
+        # the commit) so genuine bugs still surface instead of being masked.
+        status = SentEmailStatus.failed
+        error = (str(exc) or type(exc).__name__)[:500]
+        sent_at = None
+        unexpected = exc
 
     sent = SentEmail(
         organization_id=user.organization_id,
@@ -118,8 +155,10 @@ async def send_user_email(
     session.add(sent)
 
     if status is SentEmailStatus.sent and company_id is not None:
+        email_payload: dict[str, Any] = {"subject": payload.subject}
         if deal is not None:
             entity_type, entity_id = ActivityEntityType.deal, deal.id
+            email_payload["deal_name"] = deal.name
         else:
             entity_type, entity_id = ActivityEntityType.company, company_id
         record_activity(
@@ -130,9 +169,13 @@ async def send_user_email(
             company_id=company_id,
             user_id=user.id,
             activity_type=ActivityType.email_sent,
-            payload={"subject": payload.subject},
+            payload=email_payload,
         )
 
     await session.commit()
     await session.refresh(sent)
+    # An unexpected build/send error was captured as a failed row above; surface
+    # it now that the audit row is durably committed.
+    if unexpected is not None:
+        raise unexpected
     return sent

@@ -35,7 +35,7 @@ from app.schemas.deal import (
     DealUpdate,
 )
 from app.schemas.pagination import Page, PaginationParams
-from app.services.activity_log import record_activity
+from app.services.activity_log import record_activity, resolve_field_changes
 
 router = APIRouter(prefix="/deals", tags=["deals"])
 
@@ -205,6 +205,7 @@ async def create_deal(
         user_id=user.id,
         activity_type=ActivityType.deal_created,
         payload={
+            "deal_name": deal.name,
             "name": deal.name,
             "value": str(deal.value),
             "stage_name": stage.name if stage else None,
@@ -245,13 +246,23 @@ async def update_deal(
         await _assert_contact_in_org(session, user, updates["primary_contact_id"])
 
     # Which submitted fields actually change a value — drives the activity log
-    # so a no-op PUT (or a save with no edits) writes nothing.
+    # so a no-op PUT (or a save with no edits) writes nothing. Capture the old
+    # values BEFORE the setattr loop so we can render per-field from→to strings.
     changed = [field for field, value in updates.items() if getattr(deal, field) != value]
+    raw_changes = {field: (getattr(deal, field), updates[field]) for field in changed}
 
     for field, value in updates.items():
         setattr(deal, field, value)
 
     if changed:
+        changes = await resolve_field_changes(
+            session,
+            raw_changes,
+            user_fields=frozenset({"owner_user_id"}),
+            stage_fields=frozenset({"stage_id"}),
+            contact_fields=frozenset({"primary_contact_id"}),
+            company_fields=frozenset({"company_id"}),
+        )
         record_activity(
             session,
             organization_id=deal.organization_id,
@@ -260,7 +271,9 @@ async def update_deal(
             company_id=deal.company_id,
             user_id=user.id,
             activity_type=ActivityType.deal_updated,
-            payload={"changed": changed},
+            # `changed` (names only) kept for legacy renderers; `changes` is the
+            # display-ready from→to map the current timeline UI consumes.
+            payload={"deal_name": deal.name, "changed": changed, "changes": changes},
         )
     await session.commit()
     await session.refresh(deal)
@@ -341,8 +354,11 @@ async def move_deal_stage(
         user_id=user.id,
         activity_type=ActivityType.stage_change,
         payload={
+            "deal_name": deal.name,
             "from_stage_id": str(previous_stage_id),
             "to_stage_id": str(payload.stage_id),
+            "from_stage_name": previous_stage.name if previous_stage else None,
+            "to_stage_name": dest_stage.name,
         },
     )
     await session.commit()
@@ -408,6 +424,7 @@ async def mark_deal_won(
         user_id=user.id,
         activity_type=ActivityType.deal_won,
         payload={
+            "deal_name": deal.name,
             "from_stage_id": str(previous_stage_id),
             "to_stage_id": str(won_stage.id),
             "value": str(deal.value),
@@ -463,6 +480,7 @@ async def mark_deal_lost(
         user_id=user.id,
         activity_type=ActivityType.deal_lost,
         payload={
+            "deal_name": deal.name,
             "from_stage_id": str(previous_stage_id),
             "to_stage_id": str(deal.stage_id),
             "lost_reason": payload.lost_reason,

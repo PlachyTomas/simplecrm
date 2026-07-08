@@ -2791,6 +2791,8 @@ export interface components {
             entity_id: string;
             /** User Id */
             user_id: string | null;
+            /** User Name */
+            user_name?: string | null;
             activity_type: components["schemas"]["ActivityType"];
             /** Payload */
             payload: {

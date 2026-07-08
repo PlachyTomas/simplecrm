@@ -286,7 +286,11 @@ async def create_event(
         company_id=deal.company_id,
         user_id=user.id,
         activity_type=ActivityType.event_created,
-        payload={"title": event.title, "starts_at": event.starts_at.isoformat()},
+        payload={
+            "deal_name": deal.name,
+            "title": event.title,
+            "starts_at": event.starts_at.isoformat(),
+        },
     )
 
     if payload.add_to_google:
