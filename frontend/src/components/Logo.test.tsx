@@ -4,16 +4,25 @@ import { describe, expect, it } from "vitest";
 import { Logo } from "@/components/Logo";
 
 describe("Logo", () => {
-  it("renders the full SimpleCRM wordmark by default", () => {
+  it("renders the icon mark plus the SimpleCRM wordmark by default", () => {
     render(<Logo />);
-    // The dot is a separate aria-hidden span, so the text content is
-    // "SimpleCRM." while the accessible/visible wordmark reads "SimpleCRM".
-    expect(screen.getByText(/SimpleCRM/)).toBeInTheDocument();
+    expect(screen.getByText("SimpleCRM")).toBeInTheDocument();
+    // The icon box is decorative (aria-hidden); the accessible name for a
+    // wrapping link comes from the visible "SimpleCRM" text.
+    expect(document.querySelector('[aria-hidden="true"] svg')).toBeInTheDocument();
   });
 
-  it("renders the compact mark variant", () => {
+  it("uses the larger wordmark size by default and the smaller one when requested", () => {
+    const { rerender } = render(<Logo />);
+    expect(screen.getByText("SimpleCRM")).toHaveClass("text-lg");
+
+    rerender(<Logo size="sm" />);
+    expect(screen.getByText("SimpleCRM")).toHaveClass("text-sm");
+  });
+
+  it("renders only the icon mark for variant='mark', with no wordmark text", () => {
     render(<Logo variant="mark" />);
-    expect(screen.getByText("S")).toBeInTheDocument();
-    expect(screen.queryByText(/SimpleCRM/)).not.toBeInTheDocument();
+    expect(screen.queryByText("SimpleCRM")).not.toBeInTheDocument();
+    expect(document.querySelector('[aria-hidden="true"] svg')).toBeInTheDocument();
   });
 });
