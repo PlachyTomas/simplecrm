@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { EmailComposeModal } from "@/app/emails/EmailComposeModal";
@@ -57,6 +57,43 @@ describe("EmailComposeModal", () => {
   it("enables Odeslat when a recipient is prefilled and a subject is typed", () => {
     wrap(<EmailComposeModal open onClose={vi.fn()} dealId="d1" replyTo={PARENT} />);
     // Reply mode prefills both To and subject → send is enabled.
+    expect(screen.getByRole("button", { name: /Odeslat/ })).toBeEnabled();
+  });
+
+  it("rejects an attachment with a disallowed type and blocks sending", () => {
+    const { container } = wrap(
+      <EmailComposeModal open onClose={vi.fn()} dealId="d1" replyTo={PARENT} />,
+    );
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const bad = new File(["data"], "smlouva.zip", { type: "application/zip" });
+    fireEvent.change(fileInput, { target: { files: [bad] } });
+    expect(screen.getByText(/nepodporovaný typ/i)).toBeInTheDocument();
+    expect(screen.getByText("smlouva.zip")).toBeInTheDocument();
+    // Reply mode would otherwise enable send — the invalid file must block it.
+    expect(screen.getByRole("button", { name: /Odeslat/ })).toBeDisabled();
+  });
+
+  it("rejects an attachment over 10 MB", () => {
+    const { container } = wrap(
+      <EmailComposeModal open onClose={vi.fn()} dealId="d1" replyTo={PARENT} />,
+    );
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const big = new File([new Uint8Array(10 * 1024 * 1024 + 1)], "velky.pdf", {
+      type: "application/pdf",
+    });
+    fireEvent.change(fileInput, { target: { files: [big] } });
+    expect(screen.getByText(/větší než 10 MB/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Odeslat/ })).toBeDisabled();
+  });
+
+  it("accepts an allowed attachment under the limit", () => {
+    const { container } = wrap(
+      <EmailComposeModal open onClose={vi.fn()} dealId="d1" replyTo={PARENT} />,
+    );
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const ok = new File(["hello"], "nabidka.pdf", { type: "application/pdf" });
+    fireEvent.change(fileInput, { target: { files: [ok] } });
+    expect(screen.queryByText(/nepodporovaný typ|větší než 10 MB/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Odeslat/ })).toBeEnabled();
   });
 });

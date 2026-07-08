@@ -24,6 +24,33 @@ function splitAddresses(raw: string): string[] {
     .filter(Boolean);
 }
 
+// Client-side attachment guard. Mirrors the server allowlist + size cap so a
+// bad file is caught before the multipart upload — keep in sync with
+// backend/app/api/v1/bulk_email.py:36-47 (_ALLOWED_ATTACHMENT_TYPES).
+const ALLOWED_ATTACHMENT_TYPES = new Set([
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/plain",
+]);
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+
+/** Czech validation message for an attachment, or `null` when it's allowed. */
+function attachmentError(file: File): string | null {
+  if (file.size > MAX_ATTACHMENT_BYTES) {
+    return `Soubor „${file.name}" je větší než 10 MB.`;
+  }
+  if (!ALLOWED_ATTACHMENT_TYPES.has(file.type)) {
+    return `Soubor „${file.name}" má nepodporovaný typ. Povolené: PDF, obrázky, Word, Excel, text.`;
+  }
+  return null;
+}
+
 function ChipsInput({
   label,
   value,
@@ -118,7 +145,9 @@ export function EmailComposeModal({
 
   if (!open) return null;
 
-  const canSend = to.length > 0 && subject.trim().length > 0 && !send.isPending;
+  const hasInvalidAttachment = files.some((f) => attachmentError(f) !== null);
+  const canSend =
+    to.length > 0 && subject.trim().length > 0 && !hasInvalidAttachment && !send.isPending;
 
   async function handleSend() {
     try {
@@ -219,22 +248,32 @@ export function EmailComposeModal({
             </label>
             {files.length ? (
               <ul className="mt-2 space-y-1">
-                {files.map((f, i) => (
-                  <li
-                    key={`${f.name}-${i}`}
-                    className="flex items-center justify-between rounded bg-surface-overlay px-2 py-1 text-xs"
-                  >
-                    <span className="truncate">{f.name}</span>
-                    <button
-                      type="button"
-                      aria-label={`Odebrat ${f.name}`}
-                      onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
-                      className="text-text-tertiary hover:text-danger"
+                {files.map((f, i) => {
+                  const error = attachmentError(f);
+                  return (
+                    <li
+                      key={`${f.name}-${i}`}
+                      className="rounded bg-surface-overlay px-2 py-1 text-xs"
                     >
-                      ×
-                    </button>
-                  </li>
-                ))}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate">{f.name}</span>
+                        <button
+                          type="button"
+                          aria-label={`Odebrat ${f.name}`}
+                          onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
+                          className="text-text-tertiary hover:text-danger"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      {error ? (
+                        <p className="mt-0.5 text-danger" role="alert">
+                          {error}
+                        </p>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             ) : null}
           </div>

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -134,6 +134,50 @@ describe("Deals list + detail", () => {
       ).toBeInTheDocument(),
     );
     expect(screen.getByText(/Otevřeno/)).toBeInTheDocument();
+  });
+
+  it("gates the deal e-mail button behind SMTP with a link to Nastavení → Integrace", async () => {
+    const deal = makeDeal({
+      id: "gate-deal",
+      name: "Dlouhý název obchodu který se nemá ořezávat",
+    });
+    fetchMock.mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
+      if (url.endsWith(`/api/v1/deals/${deal.id}`)) return jsonResponse(deal);
+      if (url.includes("/api/v1/deals?"))
+        return jsonResponse({ items: [deal], total: 1, limit: 50, offset: 0 });
+      if (url.includes("/api/v1/me/smtp")) return jsonResponse({ configured: false });
+      if (url.includes("/api/v1/emails"))
+        return jsonResponse({ items: [], total: 0, limit: 50, offset: 0 });
+      if (url.includes("/api/v1/companies/"))
+        return jsonResponse({ id: "co1", name: "Firma", email: "info@firma.cz" });
+      if (url.includes("/api/v1/contacts")) return jsonResponse({ items: [], total: 0 });
+      if (url.includes("/api/v1/users") || url.includes("/api/v1/teams"))
+        return jsonResponse({ items: [], total: 0 });
+      if (url.includes("/api/v1/pipelines")) return jsonResponse({ stages: [] });
+      if (url.includes("/api/v1/events")) return jsonResponse({ items: [], total: 0 });
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    renderAt(`/app/deals/${deal.id}`);
+    const heading = await screen.findByRole("heading", {
+      level: 2,
+      name: /Dlouhý název obchodu/,
+    });
+    // #12: the deal name must wrap, not truncate.
+    expect(heading.className).not.toContain("truncate");
+
+    // #2: gated button is focusable (aria-disabled), not natively disabled.
+    const mailButton = screen.getByRole("button", { name: /Poslat e-mail/ });
+    expect(mailButton).toHaveAttribute("aria-disabled", "true");
+    expect(mailButton).not.toBeDisabled();
+
+    // Focusing reveals the popover with the fix-it link to the integrations page.
+    fireEvent.focus(mailButton);
+    expect(await screen.findByText(/Nejprve nastavte a ověřte SMTP/)).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /Nastavení → Integrace/ });
+    expect(link).toHaveAttribute("href", "/app/settings/integrations");
   });
 
   it("empty state points users at the Kanban for creating deals", async () => {

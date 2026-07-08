@@ -9,6 +9,7 @@ import { useMarkDealLost, useMarkDealWon } from "@/app/deals/useDealActions";
 import { useDeal, useDeleteDeal, useUpdateDeal } from "@/app/deals/useDeals";
 import { EmailComposeModal } from "@/app/emails/EmailComposeModal";
 import { EmailHistorySection } from "@/app/emails/EmailHistorySection";
+import { GatedMailButton } from "@/app/emails/GatedMailButton";
 import type { SentEmailOut } from "@/app/emails/useEmails";
 import { DealEventsSection } from "@/app/events/DealEventsSection";
 import { usePipelineBoard } from "@/app/pipeline/useBoard";
@@ -187,24 +188,27 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
   }
 
   return (
-    <div className="p-6">
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h2
-            ref={titleRef}
-            tabIndex={-1}
-            id="deal-detail-title"
-            className="truncate text-2xl font-semibold outline-none"
-          >
-            {deal.name}
-          </h2>
-          {value > 0 ? (
-            <p className="mt-1 font-mono text-lg tabular-nums text-text-primary">
-              {Number.isNaN(value) ? `${deal.value} ${deal.currency}` : moneyFmt.format(value)}
-            </p>
-          ) : null}
+    <div className="flex min-h-0 flex-1 flex-col">
+      <header className="shrink-0 border-b border-border-subtle p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h2
+              ref={titleRef}
+              tabIndex={-1}
+              id="deal-detail-title"
+              className="text-2xl font-semibold outline-none"
+            >
+              {deal.name}
+            </h2>
+            {value > 0 ? (
+              <p className="mt-1 font-mono text-lg tabular-nums text-text-primary">
+                {Number.isNaN(value) ? `${deal.value} ${deal.currency}` : moneyFmt.format(value)}
+              </p>
+            ) : null}
+          </div>
+          <CloseButton onClose={onClose} />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           {!isClosed ? (
             <>
               <button
@@ -247,22 +251,16 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
               <Pencil size={14} strokeWidth={1.75} /> Upravit
             </button>
           ) : null}
-          <button
-            type="button"
+          <GatedMailButton
+            verified={isSmtpVerified(smtp)}
             onClick={() => {
               setReplyTarget(null);
               setComposeOpen(true);
             }}
-            disabled={!isSmtpVerified(smtp)}
-            title={
-              isSmtpVerified(smtp)
-                ? undefined
-                : "Nejprve nastavte a ověřte SMTP v Nastavení → Integrace"
-            }
-            className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
           >
             <Mail size={14} strokeWidth={1.75} /> Poslat e-mail
-          </button>
+          </GatedMailButton>
           {user?.role === "admin" ? (
             <button
               type="button"
@@ -274,202 +272,204 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
               <Trash2 size={14} strokeWidth={1.75} />
             </button>
           ) : null}
-          <CloseButton onClose={onClose} />
         </div>
       </header>
 
-      <section className="rounded-lg border border-border bg-surface">
-        <dl className="divide-y divide-border-subtle px-6">
-          <Field label="Stav">
-            {deal.closed_at ? (
-              deal.lost_reason ? (
-                <span className="inline-flex items-center rounded-full bg-danger-subtle px-3 py-1 text-xs font-medium text-danger">
-                  Neúspěch · {deal.lost_reason}
-                </span>
+      <div className="min-h-0 flex-1 overflow-y-auto p-6">
+        <section className="rounded-lg border border-border bg-surface">
+          <dl className="divide-y divide-border-subtle px-6">
+            <Field label="Stav">
+              {deal.closed_at ? (
+                deal.lost_reason ? (
+                  <span className="inline-flex items-center rounded-full bg-danger-subtle px-3 py-1 text-xs font-medium text-danger">
+                    Neúspěch · {deal.lost_reason}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-success-subtle px-3 py-1 text-xs font-medium text-success">
+                    <Check size={12} strokeWidth={2} aria-hidden /> Vyhráno
+                  </span>
+                )
               ) : (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-success-subtle px-3 py-1 text-xs font-medium text-success">
-                  <Check size={12} strokeWidth={2} aria-hidden /> Vyhráno
+                <span className="inline-flex items-center rounded-full bg-accent-subtle px-3 py-1 text-xs font-medium text-accent">
+                  Otevřeno
                 </span>
-              )
-            ) : (
-              <span className="inline-flex items-center rounded-full bg-accent-subtle px-3 py-1 text-xs font-medium text-accent">
-                Otevřeno
-              </span>
-            )}
-          </Field>
-          <Field label="Název">
-            {editing && edit ? (
-              <input
-                type="text"
-                value={edit.name}
-                onChange={(e) => setEdit((p) => p && { ...p, name: e.target.value })}
-                className="block h-9 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
-              />
-            ) : (
-              deal.name
-            )}
-          </Field>
-          <Field label="Hodnota">
-            {editing && edit ? (
-              <input
-                type="text"
-                inputMode="decimal"
-                value={edit.value}
-                onChange={(e) => setEdit((p) => p && { ...p, value: e.target.value })}
-                className="block h-9 w-full rounded-md border border-border bg-surface-overlay px-3 font-mono text-sm tabular-nums focus:border-accent focus:outline-none"
-              />
-            ) : Number.isNaN(value) ? (
-              `${deal.value} ${deal.currency}`
-            ) : value > 0 ? (
-              moneyFmt.format(value)
-            ) : (
-              <span className="text-text-tertiary">—</span>
-            )}
-          </Field>
-          <Field label="Firma">
-            <Link
-              to={`/app/companies/${deal.company_id}`}
-              onClick={onClose}
-              className="text-accent hover:text-accent-hover"
-            >
-              {company?.name ?? "Přejít na firmu"}
-            </Link>
-          </Field>
-          <Field label="Vlastník">
-            {editing && edit ? (
-              <select
-                value={edit.owner_user_id}
-                onChange={(e) => setEdit((p) => p && { ...p, owner_user_id: e.target.value })}
-                className="block h-9 rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
-              >
-                <option value="">Bez vlastníka</option>
-                {orgUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              owner
-            )}
-          </Field>
-          <Field label="Fáze">
-            {editing && edit ? (
-              <select
-                value={edit.stage_id}
-                onChange={(e) => setEdit((p) => p && { ...p, stage_id: e.target.value })}
-                className="block h-9 rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
-              >
-                {stages.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              (stage?.name ?? "—")
-            )}
-          </Field>
-          <Field label="Hlavní kontakt">
-            {editing && edit ? (
-              <select
-                value={edit.primary_contact_id}
-                onChange={(e) => setEdit((p) => p && { ...p, primary_contact_id: e.target.value })}
-                className="block h-9 rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
-              >
-                <option value="">Bez hlavního kontaktu</option>
-                {companyContacts.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.first_name} {c.last_name}
-                  </option>
-                ))}
-              </select>
-            ) : primaryContact ? (
+              )}
+            </Field>
+            <Field label="Název">
+              {editing && edit ? (
+                <input
+                  type="text"
+                  value={edit.name}
+                  onChange={(e) => setEdit((p) => p && { ...p, name: e.target.value })}
+                  className="block h-9 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
+                />
+              ) : (
+                deal.name
+              )}
+            </Field>
+            <Field label="Hodnota">
+              {editing && edit ? (
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={edit.value}
+                  onChange={(e) => setEdit((p) => p && { ...p, value: e.target.value })}
+                  className="block h-9 w-full rounded-md border border-border bg-surface-overlay px-3 font-mono text-sm tabular-nums focus:border-accent focus:outline-none"
+                />
+              ) : Number.isNaN(value) ? (
+                `${deal.value} ${deal.currency}`
+              ) : value > 0 ? (
+                moneyFmt.format(value)
+              ) : (
+                <span className="text-text-tertiary">—</span>
+              )}
+            </Field>
+            <Field label="Firma">
               <Link
-                to={`/app/contacts/${primaryContact.id}`}
+                to={`/app/companies/${deal.company_id}`}
                 onClick={onClose}
                 className="text-accent hover:text-accent-hover"
               >
-                {primaryContact.first_name} {primaryContact.last_name}
+                {company?.name ?? "Přejít na firmu"}
               </Link>
-            ) : (
-              "—"
-            )}
-          </Field>
-          <Field label="Očekávané uzavření">
-            {editing && edit ? (
-              <input
-                type="date"
-                value={edit.expected_close_date}
-                onChange={(e) => setEdit((p) => p && { ...p, expected_close_date: e.target.value })}
-                className="block h-9 rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
-              />
-            ) : deal.expected_close_date ? (
-              dateFmt.format(new Date(deal.expected_close_date))
-            ) : (
-              "—"
-            )}
-          </Field>
-          <Field label="Pravděpodobnost">
-            {editing && edit ? (
-              <input
-                type="number"
-                min={0}
-                max={100}
-                placeholder="dle fáze"
-                value={edit.probability_override}
-                onChange={(e) => setEdit((p) => p && { ...p, probability_override: e.target.value })}
-                className="block h-9 w-32 rounded-md border border-border bg-surface-overlay px-3 text-sm tabular-nums focus:border-accent focus:outline-none"
-              />
-            ) : deal.probability_override != null ? (
-              `${deal.probability_override} %`
-            ) : (
-              "dle fáze"
-            )}
-          </Field>
-          <Field label="Vytvořeno">{dateFmt.format(new Date(deal.created_at))}</Field>
-          {deal.closed_at ? (
-            <Field label="Uzavřeno">{dateFmt.format(new Date(deal.closed_at))}</Field>
-          ) : null}
-        </dl>
-      </section>
+            </Field>
+            <Field label="Vlastník">
+              {editing && edit ? (
+                <select
+                  value={edit.owner_user_id}
+                  onChange={(e) => setEdit((p) => p && { ...p, owner_user_id: e.target.value })}
+                  className="block h-9 rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
+                >
+                  <option value="">Bez vlastníka</option>
+                  {orgUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                owner
+              )}
+            </Field>
+            <Field label="Fáze">
+              {editing && edit ? (
+                <select
+                  value={edit.stage_id}
+                  onChange={(e) => setEdit((p) => p && { ...p, stage_id: e.target.value })}
+                  className="block h-9 rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
+                >
+                  {stages.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                (stage?.name ?? "—")
+              )}
+            </Field>
+            <Field label="Hlavní kontakt">
+              {editing && edit ? (
+                <select
+                  value={edit.primary_contact_id}
+                  onChange={(e) => setEdit((p) => p && { ...p, primary_contact_id: e.target.value })}
+                  className="block h-9 rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
+                >
+                  <option value="">Bez hlavního kontaktu</option>
+                  {companyContacts.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.first_name} {c.last_name}
+                    </option>
+                  ))}
+                </select>
+              ) : primaryContact ? (
+                <Link
+                  to={`/app/contacts/${primaryContact.id}`}
+                  onClick={onClose}
+                  className="text-accent hover:text-accent-hover"
+                >
+                  {primaryContact.first_name} {primaryContact.last_name}
+                </Link>
+              ) : (
+                "—"
+              )}
+            </Field>
+            <Field label="Očekávané uzavření">
+              {editing && edit ? (
+                <input
+                  type="date"
+                  value={edit.expected_close_date}
+                  onChange={(e) => setEdit((p) => p && { ...p, expected_close_date: e.target.value })}
+                  className="block h-9 rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
+                />
+              ) : deal.expected_close_date ? (
+                dateFmt.format(new Date(deal.expected_close_date))
+              ) : (
+                "—"
+              )}
+            </Field>
+            <Field label="Pravděpodobnost">
+              {editing && edit ? (
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  placeholder="dle fáze"
+                  value={edit.probability_override}
+                  onChange={(e) => setEdit((p) => p && { ...p, probability_override: e.target.value })}
+                  className="block h-9 w-32 rounded-md border border-border bg-surface-overlay px-3 text-sm tabular-nums focus:border-accent focus:outline-none"
+                />
+              ) : deal.probability_override != null ? (
+                `${deal.probability_override} %`
+              ) : (
+                "dle fáze"
+              )}
+            </Field>
+            <Field label="Vytvořeno">{dateFmt.format(new Date(deal.created_at))}</Field>
+            {deal.closed_at ? (
+              <Field label="Uzavřeno">{dateFmt.format(new Date(deal.closed_at))}</Field>
+            ) : null}
+          </dl>
+        </section>
 
-      {editing ? (
-        <div className="mt-4 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={updateDeal.isPending}
-            className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent disabled:opacity-60"
-          >
-            {updateDeal.isPending ? "Ukládám…" : "Uložit změny"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEditing(false);
-              setEdit(null);
-            }}
-            className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary"
-          >
-            Zrušit
-          </button>
-        </div>
-      ) : null}
+        {editing ? (
+          <div className="mt-4 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={updateDeal.isPending}
+              className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent disabled:opacity-60"
+            >
+              {updateDeal.isPending ? "Ukládám…" : "Uložit změny"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(false);
+                setEdit(null);
+              }}
+              className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary"
+            >
+              Zrušit
+            </button>
+          </div>
+        ) : null}
 
-      <DealEventsSection dealId={deal.id} dealName={deal.name} locale={locale} />
+        <DealEventsSection dealId={deal.id} dealName={deal.name} locale={locale} />
 
-      <EmailHistorySection
-        dealId={deal.id}
-        locale={locale}
-        onReply={(email) => {
-          setReplyTarget(email);
-          setComposeOpen(true);
-        }}
-      />
+        <EmailHistorySection
+          dealId={deal.id}
+          locale={locale}
+          onReply={(email) => {
+            setReplyTarget(email);
+            setComposeOpen(true);
+          }}
+        />
+      </div>
 
       {composeOpen ? (
         <EmailComposeModal
+          key={replyTarget?.id ?? "new"}
           open
           onClose={() => {
             setComposeOpen(false);
