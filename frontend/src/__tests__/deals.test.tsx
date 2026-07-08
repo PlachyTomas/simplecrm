@@ -46,6 +46,13 @@ function makeDeal(overrides: Record<string, unknown> = {}) {
     lost_reason: null,
     created_at: "2026-04-01T08:00:00+00:00",
     updated_at: "2026-04-01T08:00:00+00:00",
+    // Denormalized display fields (DealListItemOut) served by GET /deals.
+    company_name: "Firma s.r.o.",
+    company_email: null,
+    stage_name: "Nový lead",
+    owner_name: null,
+    primary_contact_name: null,
+    primary_contact_email: null,
     ...overrides,
   };
 }
@@ -92,25 +99,38 @@ describe("Deals list + detail", () => {
     });
 
     renderAt("/app/deals");
-    expect(await screen.findByRole("link", { name: /Velká zakázka/ })).toBeInTheDocument();
+    // The deal name is a button that opens the detail dialog (no standalone page).
+    expect(await screen.findByRole("button", { name: /Velká zakázka/ })).toBeInTheDocument();
     // The cs-CZ currency formatter uses non-breaking spaces and "Kč" after the value.
     const moneyCell = await screen.findByText(/42\s?500,00/);
     expect(moneyCell).toBeInTheDocument();
   });
 
-  it("renders the deal detail page with an open-stage badge", async () => {
+  it("redirects the legacy deal route to the list with the detail dialog open", async () => {
     const deal = makeDeal({ id: "open-deal", name: "Otevřený obchod" });
     fetchMock.mockImplementation(async (input) => {
       const url = typeof input === "string" ? input : (input as Request).url;
       if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
       if (url.endsWith(`/api/v1/deals/${deal.id}`)) return jsonResponse(deal);
+      if (url.includes("/api/v1/deals?"))
+        return jsonResponse({ items: [deal], total: 1, limit: 50, offset: 0 });
+      // Detail dialog also loads company/contacts/users/board; return empties so
+      // it renders without noise.
+      if (url.includes("/api/v1/companies/")) return jsonResponse({ id: "co1", name: "Firma" });
+      if (url.includes("/api/v1/contacts")) return jsonResponse({ items: [], total: 0 });
+      if (url.includes("/api/v1/users") || url.includes("/api/v1/teams"))
+        return jsonResponse({ items: [], total: 0 });
+      if (url.includes("/api/v1/pipelines")) return jsonResponse({ stages: [] });
+      if (url.includes("/api/v1/events")) return jsonResponse({ items: [], total: 0 });
       throw new Error(`Unexpected fetch: ${url}`);
     });
 
+    // The retired /app/deals/:id route redirects to /app/deals?deal=:id and
+    // opens the dialog (an h2, not a full page).
     renderAt(`/app/deals/${deal.id}`);
     await waitFor(() =>
       expect(
-        screen.getByRole("heading", { level: 1, name: /Otevřený obchod/ }),
+        screen.getByRole("heading", { level: 2, name: /Otevřený obchod/ }),
       ).toBeInTheDocument(),
     );
     expect(screen.getByText(/Otevřeno/)).toBeInTheDocument();

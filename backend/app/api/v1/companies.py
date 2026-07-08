@@ -13,7 +13,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user, require_role
 from app.core.scoping import can_write_row, scope_by_owner
 from app.db import get_db
-from app.db.models import BlockedCompany, Company, Contact, User, UserRole
+from app.db.models import (
+    ActivityEntityType,
+    ActivityType,
+    BlockedCompany,
+    Company,
+    Contact,
+    User,
+    UserRole,
+)
 from app.schemas.company import (
     CompanyCreate,
     CompanyFilterOptions,
@@ -23,6 +31,7 @@ from app.schemas.company import (
 from app.schemas.contact import ContactOut
 from app.schemas.pagination import Page, PaginationParams
 from app.schemas.registry import RegistryLookupResult
+from app.services.activity_log import record_activity
 from app.services.business_registry import (
     BusinessRegistryError,
     BusinessRegistryRegistry,
@@ -502,8 +511,20 @@ async def update_company(
         await _assert_owner_cap(session, new_owner, excluding_company_id=company.id)
     if "main_contact_id" in updates:
         await _validate_main_contact_id(session, user, company, updates["main_contact_id"])
+    changed = [field for field, value in updates.items() if getattr(company, field) != value]
     for field, value in updates.items():
         setattr(company, field, value)
+    if changed:
+        record_activity(
+            session,
+            organization_id=company.organization_id,
+            entity_type=ActivityEntityType.company,
+            entity_id=company.id,
+            company_id=company.id,
+            user_id=user.id,
+            activity_type=ActivityType.company_updated,
+            payload={"changed": changed},
+        )
     try:
         await session.commit()
     except IntegrityError as exc:

@@ -31,6 +31,7 @@ class Activity(Base):
         Index("ix_activities_created_at", "created_at"),
         Index("ix_activities_organization_id", "organization_id"),
         Index("ix_activities_user_id", "user_id"),
+        Index("ix_activities_company_id", "company_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -47,6 +48,14 @@ class Activity(Base):
         nullable=False,
     )
     entity_id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
+    # Denormalized parent-company link so the company timeline can surface
+    # everything about a company AND its deals/events/emails in one query.
+    # Nullable: org-level activities (subscription_change) have no company.
+    company_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("companies.id", ondelete="SET NULL"),
+    )
 
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True),

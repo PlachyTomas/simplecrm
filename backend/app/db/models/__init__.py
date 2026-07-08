@@ -22,6 +22,7 @@ from app.db.models.enums import (
     GoogleSyncStatus,
     OwnershipChangeReason,
     Region,
+    SentEmailStatus,
     StageType,
     UserRole,
 )
@@ -37,6 +38,7 @@ from app.db.models.payment_method import PaymentMethod
 from app.db.models.pipeline import Pipeline
 from app.db.models.plan import Plan
 from app.db.models.refresh_token import RefreshToken
+from app.db.models.sent_email import SentEmail
 from app.db.models.stage import Stage
 from app.db.models.subscription import Subscription
 from app.db.models.super_admin_audit import SuperAdminAction, SuperAdminAuditLog
@@ -76,6 +78,8 @@ __all__ = [
     "Plan",
     "RefreshToken",
     "Region",
+    "SentEmail",
+    "SentEmailStatus",
     "Stage",
     "StageType",
     "Subscription",

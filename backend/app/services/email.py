@@ -52,6 +52,16 @@ class Email:
     # Optional Reply-To override. Used by the feedback endpoint so the
     # founder can hit Reply and land on the reporting user's inbox.
     reply_to: str | None = None
+    # CC/BCC recipients (used by the single-email composer). Bcc is set as a
+    # header and stripped by smtplib's `send_message` before transmission.
+    cc: tuple[str, ...] = field(default_factory=tuple)
+    bcc: tuple[str, ...] = field(default_factory=tuple)
+    # RFC 5322 threading headers for the send-only mail client. `message_id`
+    # is the value we stamp; `in_reply_to`/`references` link a follow-up to a
+    # previously sent mail.
+    message_id: str | None = None
+    in_reply_to: str | None = None
+    references: str | None = None
     attachments: tuple[EmailAttachment, ...] = field(default_factory=tuple)
     # Picks which Zoho send-as identity supplies the `From:` header.
     # Defaults to "info" since everything except customer-facing
@@ -175,9 +185,20 @@ def _build_mime(message: Email, *, sender: str) -> EmailMessage:
     msg = EmailMessage()
     msg["From"] = sender
     msg["To"] = message.to
+    if message.cc:
+        msg["Cc"] = ", ".join(message.cc)
+    if message.bcc:
+        # smtplib.send_message reads Bcc for the envelope and strips the header.
+        msg["Bcc"] = ", ".join(message.bcc)
     msg["Subject"] = message.subject
     if message.reply_to:
         msg["Reply-To"] = message.reply_to
+    if message.message_id:
+        msg["Message-ID"] = message.message_id
+    if message.in_reply_to:
+        msg["In-Reply-To"] = message.in_reply_to
+    if message.references:
+        msg["References"] = message.references
     msg.set_content(message.body)
     for att in message.attachments:
         maintype, _, subtype = att.content_type.partition("/")

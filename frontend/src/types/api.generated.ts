@@ -981,6 +981,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Emails */
+        get: operations["list_emails_api_v1_emails_get"];
+        put?: never;
+        /** Send Email Endpoint */
+        post: operations["send_email_endpoint_api_v1_emails_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emails/{email_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Email */
+        get: operations["get_email_api_v1_emails__email_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/events": {
         parameters: {
             query?: never;
@@ -2123,9 +2158,12 @@ export interface paths {
          * @description ComGate redirects the customer's browser here after they
          *     complete (or cancel) the hosted-payment page.
          *
-         *     We don't trust this for billing state — that's the webhook's job.
-         *     Read the charge if we know its ID, then 302 the customer to the
-         *     frontend's billing-return route with whatever status we can see.
+         *     We don't trust this for billing state — that's the webhook's job — and we
+         *     deliberately do NOT read the charge's status here: this route is
+         *     unauthenticated, so reflecting DB state would let anyone holding a Charge id
+         *     learn its payment status across tenants (review R1 P3). We always redirect
+         *     with a neutral `pending`; the auth-gated in-app billing-return page fetches
+         *     the real, org-scoped status.
          */
         get: operations["payment_return_api_v1_payments_return_get"];
         put?: never;
@@ -2768,7 +2806,7 @@ export interface components {
          * ActivityType
          * @enum {string}
          */
-        ActivityType: "note" | "stage_change" | "owner_change" | "deal_won" | "deal_lost" | "company_freed" | "ownership_reassigned" | "subscription_change" | "email_sent";
+        ActivityType: "note" | "stage_change" | "owner_change" | "deal_won" | "deal_lost" | "company_freed" | "ownership_reassigned" | "subscription_change" | "email_sent" | "deal_created" | "deal_updated" | "company_updated" | "event_created";
         /** AdminAccessLogList */
         AdminAccessLogList: {
             /** Items */
@@ -3492,6 +3530,13 @@ export interface components {
             /** Attachment */
             attachment?: string | null;
         };
+        /** Body_send_email_endpoint_api_v1_emails_post */
+        Body_send_email_endpoint_api_v1_emails_post: {
+            /** Payload */
+            payload: string;
+            /** Attachments */
+            attachments?: string[] | null;
+        };
         /** Body_submit_feedback_api_v1_feedback_post */
         Body_submit_feedback_api_v1_feedback_post: {
             kind: components["schemas"]["FeedbackKind"];
@@ -4175,6 +4220,81 @@ export interface components {
             probability_override?: number | null;
             /** Expected Close Date */
             expected_close_date?: string | null;
+        };
+        /**
+         * DealListItemOut
+         * @description `DealOut` plus denormalized display fields so list views (Firmy →
+         *     obchody, the all-deals table) can render names — not UUIDs — without a
+         *     per-row fetch. Mirrors the `deal_name` denormalization on the events list.
+         */
+        DealListItemOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /**
+             * Stage Id
+             * Format: uuid
+             */
+            stage_id: string;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Primary Contact Id */
+            primary_contact_id?: string | null;
+            /** Name */
+            name: string;
+            /** Value */
+            value: string;
+            /** Currency */
+            currency: string;
+            /** Probability Override */
+            probability_override?: number | null;
+            /** Expected Close Date */
+            expected_close_date?: string | null;
+            /** Closed At */
+            closed_at?: string | null;
+            /** Lost Reason */
+            lost_reason?: string | null;
+            /**
+             * Is Paid
+             * @default false
+             */
+            is_paid: boolean;
+            /** Paid At */
+            paid_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Company Name */
+            company_name: string;
+            /** Company Email */
+            company_email?: string | null;
+            /** Stage Name */
+            stage_name: string;
+            /** Owner Name */
+            owner_name?: string | null;
+            /** Primary Contact Name */
+            primary_contact_name?: string | null;
+            /** Primary Contact Email */
+            primary_contact_email?: string | null;
         };
         /** DealMarkLost */
         DealMarkLost: {
@@ -5051,10 +5171,10 @@ export interface components {
             /** Offset */
             offset: number;
         };
-        /** Page[DealOut] */
-        Page_DealOut_: {
+        /** Page[DealListItemOut] */
+        Page_DealListItemOut_: {
             /** Items */
-            items: components["schemas"]["DealOut"][];
+            items: components["schemas"]["DealListItemOut"][];
             /** Total */
             total: number;
             /** Limit */
@@ -5066,6 +5186,17 @@ export interface components {
         Page_InvitationOut_: {
             /** Items */
             items: components["schemas"]["InvitationOut"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** Page[SentEmailOut] */
+        Page_SentEmailOut_: {
+            /** Items */
+            items: components["schemas"]["SentEmailOut"][];
             /** Total */
             total: number;
             /** Limit */
@@ -5481,6 +5612,117 @@ export interface components {
             /** Currency */
             currency: string;
         };
+        /**
+         * SentEmailDetail
+         * @description One sent email plus every other mail sharing its `thread_id`.
+         */
+        SentEmailDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /** Sender User Id */
+            sender_user_id?: string | null;
+            /** Deal Id */
+            deal_id?: string | null;
+            /** Company Id */
+            company_id?: string | null;
+            /** To Emails */
+            to_emails: string[];
+            /** Cc Emails */
+            cc_emails: string[];
+            /** Bcc Emails */
+            bcc_emails: string[];
+            /** Subject */
+            subject: string;
+            /** Body */
+            body: string;
+            /** Attachment Filenames */
+            attachment_filenames: string[];
+            status: components["schemas"]["SentEmailStatus"];
+            /** Error */
+            error?: string | null;
+            /** Message Id */
+            message_id: string;
+            /** In Reply To Message Id */
+            in_reply_to_message_id?: string | null;
+            /**
+             * Thread Id
+             * Format: uuid
+             */
+            thread_id: string;
+            /** Sent At */
+            sent_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Thread */
+            thread?: components["schemas"]["SentEmailOut"][];
+        };
+        /** SentEmailOut */
+        SentEmailOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /** Sender User Id */
+            sender_user_id?: string | null;
+            /** Deal Id */
+            deal_id?: string | null;
+            /** Company Id */
+            company_id?: string | null;
+            /** To Emails */
+            to_emails: string[];
+            /** Cc Emails */
+            cc_emails: string[];
+            /** Bcc Emails */
+            bcc_emails: string[];
+            /** Subject */
+            subject: string;
+            /** Body */
+            body: string;
+            /** Attachment Filenames */
+            attachment_filenames: string[];
+            status: components["schemas"]["SentEmailStatus"];
+            /** Error */
+            error?: string | null;
+            /** Message Id */
+            message_id: string;
+            /** In Reply To Message Id */
+            in_reply_to_message_id?: string | null;
+            /**
+             * Thread Id
+             * Format: uuid
+             */
+            thread_id: string;
+            /** Sent At */
+            sent_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * SentEmailStatus
+         * @description Outcome of a single user-composed email send (send-only mail client).
+         * @enum {string}
+         */
+        SentEmailStatus: "sent" | "failed";
         /** SetCompIn */
         SetCompIn: {
             /** Reason */
@@ -7718,7 +7960,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Page_DealOut_"];
+                    "application/json": components["schemas"]["Page_DealListItemOut_"];
                 };
             };
             /** @description Validation Error */
@@ -7983,6 +8225,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_emails_api_v1_emails_get: {
+        parameters: {
+            query?: {
+                deal_id?: string | null;
+                company_id?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_SentEmailOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_email_endpoint_api_v1_emails_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_send_email_endpoint_api_v1_emails_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentEmailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_email_api_v1_emails__email_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                email_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentEmailDetail"];
                 };
             };
             /** @description Validation Error */
@@ -9568,6 +9908,8 @@ export interface operations {
             query?: {
                 entity_type?: components["schemas"]["ActivityEntityType"] | null;
                 entity_id?: string | null;
+                /** @description Fan-up filter: returns everything logged against this company AND its deals/events/emails. Powers the company detail's Aktivita timeline. */
+                company_id?: string | null;
                 limit?: number;
                 offset?: number;
             };

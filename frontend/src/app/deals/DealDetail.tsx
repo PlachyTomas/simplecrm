@@ -1,18 +1,21 @@
-import { ArrowLeft, Check, Pencil, RotateCcw, Trash2, X } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Check, Mail, Pencil, RotateCcw, Trash2, X } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { useCompany } from "@/app/companies/useCompany";
 import { useContact, useContacts } from "@/app/contacts/useContacts";
-import { DealEventsSection } from "@/app/events/DealEventsSection";
 import { MarkLostDialog } from "@/app/deals/MarkLostDialog";
 import { useMarkDealLost, useMarkDealWon } from "@/app/deals/useDealActions";
 import { useDeal, useDeleteDeal, useUpdateDeal } from "@/app/deals/useDeals";
+import { EmailComposeModal } from "@/app/emails/EmailComposeModal";
+import { EmailHistorySection } from "@/app/emails/EmailHistorySection";
+import type { SentEmailOut } from "@/app/emails/useEmails";
+import { DealEventsSection } from "@/app/events/DealEventsSection";
 import { usePipelineBoard } from "@/app/pipeline/useBoard";
+import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { useToast } from "@/lib/toast";
-import { usePageTitle } from "@/lib/usePageTitle";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -33,9 +36,19 @@ interface EditState {
   primary_contact_id: string;
 }
 
-export function DealDetailPage() {
-  const { dealId } = useParams<{ dealId: string }>();
-  const navigate = useNavigate();
+interface DealDetailProps {
+  dealId: string;
+  /** Called when the deal is deleted or the user dismisses the panel. */
+  onClose: () => void;
+}
+
+/**
+ * Presentational deal detail, rendered inside `DealDetailDialog`. Everything
+ * the old standalone page showed — status, inline edit, win/lose/reopen/delete,
+ * the embedded events section — minus the page chrome. Deleting closes the
+ * dialog rather than navigating.
+ */
+export function DealDetail({ dealId, onClose }: DealDetailProps) {
   const { data: deal, isPending, isError } = useDeal(dealId);
   const { data: user } = useCurrentUser();
   const { data: usersPage } = useOrgUsers();
@@ -46,10 +59,26 @@ export function DealDetailPage() {
     companyId: deal?.company_id,
     limit: 100,
   });
+  const { data: smtp } = useSmtpSettings();
   const [lostDialogOpen, setLostDialogOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [edit, setEdit] = useState<EditState | null>(null);
-  usePageTitle(deal?.name ?? "Detail obchodu");
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [replyTarget, setReplyTarget] = useState<SentEmailOut | null>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const focusedOnLoad = useRef(false);
+
+  // The dialog mounts before the deal query resolves, so `useModalDialog`
+  // focuses the loading state's close button. That button unmounts when the
+  // data arrives, dropping focus to <body> and silently breaking Escape (whose
+  // listener lives on the dialog node). Re-assert focus onto the title the first
+  // time the deal loads — later refetches must not steal focus mid-edit.
+  useEffect(() => {
+    if (deal && !focusedOnLoad.current) {
+      focusedOnLoad.current = true;
+      titleRef.current?.focus();
+    }
+  }, [deal]);
 
   const markWon = useMarkDealWon(dealId);
   const markLost = useMarkDealLost(dealId);
@@ -62,24 +91,24 @@ export function DealDetailPage() {
 
   if (isPending) {
     return (
-      <div className="p-8 text-sm text-text-tertiary" role="status">
-        Načítání…
+      <div className="flex items-center justify-between p-6">
+        <p className="text-sm text-text-tertiary" role="status">
+          Načítání…
+        </p>
+        <CloseButton onClose={onClose} />
       </div>
     );
   }
 
   if (isError || !deal) {
     return (
-      <div className="p-8">
-        <Link
-          to="/app/deals"
-          className="mb-4 inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary"
-        >
-          <ArrowLeft size={16} strokeWidth={1.75} /> Zpět na obchody
-        </Link>
-        <p className="mt-4 text-sm text-danger" role="alert">
-          Obchod se nepodařilo načíst.
-        </p>
+      <div className="p-6">
+        <div className="flex items-start justify-between gap-4">
+          <p className="text-sm text-danger" role="alert">
+            Obchod se nepodařilo načíst.
+          </p>
+          <CloseButton onClose={onClose} />
+        </div>
       </div>
     );
   }
@@ -139,12 +168,7 @@ export function DealDetailPage() {
     if (!window.confirm("Znovu otevřít tento obchod? Datum uzavření a důvod budou odstraněny."))
       return;
     try {
-      // `closed_at` isn't exposed on DealUpdate — the backend clears it
-      // automatically when the deal moves back into a non-terminal stage.
-      // We only need to wipe the lost_reason here.
-      await updateDeal.mutateAsync({
-        lost_reason: null,
-      });
+      await updateDeal.mutateAsync({ lost_reason: null });
       toast.success("Obchod znovu otevřen.");
     } catch {
       toast.error("Obchod se nepodařilo znovu otevřít.");
@@ -156,24 +180,24 @@ export function DealDetailPage() {
     try {
       await deleteDeal.mutateAsync();
       toast.success("Obchod smazán.");
-      navigate("/app/deals");
+      onClose();
     } catch {
       toast.error("Obchod se nepodařilo smazat.");
     }
   }
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8">
-      <Link
-        to="/app/deals"
-        className="mb-4 inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary"
-      >
-        <ArrowLeft size={16} strokeWidth={1.75} /> Zpět na obchody
-      </Link>
-
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">{deal.name}</h1>
+    <div className="p-6">
+      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2
+            ref={titleRef}
+            tabIndex={-1}
+            id="deal-detail-title"
+            className="truncate text-2xl font-semibold outline-none"
+          >
+            {deal.name}
+          </h2>
           {value > 0 ? (
             <p className="mt-1 font-mono text-lg tabular-nums text-text-primary">
               {Number.isNaN(value) ? `${deal.value} ${deal.currency}` : moneyFmt.format(value)}
@@ -191,17 +215,17 @@ export function DealDetailPage() {
                   })
                 }
                 disabled={markWon.isPending}
-                className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-accent px-5 text-sm font-semibold text-text-on-brand-accent transition-colors duration-fast hover:bg-brand-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-accent px-4 text-sm font-semibold text-text-on-brand-accent transition-colors duration-fast hover:bg-brand-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <Check size={16} strokeWidth={1.75} /> Označit jako vyhráno
+                <Check size={16} strokeWidth={1.75} /> Vyhráno
               </button>
               <button
                 type="button"
                 onClick={() => setLostDialogOpen(true)}
                 disabled={markLost.isPending}
-                className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
               >
-                <X size={16} strokeWidth={1.75} /> Označit jako neúspěch
+                <X size={16} strokeWidth={1.75} /> Neúspěch
               </button>
             </>
           ) : (
@@ -209,7 +233,7 @@ export function DealDetailPage() {
               type="button"
               onClick={handleReopen}
               disabled={updateDeal.isPending}
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
+              className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
             >
               <RotateCcw size={16} strokeWidth={1.75} /> Znovu otevřít
             </button>
@@ -223,6 +247,22 @@ export function DealDetailPage() {
               <Pencil size={14} strokeWidth={1.75} /> Upravit
             </button>
           ) : null}
+          <button
+            type="button"
+            onClick={() => {
+              setReplyTarget(null);
+              setComposeOpen(true);
+            }}
+            disabled={!isSmtpVerified(smtp)}
+            title={
+              isSmtpVerified(smtp)
+                ? undefined
+                : "Nejprve nastavte a ověřte SMTP v Nastavení → Integrace"
+            }
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Mail size={14} strokeWidth={1.75} /> Poslat e-mail
+          </button>
           {user?.role === "admin" ? (
             <button
               type="button"
@@ -234,6 +274,7 @@ export function DealDetailPage() {
               <Trash2 size={14} strokeWidth={1.75} />
             </button>
           ) : null}
+          <CloseButton onClose={onClose} />
         </div>
       </header>
 
@@ -288,6 +329,7 @@ export function DealDetailPage() {
           <Field label="Firma">
             <Link
               to={`/app/companies/${deal.company_id}`}
+              onClick={onClose}
               className="text-accent hover:text-accent-hover"
             >
               {company?.name ?? "Přejít na firmu"}
@@ -345,6 +387,7 @@ export function DealDetailPage() {
             ) : primaryContact ? (
               <Link
                 to={`/app/contacts/${primaryContact.id}`}
+                onClick={onClose}
                 className="text-accent hover:text-accent-hover"
               >
                 {primaryContact.first_name} {primaryContact.last_name}
@@ -375,9 +418,7 @@ export function DealDetailPage() {
                 max={100}
                 placeholder="dle fáze"
                 value={edit.probability_override}
-                onChange={(e) =>
-                  setEdit((p) => p && { ...p, probability_override: e.target.value })
-                }
+                onChange={(e) => setEdit((p) => p && { ...p, probability_override: e.target.value })}
                 className="block h-9 w-32 rounded-md border border-border bg-surface-overlay px-3 text-sm tabular-nums focus:border-accent focus:outline-none"
               />
             ) : deal.probability_override != null ? (
@@ -418,6 +459,28 @@ export function DealDetailPage() {
 
       <DealEventsSection dealId={deal.id} dealName={deal.name} locale={locale} />
 
+      <EmailHistorySection
+        dealId={deal.id}
+        locale={locale}
+        onReply={(email) => {
+          setReplyTarget(email);
+          setComposeOpen(true);
+        }}
+      />
+
+      {composeOpen ? (
+        <EmailComposeModal
+          open
+          onClose={() => {
+            setComposeOpen(false);
+            setReplyTarget(null);
+          }}
+          dealId={deal.id}
+          defaultTo={primaryContact?.email ?? company?.email ?? null}
+          replyTo={replyTarget}
+        />
+      ) : null}
+
       <MarkLostDialog
         open={lostDialogOpen}
         onClose={() => setLostDialogOpen(false)}
@@ -434,5 +497,18 @@ export function DealDetailPage() {
         }}
       />
     </div>
+  );
+}
+
+function CloseButton({ onClose }: { onClose: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClose}
+      aria-label="Zavřít"
+      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-text-tertiary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary"
+    >
+      <X size={18} strokeWidth={1.75} aria-hidden />
+    </button>
   );
 }

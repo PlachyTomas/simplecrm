@@ -575,6 +575,7 @@ async def _log_activities(
                 organization_id=org_id,
                 entity_type=ActivityEntityType.company,
                 entity_id=company_id,
+                company_id=company_id,
                 user_id=user.id,
                 activity_type=ActivityType.email_sent,
                 payload={"subject": campaign.subject, "campaign_id": str(campaign.id)},

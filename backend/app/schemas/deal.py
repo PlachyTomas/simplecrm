@@ -3,8 +3,12 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
+
+if TYPE_CHECKING:
+    from app.db.models import Deal
 
 
 class DealCreate(BaseModel):
@@ -64,3 +68,33 @@ class DealOut(BaseModel):
     paid_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class DealListItemOut(DealOut):
+    """`DealOut` plus denormalized display fields so list views (Firmy →
+    obchody, the all-deals table) can render names — not UUIDs — without a
+    per-row fetch. Mirrors the `deal_name` denormalization on the events list.
+    """
+
+    company_name: str
+    company_email: str | None = None
+    stage_name: str
+    owner_name: str | None = None
+    primary_contact_name: str | None = None
+    primary_contact_email: str | None = None
+
+    @classmethod
+    def from_deal(cls, deal: Deal) -> DealListItemOut:
+        """Build from a `Deal` whose `company`, `stage`, `owner`, and
+        `primary_contact` relationships have been eager-loaded."""
+        contact = deal.primary_contact
+        contact_name = f"{contact.first_name} {contact.last_name}".strip() if contact else None
+        return cls(
+            **DealOut.model_validate(deal).model_dump(),
+            company_name=deal.company.name,
+            company_email=deal.company.email,
+            stage_name=deal.stage.name,
+            owner_name=deal.owner.name if deal.owner else None,
+            primary_contact_name=contact_name,
+            primary_contact_email=contact.email if contact else None,
+        )

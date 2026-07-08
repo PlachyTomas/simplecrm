@@ -27,6 +27,8 @@ from app.core.scoping import scope_by_owner
 from app.core.token_crypto import TokenDecryptError
 from app.db import get_db
 from app.db.models import (
+    ActivityEntityType,
+    ActivityType,
     CalendarEvent,
     Deal,
     GoogleCalendarConnection,
@@ -40,6 +42,7 @@ from app.schemas.calendar_event import (
     CalendarEventUpdate,
 )
 from app.schemas.pagination import Page, PaginationParams
+from app.services.activity_log import record_activity
 from app.services.google_calendar import (
     GoogleCalendarClient,
     GoogleCalendarError,
@@ -274,6 +277,17 @@ async def create_event(
     )
     session.add(event)
     await session.flush()
+
+    record_activity(
+        session,
+        organization_id=deal.organization_id,
+        entity_type=ActivityEntityType.deal,
+        entity_id=deal.id,
+        company_id=deal.company_id,
+        user_id=user.id,
+        activity_type=ActivityType.event_created,
+        payload={"title": event.title, "starts_at": event.starts_at.isoformat()},
+    )
 
     if payload.add_to_google:
         connection = _require_connection(await _owner_connection(session, user.id))

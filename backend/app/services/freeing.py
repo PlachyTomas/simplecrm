@@ -64,6 +64,7 @@ async def _record_release(
             organization_id=company.organization_id,
             entity_type=ActivityEntityType.company,
             entity_id=company.id,
+            company_id=company.id,
             user_id=released_by,
             activity_type=activity_type,
             payload={

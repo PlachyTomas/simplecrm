@@ -28,6 +28,13 @@ async def list_activities(
     pagination: PaginationParams = Depends(),
     entity_type: ActivityEntityType | None = Query(default=None),
     entity_id: uuid.UUID | None = Query(default=None),
+    company_id: uuid.UUID | None = Query(
+        default=None,
+        description=(
+            "Fan-up filter: returns everything logged against this company AND its "
+            "deals/events/emails. Powers the company detail's Aktivita timeline."
+        ),
+    ),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Page[ActivityOut]:
@@ -36,6 +43,8 @@ async def list_activities(
         base = base.where(Activity.entity_type == entity_type)
     if entity_id is not None:
         base = base.where(Activity.entity_id == entity_id)
+    if company_id is not None:
+        base = base.where(Activity.company_id == company_id)
     count_stmt = select(func.count()).select_from(base.subquery())
     total = (await session.execute(count_stmt)).scalar_one()
 

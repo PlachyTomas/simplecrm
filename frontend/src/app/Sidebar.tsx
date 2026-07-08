@@ -11,8 +11,9 @@ import {
   Users,
   Workflow,
 } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
+import { Logo } from "@/components/Logo";
 import { testIds } from "@/lib/testids";
 import { ThemeToggle } from "@/lib/ThemeToggle";
 import { cn } from "@/lib/utils";
@@ -59,6 +60,14 @@ export function Sidebar({ onLogout }: SidebarProps) {
       aria-label="Hlavní navigace"
       className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-border-subtle bg-surface px-3 py-4 md:flex"
     >
+      <Link
+        to="/app"
+        aria-label="SimpleCRM"
+        className="mb-5 inline-flex w-fit rounded-md px-3 py-1 text-xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      >
+        <Logo />
+      </Link>
+
       <div className="flex-1 space-y-1">
         <p className="px-3 pb-2 text-xs font-medium uppercase tracking-wider text-text-tertiary">
           Prodej
