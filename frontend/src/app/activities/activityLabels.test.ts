@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { ACTIVITY_LABEL, activityDetail, activityLabel } from "@/app/activities/activityLabels";
+import {
+  ACTIVITY_LABEL,
+  activityDetail,
+  activityLabel,
+  changeFieldLabel,
+} from "@/app/activities/activityLabels";
 
 // Mirror of the backend ActivityType enum. `ACTIVITY_LABEL` is typed
 // `Record<ActivityType, string>`, so a missing entry already fails the build;
@@ -30,9 +35,9 @@ describe("activityLabels", () => {
   });
 
   it("derives a readable detail from the payload", () => {
-    expect(activityDetail({ activity_type: "deal_created", payload: { name: "Velký obchod" } })).toBe(
-      "Velký obchod",
-    );
+    expect(
+      activityDetail({ activity_type: "deal_created", payload: { name: "Velký obchod" } }),
+    ).toBe("Velký obchod");
     expect(
       activityDetail({ activity_type: "deal_updated", payload: { changed: ["name", "value"] } }),
     ).toBe("název, hodnota");
@@ -44,8 +49,31 @@ describe("activityLabels", () => {
     );
   });
 
+  it("renders a stage change from resolved stage names, never UUIDs", () => {
+    expect(
+      activityDetail({
+        activity_type: "stage_change",
+        payload: { from_stage_name: "Nový", to_stage_name: "Nabídka" },
+      }),
+    ).toBe("Fáze: Nový → Nabídka");
+    // Legacy payload with only UUIDs must not leak them into the detail.
+    expect(
+      activityDetail({
+        activity_type: "stage_change",
+        payload: { from_stage_id: "a1b2", to_stage_id: "c3d4" },
+      }),
+    ).toBeNull();
+  });
+
   it("returns null when there is no extra detail", () => {
     expect(activityDetail({ activity_type: "stage_change", payload: {} })).toBeNull();
     expect(activityDetail({ activity_type: "deal_updated", payload: { changed: [] } })).toBeNull();
+  });
+
+  it("maps changed field names to Czech, falling back to the raw key", () => {
+    expect(changeFieldLabel("name")).toBe("Název");
+    expect(changeFieldLabel("expected_close_date")).toBe("Očekávané uzavření");
+    expect(changeFieldLabel("ico")).toBe("IČO");
+    expect(changeFieldLabel("unknown_field")).toBe("unknown_field");
   });
 });

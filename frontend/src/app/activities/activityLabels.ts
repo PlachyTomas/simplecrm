@@ -50,8 +50,41 @@ const FIELD_LABEL: Record<string, string> = {
   owner: "vlastník",
 };
 
+/**
+ * Field name → Czech label for the per-field "changes" detail (finding #5).
+ * Title-cased because each field starts its own line ("Název: staré → nové"),
+ * unlike the inline, comma-joined legacy list in `FIELD_LABEL`.
+ */
+export const CHANGE_FIELD_LABEL: Record<string, string> = {
+  name: "Název",
+  value: "Hodnota",
+  expected_close_date: "Očekávané uzavření",
+  probability_override: "Pravděpodobnost",
+  owner_user_id: "Vlastník",
+  stage_id: "Fáze",
+  primary_contact_id: "Hlavní kontakt",
+  currency: "Měna",
+  ico: "IČO",
+  dic: "DIČ",
+  email: "E-mail",
+  phone: "Telefon",
+  website: "Web",
+  note: "Poznámka",
+  industry: "Obor",
+  legal_form: "Právní forma",
+  address_street: "Ulice",
+  address_city: "Město",
+  address_zip: "PSČ",
+  main_contact_id: "Hlavní kontakt",
+};
+
 export function activityLabel(activityType: ActivityType): string {
   return ACTIVITY_LABEL[activityType] ?? activityType;
+}
+
+/** Czech label for a changed field, falling back to the raw key if unknown. */
+export function changeFieldLabel(field: string): string {
+  return CHANGE_FIELD_LABEL[field] ?? field;
 }
 
 /**
@@ -66,6 +99,14 @@ export function activityDetail(a: Pick<ActivityOut, "activity_type" | "payload">
       ? v.map((f) => FIELD_LABEL[String(f)] ?? String(f)).join(", ")
       : null;
   switch (a.activity_type) {
+    case "stage_change": {
+      // Names only — never the raw stage UUIDs the payload also carries (#6).
+      const from = str(p.from_stage_name);
+      const to = str(p.to_stage_name);
+      if (from && to) return `Fáze: ${from} → ${to}`;
+      if (to) return `Fáze: ${to}`;
+      return null;
+    }
     case "deal_created":
       return str(p.name);
     case "event_created":
