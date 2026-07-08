@@ -13,12 +13,14 @@ import { Check, Plus, Trash2, Workflow, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AddDealModal } from "@/app/deals/AddDealModal";
+import { DealDetailDialog } from "@/app/deals/DealDetailDialog";
 import { MarkLostDialog } from "@/app/deals/MarkLostDialog";
 import {
   useMarkAnyDealLost,
   useMarkAnyDealWon,
   useToggleAnyDealPayment,
 } from "@/app/deals/useDealActions";
+import { useDealDialog } from "@/app/deals/useDealDialog";
 import { useDeleteAnyDeal } from "@/app/deals/useDeals";
 import { stageColor } from "@/app/pipeline/colors";
 import {
@@ -87,6 +89,8 @@ interface DealCardProps {
   onLose?: () => void;
   /** Provided only on cards in a won stage; toggles is_paid via the API. */
   onTogglePaid?: (next: boolean) => void;
+  /** Open the deal detail dialog. Fires on a click/Enter that isn't a drag. */
+  onOpen?: (id: string) => void;
   winning?: boolean;
   losing?: boolean;
   paymentPending?: boolean;
@@ -99,6 +103,7 @@ function DealCard({
   onWin,
   onLose,
   onTogglePaid,
+  onOpen,
   winning,
   losing,
   paymentPending,
@@ -108,6 +113,11 @@ function DealCard({
     data: { type: "deal", stageId: deal.stage_id },
   });
   const winButtonRef = useRef<HTMLButtonElement>(null);
+  // Distinguish a click (open the dialog) from a drag. dnd-kit starts a drag
+  // after 6px of movement, so we record where the pointer went down (in the
+  // capture phase, to avoid clobbering dnd-kit's own onPointerDown) and only
+  // open if the pointer barely moved.
+  const pointerStart = useRef<{ x: number; y: number } | null>(null);
 
   const style: React.CSSProperties = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
@@ -123,6 +133,23 @@ function DealCard({
       {...attributes}
       role="button"
       tabIndex={0}
+      onPointerDownCapture={(e) => {
+        pointerStart.current = { x: e.clientX, y: e.clientY };
+      }}
+      onClick={(e) => {
+        if (!onOpen) return;
+        // Ignore clicks that bubbled up from an inner control (win/lose/paid).
+        if (e.defaultPrevented) return;
+        const start = pointerStart.current;
+        const moved = start ? Math.hypot(e.clientX - start.x, e.clientY - start.y) : 0;
+        if (moved <= 6) onOpen(deal.id);
+      }}
+      onKeyDown={(e) => {
+        if (onOpen && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onOpen(deal.id);
+        }
+      }}
       aria-label={
         valueShown ? `${deal.name} — ${formatMoney(deal.value, deal.currency, locale)}` : deal.name
       }
@@ -211,6 +238,7 @@ function MobileDealCard({
   onLose,
   onTogglePaid,
   onMove,
+  onOpen,
   winning,
   losing,
   paymentPending,
@@ -223,6 +251,7 @@ function MobileDealCard({
   onLose?: () => void;
   onTogglePaid?: (next: boolean) => void;
   onMove: (dealId: string, stageId: string) => void;
+  onOpen?: (id: string) => void;
   winning?: boolean;
   losing?: boolean;
   paymentPending?: boolean;
@@ -237,7 +266,17 @@ function MobileDealCard({
           : "border-border bg-surface",
       )}
     >
-      <p className="text-sm font-medium text-text-primary">{deal.name}</p>
+      {onOpen ? (
+        <button
+          type="button"
+          onClick={() => onOpen(deal.id)}
+          className="block w-full text-left text-sm font-medium text-text-primary hover:text-accent"
+        >
+          {deal.name}
+        </button>
+      ) : (
+        <p className="text-sm font-medium text-text-primary">{deal.name}</p>
+      )}
       {valueShown ? (
         <p className="mt-1 font-mono text-xs tabular-nums text-text-secondary">
           {formatMoney(deal.value, deal.currency, locale)}
@@ -304,6 +343,7 @@ interface MobileBoardProps {
   onLoseDeal: (deal: BoardDeal) => void;
   onTogglePayment: (deal: BoardDeal, next: boolean) => void;
   onMoveDeal: (dealId: string, stageId: string) => void;
+  onOpenDeal: (id: string) => void;
   winningDealId: string | null;
   losingDealId: string | null;
   payingDealId: string | null;
@@ -322,6 +362,7 @@ function MobileBoard({
   onLoseDeal,
   onTogglePayment,
   onMoveDeal,
+  onOpenDeal,
   winningDealId,
   losingDealId,
   payingDealId,
@@ -383,6 +424,7 @@ function MobileBoard({
                         : undefined
                     }
                     onMove={onMoveDeal}
+                    onOpen={onOpenDeal}
                     winning={winningDealId === deal.id}
                     losing={losingDealId === deal.id}
                     paymentPending={payingDealId === deal.id}
@@ -406,6 +448,7 @@ interface StageColumnProps {
   onWinDeal: (deal: BoardDeal, anchor: HTMLElement | null) => void;
   onLoseDeal: (deal: BoardDeal) => void;
   onTogglePayment: (deal: BoardDeal, next: boolean) => void;
+  onOpenDeal: (id: string) => void;
   winningDealId: string | null;
   losingDealId: string | null;
   payingDealId: string | null;
@@ -420,6 +463,7 @@ function StageColumn({
   onWinDeal,
   onLoseDeal,
   onTogglePayment,
+  onOpenDeal,
   winningDealId,
   losingDealId,
   payingDealId,
@@ -491,6 +535,7 @@ function StageColumn({
               deal={deal}
               locale={locale}
               dragging={draggingId === deal.id}
+              onOpen={onOpenDeal}
               onWin={stage.stage_type === "won" ? undefined : (anchor) => onWinDeal(deal, anchor)}
               onLose={stage.stage_type === "won" ? undefined : () => onLoseDeal(deal)}
               onTogglePaid={
@@ -519,6 +564,7 @@ export function PipelinePage() {
   const paymentMutation = useToggleAnyDealPayment();
   const deleteMutation = useDeleteAnyDeal();
   const toast = useToast();
+  const { dealId: dialogDealId, openDeal, closeDeal } = useDealDialog();
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
   const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | string>("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -879,6 +925,7 @@ export function PipelinePage() {
                   onWinDeal={handleWinDeal}
                   onLoseDeal={handleLoseDeal}
                   onTogglePayment={handleTogglePayment}
+                  onOpenDeal={openDeal}
                   winningDealId={winningDealId}
                   losingDealId={losingDealTarget?.id ?? null}
                   payingDealId={payingDealId}
@@ -902,6 +949,7 @@ export function PipelinePage() {
             onLoseDeal={handleLoseDeal}
             onTogglePayment={handleTogglePayment}
             onMoveDeal={handleMoveDeal}
+            onOpenDeal={openDeal}
             winningDealId={winningDealId}
             losingDealId={losingDealTarget?.id ?? null}
             payingDealId={payingDealId}
@@ -955,6 +1003,8 @@ export function PipelinePage() {
         onConfirm={handleConfirmDelete}
         moneyFmt={moneyFmt}
       />
+
+      {dialogDealId ? <DealDetailDialog dealId={dialogDealId} onClose={closeDeal} /> : null}
     </div>
   );
 }

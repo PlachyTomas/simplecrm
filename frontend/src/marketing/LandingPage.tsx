@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 
+import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/lib/ThemeToggle";
 
 import { HeroPlasma } from "./HeroPlasma";
@@ -29,6 +30,7 @@ import { InteractivePipeline } from "@/marketing/InteractivePipeline";
 import { ReportsDemoSection } from "@/marketing/ReportsDemoSection";
 
 const SIGNUP_PATH = "/signup";
+
 // Monthly list price; the annual plan (996 Kč/yr) works out to 83 Kč/mo, which
 // is what we lead with on the landing page.
 const PRICE_PER_USER_CZK = 99;
@@ -100,13 +102,7 @@ export function Nav() {
     <header className="sticky top-0 z-30 border-b border-border-subtle bg-bg/70 backdrop-blur">
       <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-2 px-4 py-4 md:gap-8 md:px-8">
         <Link to="/" className="flex items-center gap-2" aria-label="SimpleCRM">
-          <span
-            aria-hidden
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-highlight text-text-on-accent"
-          >
-            <Sparkles size={18} strokeWidth={1.75} />
-          </span>
-          <span className="text-lg font-semibold">SimpleCRM</span>
+          <Logo />
         </Link>
         <nav aria-label="Hlavní" className="hidden items-center gap-6 md:flex">
           {NAV_LINKS.map((link) =>
@@ -656,13 +652,7 @@ export function Footer() {
         <div className="grid gap-8 md:grid-cols-4">
           <div className="md:col-span-1">
             <Link to="/" className="flex items-center gap-2" aria-label="SimpleCRM">
-              <span
-                aria-hidden
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-highlight text-text-on-accent"
-              >
-                <Sparkles size={18} strokeWidth={1.75} />
-              </span>
-              <span className="text-sm font-semibold">SimpleCRM</span>
+              <Logo size="sm" />
             </Link>
             <p className="mt-3 text-xs text-text-tertiary">
               Jednoduché české CRM pro firmy do 30 obchodníků.

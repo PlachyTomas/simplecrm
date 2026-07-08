@@ -10,7 +10,7 @@ import { CompaniesListPage } from "@/app/companies/CompaniesListPage";
 import { CompanyDetailPage } from "@/app/companies/CompanyDetailPage";
 import { ContactsPage } from "@/app/contacts/ContactsPage";
 import { DashboardPage } from "@/app/dashboard/DashboardPage";
-import { DealDetailPage } from "@/app/deals/DealDetailPage";
+import { DealDetailRedirect } from "@/app/deals/DealDetailRedirect";
 import { DealsListPage } from "@/app/deals/DealsListPage";
 import { FeedbackPage } from "@/app/feedback/FeedbackPage";
 import { PipelinePage } from "@/app/pipeline/PipelinePage";
@@ -93,7 +93,7 @@ export function AppRoutes() {
         <Route path="contacts" element={<ContactsPage />} />
         <Route path="contacts/:contactId" element={<ContactsPage />} />
         <Route path="deals" element={<DealsListPage />} />
-        <Route path="deals/:dealId" element={<DealDetailPage />} />
+        <Route path="deals/:dealId" element={<DealDetailRedirect />} />
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsLayout />}>

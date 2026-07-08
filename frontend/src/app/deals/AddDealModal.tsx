@@ -27,6 +27,12 @@ interface AddDealModalProps {
   stages: PipelineStageOption[];
   /** When the user opened the modal from a specific stage column. */
   initialStageId?: string;
+  /**
+   * Preset + lock the deal to this company (opened from the company detail
+   * page). Hides the company search and inline new-company subform; the deal
+   * is always created against this company.
+   */
+  lockedCompany?: { id: string; name: string };
 }
 
 interface FormState {
@@ -92,10 +98,11 @@ function describeLookupError(error: unknown, ico: string): string {
 function buildEmptyForm(
   initialStageId: string | undefined,
   stages: PipelineStageOption[],
+  lockedCompanyId?: string,
 ): FormState {
   return {
     name: "",
-    companyId: "",
+    companyId: lockedCompanyId ?? "",
     ownerId: "",
     primaryContactId: "",
     value: "",
@@ -110,7 +117,9 @@ export function AddDealModal({
   onCreated,
   stages,
   initialStageId,
+  lockedCompany,
 }: AddDealModalProps) {
+  const lockedCompanyId = lockedCompany?.id;
   const dialogRef = useModalDialog<HTMLDivElement>(onClose, open);
   const { data: currentUser } = useCurrentUser();
   const { data: usersPage } = useOrgUsers();
@@ -120,7 +129,9 @@ export function AddDealModal({
   const createDeal = useCreateDeal();
   const toast = useToast();
 
-  const [form, setForm] = useState<FormState>(() => buildEmptyForm(initialStageId, stages));
+  const [form, setForm] = useState<FormState>(() =>
+    buildEmptyForm(initialStageId, stages, lockedCompanyId),
+  );
   // Inline "create new firma" sub-form. The salesperson opens it from
   // the search miss state — same IČO + ARES autofill as AddCompanyModal,
   // but inlined so a deal can be created in a single submit.
@@ -138,7 +149,7 @@ export function AddDealModal({
 
   useEffect(() => {
     if (open) {
-      setForm(buildEmptyForm(initialStageId, stages));
+      setForm(buildEmptyForm(initialStageId, stages, lockedCompanyId));
       setCompanySearch("");
       setShowNewCompany(false);
       setNewCompany(EMPTY_NEW_COMPANY);
@@ -151,7 +162,7 @@ export function AddDealModal({
     // createDeal / createCompany are stable enough; intentionally omitted
     // to avoid loops on isPending flips.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initialStageId, stages]);
+  }, [open, initialStageId, stages, lockedCompanyId]);
 
   // ARES autofill for the inline new-firma path. Mirrors the logic in
   // AddCompanyModal: debounce, only fire on exactly 8 digits, clear the
@@ -212,7 +223,7 @@ export function AddDealModal({
   if (!open) return null;
 
   const newCompanyReady = showNewCompany && !!newCompany.name.trim();
-  const hasCompany = !!form.companyId || newCompanyReady;
+  const hasCompany = !!lockedCompanyId || !!form.companyId || newCompanyReady;
   const hasStage = !!form.stageId;
   // Lead capture stays fast: only a company + stage are required. The deal
   // name defaults to the company name when left blank.
@@ -228,7 +239,9 @@ export function AddDealModal({
     newCompanyReady || (!!form.companyId && (showNewContact || companyContacts.length === 0));
   const newContactProvided =
     useNewContactFields && !!newContact.firstName.trim() && !!newContact.lastName.trim();
-  const resolvedCompanyName = (newCompanyReady ? newCompany.name : companySearch).trim();
+  const resolvedCompanyName = lockedCompany
+    ? lockedCompany.name.trim()
+    : (newCompanyReady ? newCompany.name : companySearch).trim();
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -373,68 +386,77 @@ export function AddDealModal({
             />
           </label>
 
-          <label className="block">
-            <span className="text-xs font-medium text-text-secondary">
-              Firma <span className="text-danger">*</span>
-            </span>
-            <input
-              type="text"
-              aria-required="true"
-              data-testid={testIds.deals.addModal.companyInput}
-              value={companySearch}
-              onChange={(e) => {
-                setCompanySearch(e.target.value);
-                setForm((prev) => ({ ...prev, companyId: "" }));
-              }}
-              placeholder="Začněte psát název firmy…"
-              className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
-              autoComplete="off"
-            />
-            {companySearch && companies.length > 0 ? (
-              <ul className="mt-2 max-h-40 overflow-y-auto rounded-md border border-border bg-surface">
-                {companies.map((company) => (
-                  <li key={company.id}>
+          {lockedCompany ? (
+            <div>
+              <span className="text-xs font-medium text-text-secondary">Firma</span>
+              <div className="mt-2 flex h-10 items-center rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary">
+                {lockedCompany.name}
+              </div>
+            </div>
+          ) : (
+            <label className="block">
+              <span className="text-xs font-medium text-text-secondary">
+                Firma <span className="text-danger">*</span>
+              </span>
+              <input
+                type="text"
+                aria-required="true"
+                data-testid={testIds.deals.addModal.companyInput}
+                value={companySearch}
+                onChange={(e) => {
+                  setCompanySearch(e.target.value);
+                  setForm((prev) => ({ ...prev, companyId: "" }));
+                }}
+                placeholder="Začněte psát název firmy…"
+                className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
+                autoComplete="off"
+              />
+              {companySearch && companies.length > 0 ? (
+                <ul className="mt-2 max-h-40 overflow-y-auto rounded-md border border-border bg-surface">
+                  {companies.map((company) => (
+                    <li key={company.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForm((prev) => ({ ...prev, companyId: company.id }));
+                          setCompanySearch(company.name);
+                        }}
+                        className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors duration-fast hover:bg-surface-overlay ${
+                          form.companyId === company.id ? "text-accent" : "text-text-primary"
+                        }`}
+                      >
+                        <span className="truncate">{company.name}</span>
+                        {company.ico ? (
+                          <span className="ml-2 font-mono text-xs text-text-tertiary">
+                            {company.ico}
+                          </span>
+                        ) : null}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {companySearch && !form.companyId && companies.length === 0 ? (
+                <div className="mt-2 flex items-center justify-between gap-2 text-xs text-text-tertiary">
+                  <span>Žádná firma neodpovídá hledání.</span>
+                  {!showNewCompany ? (
                     <button
                       type="button"
                       onClick={() => {
-                        setForm((prev) => ({ ...prev, companyId: company.id }));
-                        setCompanySearch(company.name);
+                        setShowNewCompany(true);
+                        // Carry the typed name across so it isn't lost; IČO is
+                        // optional enrichment from there.
+                        setNewCompany({ ...EMPTY_NEW_COMPANY, name: companySearch.trim() });
                       }}
-                      className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors duration-fast hover:bg-surface-overlay ${
-                        form.companyId === company.id ? "text-accent" : "text-text-primary"
-                      }`}
+                      className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover"
                     >
-                      <span className="truncate">{company.name}</span>
-                      {company.ico ? (
-                        <span className="ml-2 font-mono text-xs text-text-tertiary">
-                          {company.ico}
-                        </span>
-                      ) : null}
+                      <Plus size={12} strokeWidth={1.75} /> Vytvořit firmu „{companySearch.trim()}"
                     </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {companySearch && !form.companyId && companies.length === 0 ? (
-              <div className="mt-2 flex items-center justify-between gap-2 text-xs text-text-tertiary">
-                <span>Žádná firma neodpovídá hledání.</span>
-                {!showNewCompany ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowNewCompany(true);
-                      // Carry the typed name across so it isn't lost; IČO is
-                      // optional enrichment from there.
-                      setNewCompany({ ...EMPTY_NEW_COMPANY, name: companySearch.trim() });
-                    }}
-                    className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover"
-                  >
-                    <Plus size={12} strokeWidth={1.75} /> Vytvořit firmu „{companySearch.trim()}"
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-          </label>
+                  ) : null}
+                </div>
+              ) : null}
+            </label>
+          )}
 
           {showNewCompany ? (
             <div className="rounded-md border border-border-subtle bg-surface-overlay p-3">

@@ -7,12 +7,12 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.deps import get_current_user, require_role
 from app.core.scoping import can_write_row, scope_by_owner
 from app.db import get_db
 from app.db.models import (
-    Activity,
     ActivityEntityType,
     ActivityType,
     Company,
@@ -27,6 +27,7 @@ from app.db.models import (
 from app.db.models.enums import StageType
 from app.schemas.deal import (
     DealCreate,
+    DealListItemOut,
     DealMarkLost,
     DealOut,
     DealPaymentUpdate,
@@ -34,6 +35,7 @@ from app.schemas.deal import (
     DealUpdate,
 )
 from app.schemas.pagination import Page, PaginationParams
+from app.services.activity_log import record_activity, resolve_field_changes
 
 router = APIRouter(prefix="/deals", tags=["deals"])
 
@@ -104,25 +106,35 @@ async def _assert_contact_in_org(
         )
 
 
-@router.get("", response_model=Page[DealOut])
+@router.get("", response_model=Page[DealListItemOut])
 async def list_deals(
     pagination: PaginationParams = Depends(),
     company_id: uuid.UUID | None = Query(default=None),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Page[DealOut]:
+) -> Page[DealListItemOut]:
     base = select(Deal).where(Deal.organization_id == user.organization_id)
     if company_id is not None:
         base = base.where(Deal.company_id == company_id)
     scoped = await scope_by_owner(base, session=session, user=user, owner_col=Deal.owner_user_id)
     count_stmt = select(func.count()).select_from(scoped.subquery())
     total = (await session.execute(count_stmt)).scalar_one()
+    # Eager-load the display relationships so the response can carry names
+    # (stage/owner/company/contact) without the client issuing per-row fetches.
     items_stmt = (
-        scoped.order_by(Deal.created_at.desc()).limit(pagination.limit).offset(pagination.offset)
+        scoped.options(
+            selectinload(Deal.company),
+            selectinload(Deal.stage),
+            selectinload(Deal.owner),
+            selectinload(Deal.primary_contact),
+        )
+        .order_by(Deal.created_at.desc())
+        .limit(pagination.limit)
+        .offset(pagination.offset)
     )
     items = (await session.execute(items_stmt)).scalars().all()
-    return Page[DealOut](
-        items=[DealOut.model_validate(d) for d in items],
+    return Page[DealListItemOut](
+        items=[DealListItemOut.from_deal(d) for d in items],
         total=total,
         limit=pagination.limit,
         offset=pagination.offset,
@@ -181,6 +193,24 @@ async def create_deal(
         expected_close_date=payload.expected_close_date,
     )
     session.add(deal)
+    await session.flush()  # populate deal.id for the activity row
+
+    stage = await session.get(Stage, deal.stage_id)
+    record_activity(
+        session,
+        organization_id=deal.organization_id,
+        entity_type=ActivityEntityType.deal,
+        entity_id=deal.id,
+        company_id=deal.company_id,
+        user_id=user.id,
+        activity_type=ActivityType.deal_created,
+        payload={
+            "deal_name": deal.name,
+            "name": deal.name,
+            "value": str(deal.value),
+            "stage_name": stage.name if stage else None,
+        },
+    )
     await session.commit()
     await session.refresh(deal)
     return deal
@@ -215,8 +245,36 @@ async def update_deal(
     if "primary_contact_id" in updates:
         await _assert_contact_in_org(session, user, updates["primary_contact_id"])
 
+    # Which submitted fields actually change a value — drives the activity log
+    # so a no-op PUT (or a save with no edits) writes nothing. Capture the old
+    # values BEFORE the setattr loop so we can render per-field from→to strings.
+    changed = [field for field, value in updates.items() if getattr(deal, field) != value]
+    raw_changes = {field: (getattr(deal, field), updates[field]) for field in changed}
+
     for field, value in updates.items():
         setattr(deal, field, value)
+
+    if changed:
+        changes = await resolve_field_changes(
+            session,
+            raw_changes,
+            user_fields=frozenset({"owner_user_id"}),
+            stage_fields=frozenset({"stage_id"}),
+            contact_fields=frozenset({"primary_contact_id"}),
+            company_fields=frozenset({"company_id"}),
+        )
+        record_activity(
+            session,
+            organization_id=deal.organization_id,
+            entity_type=ActivityEntityType.deal,
+            entity_id=deal.id,
+            company_id=deal.company_id,
+            user_id=user.id,
+            activity_type=ActivityType.deal_updated,
+            # `changed` (names only) kept for legacy renderers; `changes` is the
+            # display-ready from→to map the current timeline UI consumes.
+            payload={"deal_name": deal.name, "changed": changed, "changes": changes},
+        )
     await session.commit()
     await session.refresh(deal)
     return deal
@@ -287,18 +345,21 @@ async def move_deal_stage(
         deal.closed_at = None
         deal.lost_reason = None
 
-    session.add(
-        Activity(
-            organization_id=user.organization_id,
-            entity_type=ActivityEntityType.deal,
-            entity_id=deal.id,
-            user_id=user.id,
-            activity_type=ActivityType.stage_change,
-            payload={
-                "from_stage_id": str(previous_stage_id),
-                "to_stage_id": str(payload.stage_id),
-            },
-        )
+    record_activity(
+        session,
+        organization_id=deal.organization_id,
+        entity_type=ActivityEntityType.deal,
+        entity_id=deal.id,
+        company_id=deal.company_id,
+        user_id=user.id,
+        activity_type=ActivityType.stage_change,
+        payload={
+            "deal_name": deal.name,
+            "from_stage_id": str(previous_stage_id),
+            "to_stage_id": str(payload.stage_id),
+            "from_stage_name": previous_stage.name if previous_stage else None,
+            "to_stage_name": dest_stage.name,
+        },
     )
     await session.commit()
     await session.refresh(deal)
@@ -354,20 +415,21 @@ async def mark_deal_won(
         window_days = user.organization.ownership_window_days if user.organization else 365
         company.ownership_expires_at = now + timedelta(days=window_days)
 
-    session.add(
-        Activity(
-            organization_id=user.organization_id,
-            entity_type=ActivityEntityType.deal,
-            entity_id=deal.id,
-            user_id=user.id,
-            activity_type=ActivityType.deal_won,
-            payload={
-                "from_stage_id": str(previous_stage_id),
-                "to_stage_id": str(won_stage.id),
-                "value": str(deal.value),
-                "currency": deal.currency,
-            },
-        )
+    record_activity(
+        session,
+        organization_id=deal.organization_id,
+        entity_type=ActivityEntityType.deal,
+        entity_id=deal.id,
+        company_id=deal.company_id,
+        user_id=user.id,
+        activity_type=ActivityType.deal_won,
+        payload={
+            "deal_name": deal.name,
+            "from_stage_id": str(previous_stage_id),
+            "to_stage_id": str(won_stage.id),
+            "value": str(deal.value),
+            "currency": deal.currency,
+        },
     )
     await session.commit()
     await session.refresh(deal)
@@ -409,19 +471,20 @@ async def mark_deal_lost(
     deal.closed_at = datetime.now(tz=UTC)
     deal.lost_reason = payload.lost_reason
 
-    session.add(
-        Activity(
-            organization_id=user.organization_id,
-            entity_type=ActivityEntityType.deal,
-            entity_id=deal.id,
-            user_id=user.id,
-            activity_type=ActivityType.deal_lost,
-            payload={
-                "from_stage_id": str(previous_stage_id),
-                "to_stage_id": str(deal.stage_id),
-                "lost_reason": payload.lost_reason,
-            },
-        )
+    record_activity(
+        session,
+        organization_id=deal.organization_id,
+        entity_type=ActivityEntityType.deal,
+        entity_id=deal.id,
+        company_id=deal.company_id,
+        user_id=user.id,
+        activity_type=ActivityType.deal_lost,
+        payload={
+            "deal_name": deal.name,
+            "from_stage_id": str(previous_stage_id),
+            "to_stage_id": str(deal.stage_id),
+            "lost_reason": payload.lost_reason,
+        },
     )
     await session.commit()
     await session.refresh(deal)

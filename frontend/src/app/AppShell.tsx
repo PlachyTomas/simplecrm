@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { Settings, Sparkles } from "lucide-react";
+import { Settings } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { MobileTabBar } from "@/app/MobileTabBar";
@@ -8,6 +8,7 @@ import { TourOverlay, TourReplayButton } from "@/app/tutorial";
 import { TrialBanner } from "@/app/TrialBanner";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { Logo } from "@/components/Logo";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
 import { apiFetch } from "@/lib/api";
 import { csNoun } from "@/lib/i18n/nouns";
@@ -86,12 +87,13 @@ export function AppShell() {
         <header className="sticky top-0 z-30 border-b border-border-subtle bg-bg/70 backdrop-blur">
           <div className="flex h-16 items-center justify-between gap-3 px-4 md:px-8">
             <div className="flex min-w-0 items-center gap-3">
-              <span
-                aria-hidden
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-highlight text-text-on-accent md:hidden"
+              <Link
+                to="/app"
+                aria-label="SimpleCRM"
+                className="shrink-0 rounded-md text-lg outline-none focus-visible:ring-2 focus-visible:ring-accent md:hidden"
               >
-                <Sparkles size={18} strokeWidth={1.75} />
-              </span>
+                <Logo />
+              </Link>
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-text-primary">
                   {user.organization.name}

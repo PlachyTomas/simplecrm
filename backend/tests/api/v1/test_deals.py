@@ -12,7 +12,7 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.db.models import Company, Deal, Organization, Stage, User, UserRole
+from app.db.models import Company, Contact, Deal, Organization, Stage, User, UserRole
 from app.db.session import AsyncSessionLocal
 from app.services.pipeline import create_default_pipeline
 
@@ -143,6 +143,50 @@ async def test_list_deals_salesperson_scoped(
     response = await client.get("/api/v1/deals", headers=_auth(sales))
     names = {it["name"] for it in response.json()["items"]}
     assert names == {"Mine"}
+
+
+async def test_list_deals_denormalizes_display_names(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = Company(organization_id=org.id, name="Acme s.r.o.", email="info@acme.cz")
+    db_session.add(company)
+    await db_session.commit()
+    await db_session.refresh(company)
+    contact = Contact(
+        organization_id=org.id,
+        company_id=company.id,
+        first_name="Jan",
+        last_name="Novák",
+        email="jan@acme.cz",
+    )
+    db_session.add(contact)
+    await db_session.commit()
+    await db_session.refresh(contact)
+    db_session.add(
+        Deal(
+            organization_id=org.id,
+            company_id=company.id,
+            stage_id=stage.id,
+            owner_user_id=admin.id,
+            primary_contact_id=contact.id,
+            name="Denorm deal",
+            value=Decimal("500"),
+            currency="CZK",
+        )
+    )
+    await db_session.commit()
+
+    response = await client.get(f"/api/v1/deals?company_id={company.id}", headers=_auth(admin))
+    assert response.status_code == 200
+    item = response.json()["items"][0]
+    assert item["company_name"] == "Acme s.r.o."
+    assert item["company_email"] == "info@acme.cz"
+    assert item["stage_name"] == stage.name
+    assert item["owner_name"] == admin.name
+    assert item["primary_contact_name"] == "Jan Novák"
+    assert item["primary_contact_email"] == "jan@acme.cz"
 
 
 async def test_list_deals_rejects_missing_token(client: AsyncClient) -> None:

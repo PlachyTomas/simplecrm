@@ -69,9 +69,20 @@ class ActivityType(StrEnum):
     ownership_reassigned = "ownership_reassigned"
     subscription_change = "subscription_change"
     email_sent = "email_sent"
+    deal_created = "deal_created"
+    deal_updated = "deal_updated"
+    company_updated = "company_updated"
+    event_created = "event_created"
 
 
 class EmailRecipientStatus(StrEnum):
     sent = "sent"
     failed = "failed"
     skipped = "skipped"
+
+
+class SentEmailStatus(StrEnum):
+    """Outcome of a single user-composed email send (send-only mail client)."""
+
+    sent = "sent"
+    failed = "failed"

@@ -6,8 +6,9 @@ import { apiFetch } from "@/lib/api";
 import type { components } from "@/types/api.generated";
 
 export type DealOut = components["schemas"]["DealOut"];
+export type DealListItem = components["schemas"]["DealListItemOut"];
 export type DealUpdate = components["schemas"]["DealUpdate"];
-export type DealsPage = components["schemas"]["Page_DealOut_"];
+export type DealsPage = components["schemas"]["Page_DealListItemOut_"];
 
 interface UseDealsOptions {
   limit?: number;

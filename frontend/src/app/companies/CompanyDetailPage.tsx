@@ -1,23 +1,32 @@
-import { ArrowLeft, ExternalLink, Plus, Star } from "lucide-react";
+import { ArrowLeft, ExternalLink, Mail, Plus, Star } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
+import { ActivityRow } from "@/app/activities/ActivityRow";
 import { useActivities } from "@/app/activities/useActivities";
-import type { ActivityOut } from "@/app/activities/useActivities";
 import { OwnershipBadge } from "@/app/companies/OwnershipBadge";
 import { useCompany } from "@/app/companies/useCompany";
 import type { CompanyOut } from "@/app/companies/useCompanies";
 import { useUpdateCompany } from "@/app/companies/useUpdateCompany";
 import { AddContactModal } from "@/app/contacts/AddContactModal";
 import { useContacts } from "@/app/contacts/useContacts";
-import { useDeals } from "@/app/deals/useDeals";
+import { AddDealModal } from "@/app/deals/AddDealModal";
+import { DealDetailDialog } from "@/app/deals/DealDetailDialog";
+import { useDealDialog } from "@/app/deals/useDealDialog";
+import { useDeals, type DealListItem } from "@/app/deals/useDeals";
+import { EmailComposeModal } from "@/app/emails/EmailComposeModal";
+import { EmailHistorySection } from "@/app/emails/EmailHistorySection";
+import { GatedMailButton } from "@/app/emails/GatedMailButton";
+import type { SentEmailOut } from "@/app/emails/useEmails";
+import { usePipelineBoard } from "@/app/pipeline/useBoard";
+import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { useToast } from "@/lib/toast";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 
-type TabKey = "overview" | "contacts" | "deals" | "activity" | "notes";
+type TabKey = "overview" | "contacts" | "deals" | "emails" | "activity" | "notes";
 
 interface Tab {
   key: TabKey;
@@ -28,6 +37,7 @@ const TABS: Tab[] = [
   { key: "overview", label: "Přehled" },
   { key: "contacts", label: "Kontakty" },
   { key: "deals", label: "Obchody" },
+  { key: "emails", label: "E-maily" },
   { key: "activity", label: "Aktivita" },
   { key: "notes", label: "Poznámky" },
 ];
@@ -228,13 +238,55 @@ function ContactsTab({ company }: { company: CompanyOut }) {
   );
 }
 
-function DealsTab({ companyId, locale }: { companyId: string; locale: string }) {
-  const { data, isPending, isError } = useDeals({ companyId, limit: 100 });
+function DealStatusBadge({
+  closedAt,
+  lostReason,
+}: {
+  closedAt: string | null | undefined;
+  lostReason: string | null | undefined;
+}) {
+  if (!closedAt) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-accent-subtle px-2.5 py-0.5 text-xs font-medium text-accent">
+        Otevřeno
+      </span>
+    );
+  }
+  if (lostReason) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-danger-subtle px-2.5 py-0.5 text-xs font-medium text-danger">
+        Neúspěch
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center rounded-full bg-success-subtle px-2.5 py-0.5 text-xs font-medium text-success">
+      Vyhráno
+    </span>
+  );
+}
+
+const DEALS_TH =
+  "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary";
+
+function DealsTab({ company, locale }: { company: CompanyOut; locale: string }) {
+  const { data, isPending, isError } = useDeals({ companyId: company.id, limit: 100 });
+  const { data: board } = usePipelineBoard();
+  const { data: smtp } = useSmtpSettings();
+  const { dealId: dialogDealId, openDeal, closeDeal } = useDealDialog();
+  const [addOpen, setAddOpen] = useState(false);
+  const [composeDeal, setComposeDeal] = useState<DealListItem | null>(null);
+  const stageOptions = useMemo(
+    () => (board?.stages ?? []).map((s) => ({ id: s.id, name: s.name })),
+    [board?.stages],
+  );
+  const smtpVerified = isSmtpVerified(smtp);
   const moneyFmt = useMemo(
     () => (value: string, currency: string) =>
       new Intl.NumberFormat(locale, { style: "currency", currency }).format(Number(value)),
     [locale],
   );
+  const dateFmt = useMemo(() => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }), [locale]);
   if (isPending) {
     return <p className="text-sm text-text-tertiary">Načítání obchodů…</p>;
   }
@@ -243,58 +295,178 @@ function DealsTab({ companyId, locale }: { companyId: string; locale: string }) 
   }
   return (
     <section className="rounded-lg border border-border bg-surface p-6">
-      <h2 className="text-lg font-semibold">Obchody</h2>
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-lg font-semibold">Obchody</h2>
+        <button
+          type="button"
+          onClick={() => setAddOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-text-on-accent hover:bg-accent-hover"
+        >
+          <Plus size={14} strokeWidth={2} /> Přidat obchod
+        </button>
+      </div>
       {data.items.length === 0 ? (
         <p className="mt-4 text-sm text-text-secondary">
           K této firmě zatím není přiřazen žádný obchod.
         </p>
       ) : (
-        <ul className="mt-4 divide-y divide-border-subtle">
-          {data.items.map((d) => (
-            <li key={d.id} className="py-3">
-              <Link
-                to={`/app/deals/${d.id}`}
-                className="flex items-center justify-between gap-4 text-sm text-text-primary hover:text-accent"
-              >
-                <span>
-                  <span className="block font-medium">{d.name}</span>
-                  {d.closed_at ? (
-                    <span className="block text-xs text-text-tertiary">
-                      Uzavřeno{" "}
-                      {new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(
-                        new Date(d.closed_at),
-                      )}
-                    </span>
-                  ) : null}
-                </span>
-                <span className="tabular-nums text-text-secondary">
-                  {moneyFmt(d.value, d.currency)}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-4 overflow-x-auto rounded-md border border-border-subtle">
+          <table className="min-w-full divide-y divide-border-subtle">
+            <thead>
+              <tr>
+                <th scope="col" className={DEALS_TH}>
+                  Název
+                </th>
+                <th scope="col" className={`${DEALS_TH} hidden sm:table-cell`}>
+                  Fáze
+                </th>
+                <th scope="col" className={`${DEALS_TH} text-right`}>
+                  Hodnota
+                </th>
+                <th scope="col" className={`${DEALS_TH} hidden lg:table-cell`}>
+                  Vlastník
+                </th>
+                <th scope="col" className={`${DEALS_TH} hidden lg:table-cell`}>
+                  Hlavní kontakt
+                </th>
+                <th scope="col" className={`${DEALS_TH} hidden md:table-cell`}>
+                  Vytvořeno
+                </th>
+                <th scope="col" className={DEALS_TH}>
+                  Stav
+                </th>
+                <th scope="col" className={`${DEALS_TH} text-right`}>
+                  Akce
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-subtle">
+              {data.items.map((d) => (
+                <tr
+                  key={d.id}
+                  onClick={() => openDeal(d.id)}
+                  className="cursor-pointer transition-colors duration-fast hover:bg-surface-overlay"
+                >
+                  <td className="px-4 py-3 text-sm">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openDeal(d.id);
+                      }}
+                      className="text-left font-medium text-text-primary hover:text-accent"
+                    >
+                      {d.name}
+                    </button>
+                  </td>
+                  <td className="hidden px-4 py-3 text-sm text-text-secondary sm:table-cell">
+                    {d.stage_name}
+                  </td>
+                  <td className="px-4 py-3 text-right text-sm tabular-nums text-text-secondary">
+                    {Number(d.value) > 0 ? (
+                      moneyFmt(d.value, d.currency)
+                    ) : (
+                      <span className="text-text-tertiary">—</span>
+                    )}
+                  </td>
+                  <td className="hidden px-4 py-3 text-sm text-text-secondary lg:table-cell">
+                    {d.owner_name ?? "—"}
+                  </td>
+                  <td className="hidden px-4 py-3 text-sm text-text-secondary lg:table-cell">
+                    {d.primary_contact_name ?? "—"}
+                  </td>
+                  <td className="hidden px-4 py-3 text-sm text-text-tertiary md:table-cell">
+                    {dateFmt.format(new Date(d.created_at))}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <DealStatusBadge closedAt={d.closed_at} lostReason={d.lost_reason} />
+                  </td>
+                  {/* Stop row-click (open detail) when using the mail action. */}
+                  <td className="px-4 py-3 text-right text-sm" onClick={(e) => e.stopPropagation()}>
+                    <GatedMailButton
+                      verified={smtpVerified}
+                      onClick={() => setComposeDeal(d)}
+                      ariaLabel={`Poslat e-mail k obchodu ${d.name}`}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-tertiary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary"
+                    >
+                      <Mail size={16} strokeWidth={1.75} aria-hidden />
+                    </GatedMailButton>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
+      {dialogDealId ? <DealDetailDialog dealId={dialogDealId} onClose={closeDeal} /> : null}
+      <AddDealModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        stages={stageOptions}
+        lockedCompany={{ id: company.id, name: company.name }}
+      />
+      {composeDeal ? (
+        <EmailComposeModal
+          key={composeDeal.id}
+          open
+          onClose={() => setComposeDeal(null)}
+          dealId={composeDeal.id}
+          defaultTo={composeDeal.primary_contact_email ?? composeDeal.company_email ?? null}
+        />
+      ) : null}
     </section>
   );
 }
 
-const ACTIVITY_LABEL: Record<string, string> = {
-  note: "Poznámka",
-  stage_change: "Změna fáze",
-  owner_change: "Změna vlastníka",
-  deal_won: "Obchod vyhrán",
-  deal_lost: "Obchod ztracen",
-  company_freed: "Firma uvolněna z poolu",
-};
+function EmailsTab({ company, locale }: { company: CompanyOut; locale: string }) {
+  const { data: smtp } = useSmtpSettings();
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [replyTarget, setReplyTarget] = useState<SentEmailOut | null>(null);
+  return (
+    <section className="rounded-lg border border-border bg-surface p-6">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-lg font-semibold">E-maily</h2>
+        <GatedMailButton
+          verified={isSmtpVerified(smtp)}
+          onClick={() => {
+            setReplyTarget(null);
+            setComposeOpen(true);
+          }}
+          className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-text-on-accent hover:bg-accent-hover"
+        >
+          <Mail size={14} strokeWidth={2} /> Poslat e-mail
+        </GatedMailButton>
+      </div>
+      <EmailHistorySection
+        companyId={company.id}
+        locale={locale}
+        onReply={(email) => {
+          setReplyTarget(email);
+          setComposeOpen(true);
+        }}
+      />
+      {composeOpen ? (
+        <EmailComposeModal
+          key={replyTarget?.id ?? "new"}
+          open
+          onClose={() => {
+            setComposeOpen(false);
+            setReplyTarget(null);
+          }}
+          companyId={company.id}
+          defaultTo={company.email ?? null}
+          replyTo={replyTarget}
+        />
+      ) : null}
+    </section>
+  );
+}
 
-function ActivityTab({ companyId, locale }: { companyId: string; locale: string }) {
+function ActivityTab({ companyId }: { companyId: string }) {
   const { data, isPending, isError } = useActivities({
-    entityType: "company",
-    entityId: companyId,
+    companyId,
     limit: 50,
   });
-  const dt = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
   if (isPending) {
     return <p className="text-sm text-text-tertiary">Načítání aktivit…</p>;
   }
@@ -315,17 +487,8 @@ function ActivityTab({ companyId, locale }: { companyId: string; locale: string 
     <section className="rounded-lg border border-border bg-surface p-6">
       <h2 className="text-lg font-semibold">Aktivita</h2>
       <ol className="mt-4 space-y-3 border-l border-border-subtle pl-5">
-        {data.items.map((a: ActivityOut) => (
-          <li key={a.id} className="relative">
-            <span
-              aria-hidden
-              className="absolute -left-[26px] top-1 inline-block h-2.5 w-2.5 rounded-full bg-accent"
-            />
-            <p className="text-sm font-medium text-text-primary">
-              {ACTIVITY_LABEL[a.activity_type] ?? a.activity_type}
-            </p>
-            <p className="text-xs text-text-tertiary">{dt.format(new Date(a.created_at))}</p>
-          </li>
+        {data.items.map((a) => (
+          <ActivityRow key={a.id} activity={a} />
         ))}
       </ol>
     </section>
@@ -519,9 +682,11 @@ export function CompanyDetailPage() {
         ) : activeTab === "contacts" ? (
           <ContactsTab company={company} />
         ) : activeTab === "deals" ? (
-          <DealsTab companyId={company.id} locale={locale} />
+          <DealsTab company={company} locale={locale} />
+        ) : activeTab === "emails" ? (
+          <EmailsTab company={company} locale={locale} />
         ) : activeTab === "activity" ? (
-          <ActivityTab companyId={company.id} locale={locale} />
+          <ActivityTab companyId={company.id} />
         ) : (
           <NotesTab companyId={company.id} initialNote={company.note ?? null} />
         )}

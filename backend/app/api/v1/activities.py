@@ -12,6 +12,7 @@ import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.deps import get_current_user
 from app.db import get_db
@@ -23,11 +24,24 @@ from app.schemas.pagination import Page, PaginationParams
 router = APIRouter(prefix="/activities", tags=["activities"])
 
 
+def _activity_out(activity: Activity) -> ActivityOut:
+    out = ActivityOut.model_validate(activity)
+    out.user_name = activity.user.name if activity.user else None
+    return out
+
+
 @router.get("", response_model=Page[ActivityOut])
 async def list_activities(
     pagination: PaginationParams = Depends(),
     entity_type: ActivityEntityType | None = Query(default=None),
     entity_id: uuid.UUID | None = Query(default=None),
+    company_id: uuid.UUID | None = Query(
+        default=None,
+        description=(
+            "Fan-up filter: returns everything logged against this company AND its "
+            "deals/events/emails. Powers the company detail's Aktivita timeline."
+        ),
+    ),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Page[ActivityOut]:
@@ -36,15 +50,22 @@ async def list_activities(
         base = base.where(Activity.entity_type == entity_type)
     if entity_id is not None:
         base = base.where(Activity.entity_id == entity_id)
+    if company_id is not None:
+        base = base.where(Activity.company_id == company_id)
     count_stmt = select(func.count()).select_from(base.subquery())
     total = (await session.execute(count_stmt)).scalar_one()
 
+    # selectinload the actor so `user_name` is populated in one extra query
+    # for the whole page rather than one fetch per row.
     items_stmt = (
-        base.order_by(Activity.created_at.desc()).limit(pagination.limit).offset(pagination.offset)
+        base.options(selectinload(Activity.user))
+        .order_by(Activity.created_at.desc())
+        .limit(pagination.limit)
+        .offset(pagination.offset)
     )
     items = (await session.execute(items_stmt)).scalars().all()
     return Page[ActivityOut](
-        items=[ActivityOut.model_validate(a) for a in items],
+        items=[_activity_out(a) for a in items],
         total=total,
         limit=pagination.limit,
         offset=pagination.offset,
