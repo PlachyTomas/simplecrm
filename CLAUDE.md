@@ -1,7 +1,12 @@
 # SimpleCRM — Claude Code instructions
 
+## Task start
+
+- Evaluate the task's difficulty first and recommend a model for it (mention /fast when it fits). Never switch the main-session model yourself — that's the owner's call. For subagent tiers, follow the budget-optimal-ultracode skill.
+
 ## UI verification
 
+- At the start of any UI task, ask who verifies: playwright (default) or the owner checking manually. If the owner verifies, skip the screenshot loop — finish with the route(s) to look at and keep the console-error check.
 - After any change that affects rendered UI, use playwright mcp to navigate to the affected route, screenshot it, and check the browser console for errors.
 - Iterate until the screenshot matches the intent. Do not claim a UI task is done without a screenshot in the final summary.
 - On the first playwright call of a session, invoke it explicitly by name (e.g. "use playwright mcp to navigate to ...") to avoid falling back to bash or other tools.
