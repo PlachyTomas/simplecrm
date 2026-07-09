@@ -305,7 +305,10 @@ export function InteractivePipeline() {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      {/* select-none: on touch, a drag attempt long-presses card text and
+          starts a selection instead of the drag — kill selection on the
+          whole board grid. */}
+      <div className="grid select-none grid-cols-2 gap-3 md:grid-cols-4">
         {DEMO_STAGES.map((stage) => {
           const stageDeals = dealsByStage.get(stage.id) ?? [];
           const total = stageDeals.reduce((sum, d) => sum + d.value, 0);

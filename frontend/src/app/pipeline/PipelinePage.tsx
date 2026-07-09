@@ -9,8 +9,17 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { Check, Plus, Trash2, Workflow, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Crown, Plus, Trash2, Workflow, X } from "lucide-react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { AddDealModal } from "@/app/deals/AddDealModal";
 import { DealDetailDialog } from "@/app/deals/DealDetailDialog";
@@ -80,6 +89,101 @@ function hasValue(value: string): boolean {
   return Number.isFinite(n) && n > 0;
 }
 
+// Shown on the card when the value is missing — the creation date is the
+// most useful always-available fact for a lead without a number yet.
+function formatCreatedDate(iso: string, locale: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso.slice(0, 10);
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      day: "numeric",
+      month: "numeric",
+      year: "numeric",
+    }).format(date);
+  } catch {
+    return date.toLocaleDateString();
+  }
+}
+
+interface CardActionButtonProps {
+  /** Short tooltip text ("Označit jako vyhráno"). */
+  label: string;
+  /** Full screen-reader label including the deal name. */
+  ariaLabel: string;
+  disabled?: boolean;
+  /** Receives the button element so callers can anchor effects (confetti). */
+  onActivate: (el: HTMLButtonElement | null) => void;
+  className?: string;
+  children: ReactNode;
+}
+
+// Icon-only card quick-action with a styled tooltip on hover/focus. The
+// tooltip is position:fixed off the button rect (house pattern, see
+// GatedMailButton) so the column's overflow-y-auto can't clip it.
+function CardActionButton({
+  label,
+  ariaLabel,
+  disabled,
+  onActivate,
+  className,
+  children,
+}: CardActionButtonProps) {
+  const tooltipId = useId();
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  const show = () => {
+    const rect = btnRef.current?.getBoundingClientRect();
+    if (rect) setPos({ top: rect.top - 6, left: rect.left + rect.width / 2 });
+  };
+  const hide = () => setPos(null);
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={(e) => {
+          // Keep the card's open-dialog click handler out of the way.
+          e.stopPropagation();
+          e.preventDefault();
+          hide();
+          onActivate(btnRef.current);
+        }}
+        // Stop dnd-kit from starting a drag from the button.
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        onFocus={show}
+        onBlur={hide}
+        disabled={disabled}
+        aria-label={ariaLabel}
+        className={cn(
+          "inline-flex h-6 w-6 items-center justify-center rounded-md shadow-sm transition-colors duration-fast disabled:cursor-not-allowed disabled:opacity-50",
+          className,
+        )}
+      >
+        {children}
+      </button>
+      {pos
+        ? // Portaled to <body>: the button sits inside a translated wrapper,
+          // and a transformed ancestor would re-base position:fixed coords.
+          createPortal(
+            <div
+              id={tooltipId}
+              role="tooltip"
+              style={{ position: "fixed", top: pos.top, left: pos.left, zIndex: 80 }}
+              className="pointer-events-none -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md border border-border bg-surface-elevated px-2 py-1 text-xs text-text-secondary shadow-md"
+            >
+              {label}
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
+
 interface DealCardProps {
   deal: BoardDeal;
   locale: string;
@@ -112,7 +216,6 @@ function DealCard({
     id: deal.id,
     data: { type: "deal", stageId: deal.stage_id },
   });
-  const winButtonRef = useRef<HTMLButtonElement>(null);
   // Distinguish a click (open the dialog) from a drag. dnd-kit starts a drag
   // after 6px of movement, so we record where the pointer went down (in the
   // capture phase, to avoid clobbering dnd-kit's own onPointerDown) and only
@@ -151,7 +254,9 @@ function DealCard({
         }
       }}
       aria-label={
-        valueShown ? `${deal.name} — ${formatMoney(deal.value, deal.currency, locale)}` : deal.name
+        valueShown
+          ? `${deal.name} — ${formatMoney(deal.value, deal.currency, locale)}`
+          : `${deal.name} — vytvořeno ${formatCreatedDate(deal.created_at, locale)}`
       }
       className={cn(
         "group/card relative cursor-grab select-none rounded-md border bg-surface px-3 py-2.5 shadow-sm transition-shadow duration-fast hover:shadow-md active:cursor-grabbing",
@@ -167,7 +272,11 @@ function DealCard({
         <p className="mt-1 font-mono text-xs tabular-nums text-text-secondary">
           {formatMoney(deal.value, deal.currency, locale)}
         </p>
-      ) : null}
+      ) : (
+        <p className="mt-1 text-xs tabular-nums text-text-tertiary">
+          Vytvořeno {formatCreatedDate(deal.created_at, locale)}
+        </p>
+      )}
       {onTogglePaid ? (
         <label
           // Stop dnd-kit from kicking in when the user clicks the checkbox.
@@ -186,39 +295,31 @@ function DealCard({
         </label>
       ) : null}
       {onWin || onLose ? (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 opacity-0 transition-opacity duration-fast focus-within:opacity-100 group-hover/card:opacity-100 max-md:opacity-100">
+        // Quick actions overlay the card's right edge instead of taking a
+        // row of their own — hidden until hover/focus so resting cards stay
+        // compact, with no blank strip reserved for them.
+        <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity duration-fast focus-within:opacity-100 group-hover/card:opacity-100">
           {onWin ? (
-            <button
-              ref={winButtonRef}
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                onWin(winButtonRef.current);
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
+            <CardActionButton
+              label="Označit jako vyhráno"
+              ariaLabel={`Označit obchod ${deal.name} jako vyhraný`}
               disabled={winning}
-              aria-label={`Označit obchod ${deal.name} jako vyhraný`}
-              className="inline-flex h-7 items-center gap-1 rounded-md bg-brand-accent px-2 text-xs font-semibold text-text-on-brand-accent transition-colors duration-fast hover:bg-brand-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+              onActivate={(el) => onWin(el)}
+              className="bg-brand-accent text-text-on-brand-accent hover:bg-brand-accent-hover"
             >
-              <Check size={12} strokeWidth={2} aria-hidden /> Vyhráno
-            </button>
+              <Crown size={13} strokeWidth={2} aria-hidden />
+            </CardActionButton>
           ) : null}
           {onLose ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                onLose();
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
+            <CardActionButton
+              label="Označit jako neúspěch"
+              ariaLabel={`Označit obchod ${deal.name} jako neúspěch`}
               disabled={losing}
-              aria-label={`Označit obchod ${deal.name} jako neúspěch`}
-              className="inline-flex h-7 items-center gap-1 rounded-md border border-border bg-surface-overlay px-2 text-xs font-medium text-text-secondary transition-colors duration-fast hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
+              onActivate={() => onLose()}
+              className="border border-border bg-surface-overlay text-text-secondary hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger"
             >
-              <X size={12} strokeWidth={2} aria-hidden /> Neúspěch
-            </button>
+              <X size={13} strokeWidth={2} aria-hidden />
+            </CardActionButton>
           ) : null}
         </div>
       ) : null}
@@ -281,7 +382,11 @@ function MobileDealCard({
         <p className="mt-1 font-mono text-xs tabular-nums text-text-secondary">
           {formatMoney(deal.value, deal.currency, locale)}
         </p>
-      ) : null}
+      ) : (
+        <p className="mt-1 text-xs tabular-nums text-text-tertiary">
+          Vytvořeno {formatCreatedDate(deal.created_at, locale)}
+        </p>
+      )}
       {stageType === "won" ? (
         <label className="mt-2 inline-flex select-none items-center gap-2 text-xs text-text-secondary">
           <input
@@ -301,7 +406,7 @@ function MobileDealCard({
             disabled={winning}
             className="inline-flex h-7 items-center gap-1 rounded-md bg-brand-accent px-2 text-xs font-semibold text-text-on-brand-accent transition-colors duration-fast hover:bg-brand-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Check size={12} strokeWidth={2} aria-hidden /> Vyhráno
+            <Crown size={12} strokeWidth={2} aria-hidden /> Vyhráno
           </button>
           <button
             type="button"
@@ -369,7 +474,7 @@ function MobileBoard({
 }: MobileBoardProps) {
   const active = stages[activeIndex];
   return (
-    <div className="flex flex-col gap-3 px-4 pb-24 md:hidden">
+    <div className="flex select-none flex-col gap-3 px-4 pb-24 md:hidden">
       <div
         role="tablist"
         aria-label="Fáze pipeline"
@@ -907,7 +1012,9 @@ export function PipelinePage() {
           >
             <div
               className={cn(
-                "hidden flex-1 gap-3 px-4 pb-6 md:flex md:px-8",
+                // select-none: touch drags (dnd-kit long-press) must never
+                // start a text selection on card/column text.
+                "hidden flex-1 select-none gap-3 px-4 pb-6 md:flex md:px-8",
                 "md:min-h-0 md:overflow-hidden",
               )}
             >
@@ -1024,7 +1131,7 @@ function TrashDropZone({ visible }: { visible: boolean }) {
     >
       <div
         className={cn(
-          "pointer-events-auto flex w-full max-w-md items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-3 text-sm font-medium shadow-lg transition-colors duration-fast",
+          "pointer-events-auto flex w-full max-w-md select-none items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-3 text-sm font-medium shadow-lg transition-colors duration-fast",
           isOver
             ? "border-danger bg-danger text-white"
             : "border-danger-subtle bg-surface text-danger",
