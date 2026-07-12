@@ -73,6 +73,13 @@ class User(Base):
         nullable=False,
     )
 
+    # Per-user UI language (BCP-47 base tag, e.g. "cs"/"en"). Drives the app
+    # UI and user-directed emails; org-directed documents (invoices,
+    # invitations) still follow `Organization.locale`. See app/core/i18n.py.
+    language: Mapped[str] = mapped_column(
+        String(8), default="cs", server_default="cs", nullable=False
+    )
+
     # Nullable: a Google-authenticated user with no pending invite lands
     # without an org and gets routed to the create-org flow on the frontend.
     organization_id: Mapped[uuid.UUID | None] = mapped_column(

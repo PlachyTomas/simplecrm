@@ -1714,6 +1714,27 @@ export interface paths {
         patch: operations["patch_my_preferences_api_v1_users_me_preferences_patch"];
         trace?: never;
     };
+    "/api/v1/users/me/language": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Patch My Language
+         * @description Set the current user's UI language. Rejects anything outside
+         *     ``SUPPORTED_LANGUAGES`` with a coded 422 the frontend can map.
+         */
+        patch: operations["patch_my_language_api_v1_users_me_language_patch"];
+        trace?: never;
+    };
     "/api/v1/me/smtp": {
         parameters: {
             query?: never;
@@ -4147,6 +4168,11 @@ export interface components {
             /** Can Invite */
             can_invite: boolean;
             /**
+             * Language
+             * @default cs
+             */
+            language: string;
+            /**
              * Is Super Admin
              * @default false
              */
@@ -4764,6 +4790,11 @@ export interface components {
             won_this_month_count: number;
             /** Won This Month Value */
             won_this_month_value: string;
+        };
+        /** LanguageUpdate */
+        LanguageUpdate: {
+            /** Language */
+            language: string;
         };
         /** LeadConversionBreakdownItem */
         LeadConversionBreakdownItem: {
@@ -9798,6 +9829,41 @@ export interface operations {
                 content: {
                     "application/json": {
                         [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_my_language_api_v1_users_me_language_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LanguageUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
                     };
                 };
             };

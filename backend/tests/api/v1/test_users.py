@@ -214,3 +214,46 @@ async def test_patch_preferences_rejects_negative_step(
         json={"tutorial_step_index": -1},
     )
     assert r.status_code == 422
+
+
+async def test_me_defaults_language_to_cs(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, _, sales = await _seed(db_session, owned_cleanup)
+    r = await client.get("/api/v1/auth/me", headers=_auth(sales))
+    assert r.status_code == 200, r.text
+    assert r.json()["language"] == "cs"
+
+
+async def test_patch_language_writes_then_round_trips_via_me(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, _, sales = await _seed(db_session, owned_cleanup)
+    r = await client.patch(
+        "/api/v1/users/me/language",
+        headers=_auth(sales),
+        json={"language": "en"},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json() == {"language": "en"}
+
+    me = await client.get("/api/v1/auth/me", headers=_auth(sales))
+    assert me.json()["language"] == "en"
+
+
+async def test_patch_language_rejects_unsupported(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, _, sales = await _seed(db_session, owned_cleanup)
+    r = await client.patch(
+        "/api/v1/users/me/language",
+        headers=_auth(sales),
+        json={"language": "de"},
+    )
+    assert r.status_code == 422, r.text
+    assert r.json()["detail"]["code"] == "invalid_language"
+
+
+async def test_patch_language_requires_auth(client: AsyncClient) -> None:
+    r = await client.patch("/api/v1/users/me/language", json={"language": "en"})
+    assert r.status_code == 401
