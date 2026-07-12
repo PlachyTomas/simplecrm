@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "@/auth/useAuth";
 import { formatCzkMinor } from "@/components/billing/format";
@@ -18,6 +19,8 @@ import { useBillingSummary } from "@/components/billing/useBillingSummary";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
 import { usePublicPlans } from "@/components/billing/usePublicPlans";
 import {
+  billingErrorCode,
+  billingErrorMessage,
   useCancelSubscription,
   useInitialPaymentInit,
   useInvoices,
@@ -663,6 +666,7 @@ interface ChoosePlanModalProps {
 
 function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
   const dialogRef = useModalDialog<HTMLDivElement>(onClose);
+  const { t } = useTranslation("billing");
   const { accessToken } = useAuth();
   const plans = usePublicPlans();
   const summary = useBillingSummary();
@@ -732,8 +736,8 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
         onSuccess: (init) => {
           window.location.assign(init.redirect_url);
         },
-        onError: () => {
-          setError("Platební brána není dostupná, zkuste to prosím za chvíli.");
+        onError: (err) => {
+          setError(billingErrorMessage(billingErrorCode(err), t));
         },
       },
     );

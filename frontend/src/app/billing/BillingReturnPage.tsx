@@ -10,7 +10,9 @@
 
 import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
+import { billingErrorMessage } from "@/components/billing/usePayments";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
 import { usePageTitle } from "@/lib/usePageTitle";
 
@@ -93,9 +95,15 @@ function PendingPanel() {
 }
 
 function FailedPanel() {
+  // No structured error code reaches this page (the return route never
+  // reflects charge state — see the route's docstring in payments.py), so
+  // this always resolves to the shared `errors.generic` copy. Routed
+  // through `billingErrorMessage` anyway so the heading and the /payments
+  // error codes stay backed by the same catalog entry.
+  const { t } = useTranslation("billing");
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-danger">Platba se nezdařila.</h1>
+      <h1 className="text-2xl font-semibold text-danger">{billingErrorMessage(undefined, t)}</h1>
       <p className="mt-3 text-sm text-text-secondary">
         Žádné peníze vám nebyly strženy. Zkuste platbu znovu, nebo kontaktujte podporu pokud problém
         přetrvává.

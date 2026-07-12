@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Loader2, Lock, Minus, Plus, ShoppingCart } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
+import { billingErrorCode, billingErrorMessage } from "@/components/billing/usePayments";
 import { usePublicPlans } from "@/components/billing/usePublicPlans";
 import { formatCzkMinor } from "@/components/billing/format";
-import { apiFetch, ApiError } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 import { Footer, Nav } from "@/marketing/LandingPage";
@@ -44,6 +46,7 @@ function isPlanCode(value: string | null): value is PlanCode {
  */
 export function ObjednavkaPage() {
   usePageTitle("Objednávka");
+  const { t } = useTranslation("billing");
   const [searchParams] = useSearchParams();
   const initialPlan = searchParams.get("plan");
 
@@ -75,11 +78,7 @@ export function ObjednavkaPage() {
       window.location.assign(result.redirect_url);
     } catch (err) {
       setSubmitting(false);
-      if (err instanceof ApiError && err.status === 429) {
-        setError("Příliš mnoho pokusů. Zkuste to prosím za pár minut.");
-      } else {
-        setError("Platební bránu se nepodařilo otevřít. Zkuste to prosím za chvíli.");
-      }
+      setError(billingErrorMessage(billingErrorCode(err), t));
     }
   }
 

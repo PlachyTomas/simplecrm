@@ -1,1 +1,11 @@
-{}
+{
+  "errors": {
+    "gateway_unavailable": "The payment gateway is unavailable, please try again shortly.",
+    "too_many_attempts": "Too many attempts, please try again in a few minutes.",
+    "gateway_declined": "The payment gateway declined the transaction. Check your saved card.",
+    "already_active": "Your subscription is already active.",
+    "payment_in_progress": "Payment is already in progress. Finish it, or try again shortly.",
+    "billing_details_required": "You need to fill in your billing details before paying.",
+    "generic": "Payment failed. Please try again."
+  }
+}

@@ -172,6 +172,8 @@ function buildSubscription(opts: VariantOpts) {
 
 interface SetupOpts extends VariantOpts {
   choosePlanFails?: boolean;
+  /** payment-init 502s with a structured `{detail: {code}}` body. */
+  choosePlanFailCode?: string;
   invalidBilling?: boolean;
 }
 
@@ -232,6 +234,9 @@ function setupFetch(opts: SetupOpts) {
         body: init?.body ? JSON.parse(init.body as string) : null,
       });
       timeline.push("payment-init");
+      if (opts.choosePlanFailCode) {
+        return jsonResponse({ detail: { code: opts.choosePlanFailCode } }, 502);
+      }
       if (opts.choosePlanFails) return new Response("err", { status: 500 });
       return jsonResponse({
         redirect_url: "https://payments.comgate.cz/client/instructions/index?id=TEST",
@@ -494,5 +499,55 @@ describe("Billing settings page", () => {
         value: originalLocation,
       });
     }
+  });
+
+  it("ChoosePlanModal payment-init failure with a structured code shows the mapped cs message", async () => {
+    setupFetch({
+      status: "past_due",
+      planCode: "monthly",
+      userCount: 8,
+      choosePlanFailCode: "gateway_unavailable",
+    });
+    renderBillingTab();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^Změnit plán$/i })).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Změnit plán$/i }));
+    fireEvent.click(screen.getByRole("radio", { name: /Měsíční/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Souhlasím s opakovanými platbami/i }));
+    const cta = await screen.findByRole("button", { name: /^Pokračovat na platbu$/i });
+    await waitFor(() => expect(cta).toBeEnabled());
+    fireEvent.click(cta);
+    // The `gateway_unavailable` code maps to its specific catalog string,
+    // not the generic fallback.
+    await waitFor(() =>
+      expect(
+        screen.getByText(/^Platební brána není dostupná, zkuste to prosím za chvíli\.$/),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("ChoosePlanModal payment-init failure without a recognized code falls back to the generic message", async () => {
+    setupFetch({
+      status: "past_due",
+      planCode: "monthly",
+      userCount: 8,
+      choosePlanFails: true,
+    });
+    renderBillingTab();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^Změnit plán$/i })).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Změnit plán$/i }));
+    fireEvent.click(screen.getByRole("radio", { name: /Měsíční/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Souhlasím s opakovanými platbami/i }));
+    const cta = await screen.findByRole("button", { name: /^Pokračovat na platbu$/i });
+    await waitFor(() => expect(cta).toBeEnabled());
+    fireEvent.click(cta);
+    await waitFor(() =>
+      expect(
+        screen.getByText(/^Platba se nezdařila\. Zkuste to prosím znovu\.$/),
+      ).toBeInTheDocument(),
+    );
   });
 });

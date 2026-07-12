@@ -1,1 +1,11 @@
-{}
+{
+  "errors": {
+    "gateway_unavailable": "Platební brána není dostupná, zkuste to prosím za chvíli.",
+    "too_many_attempts": "Příliš mnoho pokusů, zkuste to prosím za pár minut.",
+    "gateway_declined": "Platební brána odmítla transakci. Zkontrolujte uloženou kartu.",
+    "already_active": "Předplatné je již aktivní.",
+    "payment_in_progress": "Platba již probíhá. Dokončete ji, nebo to zkuste za chvíli znovu.",
+    "billing_details_required": "Před platbou je nutné vyplnit fakturační údaje.",
+    "generic": "Platba se nezdařila. Zkuste to prosím znovu."
+  }
+}
