@@ -6,6 +6,8 @@ import { InviteTeammatesCard } from "@/app/dashboard/InviteTeammatesCard";
 import { useLeaderboard, useVelocity } from "@/app/reports/useReports";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { KpiCard } from "@/components/ui/KpiCard";
+import { formatMoney } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { usePageTitle } from "@/lib/usePageTitle";
 
 /**
@@ -22,20 +24,6 @@ function firstName(name: string, email: string): string {
   }
   const local = email.split("@")[0] ?? "";
   return local || "uživateli";
-}
-
-function formatMoney(value: string, currency: string, locale: string): string {
-  const numeric = Number(value);
-  if (Number.isNaN(numeric)) return `${value} ${currency}`;
-  try {
-    return new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 0,
-    }).format(numeric);
-  } catch {
-    return `${numeric.toLocaleString(locale)} ${currency}`;
-  }
 }
 
 function ManagerWidgets({ locale }: { locale: string }) {
@@ -141,7 +129,7 @@ export function DashboardPage() {
   const { data: user } = useCurrentUser();
   const { data: kpi, isPending, isError } = useKpiSummary();
 
-  const locale = user?.organization?.locale ?? "cs-CZ";
+  const locale = useLocale();
   const monthLabel = useMemo(() => {
     try {
       return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" })

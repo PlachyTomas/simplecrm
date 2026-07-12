@@ -101,8 +101,9 @@ describe("Deals list + detail", () => {
     renderAt("/app/deals");
     // The deal name is a button that opens the detail dialog (no standalone page).
     expect(await screen.findByRole("button", { name: /Velká zakázka/ })).toBeInTheDocument();
-    // The cs-CZ currency formatter uses non-breaking spaces and "Kč" after the value.
-    const moneyCell = await screen.findByText(/42\s?500,00/);
+    // The cs-CZ currency formatter uses non-breaking spaces and "Kč" after the
+    // value, with whole korunas (no haléře) per the shared @/lib/format.
+    const moneyCell = await screen.findByText(/42\s?500\s?Kč/);
     expect(moneyCell).toBeInTheDocument();
   });
 

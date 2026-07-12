@@ -9,6 +9,8 @@ import { formatCzkMinor } from "@/components/billing/format";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
 import { isSeatUpgradePaymentRequired, useSeatChangeInit } from "@/components/billing/usePayments";
 import { ApiError, apiFetch } from "@/lib/api";
+import { formatDate } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { cn } from "@/lib/utils";
 import type { components } from "@/types/api.generated";
 
@@ -66,6 +68,7 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
   const { accessToken } = useAuth();
   const qc = useQueryClient();
   const { data: me } = useCurrentUser();
+  const locale = useLocale();
   const seatChangeInit = useSeatChangeInit();
   const [draft, setDraft] = useState<string>(String(sub.seat_count));
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -171,9 +174,7 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
   const queuedIds = new Set(sub.pending_user_deactivations ?? []);
   const queuedUsers = activeUsers.filter((u) => queuedIds.has(u.id));
   const periodEndsAt = sub.current_period_ends_at
-    ? new Intl.DateTimeFormat("cs-CZ", { dateStyle: "long" }).format(
-        new Date(sub.current_period_ends_at),
-      )
+    ? formatDate(sub.current_period_ends_at, locale, { dateStyle: "long" })
     : null;
 
   function cancelQueue() {

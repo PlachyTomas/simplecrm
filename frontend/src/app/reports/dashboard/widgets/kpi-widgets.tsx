@@ -25,7 +25,7 @@ import {
 } from "@/app/reports/dashboard/WidgetFrame";
 import { type GlobalFilters, type WidgetEntry, WIDGET_LABEL } from "@/app/reports/dashboard/types";
 import { useWidgetQuery } from "@/app/reports/dashboard/useWidgetQuery";
-import { useCurrentUser } from "@/auth/useCurrentUser";
+import { useLocale } from "@/lib/i18n/useLocale";
 import type { components } from "@/types/api.generated";
 
 import { KPITile } from "@/app/reports/dashboard/widgets/KPITile";
@@ -54,16 +54,11 @@ function narrowConfig<T extends Config["type"]>(
   return config as Extract<Config, { type: T }>;
 }
 
-function useOrgLocale(): string {
-  const { data } = useCurrentUser();
-  return data?.organization?.locale ?? "cs-CZ";
-}
-
 // --------- pipeline_value ---------
 
 export function PipelineValueWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "pipeline_value");
-  const locale = useOrgLocale();
+  const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["PipelineValueResponse"]>({
     type: "pipeline_value",
     endpoint: "pipeline-value",
@@ -93,7 +88,7 @@ export function PipelineValueWidget(props: BaseWidgetProps) {
 
 export function DealsWonWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "deals_won");
-  const locale = useOrgLocale();
+  const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["DealsWonResponse"]>({
     type: "deals_won",
     endpoint: "deals-won",
@@ -161,7 +156,7 @@ export function WinRateWidget(props: BaseWidgetProps) {
 
 export function AvgDealSizeWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "avg_deal_size");
-  const locale = useOrgLocale();
+  const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["AvgDealSizeResponse"]>({
     type: "avg_deal_size",
     endpoint: "avg-deal-size",
@@ -261,7 +256,7 @@ export function LeadToDealConversionWidget(props: BaseWidgetProps) {
 
 export function NewCompaniesWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "new_companies");
-  const locale = useOrgLocale();
+  const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["NewCompaniesResponse"]>({
     type: "new_companies",
     endpoint: "new-companies",

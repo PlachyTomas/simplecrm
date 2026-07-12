@@ -43,7 +43,9 @@ import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
 import { celebrateWin } from "@/lib/celebrate";
+import { formatMoney } from "@/lib/format";
 import { csNoun } from "@/lib/i18n/nouns";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { useModalDialog } from "@/lib/useModalDialog";
 import { useToast } from "@/lib/toast";
 import { usePageTitle } from "@/lib/usePageTitle";
@@ -69,16 +71,6 @@ function loadWonWindow(): WonWindow {
   if (raw === "all") return "all";
   const n = Number(raw);
   return Number.isFinite(n) && n > 0 ? n : 30;
-}
-
-function formatMoney(value: string, currency: string, locale: string): string {
-  const numeric = Number(value);
-  if (Number.isNaN(numeric)) return `${value} ${currency}`;
-  try {
-    return new Intl.NumberFormat(locale, { style: "currency", currency }).format(numeric);
-  } catch {
-    return `${numeric.toLocaleString(locale)} ${currency}`;
-  }
 }
 
 // A deal with value 0 is treated as "value not yet entered" — we hide
@@ -692,7 +684,7 @@ export function PipelinePage() {
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
   );
 
-  const locale = user?.organization?.locale ?? "cs-CZ";
+  const locale = useLocale();
 
   const moneyFmt = useMemo(
     () =>

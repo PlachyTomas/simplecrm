@@ -4,6 +4,8 @@ import { useState, type FormEvent } from "react";
 
 import { useAuth } from "@/auth/useAuth";
 import { ApiError, apiFetch } from "@/lib/api";
+import { formatDate } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import type { components } from "@/types/api.generated";
 
 type BlockedCompanyOut = components["schemas"]["BlockedCompanyOut"];
@@ -22,8 +24,6 @@ const REASON_LABEL: Record<BlockedCompanyReason, string> = {
   legal_issue: "Právní problém",
   other: "Jiný",
 };
-
-const dateFmt = new Intl.DateTimeFormat("cs-CZ", { dateStyle: "short" });
 
 function useBlockedCompanies() {
   const { accessToken } = useAuth();
@@ -70,6 +70,7 @@ export function BlockedCompaniesSection() {
   const list = useBlockedCompanies();
   const add = useAddBlockedCompany();
   const del = useDeleteBlockedCompany();
+  const locale = useLocale();
   const [ico, setIco] = useState("");
   const [reason, setReason] = useState<BlockedCompanyReason>("competitor");
   const [note, setNote] = useState("");
@@ -204,7 +205,7 @@ export function BlockedCompaniesSection() {
                   </td>
                   <td className="px-3 py-2 text-text-secondary">{row.note ?? "—"}</td>
                   <td className="px-3 py-2 text-text-tertiary">
-                    {dateFmt.format(new Date(row.created_at))}
+                    {formatDate(row.created_at, locale, { dateStyle: "short" })}
                   </td>
                   <td className="px-3 py-2 text-right">
                     <button

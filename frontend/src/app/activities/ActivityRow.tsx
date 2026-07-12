@@ -3,6 +3,7 @@ import { type ReactNode, useState } from "react";
 
 import { activityDetail, activityLabel, changeFieldLabel } from "@/app/activities/activityLabels";
 import type { ActivityOut } from "@/app/activities/useActivities";
+import { useLocale } from "@/lib/i18n/useLocale";
 
 /**
  * The backend denormalizes the actor's name onto each activity row, but the
@@ -11,11 +12,6 @@ import type { ActivityOut } from "@/app/activities/useActivities";
  * treated defensively so legacy rows keep rendering.
  */
 export type ActivityItem = ActivityOut & { user_name?: string | null };
-
-const dateTimeFmt = new Intl.DateTimeFormat("cs-CZ", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 
 function asString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
@@ -27,9 +23,11 @@ function sideValue(value: unknown): string {
   return String(value);
 }
 
-function formatDateTime(iso: string): string {
+function formatDateTime(iso: string, locale: string): string {
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : dateTimeFmt.format(d);
+  return Number.isNaN(d.getTime())
+    ? iso
+    : new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(d);
 }
 
 function DetailLine({ children }: { children: ReactNode }) {
@@ -80,9 +78,11 @@ function ChangesDetail({ entries }: { entries: [string, unknown][] }): JSX.Eleme
 function ActivityDetail({
   activity,
   payload,
+  locale,
 }: {
   activity: ActivityItem;
   payload: Record<string, unknown>;
+  locale: string;
 }): JSX.Element | null {
   const type = activity.activity_type;
 
@@ -102,7 +102,7 @@ function ActivityDetail({
   if (type === "event_created") {
     const title = asString(payload.title);
     const startsAt = asString(payload.starts_at);
-    const parts = [title, startsAt ? formatDateTime(startsAt) : null].filter(Boolean);
+    const parts = [title, startsAt ? formatDateTime(startsAt, locale) : null].filter(Boolean);
     return parts.length ? <DetailLine>{parts.join(" · ")}</DetailLine> : null;
   }
 
@@ -116,6 +116,7 @@ function ActivityDetail({
  * Renders as an `<li>` to slot into the timeline `<ol>` at the call site.
  */
 export function ActivityRow({ activity }: { activity: ActivityItem }): JSX.Element {
+  const locale = useLocale();
   const payload = (activity.payload ?? {}) as Record<string, unknown>;
   const dealName = asString(payload.deal_name);
   const label = activityLabel(activity.activity_type);
@@ -136,10 +137,10 @@ export function ActivityRow({ activity }: { activity: ActivityItem }): JSX.Eleme
           label
         )}
       </p>
-      <ActivityDetail activity={activity} payload={payload} />
+      <ActivityDetail activity={activity} payload={payload} locale={locale} />
       <p className="mt-0.5 text-xs text-text-tertiary">
         {userName ? <span>{userName} · </span> : null}
-        {formatDateTime(activity.created_at)}
+        {formatDateTime(activity.created_at, locale)}
       </p>
     </li>
   );

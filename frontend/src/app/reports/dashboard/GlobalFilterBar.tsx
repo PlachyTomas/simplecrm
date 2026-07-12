@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 import { useOrgTeams, useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { cn } from "@/lib/utils";
 
 import {
@@ -35,6 +36,7 @@ interface GlobalFilterBarProps {
  */
 export function GlobalFilterBar({ value, onChange }: GlobalFilterBarProps) {
   const { data: me } = useCurrentUser();
+  const locale = useLocale();
   const isAdmin = me?.role === "admin";
   const isManager = me?.role === "manager";
 
@@ -50,7 +52,7 @@ export function GlobalFilterBar({ value, onChange }: GlobalFilterBarProps) {
     if (!value.dateRange) return null;
     try {
       const { from, to } = resolvePreset(value.dateRange);
-      const fmt = new Intl.DateTimeFormat("cs-CZ", {
+      const fmt = new Intl.DateTimeFormat(locale, {
         day: "numeric",
         month: "numeric",
         year: "numeric",
@@ -59,7 +61,7 @@ export function GlobalFilterBar({ value, onChange }: GlobalFilterBarProps) {
     } catch {
       return null;
     }
-  }, [value.dateRange]);
+  }, [value.dateRange, locale]);
 
   // Teams the current user can scope by. Admins see every team; a
   // manager sees only the teams they manage (a single user can manage

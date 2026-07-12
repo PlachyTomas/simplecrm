@@ -7,20 +7,11 @@ import { useDealDialog } from "@/app/deals/useDealDialog";
 import { useDeals } from "@/app/deals/useDeals";
 import { stageColor } from "@/app/pipeline/colors";
 import { usePipelineBoard } from "@/app/pipeline/useBoard";
-import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
+import { formatMoney } from "@/lib/format";
 import { csNoun } from "@/lib/i18n/nouns";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { usePageTitle } from "@/lib/usePageTitle";
-
-function formatMoney(value: string, currency: string, locale: string): string {
-  const numeric = Number(value);
-  if (Number.isNaN(numeric)) return `${value} ${currency}`;
-  try {
-    return new Intl.NumberFormat(locale, { style: "currency", currency }).format(numeric);
-  } catch {
-    return `${numeric.toLocaleString(locale)} ${currency}`;
-  }
-}
 
 const TH = "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary";
 
@@ -28,11 +19,10 @@ export function DealsListPage() {
   usePageTitle("Obchody");
   const navigate = useNavigate();
   const { data: deals, isPending, isError } = useDeals();
-  const { data: user } = useCurrentUser();
   const { data: board } = usePipelineBoard();
   const { dealId: dialogDealId, openDeal, closeDeal } = useDealDialog();
 
-  const locale = user?.organization?.locale ?? "cs-CZ";
+  const locale = useLocale();
   const dateFmt = useMemo(() => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }), [locale]);
 
   // The board is only consulted for a stage's semantic dot color; the stage

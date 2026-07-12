@@ -12,11 +12,13 @@ import { Logo } from "@/components/Logo";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
 import { apiFetch } from "@/lib/api";
 import { csNoun } from "@/lib/i18n/nouns";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 
 export function AppShell() {
   const { data: user } = useCurrentUser();
+  const locale = useLocale();
   const { data: subscription } = useCurrentSubscription();
   const { accessToken, clearAuth } = useAuth();
   const location = useLocation();
@@ -43,7 +45,6 @@ export function AppShell() {
 
   if (!user || !user.organization) return null;
 
-  const locale = user.organization.locale;
   const trialEndsAt = new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(
     new Date(user.organization.trial_ends_at),
   );

@@ -11,6 +11,8 @@ import {
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
 import { ApiError, apiFetch } from "@/lib/api";
+import { formatDate } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 
 type Role = "admin" | "manager" | "salesperson";
 
@@ -19,8 +21,6 @@ const ROLE_LABEL: Record<Role, string> = {
   manager: "Manažer",
   salesperson: "Obchodník",
 };
-
-const dateFmt = new Intl.DateTimeFormat("cs-CZ", { dateStyle: "short" });
 
 function UserRow({
   u,
@@ -198,13 +198,14 @@ export function UsersSection() {
   const sub = subQuery.data;
   const { accessToken } = useAuth();
   const qc = useQueryClient();
+  const locale = useLocale();
   const [error, setError] = useState<string | null>(null);
 
   // Map of queued user IDs → formatted "DD.MM.RR" date so each row can
   // render the scheduled-deactivation pill without duplicating the math.
   const queuedSet = new Set(sub?.pending_user_deactivations ?? []);
   const scheduledDate = sub?.current_period_ends_at
-    ? dateFmt.format(new Date(sub.current_period_ends_at))
+    ? formatDate(sub.current_period_ends_at, locale, { dateStyle: "short" })
     : null;
 
   async function mutate(id: string, patch: Parameters<typeof update.mutateAsync>[0]["patch"]) {

@@ -7,10 +7,9 @@ export const SUPPORT_MAILTO = "mailto:podpora@simplecrm.cz";
 export const ENTERPRISE_MAILTO =
   "mailto:podpora@simplecrm.cz?subject=" + encodeURIComponent("SimpleCRM enterprise — dotaz");
 
-const csDate = new Intl.DateTimeFormat("cs-CZ", { dateStyle: "long" });
-export function formatCsDate(iso: string | null | undefined): string | null {
+export function formatCsDate(iso: string | null | undefined, locale: string): string | null {
   if (!iso) return null;
-  return csDate.format(new Date(iso));
+  return new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(new Date(iso));
 }
 
 interface StatusPillSpec {

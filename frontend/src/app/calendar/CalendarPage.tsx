@@ -11,7 +11,7 @@ import {
 } from "@/app/calendar/calendarMath";
 import { EventFormModal } from "@/app/events/EventFormModal";
 import { type CalendarEventOut, useDeleteEvent, useEvents } from "@/app/events/useEvents";
-import { useCurrentUser } from "@/auth/useCurrentUser";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { useToast } from "@/lib/toast";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
@@ -102,8 +102,7 @@ function DayEventsList({
 export function CalendarPage() {
   usePageTitle("Kalendář");
   const toast = useToast();
-  const { data: user } = useCurrentUser();
-  const locale = user?.organization?.locale ?? "cs-CZ";
+  const locale = useLocale();
 
   const today = new Date();
   const [[year, month], setYearMonth] = useState<[number, number]>([

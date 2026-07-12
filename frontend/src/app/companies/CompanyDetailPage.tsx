@@ -21,7 +21,7 @@ import type { SentEmailOut } from "@/app/emails/useEmails";
 import { usePipelineBoard } from "@/app/pipeline/useBoard";
 import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
-import { useCurrentUser } from "@/auth/useCurrentUser";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { useToast } from "@/lib/toast";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
@@ -573,9 +573,9 @@ function NotesTab({ companyId, initialNote }: { companyId: string; initialNote: 
 
 export function CompanyDetailPage() {
   const { companyId } = useParams<{ companyId: string }>();
+  const locale = useLocale();
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const { data: company, isPending, isError } = useCompany(companyId);
-  const { data: user } = useCurrentUser();
   const { data: usersPage } = useOrgUsers();
   usePageTitle(company?.name ?? "Detail firmy");
   const ownerName = useMemo(() => {
@@ -606,8 +606,6 @@ export function CompanyDetailPage() {
       </div>
     );
   }
-
-  const locale = user?.organization?.locale ?? "cs-CZ";
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">

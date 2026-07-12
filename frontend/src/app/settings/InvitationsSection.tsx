@@ -6,6 +6,8 @@ import { useOrgTeams } from "@/app/settings/useUsersTeams";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { ApiError, apiFetch } from "@/lib/api";
+import { formatDate } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { useToast } from "@/lib/toast";
 import type { components } from "@/types/api.generated";
 
@@ -303,9 +305,8 @@ function InvitationRow({
   teamName: string;
   onRevoke: () => void;
 }) {
-  const expires = new Intl.DateTimeFormat("cs-CZ", { dateStyle: "medium" }).format(
-    new Date(invitation.expires_at),
-  );
+  const locale = useLocale();
+  const expires = formatDate(invitation.expires_at, locale, { dateStyle: "medium" });
   return (
     <tr className="border-b border-border-subtle last:border-0">
       <td className="py-3 text-sm text-text-primary">{invitation.email}</td>

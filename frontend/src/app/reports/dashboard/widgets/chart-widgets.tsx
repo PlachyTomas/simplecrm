@@ -13,7 +13,7 @@ import { WidgetError, WidgetFrame, WidgetSkeleton } from "@/app/reports/dashboar
 import { type GlobalFilters, type WidgetEntry, WIDGET_LABEL } from "@/app/reports/dashboard/types";
 import { useWidgetQuery } from "@/app/reports/dashboard/useWidgetQuery";
 import { BarChartWidget, type BarRow } from "@/app/reports/dashboard/widgets/BarChartWidget";
-import { useCurrentUser } from "@/auth/useCurrentUser";
+import { useLocale } from "@/lib/i18n/useLocale";
 import type { components } from "@/types/api.generated";
 
 type ApiSchemas = components["schemas"];
@@ -36,16 +36,11 @@ function narrowConfig<T extends Config["type"]>(
   return config as Extract<Config, { type: T }>;
 }
 
-function useOrgLocale(): string {
-  const { data } = useCurrentUser();
-  return data?.organization?.locale ?? "cs-CZ";
-}
-
 // ---------- lost_reasons_breakdown ----------
 
 export function LostReasonsBreakdownWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "lost_reasons_breakdown");
-  const locale = useOrgLocale();
+  const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["LostReasonsBreakdownResponse"]>({
     type: "lost_reasons_breakdown",
     endpoint: "lost-reasons-breakdown",
@@ -88,7 +83,7 @@ export function LostReasonsBreakdownWidget(props: BaseWidgetProps) {
 
 export function SalesLeaderboardWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "sales_leaderboard");
-  const locale = useOrgLocale();
+  const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["SalesLeaderboardResponse"]>({
     type: "sales_leaderboard",
     endpoint: "sales-leaderboard",
@@ -154,7 +149,7 @@ function formatLeaderboardValue(
 
 export function RepActivityWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "rep_activity");
-  const locale = useOrgLocale();
+  const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["RepActivityResponse"]>({
     type: "rep_activity",
     endpoint: "rep-activity",

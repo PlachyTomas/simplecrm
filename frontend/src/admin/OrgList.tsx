@@ -8,6 +8,8 @@ import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ADMIN_PAGE_SIZE, type AdminOrgRow, useAdminOrgList } from "@/admin/hooks";
+import { formatDate } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { cn } from "@/lib/utils";
 
@@ -16,11 +18,9 @@ interface OrgListProps {
   onSelect: (orgId: string, userCount: number) => void;
 }
 
-const dateFmt = new Intl.DateTimeFormat("cs-CZ", { dateStyle: "short" });
-const relFmt = new Intl.RelativeTimeFormat("cs-CZ", { numeric: "auto" });
-
-function formatRelativeDays(iso: string | null | undefined): string {
+function formatRelativeDays(iso: string | null | undefined, locale: string): string {
   if (!iso) return "—";
+  const relFmt = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   const ms = new Date(iso).getTime() - Date.now();
   const days = Math.round(ms / (24 * 3600 * 1000));
   if (Math.abs(days) >= 1) return relFmt.format(days, "day");
@@ -49,6 +49,7 @@ function statusPillSpec(row: AdminOrgRow): { label: string; className: string } 
 }
 
 export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
+  const locale = useLocale();
   const [searchInput, setSearchInput] = useState("");
   const [page, setPage] = useState(0);
   const debouncedSearch = useDebouncedValue(searchInput, 300);
@@ -98,18 +99,20 @@ export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
         cell: ({ row }) => {
           const iso = row.original.current_period_ends_at ?? row.original.trial_ends_at;
           return (
-            <span className="text-text-secondary">{iso ? dateFmt.format(new Date(iso)) : "—"}</span>
+            <span className="text-text-secondary">
+              {iso ? formatDate(iso, locale, { dateStyle: "short" }) : "—"}
+            </span>
           );
         },
       }),
       helper.accessor("last_activity_at", {
         header: "Poslední aktivita",
         cell: (info) => (
-          <span className="text-text-tertiary">{formatRelativeDays(info.getValue())}</span>
+          <span className="text-text-tertiary">{formatRelativeDays(info.getValue(), locale)}</span>
         ),
       }),
     ];
-  }, []);
+  }, [locale]);
 
   const table = useReactTable({
     data: items,

@@ -31,6 +31,7 @@ import {
 } from "@/components/billing/useTaxInvoices";
 import { apiFetch } from "@/lib/api";
 import { csNoun } from "@/lib/i18n/nouns";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { useModalDialog } from "@/lib/useModalDialog";
 import { cn } from "@/lib/utils";
 import type { components } from "@/types/api.generated";
@@ -98,6 +99,7 @@ export function BillingSection() {
  * Comp + enterprise opt out at the call site.
  */
 function PaidThroughBlock({ sub }: { sub: SubscriptionOut | null | undefined }) {
+  const locale = useLocale();
   if (!sub) return null;
   if (sub.is_comp) return null;
   if (sub.plan?.code === "enterprise") return null;
@@ -105,8 +107,8 @@ function PaidThroughBlock({ sub }: { sub: SubscriptionOut | null | undefined }) 
 
   const start = sub.current_period_starts_at ?? sub.started_at;
   const end = sub.current_period_ends_at;
-  const startLabel = formatCsDate(start);
-  const endLabel = formatCsDate(end);
+  const startLabel = formatCsDate(start, locale);
+  const endLabel = formatCsDate(end, locale);
   if (!endLabel) return null;
 
   const isTrial = sub.status === "trialing";
@@ -267,6 +269,7 @@ interface BillingDetailsCardProps {
 }
 
 function BillingDetailsCard({ sub, summary, onSwitchToAnnual }: BillingDetailsCardProps) {
+  const locale = useLocale();
   if (!sub) return null;
   if (sub.is_comp) return null;
   if (sub.plan?.code === "enterprise") return null;
@@ -290,7 +293,7 @@ function BillingDetailsCard({ sub, summary, onSwitchToAnnual }: BillingDetailsCa
   const monthlyContractTotal = perUserMinor * billedSeats;
   const annualContractTotal = perUserMinor * 12 * billedSeats;
   const totalMinor = isAnnual ? annualContractTotal : monthlyContractTotal;
-  const renewalDate = formatCsDate(sub.current_period_ends_at);
+  const renewalDate = formatCsDate(sub.current_period_ends_at, locale);
 
   return (
     <section className="rounded-lg border border-border bg-surface p-6">
@@ -354,6 +357,7 @@ const PAYMENT_STATUS_PILL: Record<ChargeOut["status"], { label: string; classNam
 
 function PaymentsCard() {
   const payments = useInvoices();
+  const locale = useLocale();
 
   return (
     <section className="rounded-lg border border-border bg-surface p-6">
@@ -373,7 +377,7 @@ function PaymentsCard() {
         <ul className="mt-4 divide-y divide-border-subtle">
           {payments.data.items.map((row) => {
             const pill = PAYMENT_STATUS_PILL[row.status];
-            const created = formatCsDate(row.created_at) ?? "";
+            const created = formatCsDate(row.created_at, locale) ?? "";
             return (
               <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
@@ -429,6 +433,7 @@ function TaxInvoicesCard() {
   const invoices = useTaxInvoices();
   const downloadPdf = useDownloadTaxInvoicePdf();
   const [error, setError] = useState<string | null>(null);
+  const locale = useLocale();
 
   function onDownload(row: TaxInvoiceOut) {
     setError(null);
@@ -469,8 +474,8 @@ function TaxInvoicesCard() {
         <ul className="mt-4 divide-y divide-border-subtle">
           {invoices.data.items.map((inv) => {
             const pill = TAX_INVOICE_STATUS_PILL[inv.status];
-            const issued = formatCsDate(inv.issued_at) ?? "";
-            const due = formatCsDate(inv.due_at) ?? "";
+            const issued = formatCsDate(inv.issued_at, locale) ?? "";
+            const due = formatCsDate(inv.due_at, locale) ?? "";
             return (
               <li key={inv.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
@@ -519,6 +524,7 @@ interface CancelSubscriptionCardProps {
 function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
   const cancel = useCancelSubscription();
   const reactivate = useReactivateSubscription();
+  const locale = useLocale();
   const [confirming, setConfirming] = useState(false);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -536,7 +542,7 @@ function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
   // "active, can cancel". The backend uses canceled_at != null + status
   // 'active' as the "scheduled to cancel at period end" signal.
   const isScheduledForCancel = sub.canceled_at != null && sub.status === "active";
-  const endsAt = formatCsDate(sub.current_period_ends_at);
+  const endsAt = formatCsDate(sub.current_period_ends_at, locale);
 
   if (isScheduledForCancel) {
     return (

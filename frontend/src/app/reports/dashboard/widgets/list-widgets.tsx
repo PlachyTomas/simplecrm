@@ -15,7 +15,8 @@ import { WidgetError, WidgetFrame, WidgetSkeleton } from "@/app/reports/dashboar
 import { type GlobalFilters, type WidgetEntry, WIDGET_LABEL } from "@/app/reports/dashboard/types";
 import { useWidgetQuery } from "@/app/reports/dashboard/useWidgetQuery";
 import { type ListColumn, ListWidget } from "@/app/reports/dashboard/widgets/ListWidget";
-import { useCurrentUser } from "@/auth/useCurrentUser";
+import { formatDate } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { cn } from "@/lib/utils";
 import type { components } from "@/types/api.generated";
 
@@ -39,30 +40,12 @@ function narrowConfig<T extends Config["type"]>(
   return config as Extract<Config, { type: T }>;
 }
 
-function useOrgLocale(): string {
-  const { data } = useCurrentUser();
-  return data?.organization?.locale ?? "cs-CZ";
-}
-
-function formatCsDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  try {
-    return new Intl.DateTimeFormat("cs-CZ", {
-      day: "numeric",
-      month: "numeric",
-      year: "2-digit",
-    }).format(new Date(value));
-  } catch {
-    return value;
-  }
-}
-
 // ---------- stale_deals ----------
 
 export function StaleDealsWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "stale_deals");
   const navigate = useNavigate();
-  const locale = useOrgLocale();
+  const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["StaleDealsResponse"]>({
     type: "stale_deals",
     endpoint: "stale-deals",
@@ -147,6 +130,7 @@ export function StaleDealsWidget(props: BaseWidgetProps) {
 export function CompaniesAtRiskWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "companies_at_risk");
   const navigate = useNavigate();
+  const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["CompaniesAtRiskResponse"]>({
     type: "companies_at_risk",
     endpoint: "companies-at-risk",
@@ -188,7 +172,11 @@ export function CompaniesAtRiskWidget(props: BaseWidgetProps) {
       header: "Poslední aktivita",
       align: "right",
       nowrap: true,
-      render: (r) => <span className="text-text-tertiary">{formatCsDate(r.last_activity_at)}</span>,
+      render: (r) => (
+        <span className="text-text-tertiary">
+          {formatDate(r.last_activity_at, locale, { day: "numeric", month: "numeric", year: "2-digit" })}
+        </span>
+      ),
     },
   ];
 

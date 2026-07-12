@@ -16,6 +16,7 @@ import { usePipelineBoard } from "@/app/pipeline/useBoard";
 import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { useToast } from "@/lib/toast";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -87,7 +88,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
   const deleteDeal = useDeleteDeal(dealId);
   const toast = useToast();
 
-  const locale = user?.organization?.locale ?? "cs-CZ";
+  const locale = useLocale();
   const dateFmt = useMemo(() => new Intl.DateTimeFormat(locale, { dateStyle: "long" }), [locale]);
 
   if (isPending) {

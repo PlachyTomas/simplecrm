@@ -13,17 +13,9 @@ import {
 import { useAuth } from "@/auth/useAuth";
 import { formatCzkMinor } from "@/components/billing/format";
 import { ApiError, apiFetch } from "@/lib/api";
+import { formatDate } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { cn } from "@/lib/utils";
-
-const dateFmt = new Intl.DateTimeFormat("cs-CZ", { dateStyle: "long" });
-const dateTimeFmt = new Intl.DateTimeFormat("cs-CZ", {
-  dateStyle: "short",
-  timeStyle: "short",
-});
-
-function fmtDate(iso: string | null | undefined): string {
-  return iso ? dateFmt.format(new Date(iso)) : "—";
-}
 
 function statusPillSpec(sub: AdminSubscriptionOut): { label: string; className: string } {
   if (sub.is_comp) {
@@ -58,6 +50,7 @@ interface OrgDetailDrawerProps {
 type ActiveModal = "activate" | "set-comp" | "set-enterprise" | "extend-trial" | "cancel" | null;
 
 export function OrgDetailDrawer({ orgId, userCount }: OrgDetailDrawerProps) {
+  const locale = useLocale();
   const subQuery = useAdminOrgSubscription(orgId);
   const sub = subQuery.data;
 
@@ -115,16 +108,22 @@ export function OrgDetailDrawer({ orgId, userCount }: OrgDetailDrawerProps) {
           </div>
           <div>
             <dt className="text-xs uppercase tracking-wider text-text-tertiary">Začátek</dt>
-            <dd className="text-text-primary">{fmtDate(sub.started_at)}</dd>
+            <dd className="text-text-primary">
+              {formatDate(sub.started_at, locale, { dateStyle: "long" })}
+            </dd>
           </div>
           <div>
             <dt className="text-xs uppercase tracking-wider text-text-tertiary">Konec období</dt>
-            <dd className="text-text-primary">{fmtDate(sub.current_period_ends_at)}</dd>
+            <dd className="text-text-primary">
+              {formatDate(sub.current_period_ends_at, locale, { dateStyle: "long" })}
+            </dd>
           </div>
           {sub.canceled_at ? (
             <div>
               <dt className="text-xs uppercase tracking-wider text-text-tertiary">Zrušeno</dt>
-              <dd className="text-text-primary">{fmtDate(sub.canceled_at)}</dd>
+              <dd className="text-text-primary">
+                {formatDate(sub.canceled_at, locale, { dateStyle: "long" })}
+              </dd>
             </div>
           ) : null}
           {sub.effective_price_per_user_minor != null ? (
@@ -582,6 +581,7 @@ function ExtendTrialModal({
   currentEndsAt: string | null | undefined;
   onClose: () => void;
 }) {
+  const locale = useLocale();
   const { accessToken } = useAuth();
   const invalidate = useInvalidateOrgDetail(orgId);
   const [days, setDays] = useState<string>("30");
@@ -592,7 +592,7 @@ function ExtendTrialModal({
     const base = new Date(currentEndsAt).getTime();
     const ms = base + Number(days) * 24 * 3600 * 1000;
     if (Number.isNaN(ms)) return null;
-    return dateFmt.format(new Date(ms));
+    return formatDate(new Date(ms), locale, { dateStyle: "long" });
   })();
 
   const mutation = useMutation({
@@ -890,6 +890,7 @@ function MemberRow({ user }: { user: AdminOrgUserRow }) {
 }
 
 function ActivityTimeline({ orgId }: { orgId: string }) {
+  const locale = useLocale();
   const { data, isPending } = useAdminOrgActivity(orgId);
   const items = data?.items ?? [];
   return (
@@ -915,7 +916,10 @@ function ActivityTimeline({ orgId }: { orgId: string }) {
                   <span className="text-text-secondary">{row.actor?.name ?? "Systém"}</span>
                   <span className="text-text-tertiary">·</span>
                   <span className="text-text-tertiary">
-                    {dateTimeFmt.format(new Date(row.created_at))}
+                    {formatDate(row.created_at, locale, {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
                   </span>
                 </div>
                 {summary ? <p className="text-xs text-text-tertiary">{summary}</p> : null}
