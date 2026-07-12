@@ -1,5 +1,6 @@
 import { Crown, Handshake, Target, Trophy, Workflow } from "lucide-react";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 import { type KpiSummary, useKpiSummary } from "@/app/dashboard/useKpi";
 import { InviteTeammatesCard } from "@/app/dashboard/InviteTeammatesCard";
@@ -16,17 +17,18 @@ import { usePageTitle } from "@/lib/usePageTitle";
  * `name` is empty. Splitting on whitespace handles both cases without
  * showing the role or domain.
  */
-function firstName(name: string, email: string): string {
+function firstName(name: string, email: string, fallback: string): string {
   const trimmed = name.trim();
   if (trimmed) {
     const [head] = trimmed.split(/\s+/);
     if (head) return head;
   }
   const local = email.split("@")[0] ?? "";
-  return local || "uživateli";
+  return local || fallback;
 }
 
 function ManagerWidgets({ locale }: { locale: string }) {
+  const { t } = useTranslation("dashboard");
   const range = useMemo(() => {
     const today = new Date();
     const to = today.toISOString().slice(0, 10);
@@ -38,21 +40,22 @@ function ManagerWidgets({ locale }: { locale: string }) {
   const velocity = useVelocity(range);
 
   return (
-    <section aria-label="Manažerský přehled" className="mt-8 grid grid-cols-1 gap-4 xl:grid-cols-2">
+    <section
+      aria-label={t("managerWidgets.sectionAriaLabel")}
+      className="mt-8 grid grid-cols-1 gap-4 xl:grid-cols-2"
+    >
       <article className="rounded-lg border border-border bg-surface p-5">
         <div className="flex items-baseline justify-between">
           <h2 className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
-            Leaderboard (30 dní)
+            {t("managerWidgets.leaderboardTitle")}
           </h2>
         </div>
         {leaderboard.isPending ? (
-          <p className="mt-4 text-sm text-text-tertiary">Načítání…</p>
+          <p className="mt-4 text-sm text-text-tertiary">{t("managerWidgets.loading")}</p>
         ) : leaderboard.isError || !leaderboard.data ? (
-          <p className="mt-4 text-sm text-danger">Nelze načíst.</p>
+          <p className="mt-4 text-sm text-danger">{t("managerWidgets.loadError")}</p>
         ) : leaderboard.data.rows.length === 0 ? (
-          <p className="mt-4 text-sm text-text-secondary">
-            Žádné vyhrané obchody za posledních 30 dní.
-          </p>
+          <p className="mt-4 text-sm text-text-secondary">{t("managerWidgets.noWonDeals")}</p>
         ) : (
           <ol className="mt-4 space-y-2">
             {leaderboard.data.rows.slice(0, 5).map((row, idx) => (
@@ -60,7 +63,7 @@ function ManagerWidgets({ locale }: { locale: string }) {
                 <span className="flex items-center gap-2 text-text-primary">
                   {idx === 0 ? (
                     <span
-                      aria-label="Vedoucí leaderboardu"
+                      aria-label={t("managerWidgets.leaderboardLeaderAria")}
                       className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-accent text-text-on-brand-accent"
                     >
                       <Crown size={11} strokeWidth={2} aria-hidden />
@@ -94,16 +97,14 @@ function ManagerWidgets({ locale }: { locale: string }) {
 
       <article className="rounded-lg border border-border bg-surface p-5">
         <h2 className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
-          Průměrné trvání obchodu (30 dní)
+          {t("managerWidgets.velocityTitle")}
         </h2>
         {velocity.isPending ? (
-          <p className="mt-4 text-sm text-text-tertiary">Načítání…</p>
+          <p className="mt-4 text-sm text-text-tertiary">{t("managerWidgets.loading")}</p>
         ) : velocity.isError || !velocity.data ? (
-          <p className="mt-4 text-sm text-danger">Nelze načíst.</p>
+          <p className="mt-4 text-sm text-danger">{t("managerWidgets.loadError")}</p>
         ) : velocity.data.stages.length === 0 ? (
-          <p className="mt-4 text-sm text-text-secondary">
-            Za posledních 30 dní nebyl uzavřen žádný obchod.
-          </p>
+          <p className="mt-4 text-sm text-text-secondary">{t("managerWidgets.noClosedDeals")}</p>
         ) : (
           <ul className="mt-4 space-y-2">
             {velocity.data.stages.map((stage) => (
@@ -112,7 +113,9 @@ function ManagerWidgets({ locale }: { locale: string }) {
                 <span className="tabular-nums text-text-secondary">
                   {stage.avg_days_in_stage == null
                     ? "—"
-                    : `${(Math.round(stage.avg_days_in_stage * 10) / 10).toFixed(1)} dní`}{" "}
+                    : t("managerWidgets.avgDurationDays", {
+                        days: (Math.round(stage.avg_days_in_stage * 10) / 10).toFixed(1),
+                      })}{" "}
                   · {stage.deal_count}
                 </span>
               </li>
@@ -125,7 +128,8 @@ function ManagerWidgets({ locale }: { locale: string }) {
 }
 
 export function DashboardPage() {
-  usePageTitle("Přehled");
+  const { t } = useTranslation("dashboard");
+  usePageTitle(t("dashboardPage.title"));
   const { data: user } = useCurrentUser();
   const { data: kpi, isPending, isError } = useKpiSummary();
 
@@ -143,7 +147,7 @@ export function DashboardPage() {
   if (isPending || !user) {
     return (
       <div className="p-8 text-sm text-text-tertiary" role="status">
-        Načítání přehledu…
+        {t("dashboardPage.loadingSummary")}
       </div>
     );
   }
@@ -154,7 +158,7 @@ export function DashboardPage() {
         className="m-4 rounded-md border border-danger-subtle bg-danger-subtle px-4 py-3 text-sm text-danger md:m-8"
         role="alert"
       >
-        Přehled KPI se nepodařilo načíst.
+        {t("dashboardPage.summaryLoadError")}
       </div>
     );
   }
@@ -162,40 +166,46 @@ export function DashboardPage() {
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold">Vítejte zpět, {firstName(user.name, user.email)}</h1>
+        <h1 className="text-2xl font-semibold">
+          {t("dashboardPage.welcome", {
+            name: firstName(user.name, user.email, t("dashboardPage.userFallback")),
+          })}
+        </h1>
         <p className="mt-1 text-sm text-text-tertiary">
-          Rychlý přehled za {monthLabel.toLowerCase() || "tento měsíc"}.
+          {t("dashboardPage.summaryFor", {
+            month: monthLabel.toLowerCase() || t("dashboardPage.summaryForFallback"),
+          })}
         </p>
       </header>
 
       <section
-        aria-label="Klíčové ukazatele"
+        aria-label={t("dashboardPage.kpiSectionAriaLabel")}
         className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
       >
         <KpiCard
-          label="Otevřené obchody"
+          label={t("dashboardPage.openDeals")}
           value={String(kpi.open_deal_count)}
           icon={Handshake}
-          hint="V probíhající pipeline"
+          hint={t("dashboardPage.openDealsHint")}
         />
         <KpiCard
-          label="Hodnota pipeline"
+          label={t("dashboardPage.pipelineValue")}
           value={formatMoney(kpi.open_pipeline_value, kpi.currency, locale)}
           icon={Workflow}
-          hint="Součet otevřených obchodů"
+          hint={t("dashboardPage.pipelineValueHint")}
         />
         <KpiCard
-          label="Vyhráno tento měsíc"
+          label={t("dashboardPage.wonThisMonth")}
           value={String(kpi.won_this_month_count)}
           icon={Target}
-          hint="Počet uzavřených obchodů"
+          hint={t("dashboardPage.wonThisMonthHint")}
         />
         <KpiCard
-          label="Výnosy tento měsíc"
+          label={t("dashboardPage.revenueThisMonth")}
           value={formatMoney(kpi.won_this_month_value, kpi.currency, locale)}
           icon={Trophy}
           accent="highlight"
-          hint="Součet vyhraných obchodů"
+          hint={t("dashboardPage.revenueThisMonthHint")}
         />
       </section>
 

@@ -1,5 +1,6 @@
 import { AlertTriangle, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import {
@@ -16,14 +17,28 @@ import { useToast } from "@/lib/toast";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 
-const WEEKDAYS = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"];
 const MAX_CHIPS = 3;
 
+/**
+ * Short weekday labels for the grid header, via `Intl` off a known Monday —
+ * localized automatically with the app language, no literals in catalogs.
+ */
+function weekdayLabels(locale: string): string[] {
+  const fmt = new Intl.DateTimeFormat(locale, { weekday: "short" });
+  const monday = new Date(Date.UTC(2024, 0, 1)); // 2024-01-01 was a Monday (UTC)
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setUTCDate(monday.getUTCDate() + i);
+    return fmt.format(d);
+  });
+}
+
 function SyncBadge({ status }: { status: CalendarEventOut["google_sync_status"] }) {
+  const { t } = useTranslation("calendar");
   if (status === "synced") {
     return (
       <span className="inline-flex items-center rounded-full bg-accent-subtle px-2 py-0.5 text-xs font-medium text-accent">
-        Google
+        {t("syncBadge.synced")}
       </span>
     );
   }
@@ -31,9 +46,9 @@ function SyncBadge({ status }: { status: CalendarEventOut["google_sync_status"] 
     return (
       <span
         className="inline-flex items-center gap-1 rounded-full bg-warning-subtle px-2 py-0.5 text-xs font-medium text-warning"
-        title="Zápis do Google kalendáře selhal."
+        title={t("syncBadge.errorTitle")}
       >
-        <AlertTriangle size={12} strokeWidth={2} aria-hidden /> Google sync selhal
+        <AlertTriangle size={12} strokeWidth={2} aria-hidden /> {t("syncBadge.errorLabel")}
       </span>
     );
   }
@@ -53,6 +68,7 @@ function DayEventsList({
   onDelete: (event: CalendarEventOut) => void;
   deleting: boolean;
 }) {
+  const { t } = useTranslation("calendar");
   const timeFmt = new Intl.DateTimeFormat(locale, { timeStyle: "short" });
   return (
     <ul className="divide-y divide-border-subtle">
@@ -78,7 +94,7 @@ function DayEventsList({
             <button
               type="button"
               onClick={() => onEdit(event)}
-              aria-label={`Upravit událost ${event.title}`}
+              aria-label={t("dayEventsList.editAria", { title: event.title })}
               className="rounded p-1.5 text-text-secondary hover:bg-surface-elevated hover:text-text-primary"
             >
               <Pencil size={15} strokeWidth={1.75} />
@@ -87,7 +103,7 @@ function DayEventsList({
               type="button"
               onClick={() => onDelete(event)}
               disabled={deleting}
-              aria-label={`Smazat událost ${event.title}`}
+              aria-label={t("dayEventsList.deleteAria", { title: event.title })}
               className="rounded p-1.5 text-text-secondary hover:bg-danger-subtle hover:text-danger disabled:opacity-60"
             >
               <Trash2 size={15} strokeWidth={1.75} />
@@ -100,7 +116,8 @@ function DayEventsList({
 }
 
 export function CalendarPage() {
-  usePageTitle("Kalendář");
+  const { t } = useTranslation("calendar");
+  usePageTitle(t("calendarPage.title"));
   const toast = useToast();
   const locale = useLocale();
 
@@ -131,6 +148,7 @@ export function CalendarPage() {
   const monthFmt = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" });
   const dayFmt = new Intl.DateTimeFormat(locale, { dateStyle: "full" });
   const monthLabel = monthFmt.format(new Date(year, month, 1));
+  const weekdays = useMemo(() => weekdayLabels(locale), [locale]);
 
   const selectedEvents = eventsByDay.get(selectedKey) ?? [];
   // Agenda for mobile: in-month days that actually have events.
@@ -143,10 +161,10 @@ export function CalendarPage() {
   }
 
   function handleDelete(event: CalendarEventOut) {
-    if (!window.confirm(`Smazat událost "${event.title}"?`)) return;
+    if (!window.confirm(t("calendarPage.deleteConfirm", { title: event.title }))) return;
     deleteEvent.mutate(event.id, {
-      onSuccess: () => toast.success("Událost smazána."),
-      onError: () => toast.error("Událost se nepodařilo smazat."),
+      onSuccess: () => toast.success(t("calendarPage.deleteSuccess")),
+      onError: () => toast.error(t("calendarPage.deleteError")),
     });
   }
 
@@ -203,7 +221,9 @@ export function CalendarPage() {
           </span>
         ))}
         {overflow > 0 ? (
-          <span className="px-1.5 text-xs text-text-tertiary">+{overflow} další</span>
+          <span className="px-1.5 text-xs text-text-tertiary">
+            {t("calendarPage.moreEvents", { count: overflow })}
+          </span>
         ) : null}
       </button>
     );
@@ -217,7 +237,7 @@ export function CalendarPage() {
           <button
             type="button"
             onClick={() => setYearMonth(([y, m]) => shiftMonth(y, m, -1))}
-            aria-label="Předchozí měsíc"
+            aria-label={t("calendarPage.prevMonth")}
             className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-surface-overlay text-text-secondary hover:bg-surface-elevated hover:text-text-primary"
           >
             <ChevronLeft size={16} strokeWidth={1.75} />
@@ -227,12 +247,12 @@ export function CalendarPage() {
             onClick={goToday}
             className="inline-flex h-9 items-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary hover:bg-surface-elevated hover:text-text-primary"
           >
-            Dnes
+            {t("calendarPage.today")}
           </button>
           <button
             type="button"
             onClick={() => setYearMonth(([y, m]) => shiftMonth(y, m, 1))}
-            aria-label="Další měsíc"
+            aria-label={t("calendarPage.nextMonth")}
             className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-surface-overlay text-text-secondary hover:bg-surface-elevated hover:text-text-primary"
           >
             <ChevronRight size={16} strokeWidth={1.75} />
@@ -242,7 +262,7 @@ export function CalendarPage() {
 
       {isPending ? (
         <p className="text-sm text-text-tertiary" role="status">
-          Načítání…
+          {t("calendarPage.loading")}
         </p>
       ) : null}
 
@@ -251,16 +271,16 @@ export function CalendarPage() {
           className="rounded-md border border-danger-subtle bg-danger-subtle px-3 py-2 text-sm text-danger"
           role="alert"
         >
-          Události se nepodařilo načíst — nejde o prázdný kalendář. Zkuste to prosím znovu.
+          {t("calendarPage.loadError")}
         </p>
       ) : null}
 
       {/* Desktop: month grid + selected-day detail */}
       <div className="hidden md:block">
         <div className="grid grid-cols-7 gap-1">
-          {WEEKDAYS.map((label) => (
+          {weekdays.map((label, i) => (
             <div
-              key={label}
+              key={i}
               className="px-1.5 py-1 text-center text-xs font-medium uppercase tracking-wide text-text-tertiary"
             >
               {label}
@@ -274,9 +294,7 @@ export function CalendarPage() {
             {dayFmt.format(new Date(`${selectedKey}T12:00`))}
           </h2>
           {selectedEvents.length === 0 ? (
-            <p className="mt-2 text-sm text-text-tertiary">
-              Žádné události. Naplánovat je můžete z detailu obchodu.
-            </p>
+            <p className="mt-2 text-sm text-text-tertiary">{t("calendarPage.noEventsDay")}</p>
           ) : (
             <DayEventsList
               events={selectedEvents}
@@ -292,9 +310,7 @@ export function CalendarPage() {
       {/* Mobile: agenda list for the visible month */}
       <div className="space-y-4 md:hidden">
         {agendaDays.length === 0 && !isPending ? (
-          <p className="text-sm text-text-tertiary">
-            V tomto měsíci nejsou žádné události. Naplánovat je můžete z detailu obchodu.
-          </p>
+          <p className="text-sm text-text-tertiary">{t("calendarPage.noEventsMonth")}</p>
         ) : (
           agendaDays.map((day) => (
             <section key={day.key} className="rounded-lg border border-border bg-surface px-4 py-3">
