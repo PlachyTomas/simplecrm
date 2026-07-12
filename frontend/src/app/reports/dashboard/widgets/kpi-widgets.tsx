@@ -10,21 +10,23 @@
  * etc.) render an em-dash and a plain hint per REPORTS_TASK §4.
  */
 
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
+
 import { DeltaBadge } from "@/app/reports/dashboard/DeltaBadge";
-import {
-  formatDays,
-  formatMoney,
-  formatNumber,
-  formatPercent,
-} from "@/app/reports/dashboard/format";
 import {
   WidgetEmpty,
   WidgetError,
   WidgetFrame,
   WidgetSkeleton,
 } from "@/app/reports/dashboard/WidgetFrame";
-import { type GlobalFilters, type WidgetEntry, WIDGET_LABEL } from "@/app/reports/dashboard/types";
+import {
+  type GlobalFilters,
+  type WidgetEntry,
+  WIDGET_LABEL_KEY,
+} from "@/app/reports/dashboard/types";
 import { useWidgetQuery } from "@/app/reports/dashboard/useWidgetQuery";
+import { formatMoney, formatNumber } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 import type { components } from "@/types/api.generated";
 
@@ -54,10 +56,30 @@ function narrowConfig<T extends Config["type"]>(
   return config as Extract<Config, { type: T }>;
 }
 
+/** Percent formatter — no translatable unit, just a locale-invariant "%" suffix. */
+function formatPercent(value: number | null | undefined, digits = 0): string {
+  if (value === null || value === undefined) return "—";
+  return `${value.toFixed(digits)} %`;
+}
+
+/**
+ * Renders an average/median day count via the `days_one/_few/_other`
+ * (+ `_many` for the fractional averages this widget deals with)
+ * catalog key. `value` carries the always-one-decimal display text;
+ * `count` (the raw, possibly fractional number) drives i18next's
+ * plural-category selection.
+ */
+function formatDaysLabel(t: TFunction<"reports">, value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  const rounded = Math.round(value * 10) / 10;
+  return t("days", { count: rounded, value: rounded.toFixed(1) });
+}
+
 // --------- pipeline_value ---------
 
 export function PipelineValueWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "pipeline_value");
+  const { t } = useTranslation("reports");
   const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["PipelineValueResponse"]>({
     type: "pipeline_value",
@@ -76,8 +98,8 @@ export function PipelineValueWidget(props: BaseWidgetProps) {
           value={formatMoney(q.data.value, q.data.currency, locale)}
           delta={<DeltaBadge comparison={q.data.comparison} />}
           sparkline={q.data.sparkline}
-          sparklineLabel="Trend hodnoty pipeline"
-          hint="Otevřené obchody v období"
+          sparklineLabel={t("kpi.pipelineValue.sparklineLabel")}
+          hint={t("kpi.pipelineValue.hint")}
         />
       )}
     </Frame>
@@ -88,6 +110,7 @@ export function PipelineValueWidget(props: BaseWidgetProps) {
 
 export function DealsWonWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "deals_won");
+  const { t } = useTranslation("reports");
   const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["DealsWonResponse"]>({
     type: "deals_won",
@@ -114,7 +137,7 @@ export function DealsWonWidget(props: BaseWidgetProps) {
           }
           delta={<DeltaBadge comparison={q.data.comparison} />}
           sparkline={q.data.sparkline}
-          sparklineLabel="Trend vyhraných obchodů"
+          sparklineLabel={t("kpi.dealsWon.sparklineLabel")}
         />
       )}
     </Frame>
@@ -125,6 +148,7 @@ export function DealsWonWidget(props: BaseWidgetProps) {
 
 export function WinRateWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "win_rate");
+  const { t } = useTranslation("reports");
   const q = useWidgetQuery<ApiSchemas["WinRateResponse"]>({
     type: "win_rate",
     endpoint: "win-rate",
@@ -140,12 +164,12 @@ export function WinRateWidget(props: BaseWidgetProps) {
       ) : q.isError || !q.data ? (
         <WidgetError onRetry={() => void q.refetch()} />
       ) : empty ? (
-        <WidgetEmpty message="V tomto období žádné uzavřené obchody." />
+        <WidgetEmpty message={t("kpi.winRate.emptyNoClosedDeals")} />
       ) : (
         <KPITile
           value={formatPercent(q.data.value, 1)}
           delta={<DeltaBadge comparison={q.data.comparison} />}
-          hint={`${q.data.won_count} výher z ${totalClosed} uzavřených`}
+          hint={t("kpi.winRate.hint", { won: q.data.won_count, total: totalClosed })}
         />
       )}
     </Frame>
@@ -156,6 +180,7 @@ export function WinRateWidget(props: BaseWidgetProps) {
 
 export function AvgDealSizeWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "avg_deal_size");
+  const { t } = useTranslation("reports");
   const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["AvgDealSizeResponse"]>({
     type: "avg_deal_size",
@@ -173,17 +198,18 @@ export function AvgDealSizeWidget(props: BaseWidgetProps) {
         <WidgetEmpty
           message={
             config.scope === "won"
-              ? "V tomto období žádné vyhrané obchody."
-              : "V tomto období žádné otevřené obchody."
+              ? t("kpi.avgDealSize.emptyNoWonDeals")
+              : t("kpi.avgDealSize.emptyNoOpenDeals")
           }
         />
       ) : (
         <KPITile
           value={formatMoney(q.data.value, q.data.currency, locale)}
           delta={<DeltaBadge comparison={q.data.comparison} />}
-          hint={`${q.data.sample_count} ${pluralizeDeal(q.data.sample_count)} ${
-            config.scope === "won" ? "(vyhrané)" : "(otevřené)"
-          }`}
+          hint={t(
+            config.scope === "won" ? "kpi.avgDealSize.hintWon" : "kpi.avgDealSize.hintOpen",
+            { count: q.data.sample_count },
+          )}
         />
       )}
     </Frame>
@@ -194,6 +220,7 @@ export function AvgDealSizeWidget(props: BaseWidgetProps) {
 
 export function SalesCycleLengthWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "sales_cycle_length");
+  const { t } = useTranslation("reports");
   const q = useWidgetQuery<ApiSchemas["SalesCycleLengthResponse"]>({
     type: "sales_cycle_length",
     endpoint: "sales-cycle-length",
@@ -208,14 +235,20 @@ export function SalesCycleLengthWidget(props: BaseWidgetProps) {
       ) : q.isError || !q.data ? (
         <WidgetError onRetry={() => void q.refetch()} />
       ) : q.data.value === null ? (
-        <WidgetEmpty message="V tomto období žádné uzavřené obchody." />
+        <WidgetEmpty message={t("kpi.salesCycleLength.emptyNoClosedDeals")} />
       ) : (
         <KPITile
-          value={formatDays(q.data.value)}
+          value={formatDaysLabel(t, q.data.value)}
           hint={
             config.metric === "median"
-              ? `Průměr ${formatDays(q.data.mean_days)}, vzorek ${q.data.sample_count}`
-              : `Medián ${formatDays(q.data.median_days)}, vzorek ${q.data.sample_count}`
+              ? t("kpi.salesCycleLength.hintMean", {
+                  days: formatDaysLabel(t, q.data.mean_days),
+                  count: q.data.sample_count,
+                })
+              : t("kpi.salesCycleLength.hintMedian", {
+                  days: formatDaysLabel(t, q.data.median_days),
+                  count: q.data.sample_count,
+                })
           }
         />
       )}
@@ -227,6 +260,7 @@ export function SalesCycleLengthWidget(props: BaseWidgetProps) {
 
 export function LeadToDealConversionWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "lead_to_deal_conversion");
+  const { t } = useTranslation("reports");
   const q = useWidgetQuery<ApiSchemas["LeadToDealConversionResponse"]>({
     type: "lead_to_deal_conversion",
     endpoint: "lead-to-deal-conversion",
@@ -240,12 +274,15 @@ export function LeadToDealConversionWidget(props: BaseWidgetProps) {
       ) : q.isError || !q.data ? (
         <WidgetError onRetry={() => void q.refetch()} />
       ) : q.data.value === null ? (
-        <WidgetEmpty message="V tomto období žádné nové firmy." />
+        <WidgetEmpty message={t("kpi.leadToDealConversion.emptyNoNewCompanies")} />
       ) : (
         <KPITile
           value={formatPercent(q.data.value, 1)}
           delta={<DeltaBadge comparison={q.data.comparison} />}
-          hint={`${q.data.converted_count} z ${q.data.total_count} nových firem získalo obchod`}
+          hint={t("kpi.leadToDealConversion.hint", {
+            converted: q.data.converted_count,
+            total: q.data.total_count,
+          })}
         />
       )}
     </Frame>
@@ -256,6 +293,7 @@ export function LeadToDealConversionWidget(props: BaseWidgetProps) {
 
 export function NewCompaniesWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "new_companies");
+  const { t } = useTranslation("reports");
   const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["NewCompaniesResponse"]>({
     type: "new_companies",
@@ -274,8 +312,8 @@ export function NewCompaniesWidget(props: BaseWidgetProps) {
           value={formatNumber(q.data.value, locale)}
           delta={<DeltaBadge comparison={q.data.comparison} />}
           sparkline={q.data.sparkline}
-          sparklineLabel="Trend nových firem"
-          hint="Firmy přidané v období"
+          sparklineLabel={t("kpi.newCompanies.sparklineLabel")}
+          hint={t("kpi.newCompanies.hint")}
         />
       )}
     </Frame>
@@ -290,15 +328,10 @@ interface FrameProps extends BaseWidgetProps {
 }
 
 function Frame({ entry: _entry, isEditMode, onRemove, type, children }: FrameProps) {
+  const { t } = useTranslation("reports");
   return (
-    <WidgetFrame label={WIDGET_LABEL[type]} isEditMode={isEditMode} onRemove={onRemove}>
+    <WidgetFrame label={t(WIDGET_LABEL_KEY[type])} isEditMode={isEditMode} onRemove={onRemove}>
       {children}
     </WidgetFrame>
   );
-}
-
-function pluralizeDeal(n: number): string {
-  if (n === 1) return "obchod";
-  if (n >= 2 && n <= 4) return "obchody";
-  return "obchodů";
 }

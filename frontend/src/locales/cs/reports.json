@@ -1,1 +1,127 @@
-{}
+{
+  "reportsPage": {
+    "title": "Reporty",
+    "subtitle": "Vlastní rozložení widgetů — výsledky týmu i jednotlivců.",
+    "resetLayout": "Obnovit výchozí",
+    "cancel": "Zrušit",
+    "save": "Uložit",
+    "downloading": "Stahování…",
+    "downloadCsv": "Stáhnout CSV",
+    "editLayout": "Upravit rozložení",
+    "resetConfirm": "Opravdu chcete obnovit výchozí rozložení? Vaše úpravy budou ztraceny.",
+    "emptyTitle": "Žádné widgety",
+    "emptyMessage": "Přidejte si první widget — sledujte přesně to, co potřebujete.",
+    "exportFilenamePrefix": "reporty"
+  },
+  "globalFilterBar": {
+    "ariaLabel": "Filtry reportů",
+    "dateRangeAriaLabel": "Časové období",
+    "selectedRangeAriaLabel": "Vybrané období",
+    "team": "Tým",
+    "allTeamsAdmin": "Všechny týmy",
+    "allTeamsManager": "Všechny moje týmy",
+    "owner": "Obchodník",
+    "allOwners": "Všichni obchodníci"
+  },
+  "presets": {
+    "last_7_days": "Posledních 7 dní",
+    "last_30_days": "Posledních 30 dní",
+    "this_quarter": "Tento kvartál",
+    "this_year": "Letošní rok",
+    "last_12_months": "Posledních 12 měsíců",
+    "custom": "Vlastní"
+  },
+  "widgetLabels": {
+    "pipeline_value": "Hodnota pipeline",
+    "new_companies": "Nové firmy",
+    "deals_won": "Vyhrané obchody",
+    "win_rate": "Úspěšnost",
+    "avg_deal_size": "Průměrná velikost obchodu",
+    "sales_cycle_length": "Délka prodejního cyklu",
+    "lead_to_deal_conversion": "Konverze lead → obchod",
+    "lost_reasons_breakdown": "Důvody prohraných obchodů",
+    "sales_leaderboard": "Žebříček obchodníků",
+    "rep_activity": "Aktivita obchodníků",
+    "stale_deals": "Stagnující obchody",
+    "companies_at_risk": "Firmy ohrožené uvolněním"
+  },
+  "widgetFrame": {
+    "moveWidget": "Přesunout widget",
+    "widgetSettings": "Nastavení widgetu",
+    "removeWidget": "Odebrat widget",
+    "loading": "Načítání widgetu",
+    "loadError": "Widget se nepodařilo načíst.",
+    "retry": "Zkusit znovu"
+  },
+  "barChart": {
+    "defaultEmptyMessage": "Žádná data v tomto období.",
+    "columnItem": "Položka",
+    "columnValue": "Hodnota"
+  },
+  "kpi": {
+    "pipelineValue": {
+      "sparklineLabel": "Trend hodnoty pipeline",
+      "hint": "Otevřené obchody v období"
+    },
+    "dealsWon": {
+      "sparklineLabel": "Trend vyhraných obchodů"
+    },
+    "winRate": {
+      "emptyNoClosedDeals": "V tomto období žádné uzavřené obchody.",
+      "hint": "{{won}} výher z {{total}} uzavřených"
+    },
+    "avgDealSize": {
+      "emptyNoWonDeals": "V tomto období žádné vyhrané obchody.",
+      "emptyNoOpenDeals": "V tomto období žádné otevřené obchody.",
+      "hintWon_one": "{{count}} obchod (vyhrané)",
+      "hintWon_few": "{{count}} obchody (vyhrané)",
+      "hintWon_other": "{{count}} obchodů (vyhrané)",
+      "hintOpen_one": "{{count}} obchod (otevřené)",
+      "hintOpen_few": "{{count}} obchody (otevřené)",
+      "hintOpen_other": "{{count}} obchodů (otevřené)"
+    },
+    "salesCycleLength": {
+      "emptyNoClosedDeals": "V tomto období žádné uzavřené obchody.",
+      "hintMean": "Průměr {{days}}, vzorek {{count}}",
+      "hintMedian": "Medián {{days}}, vzorek {{count}}"
+    },
+    "leadToDealConversion": {
+      "emptyNoNewCompanies": "V tomto období žádné nové firmy.",
+      "hint": "{{converted}} z {{total}} nových firem získalo obchod"
+    },
+    "newCompanies": {
+      "sparklineLabel": "Trend nových firem",
+      "hint": "Firmy přidané v období"
+    }
+  },
+  "chart": {
+    "lostReasonsAriaLabel": "Důvody prohraných obchodů",
+    "lostReasonsEmpty": "V tomto období nebyly ztracené obchody s vyplněným důvodem.",
+    "leaderboardAriaLabel": "Žebříček obchodníků",
+    "leaderboardEmpty": "V tomto období žádný obchodník nedosáhl měřitelných výsledků.",
+    "repActivityAriaLabel": "Aktivita obchodníků",
+    "repActivityEmpty": "V tomto období nikdo nepřidal nový obchod."
+  },
+  "list": {
+    "staleDeals": {
+      "columnDeal": "Obchod",
+      "columnCompany": "Firma",
+      "columnStage": "Fáze",
+      "columnValue": "Hodnota",
+      "columnOwner": "Obchodník",
+      "columnDaysSinceChange": "Dní bez pohybu",
+      "empty": "Žádné obchody bez pohybu déle než {{count}} dní."
+    },
+    "companiesAtRisk": {
+      "columnCompany": "Firma",
+      "columnOwner": "Obchodník",
+      "columnDaysRemaining": "Zbývá dní",
+      "columnLastActivity": "Poslední aktivita",
+      "empty": "Žádné firmy s vlastnictvím končícím do {{count}} dní."
+    }
+  },
+  "days_one": "{{value}} den",
+  "days_few": "{{value}} dny",
+  "days_many": "{{value}} dní",
+  "days_other": "{{value}} dní"
+}

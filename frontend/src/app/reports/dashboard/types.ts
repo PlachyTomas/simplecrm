@@ -4,6 +4,8 @@
  * `components["schemas"]["…"]` paths.
  */
 
+import type { ParseKeys } from "i18next";
+
 import type { components } from "@/types/api.generated";
 
 export type DashboardConfig = components["schemas"]["DashboardConfig"];
@@ -27,23 +29,24 @@ export type WidgetType =
   | "companies_at_risk";
 
 /**
- * Each widget type has its own Czech display label per
- * REPORTS_TASK §4. Centralized so the WidgetFrame header and the
- * "Add widget" picker speak in the same words.
+ * Each widget type has its own display label per REPORTS_TASK §4,
+ * sourced from the `reports` catalog (`widgetLabels.*`). Centralized
+ * so the WidgetFrame header and the "Add widget" picker speak in the
+ * same words. Callers resolve the key via `t()`.
  */
-export const WIDGET_LABEL: Record<WidgetType, string> = {
-  pipeline_value: "Hodnota pipeline",
-  new_companies: "Nové firmy",
-  deals_won: "Vyhrané obchody",
-  win_rate: "Úspěšnost",
-  avg_deal_size: "Průměrná velikost obchodu",
-  sales_cycle_length: "Délka prodejního cyklu",
-  lead_to_deal_conversion: "Konverze lead → obchod",
-  lost_reasons_breakdown: "Důvody prohraných obchodů",
-  sales_leaderboard: "Žebříček obchodníků",
-  rep_activity: "Aktivita obchodníků",
-  stale_deals: "Stagnující obchody",
-  companies_at_risk: "Firmy ohrožené uvolněním",
+export const WIDGET_LABEL_KEY: Record<WidgetType, ParseKeys<"reports">> = {
+  pipeline_value: "widgetLabels.pipeline_value",
+  new_companies: "widgetLabels.new_companies",
+  deals_won: "widgetLabels.deals_won",
+  win_rate: "widgetLabels.win_rate",
+  avg_deal_size: "widgetLabels.avg_deal_size",
+  sales_cycle_length: "widgetLabels.sales_cycle_length",
+  lead_to_deal_conversion: "widgetLabels.lead_to_deal_conversion",
+  lost_reasons_breakdown: "widgetLabels.lost_reasons_breakdown",
+  sales_leaderboard: "widgetLabels.sales_leaderboard",
+  rep_activity: "widgetLabels.rep_activity",
+  stale_deals: "widgetLabels.stale_deals",
+  companies_at_risk: "widgetLabels.companies_at_risk",
 };
 
-export const WIDGET_TYPES: WidgetType[] = Object.keys(WIDGET_LABEL) as WidgetType[];
+export const WIDGET_TYPES: WidgetType[] = Object.keys(WIDGET_LABEL_KEY) as WidgetType[];

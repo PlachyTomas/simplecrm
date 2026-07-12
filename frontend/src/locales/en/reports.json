@@ -1,1 +1,123 @@
-{}
+{
+  "reportsPage": {
+    "title": "Reports",
+    "subtitle": "Custom widget layout — team and individual results.",
+    "resetLayout": "Reset to default",
+    "cancel": "Cancel",
+    "save": "Save",
+    "downloading": "Downloading…",
+    "downloadCsv": "Download CSV",
+    "editLayout": "Edit layout",
+    "resetConfirm": "Reset to the default layout? Your changes will be lost.",
+    "emptyTitle": "No widgets",
+    "emptyMessage": "Add your first widget — track exactly what you need.",
+    "exportFilenamePrefix": "reports"
+  },
+  "globalFilterBar": {
+    "ariaLabel": "Report filters",
+    "dateRangeAriaLabel": "Time period",
+    "selectedRangeAriaLabel": "Selected period",
+    "team": "Team",
+    "allTeamsAdmin": "All teams",
+    "allTeamsManager": "All my teams",
+    "owner": "Salesperson",
+    "allOwners": "All salespeople"
+  },
+  "presets": {
+    "last_7_days": "Last 7 days",
+    "last_30_days": "Last 30 days",
+    "this_quarter": "This quarter",
+    "this_year": "This year",
+    "last_12_months": "Last 12 months",
+    "custom": "Custom"
+  },
+  "widgetLabels": {
+    "pipeline_value": "Pipeline value",
+    "new_companies": "New companies",
+    "deals_won": "Deals won",
+    "win_rate": "Win rate",
+    "avg_deal_size": "Average deal size",
+    "sales_cycle_length": "Sales cycle length",
+    "lead_to_deal_conversion": "Lead → deal conversion",
+    "lost_reasons_breakdown": "Lost reasons breakdown",
+    "sales_leaderboard": "Sales leaderboard",
+    "rep_activity": "Rep activity",
+    "stale_deals": "Stale deals",
+    "companies_at_risk": "Companies at risk"
+  },
+  "widgetFrame": {
+    "moveWidget": "Move widget",
+    "widgetSettings": "Widget settings",
+    "removeWidget": "Remove widget",
+    "loading": "Loading widget",
+    "loadError": "Failed to load the widget.",
+    "retry": "Retry"
+  },
+  "barChart": {
+    "defaultEmptyMessage": "No data for this period.",
+    "columnItem": "Item",
+    "columnValue": "Value"
+  },
+  "kpi": {
+    "pipelineValue": {
+      "sparklineLabel": "Pipeline value trend",
+      "hint": "Open deals in the period"
+    },
+    "dealsWon": {
+      "sparklineLabel": "Deals won trend"
+    },
+    "winRate": {
+      "emptyNoClosedDeals": "No deals closed in this period.",
+      "hint": "{{won}} wins out of {{total}} closed"
+    },
+    "avgDealSize": {
+      "emptyNoWonDeals": "No deals won in this period.",
+      "emptyNoOpenDeals": "No open deals in this period.",
+      "hintWon_one": "{{count}} deal (won)",
+      "hintWon_other": "{{count}} deals (won)",
+      "hintOpen_one": "{{count}} deal (open)",
+      "hintOpen_other": "{{count}} deals (open)"
+    },
+    "salesCycleLength": {
+      "emptyNoClosedDeals": "No deals closed in this period.",
+      "hintMean": "Mean {{days}}, sample {{count}}",
+      "hintMedian": "Median {{days}}, sample {{count}}"
+    },
+    "leadToDealConversion": {
+      "emptyNoNewCompanies": "No new companies in this period.",
+      "hint": "{{converted}} of {{total}} new companies converted to a deal"
+    },
+    "newCompanies": {
+      "sparklineLabel": "New companies trend",
+      "hint": "Companies added in the period"
+    }
+  },
+  "chart": {
+    "lostReasonsAriaLabel": "Lost reasons breakdown",
+    "lostReasonsEmpty": "No lost deals with a reason recorded in this period.",
+    "leaderboardAriaLabel": "Sales leaderboard",
+    "leaderboardEmpty": "No salesperson reached a measurable result in this period.",
+    "repActivityAriaLabel": "Rep activity",
+    "repActivityEmpty": "No one added a new deal in this period."
+  },
+  "list": {
+    "staleDeals": {
+      "columnDeal": "Deal",
+      "columnCompany": "Company",
+      "columnStage": "Stage",
+      "columnValue": "Value",
+      "columnOwner": "Salesperson",
+      "columnDaysSinceChange": "Days without movement",
+      "empty": "No deals without movement for more than {{count}} days."
+    },
+    "companiesAtRisk": {
+      "columnCompany": "Company",
+      "columnOwner": "Salesperson",
+      "columnDaysRemaining": "Days remaining",
+      "columnLastActivity": "Last activity",
+      "empty": "No companies with ownership ending within {{count}} days."
+    }
+  },
+  "days_one": "{{value}} day",
+  "days_other": "{{value}} days"
+}

@@ -1,5 +1,6 @@
 import { Download, Pencil, RotateCcw, Save, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Navigate } from "react-router-dom";
 
 import { GlobalFilterBar } from "@/app/reports/dashboard/GlobalFilterBar";
@@ -35,11 +36,12 @@ function defaultFilters(): GlobalFilters {
  * there.
  *
  * Edit mode is local state. The on-screen `config` is the working
- * copy; clicking "Uložit" PUTs it to the backend, "Zrušit" reverts to
- * the last loaded value, and "Obnovit výchozí" calls DELETE.
+ * copy; clicking Save PUTs it to the backend, Cancel reverts to
+ * the last loaded value, and Reset to default calls DELETE.
  */
 export function ReportsPage() {
-  usePageTitle("Reporty");
+  const { t } = useTranslation("reports");
+  usePageTitle(t("reportsPage.title"));
   const { data: me, isPending: meLoading } = useCurrentUser();
   const config = useDashboardConfig();
   const save = useSaveDashboardConfig();
@@ -65,7 +67,7 @@ export function ReportsPage() {
   }, [editMode, config.data, draft]);
 
   // Escape exits edit mode without saving — keyboard parity with the
-  // "Zrušit" button. react-grid-layout's drag is mouse-only, so this
+  // Cancel button. react-grid-layout's drag is mouse-only, so this
   // is the only keyboard escape hatch we promise.
   useEffect(() => {
     if (!editMode) return;
@@ -130,9 +132,7 @@ export function ReportsPage() {
   }
 
   async function handleReset() {
-    const ok = window.confirm(
-      "Opravdu chcete obnovit výchozí rozložení? Vaše úpravy budou ztraceny.",
-    );
+    const ok = window.confirm(t("reportsPage.resetConfirm"));
     if (!ok) return;
     await reset.mutateAsync();
     setEditMode(false);
@@ -143,10 +143,8 @@ export function ReportsPage() {
     <div className="px-4 py-6 md:px-8 md:py-8">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Reporty</h1>
-          <p className="mt-1 text-sm text-text-tertiary">
-            Vlastní rozložení widgetů — výsledky týmu i jednotlivců.
-          </p>
+          <h1 className="text-2xl font-semibold">{t("reportsPage.title")}</h1>
+          <p className="mt-1 text-sm text-text-tertiary">{t("reportsPage.subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {editMode ? (
@@ -157,14 +155,14 @@ export function ReportsPage() {
                 disabled={reset.isPending}
                 className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium text-text-secondary hover:border-accent hover:text-accent disabled:opacity-50"
               >
-                <RotateCcw size={14} strokeWidth={1.75} aria-hidden /> Obnovit výchozí
+                <RotateCcw size={14} strokeWidth={1.75} aria-hidden /> {t("reportsPage.resetLayout")}
               </button>
               <button
                 type="button"
                 onClick={handleCancel}
                 className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium text-text-secondary hover:border-accent hover:text-accent"
               >
-                <X size={14} strokeWidth={1.75} aria-hidden /> Zrušit
+                <X size={14} strokeWidth={1.75} aria-hidden /> {t("reportsPage.cancel")}
               </button>
               <button
                 type="button"
@@ -172,7 +170,7 @@ export function ReportsPage() {
                 disabled={save.isPending}
                 className="hover:bg-accent-strong inline-flex h-9 items-center gap-1.5 rounded-md border border-accent bg-accent px-3 text-sm font-medium text-text-on-accent disabled:opacity-50"
               >
-                <Save size={14} strokeWidth={1.75} aria-hidden /> Uložit
+                <Save size={14} strokeWidth={1.75} aria-hidden /> {t("reportsPage.save")}
               </button>
             </>
           ) : (
@@ -190,14 +188,14 @@ export function ReportsPage() {
                 className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium text-text-secondary hover:border-accent hover:text-accent disabled:opacity-50"
               >
                 <Download size={14} strokeWidth={1.75} aria-hidden />
-                {exportCsv.isPending ? "Stahování…" : "Stáhnout CSV"}
+                {exportCsv.isPending ? t("reportsPage.downloading") : t("reportsPage.downloadCsv")}
               </button>
               <button
                 type="button"
                 onClick={() => setEditMode(true)}
                 className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium text-text-secondary hover:border-accent hover:text-accent"
               >
-                <Pencil size={14} strokeWidth={1.75} aria-hidden /> Upravit rozložení
+                <Pencil size={14} strokeWidth={1.75} aria-hidden /> {t("reportsPage.editLayout")}
               </button>
             </>
           )}
@@ -246,18 +244,17 @@ function DashboardSkeleton() {
 }
 
 function EmptyDashboard({ onEdit }: { onEdit: () => void }) {
+  const { t } = useTranslation("reports");
   return (
     <div className="rounded-lg border border-dashed border-border bg-surface p-12 text-center">
-      <h2 className="text-lg font-semibold">Žádné widgety</h2>
-      <p className="mt-2 text-sm text-text-tertiary">
-        Přidejte si první widget — sledujte přesně to, co potřebujete.
-      </p>
+      <h2 className="text-lg font-semibold">{t("reportsPage.emptyTitle")}</h2>
+      <p className="mt-2 text-sm text-text-tertiary">{t("reportsPage.emptyMessage")}</p>
       <button
         type="button"
         onClick={onEdit}
         className="hover:bg-accent-strong mt-4 inline-flex h-9 items-center gap-1.5 rounded-md border border-accent bg-accent px-3 text-sm font-medium text-text-on-accent"
       >
-        <Pencil size={14} strokeWidth={1.75} aria-hidden /> Upravit rozložení
+        <Pencil size={14} strokeWidth={1.75} aria-hidden /> {t("reportsPage.editLayout")}
       </button>
     </div>
   );

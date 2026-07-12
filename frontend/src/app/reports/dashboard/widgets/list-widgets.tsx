@@ -9,13 +9,17 @@
  */
 
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
-import { formatMoney, formatNumber } from "@/app/reports/dashboard/format";
 import { WidgetError, WidgetFrame, WidgetSkeleton } from "@/app/reports/dashboard/WidgetFrame";
-import { type GlobalFilters, type WidgetEntry, WIDGET_LABEL } from "@/app/reports/dashboard/types";
+import {
+  type GlobalFilters,
+  type WidgetEntry,
+  WIDGET_LABEL_KEY,
+} from "@/app/reports/dashboard/types";
 import { useWidgetQuery } from "@/app/reports/dashboard/useWidgetQuery";
 import { type ListColumn, ListWidget } from "@/app/reports/dashboard/widgets/ListWidget";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatMoney, formatNumber } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { cn } from "@/lib/utils";
 import type { components } from "@/types/api.generated";
@@ -45,6 +49,7 @@ function narrowConfig<T extends Config["type"]>(
 export function StaleDealsWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "stale_deals");
   const navigate = useNavigate();
+  const { t } = useTranslation("reports");
   const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["StaleDealsResponse"]>({
     type: "stale_deals",
@@ -57,20 +62,20 @@ export function StaleDealsWidget(props: BaseWidgetProps) {
 
   const columns: ListColumn<Row>[] = [
     {
-      header: "Obchod",
+      header: t("list.staleDeals.columnDeal"),
       render: (r) => <span className="font-medium text-text-primary">{r.deal_name}</span>,
     },
     {
-      header: "Firma",
+      header: t("list.staleDeals.columnCompany"),
       render: (r) => <span className="text-text-secondary">{r.company_name}</span>,
     },
     {
-      header: "Fáze",
+      header: t("list.staleDeals.columnStage"),
       render: (r) => <span className="text-text-tertiary">{r.stage_name}</span>,
       nowrap: true,
     },
     {
-      header: "Hodnota",
+      header: t("list.staleDeals.columnValue"),
       align: "right",
       nowrap: true,
       render: (r) => (
@@ -80,12 +85,12 @@ export function StaleDealsWidget(props: BaseWidgetProps) {
       ),
     },
     {
-      header: "Obchodník",
+      header: t("list.staleDeals.columnOwner"),
       render: (r) => <span className="text-text-tertiary">{r.owner_name}</span>,
       nowrap: true,
     },
     {
-      header: "Dní bez pohybu",
+      header: t("list.staleDeals.columnDaysSinceChange"),
       align: "right",
       nowrap: true,
       render: (r) => (
@@ -104,7 +109,7 @@ export function StaleDealsWidget(props: BaseWidgetProps) {
 
   return (
     <WidgetFrame
-      label={WIDGET_LABEL.stale_deals}
+      label={t(WIDGET_LABEL_KEY.stale_deals)}
       isEditMode={props.isEditMode}
       onRemove={props.onRemove}
     >
@@ -118,7 +123,7 @@ export function StaleDealsWidget(props: BaseWidgetProps) {
           columns={columns}
           rowKey={(r) => r.deal_id}
           onRowClick={(r) => navigate(`/app/deals/${r.deal_id}`)}
-          emptyMessage={`Žádné obchody bez pohybu déle než ${q.data.threshold_days} dní.`}
+          emptyMessage={t("list.staleDeals.empty", { count: q.data.threshold_days })}
         />
       )}
     </WidgetFrame>
@@ -130,6 +135,7 @@ export function StaleDealsWidget(props: BaseWidgetProps) {
 export function CompaniesAtRiskWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "companies_at_risk");
   const navigate = useNavigate();
+  const { t } = useTranslation("reports");
   const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["CompaniesAtRiskResponse"]>({
     type: "companies_at_risk",
@@ -142,16 +148,16 @@ export function CompaniesAtRiskWidget(props: BaseWidgetProps) {
 
   const columns: ListColumn<Row>[] = [
     {
-      header: "Firma",
+      header: t("list.companiesAtRisk.columnCompany"),
       render: (r) => <span className="font-medium text-text-primary">{r.company_name}</span>,
     },
     {
-      header: "Obchodník",
+      header: t("list.companiesAtRisk.columnOwner"),
       render: (r) => <span className="text-text-tertiary">{r.owner_name}</span>,
       nowrap: true,
     },
     {
-      header: "Zbývá dní",
+      header: t("list.companiesAtRisk.columnDaysRemaining"),
       align: "right",
       nowrap: true,
       render: (r) => (
@@ -169,7 +175,7 @@ export function CompaniesAtRiskWidget(props: BaseWidgetProps) {
       ),
     },
     {
-      header: "Poslední aktivita",
+      header: t("list.companiesAtRisk.columnLastActivity"),
       align: "right",
       nowrap: true,
       render: (r) => (
@@ -182,7 +188,7 @@ export function CompaniesAtRiskWidget(props: BaseWidgetProps) {
 
   return (
     <WidgetFrame
-      label={WIDGET_LABEL.companies_at_risk}
+      label={t(WIDGET_LABEL_KEY.companies_at_risk)}
       isEditMode={props.isEditMode}
       onRemove={props.onRemove}
     >
@@ -196,7 +202,7 @@ export function CompaniesAtRiskWidget(props: BaseWidgetProps) {
           columns={columns}
           rowKey={(r) => r.company_id}
           onRowClick={(r) => navigate(`/app/companies/${r.company_id}`)}
-          emptyMessage={`Žádné firmy s vlastnictvím končícím do ${q.data.threshold_days} dní.`}
+          emptyMessage={t("list.companiesAtRisk.empty", { count: q.data.threshold_days })}
         />
       )}
     </WidgetFrame>
