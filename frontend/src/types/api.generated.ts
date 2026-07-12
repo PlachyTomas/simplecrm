@@ -3377,6 +3377,10 @@ export interface components {
             invoice_email_subject_template: string;
             /** Invoice Email Body Template */
             invoice_email_body_template: string;
+            /** Invoice Email Subject Template En */
+            invoice_email_subject_template_en: string;
+            /** Invoice Email Body Template En */
+            invoice_email_body_template_en: string;
             /**
              * Updated At
              * Format: date-time
@@ -3426,6 +3430,10 @@ export interface components {
             invoice_email_subject_template?: string | null;
             /** Invoice Email Body Template */
             invoice_email_body_template?: string | null;
+            /** Invoice Email Subject Template En */
+            invoice_email_subject_template_en?: string | null;
+            /** Invoice Email Body Template En */
+            invoice_email_body_template_en?: string | null;
         };
         /** BillingSummary */
         BillingSummary: {

@@ -1,1 +1,7 @@
-{}
+{
+  "billingSettings": {
+    "invoiceEmailSubjectTemplateEn": "Šablona předmětu e-mailu s fakturou (anglicky)",
+    "invoiceEmailSubjectTemplateEnHint": "Použije se pro organizace s anglickým jazykem. Stejné proměnné jako u české šablony výše.",
+    "invoiceEmailBodyTemplateEn": "Šablona textu e-mailu s fakturou (anglicky)"
+  }
+}

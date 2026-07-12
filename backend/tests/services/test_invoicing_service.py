@@ -16,6 +16,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
+from jinja2 import Template
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,7 +30,9 @@ from app.db.models import (
     Organization,
 )
 from app.db.session import AsyncSessionLocal
+from app.services.email import Email
 from app.services.invoicing.mailer import InvoiceMailer
+from app.services.invoicing.renderer import formatters
 from app.services.invoicing.service import (
     CreditNoteExceedsOriginalError,
     InvoiceIssuerNotConfiguredError,
@@ -77,8 +80,10 @@ async def _bare_issuer(session: AsyncSession) -> None:
     await session.commit()
 
 
-async def _make_org_and_charge(session: AsyncSession) -> tuple[Organization, Charge]:
-    org = Organization(name=f"InvSvc-{uuid.uuid4().hex[:6]}")
+async def _make_org_and_charge(
+    session: AsyncSession, locale: str = "cs-CZ"
+) -> tuple[Organization, Charge]:
+    org = Organization(name=f"InvSvc-{uuid.uuid4().hex[:6]}", locale=locale)
     session.add(org)
     await session.flush()
     charge = Charge(
@@ -545,3 +550,109 @@ async def test_mailer_sends_invoice_and_writes_sent_audit(
             .all()
         )
         assert "sent" in events
+
+
+def _expected_ctx(invoice: Invoice, lang: str) -> dict[str, str]:
+    """Mirror `InvoiceMailer.send`'s ctx-building so tests can compute the
+    exact subject/body a given ``lang`` should render, independent of the
+    mailer's own implementation."""
+    fmt_money, _fmt_qty, fmt_date = formatters(lang)
+    return {
+        "number": invoice.number,
+        "due_date": fmt_date(invoice.due_at),
+        "customer_name": invoice.customer_name,
+        "period_start": fmt_date(invoice.taxable_supply_date),
+        "period_end": fmt_date(invoice.due_at),
+        "total_display": fmt_money(invoice.total_minor, invoice.currency),
+        "issuer_iban": invoice.issuer_iban,
+        "variable_symbol": invoice.variable_symbol,
+    }
+
+
+async def test_mailer_uses_en_templates_and_formatting_for_en_locale_org(
+    cleanup_orgs: list[uuid.UUID], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An org whose locale resolves to "en" (`language_for_locale`) gets the
+    `_en` subject/body templates, rendered with en-formatted dates/money —
+    not the cs templates + cs Babel locale."""
+    async with AsyncSessionLocal() as s:
+        await _configure_issuer(s)
+    async with AsyncSessionLocal() as s:
+        org, charge = await _make_org_and_charge(s, locale="en-US")
+        cleanup_orgs.append(org.id)
+    storage = _local_storage(tmp_path)
+    async with AsyncSessionLocal() as s:
+        svc = InvoiceService(storage=storage)
+        invoice = await svc.issue_for_charge(s, charge)
+        await s.commit()
+        invoice_id = invoice.id
+
+    sent: dict[str, Email] = {}
+
+    async def _capture_send(message: Email) -> None:
+        sent["message"] = message
+
+    monkeypatch.setattr("app.services.invoicing.mailer.send_email", _capture_send)
+
+    mailer = InvoiceMailer(storage=storage)
+    async with AsyncSessionLocal() as s:
+        loaded = await s.get(Invoice, invoice_id)
+        assert loaded is not None
+        billing = (await s.execute(select(BillingSettings))).scalar_one()
+        await mailer.send(s, loaded, override_to="customer@example.com")
+        await s.commit()
+        expected_ctx = _expected_ctx(loaded, "en")
+
+    expected_subject = Template(billing.invoice_email_subject_template_en).render(**expected_ctx)
+    expected_body = Template(billing.invoice_email_body_template_en).render(**expected_ctx)
+
+    message = sent["message"]
+    assert message.subject == expected_subject
+    assert message.body == expected_body
+    assert message.subject.startswith("Invoice ")
+    assert "Due date:" in message.body
+    # en-GB Babel date formatting ("9 May 2026"), not cs ("9. května 2026").
+    assert "." not in expected_ctx["due_date"]
+
+
+async def test_mailer_uses_cs_templates_and_formatting_for_cs_locale_org(
+    cleanup_orgs: list[uuid.UUID], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A cs-locale org (the default) keeps rendering the cs templates with
+    cs Babel formatting — unchanged by the `_en` column addition."""
+    async with AsyncSessionLocal() as s:
+        await _configure_issuer(s)
+    async with AsyncSessionLocal() as s:
+        org, charge = await _make_org_and_charge(s)  # default locale="cs-CZ"
+        cleanup_orgs.append(org.id)
+    storage = _local_storage(tmp_path)
+    async with AsyncSessionLocal() as s:
+        svc = InvoiceService(storage=storage)
+        invoice = await svc.issue_for_charge(s, charge)
+        await s.commit()
+        invoice_id = invoice.id
+
+    sent: dict[str, Email] = {}
+
+    async def _capture_send(message: Email) -> None:
+        sent["message"] = message
+
+    monkeypatch.setattr("app.services.invoicing.mailer.send_email", _capture_send)
+
+    mailer = InvoiceMailer(storage=storage)
+    async with AsyncSessionLocal() as s:
+        loaded = await s.get(Invoice, invoice_id)
+        assert loaded is not None
+        billing = (await s.execute(select(BillingSettings))).scalar_one()
+        await mailer.send(s, loaded, override_to="customer@example.cz")
+        await s.commit()
+        expected_ctx = _expected_ctx(loaded, "cs")
+
+    expected_subject = Template(billing.invoice_email_subject_template).render(**expected_ctx)
+    expected_body = Template(billing.invoice_email_body_template).render(**expected_ctx)
+
+    message = sent["message"]
+    assert message.subject == expected_subject
+    assert message.body == expected_body
+    assert message.subject.startswith("Faktura č.")
+    assert "Splatnost:" in message.body

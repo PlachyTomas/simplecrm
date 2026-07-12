@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useAdminBillingSettings } from "@/admin/hooks";
 import { useAuth } from "@/auth/useAuth";
@@ -11,6 +12,8 @@ interface FormState {
   seller_iban: string;
   seller_ico: string;
   contact_email: string;
+  invoice_email_subject_template_en: string;
+  invoice_email_body_template_en: string;
 }
 
 const DEFAULT_FORM: FormState = {
@@ -19,9 +22,12 @@ const DEFAULT_FORM: FormState = {
   seller_iban: "",
   seller_ico: "",
   contact_email: "",
+  invoice_email_subject_template_en: "",
+  invoice_email_body_template_en: "",
 };
 
 export function AdminBillingSettings() {
+  const { t } = useTranslation("admin");
   const { accessToken } = useAuth();
   const queryClient = useQueryClient();
   const { data, isPending } = useAdminBillingSettings();
@@ -38,6 +44,8 @@ export function AdminBillingSettings() {
       seller_iban: data.seller_iban ?? "",
       seller_ico: data.seller_ico ?? "",
       contact_email: data.contact_email,
+      invoice_email_subject_template_en: data.invoice_email_subject_template_en,
+      invoice_email_body_template_en: data.invoice_email_body_template_en,
     });
   }, [data]);
 
@@ -47,6 +55,8 @@ export function AdminBillingSettings() {
         is_vat_payer: form.is_vat_payer,
         vat_rate_percent: form.vat_rate_percent,
         contact_email: form.contact_email,
+        invoice_email_subject_template_en: form.invoice_email_subject_template_en,
+        invoice_email_body_template_en: form.invoice_email_body_template_en,
       };
       // Only send IBAN/IČO when set; backend types them as nullable so
       // empty strings would be coerced to "" rather than null.
@@ -161,6 +171,34 @@ export function AdminBillingSettings() {
           value={form.contact_email}
           onChange={(e) => setForm((s) => ({ ...s, contact_email: e.target.value }))}
           className="mt-1 block h-10 w-full rounded-md border border-border bg-bg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+        />
+      </label>
+
+      <label className="block text-sm font-medium">
+        {t("billingSettings.invoiceEmailSubjectTemplateEn")}
+        <input
+          type="text"
+          maxLength={200}
+          value={form.invoice_email_subject_template_en}
+          onChange={(e) =>
+            setForm((s) => ({ ...s, invoice_email_subject_template_en: e.target.value }))
+          }
+          className="mt-1 block h-10 w-full rounded-md border border-border bg-bg px-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+        />
+        <span className="mt-1 block text-xs font-normal text-text-tertiary">
+          {t("billingSettings.invoiceEmailSubjectTemplateEnHint")}
+        </span>
+      </label>
+
+      <label className="block text-sm font-medium">
+        {t("billingSettings.invoiceEmailBodyTemplateEn")}
+        <textarea
+          value={form.invoice_email_body_template_en}
+          onChange={(e) =>
+            setForm((s) => ({ ...s, invoice_email_body_template_en: e.target.value }))
+          }
+          rows={10}
+          className="mt-1 block w-full rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-accent"
         />
       </label>
 

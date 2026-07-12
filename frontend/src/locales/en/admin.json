@@ -1,1 +1,7 @@
-{}
+{
+  "billingSettings": {
+    "invoiceEmailSubjectTemplateEn": "Invoice email subject template (English)",
+    "invoiceEmailSubjectTemplateEnHint": "Used for organizations whose language is English. Same variables as the Czech template above.",
+    "invoiceEmailBodyTemplateEn": "Invoice email body template (English)"
+  }
+}
