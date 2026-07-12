@@ -17,9 +17,10 @@ interface UseLookupOptions {
 }
 
 /**
- * Lookup an IČO against the business registry. `enabled` gates the query so
- * nothing fires until the caller is sure the input is well-formed. Retries
- * are disabled — a 404/429/502 should surface immediately.
+ * Lookup a company registration number against the business registry.
+ * `enabled` gates the query so nothing fires until the caller is sure the
+ * input is well-formed. Retries are disabled — a 404/429/502 should surface
+ * immediately.
  */
 export function useLookupRegistry({
   country,

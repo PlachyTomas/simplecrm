@@ -1,1 +1,53 @@
-{}
+{
+  "contactsPage": {
+    "pageTitle": "Kontakty",
+    "listAriaLabel": "Seznam kontaktů",
+    "detailAriaLabel": "Detail kontaktu",
+    "addButton": "Přidat kontakt",
+    "searchLabel": "Hledat kontakt",
+    "searchPlaceholder": "Jméno, e-mail, telefon…",
+    "loading": "Načítání…",
+    "loadError": "Kontakty se nepodařilo načíst.",
+    "emptyState": {
+      "title": "Přidejte první kontakt",
+      "body": "Kontakty patří k firmám. Po přidání je uvidíte v levém panelu i na detailu firmy.",
+      "cta": "+ Přidat kontakt"
+    },
+    "emptyFiltered": {
+      "title": "Žádný výsledek pro vybrané filtry.",
+      "body": "Zkuste upravit hledaný výraz.",
+      "cta": "Vymazat filtry"
+    }
+  },
+
+  "addContactModal": {
+    "title": "Přidat kontakt",
+    "subtitle": "Zadejte jméno a případně další kontaktní údaje.",
+    "firstName": "Jméno",
+    "lastName": "Příjmení",
+    "companyLabel": "Firma",
+    "companyHint": "Kontakty patří k firmě — uvidíte je v jejím detailu.",
+    "positionOptional": "Pozice (volitelné)",
+    "emailOptional": "E-mail (volitelné)",
+    "phoneOptional": "Telefon (volitelné)",
+    "saveError": "Kontakt se nepodařilo uložit. Zkontrolujte údaje a zkuste to znovu.",
+    "cancel": "Zrušit",
+    "save": "Uložit kontakt",
+    "saving": "Ukládám…"
+  },
+
+  "contactDetail": {
+    "selectPrompt": "Vyberte kontakt ze seznamu.",
+    "loading": "Načítání…",
+    "loadError": "Kontakt se nepodařilo načíst.",
+    "companySectionTitle": "Firma",
+    "noCompany": "Tento kontakt zatím nemá přiřazenou firmu.",
+    "assignCompanyCta": "+ Přiřadit firmu",
+    "assignCompanyError": "Firmu se nepodařilo přiřadit ke kontaktu.",
+    "save": "Uložit",
+    "saving": "Ukládám…",
+    "cancel": "Zrušit",
+    "noContactInfo": "Ke kontaktu zatím nejsou vyplněny e-mail ani telefon.",
+    "noteTitle": "Poznámka"
+  }
+}

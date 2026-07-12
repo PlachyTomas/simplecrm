@@ -1,5 +1,6 @@
 import { UserPlus } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useCreateContact } from "@/app/contacts/useCreateContact";
 import { CompanyCombobox } from "@/components/ui/CompanyCombobox";
@@ -33,6 +34,7 @@ const EMPTY: Form = {
 };
 
 export function AddContactModal({ open, onClose, onCreated, forCompanyId }: AddContactModalProps) {
+  const { t } = useTranslation("contacts");
   const dialogRef = useModalDialog<HTMLDivElement>(onClose, open);
   const [form, setForm] = useState<Form>(EMPTY);
   const mutation = useCreateContact();
@@ -87,15 +89,15 @@ export function AddContactModal({ open, onClose, onCreated, forCompanyId }: AddC
           <UserPlus size={20} strokeWidth={1.75} />
         </div>
         <h1 id="add-contact-title" className="text-2xl font-semibold">
-          Přidat kontakt
+          {t("addContactModal.title")}
         </h1>
-        <p className="mt-2 text-sm text-text-secondary">
-          Zadejte jméno a případně další kontaktní údaje.
-        </p>
+        <p className="mt-2 text-sm text-text-secondary">{t("addContactModal.subtitle")}</p>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           <label className="block">
-            <span className="text-xs font-medium text-text-secondary">Jméno</span>
+            <span className="text-xs font-medium text-text-secondary">
+              {t("addContactModal.firstName")}
+            </span>
             <input
               type="text"
               value={form.first_name}
@@ -105,7 +107,9 @@ export function AddContactModal({ open, onClose, onCreated, forCompanyId }: AddC
             />
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-text-secondary">Příjmení</span>
+            <span className="text-xs font-medium text-text-secondary">
+              {t("addContactModal.lastName")}
+            </span>
             <input
               type="text"
               value={form.last_name}
@@ -119,7 +123,9 @@ export function AddContactModal({ open, onClose, onCreated, forCompanyId }: AddC
         {!forCompanyId ? (
           <div className="mt-4">
             <label className="block">
-              <span className="text-xs font-medium text-text-secondary">Firma</span>
+              <span className="text-xs font-medium text-text-secondary">
+                {t("addContactModal.companyLabel")}
+              </span>
               <div className="mt-2">
                 <CompanyCombobox
                   value={form.company_id}
@@ -128,7 +134,7 @@ export function AddContactModal({ open, onClose, onCreated, forCompanyId }: AddC
                 />
               </div>
               <span className="mt-1 block text-xs text-text-tertiary">
-                Kontakty patří k firmě — uvidíte je v jejím detailu.
+                {t("addContactModal.companyHint")}
               </span>
             </label>
           </div>
@@ -136,7 +142,9 @@ export function AddContactModal({ open, onClose, onCreated, forCompanyId }: AddC
 
         <div className="mt-4 space-y-4">
           <label className="block">
-            <span className="text-xs font-medium text-text-secondary">Pozice (volitelné)</span>
+            <span className="text-xs font-medium text-text-secondary">
+              {t("addContactModal.positionOptional")}
+            </span>
             <input
               type="text"
               value={form.position}
@@ -145,7 +153,9 @@ export function AddContactModal({ open, onClose, onCreated, forCompanyId }: AddC
             />
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-text-secondary">E-mail (volitelné)</span>
+            <span className="text-xs font-medium text-text-secondary">
+              {t("addContactModal.emailOptional")}
+            </span>
             <input
               type="email"
               value={form.email}
@@ -154,7 +164,9 @@ export function AddContactModal({ open, onClose, onCreated, forCompanyId }: AddC
             />
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-text-secondary">Telefon (volitelné)</span>
+            <span className="text-xs font-medium text-text-secondary">
+              {t("addContactModal.phoneOptional")}
+            </span>
             <input
               type="tel"
               value={form.phone}
@@ -169,7 +181,7 @@ export function AddContactModal({ open, onClose, onCreated, forCompanyId }: AddC
             className="mt-4 rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger"
             role="alert"
           >
-            Kontakt se nepodařilo uložit. Zkontrolujte údaje a zkuste to znovu.
+            {t("addContactModal.saveError")}
           </p>
         ) : null}
 
@@ -179,14 +191,14 @@ export function AddContactModal({ open, onClose, onCreated, forCompanyId }: AddC
             onClick={onClose}
             className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
           >
-            Zrušit
+            {t("addContactModal.cancel")}
           </button>
           <button
             type="submit"
             disabled={mutation.isPending || !canSubmit}
             className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {mutation.isPending ? "Ukládám…" : "Uložit kontakt"}
+            {mutation.isPending ? t("addContactModal.saving") : t("addContactModal.save")}
           </button>
         </div>
       </form>

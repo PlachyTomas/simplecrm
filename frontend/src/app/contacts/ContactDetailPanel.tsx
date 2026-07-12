@@ -1,5 +1,6 @@
 import { Building2, Mail, Phone, Users } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { useCompany } from "@/app/companies/useCompany";
@@ -12,6 +13,7 @@ interface ContactDetailPanelProps {
 }
 
 export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
+  const { t } = useTranslation("contacts");
   const { data: contact, isPending, isError } = useContact(contactId);
   const { data: company } = useCompany(contact?.company_id ?? undefined);
   const updateContact = useUpdateContact(contactId);
@@ -28,7 +30,7 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
         >
           <Users size={24} strokeWidth={1.75} />
         </div>
-        <p className="text-sm">Vyberte kontakt ze seznamu.</p>
+        <p className="text-sm">{t("contactDetail.selectPrompt")}</p>
       </div>
     );
   }
@@ -36,7 +38,7 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
   if (isPending) {
     return (
       <div className="p-8 text-sm text-text-tertiary" role="status">
-        Načítání…
+        {t("contactDetail.loading")}
       </div>
     );
   }
@@ -44,7 +46,7 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
   if (isError || !contact) {
     return (
       <div className="p-8 text-sm text-danger" role="alert">
-        Kontakt se nepodařilo načíst.
+        {t("contactDetail.loadError")}
       </div>
     );
   }
@@ -58,7 +60,7 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
       setEditingCompany(false);
       setPendingCompanyId("");
     } catch {
-      toast.error("Firmu se nepodařilo přiřadit ke kontaktu.");
+      toast.error(t("contactDetail.assignCompanyError"));
     }
   }
 
@@ -81,7 +83,7 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
 
       <section>
         <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-text-tertiary">
-          Firma
+          {t("contactDetail.companySectionTitle")}
         </h3>
         {contact.company_id && company ? (
           <Link
@@ -93,14 +95,14 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
           </Link>
         ) : (
           <div className="space-y-2 rounded-md border border-border bg-surface px-4 py-3">
-            <p className="text-sm text-text-tertiary">Tento kontakt zatím nemá přiřazenou firmu.</p>
+            <p className="text-sm text-text-tertiary">{t("contactDetail.noCompany")}</p>
             {!editingCompany ? (
               <button
                 type="button"
                 onClick={() => setEditingCompany(true)}
                 className="text-sm font-medium text-accent hover:text-accent-hover"
               >
-                + Přiřadit firmu
+                {t("contactDetail.assignCompanyCta")}
               </button>
             ) : (
               <div className="space-y-2">
@@ -115,7 +117,7 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
                     disabled={!pendingCompanyId || updateContact.isPending}
                     className="inline-flex h-8 items-center justify-center rounded-md bg-accent px-3 text-xs font-medium text-text-on-accent disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {updateContact.isPending ? "Ukládám…" : "Uložit"}
+                    {updateContact.isPending ? t("contactDetail.saving") : t("contactDetail.save")}
                   </button>
                   <button
                     type="button"
@@ -125,7 +127,7 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
                     }}
                     className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-surface-overlay px-3 text-xs font-medium text-text-secondary"
                   >
-                    Zrušit
+                    {t("contactDetail.cancel")}
                   </button>
                 </div>
               </div>
@@ -154,16 +156,14 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
           </a>
         ) : null}
         {!contact.email && !contact.phone ? (
-          <p className="text-sm text-text-tertiary">
-            Ke kontaktu zatím nejsou vyplněny e-mail ani telefon.
-          </p>
+          <p className="text-sm text-text-tertiary">{t("contactDetail.noContactInfo")}</p>
         ) : null}
       </section>
 
       {contact.note ? (
         <section className="rounded-md border border-border bg-surface p-4">
           <h3 className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
-            Poznámka
+            {t("contactDetail.noteTitle")}
           </h3>
           <p className="mt-2 whitespace-pre-wrap text-sm text-text-primary">{contact.note}</p>
         </section>
