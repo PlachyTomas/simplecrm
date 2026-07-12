@@ -1,5 +1,7 @@
+import type { ParseKeys, TFunction } from "i18next";
 import { ChevronDown, ChevronRight, Mail, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -21,9 +23,9 @@ interface EmailOption {
 }
 
 /** Build the selectable address list for a company: its default address
- * first (a contact's name when it maps to one, else "Firemní e-mail"), then
- * any remaining contacts that have an email. */
-function emailOptions(c: RecipientCandidate): EmailOption[] {
+ * first (a contact's name when it maps to one, else a generic company-email
+ * label), then any remaining contacts that have an email. */
+function emailOptions(c: RecipientCandidate, t: TFunction<"emails">): EmailOption[] {
   const out: EmailOption[] = [];
   const seen = new Set<string>();
   const contactByEmail = new Map<string, RecipientCandidate["contacts"][number]>();
@@ -34,7 +36,7 @@ function emailOptions(c: RecipientCandidate): EmailOption[] {
     const ct = contactByEmail.get(c.default_email.toLowerCase());
     out.push({
       email: c.default_email,
-      label: ct ? `${ct.first_name} ${ct.last_name}` : "Firemní e-mail",
+      label: ct ? `${ct.first_name} ${ct.last_name}` : t("wizard.defaultEmailLabel"),
       contactId: ct?.id ?? null,
     });
     seen.add(c.default_email.toLowerCase());
@@ -51,9 +53,9 @@ function emailOptions(c: RecipientCandidate): EmailOption[] {
 const inputClass =
   "mt-1 block w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none";
 
-const SKIP_LABELS: Record<string, string> = {
-  no_email: "bez e-mailu",
-  blocked: "na blocklistu",
+const SKIP_LABEL_KEY: Record<string, ParseKeys<"emails">> = {
+  no_email: "wizard.skipReasonNoEmail",
+  blocked: "wizard.skipReasonBlocked",
 };
 
 export function BulkEmailWizard({
@@ -65,6 +67,7 @@ export function BulkEmailWizard({
   onClose: () => void;
   initialFilters: BulkEmailFilters;
 }) {
+  const { t } = useTranslation("emails");
   const toast = useToast();
   const navigate = useNavigate();
   const { data: usersPage } = useOrgUsers();
@@ -104,7 +107,7 @@ export function BulkEmailWizard({
         }
         setSelected(initial);
       },
-      onError: () => toast.error("Načtení firem se nezdařilo, zkuste to prosím znovu."),
+      onError: () => toast.error(t("wizard.loadRecipientsError")),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -136,12 +139,14 @@ export function BulkEmailWizard({
 
   const usersById = new Map((usersPage?.items ?? []).map((u) => [u.id, u.name] as const));
   const summaryParts: string[] = [];
-  if (initialFilters.unowned) summaryParts.push("Nezabrané");
+  if (initialFilters.unowned) summaryParts.push(t("wizard.filterUnowned"));
   else if (initialFilters.owner_user_id)
-    summaryParts.push(usersById.get(initialFilters.owner_user_id) ?? "vybraný vlastník");
+    summaryParts.push(usersById.get(initialFilters.owner_user_id) ?? t("wizard.filterUnknownOwner"));
   if (initialFilters.industry) summaryParts.push(initialFilters.industry);
   if (initialFilters.city) summaryParts.push(initialFilters.city);
-  const filterSummary = summaryParts.length ? summaryParts.join(" · ") : "vaše celé portfolio";
+  const filterSummary = summaryParts.length
+    ? summaryParts.join(" · ")
+    : t("wizard.filterAllPortfolio");
 
   const toggleEmail = (companyId: string, email: string) => {
     setSelected((prev) => {
@@ -168,7 +173,7 @@ export function BulkEmailWizard({
       .filter(([, emails]) => emails.length > 0)
       .map(([companyId, emails]) => {
         const cand = candidateById.get(companyId);
-        const opts = cand ? emailOptions(cand) : [];
+        const opts = cand ? emailOptions(cand, t) : [];
         const firstContact = opts.find((o) => o.email === emails[0])?.contactId ?? null;
         return { company_id: companyId, emails, contact_id: firstContact };
       });
@@ -189,8 +194,8 @@ export function BulkEmailWizard({
         onError: (err) =>
           toast.error(
             err instanceof ApiError && err.status === 422
-              ? "Odeslání odmítnuto — zkontrolujte nastavení SMTP a příjemce."
-              : "Odeslání se nezdařilo, zkuste to prosím znovu.",
+              ? t("wizard.sendRejected")
+              : t("wizard.sendFailed"),
           ),
       },
     );
@@ -210,13 +215,13 @@ export function BulkEmailWizard({
           <div className="flex items-center gap-2">
             <Mail size={18} strokeWidth={1.75} className="text-accent" />
             <h2 id="bulk-email-title" className="text-base font-semibold text-text-primary">
-              Hromadný e-mail
+              {t("wizard.title")}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Zavřít"
+            aria-label={t("wizard.close")}
             className="rounded-md p-1 text-text-tertiary hover:bg-surface-overlay hover:text-text-primary"
           >
             <X size={18} strokeWidth={1.75} />
@@ -233,17 +238,19 @@ export function BulkEmailWizard({
           <>
             <div className="border-b border-border-subtle px-5 py-2">
               <ol className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-tertiary">
-                {["Příjemci", "Text", "Odeslání"].map((label, i) => (
-                  <li
-                    key={label}
-                    className={cn(
-                      "font-medium",
-                      step === i + 1 ? "text-accent" : step > i + 1 ? "text-text-secondary" : "",
-                    )}
-                  >
-                    {i + 1}. {label}
-                  </li>
-                ))}
+                {[t("wizard.stepRecipients"), t("wizard.stepText"), t("wizard.stepSend")].map(
+                  (label, i) => (
+                    <li
+                      key={label}
+                      className={cn(
+                        "font-medium",
+                        step === i + 1 ? "text-accent" : step > i + 1 ? "text-text-secondary" : "",
+                      )}
+                    >
+                      {i + 1}. {label}
+                    </li>
+                  ),
+                )}
               </ol>
             </div>
 
@@ -252,7 +259,8 @@ export function BulkEmailWizard({
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs text-text-tertiary">
-                      Filtr: <span className="text-text-secondary">{filterSummary}</span>
+                      {t("wizard.filterLabel")}{" "}
+                      <span className="text-text-secondary">{filterSummary}</span>
                     </p>
                     {(candidates ?? []).some((c) => c.emailable) ? (
                       <div className="flex items-center gap-2 text-xs">
@@ -261,7 +269,7 @@ export function BulkEmailWizard({
                           onClick={selectAllCompanies}
                           className="text-accent hover:text-accent-hover"
                         >
-                          Vybrat vše
+                          {t("wizard.selectAll")}
                         </button>
                         <span className="text-text-tertiary">·</span>
                         <button
@@ -269,21 +277,23 @@ export function BulkEmailWizard({
                           onClick={selectNoCompanies}
                           className="text-text-secondary hover:text-text-primary"
                         >
-                          Zrušit výběr
+                          {t("wizard.selectNone")}
                         </button>
                       </div>
                     ) : null}
                   </div>
                   {resolve.isPending ? (
-                    <p className="py-8 text-center text-sm text-text-tertiary">Načítání firem…</p>
+                    <p className="py-8 text-center text-sm text-text-tertiary">
+                      {t("wizard.loadingCompanies")}
+                    </p>
                   ) : null}
                   {candidates && candidates.length === 0 ? (
                     <p className="py-8 text-center text-sm text-text-tertiary">
-                      Žádné firmy neodpovídají filtru.
+                      {t("wizard.noCompaniesMatch")}
                     </p>
                   ) : null}
                   {(candidates ?? []).map((c) => {
-                    const opts = emailOptions(c);
+                    const opts = emailOptions(c, t);
                     const chosen = selected[c.company_id] ?? [];
                     return (
                       <div
@@ -302,11 +312,14 @@ export function BulkEmailWizard({
                             </p>
                             {c.emailable ? (
                               <p className="text-xs text-text-tertiary">
-                                {chosen.length} {chosen.length === 1 ? "adresa" : "adres"} vybráno
+                                {t("wizard.addressesSelected", { count: chosen.length })}
                               </p>
                             ) : (
                               <p className="text-xs text-warning">
-                                Přeskočeno — {SKIP_LABELS[c.skip_reason ?? ""] ?? c.skip_reason}
+                                {t("wizard.skippedPrefix")}{" "}
+                                {c.skip_reason && c.skip_reason in SKIP_LABEL_KEY
+                                  ? t(SKIP_LABEL_KEY[c.skip_reason]!)
+                                  : c.skip_reason}
                               </p>
                             )}
                           </div>
@@ -321,7 +334,7 @@ export function BulkEmailWizard({
                               ) : (
                                 <ChevronRight size={14} />
                               )}
-                              Příjemci
+                              {t("wizard.recipientsToggle")}
                             </button>
                           ) : null}
                         </div>
@@ -352,33 +365,37 @@ export function BulkEmailWizard({
               {step === 2 ? (
                 <div className="space-y-3">
                   <label className="block">
-                    <span className="text-xs font-medium text-text-secondary">Předmět</span>
+                    <span className="text-xs font-medium text-text-secondary">
+                      {t("wizard.subjectLabel")}
+                    </span>
                     <input
                       className={inputClass}
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
-                      placeholder="Nová nabídka pro {firma}"
+                      placeholder={t("wizard.subjectPlaceholder")}
                     />
                   </label>
                   <label className="block">
-                    <span className="text-xs font-medium text-text-secondary">Text e-mailu</span>
+                    <span className="text-xs font-medium text-text-secondary">
+                      {t("wizard.bodyLabel")}
+                    </span>
                     <textarea
                       className={cn(inputClass, "min-h-[160px] resize-y")}
                       value={body}
                       onChange={(e) => setBody(e.target.value)}
-                      placeholder={"Dobrý den {kontakt},\n\nrádi bychom Vám představili…"}
+                      placeholder={t("wizard.bodyPlaceholder")}
                     />
                   </label>
                   <p className="text-xs text-text-tertiary">
-                    Použijte zástupné výrazy{" "}
+                    {t("wizard.placeholdersHintPrefix")}{" "}
                     <code className="rounded bg-surface-overlay px-1">{"{firma}"}</code>,{" "}
                     <code className="rounded bg-surface-overlay px-1">{"{kontakt}"}</code>,{" "}
-                    <code className="rounded bg-surface-overlay px-1">{"{vlastnik}"}</code> — doplní
-                    se u každého příjemce.
+                    <code className="rounded bg-surface-overlay px-1">{"{vlastnik}"}</code>{" "}
+                    {t("wizard.placeholdersHintSuffix")}
                   </p>
                   <label className="block">
                     <span className="text-xs font-medium text-text-secondary">
-                      Příloha (volitelné)
+                      {t("wizard.attachmentLabel")}
                     </span>
                     <input
                       type="file"
@@ -392,8 +409,8 @@ export function BulkEmailWizard({
               {step === 3 ? (
                 <div className="space-y-3">
                   <p className="text-sm text-text-secondary">
-                    E-mail bude odeslán <strong>{totalSelected}</strong> příjemcům z vaší vlastní
-                    schránky.
+                    {t("wizard.sendSummaryPrefix")} <strong>{totalSelected}</strong>{" "}
+                    {t("wizard.sendSummarySuffix")}
                   </p>
                   <label className="flex items-center gap-2 text-sm text-text-secondary">
                     <input
@@ -401,16 +418,18 @@ export function BulkEmailWizard({
                       checked={createDeals}
                       onChange={(e) => setCreateDeals(e.target.checked)}
                     />
-                    Vytvořit obchod v pipeline pro každou oslovenou firmu
+                    {t("wizard.createDealsCheckbox")}
                   </label>
                   {createDeals ? (
                     <label className="block">
-                      <span className="text-xs font-medium text-text-secondary">Název obchodu</span>
+                      <span className="text-xs font-medium text-text-secondary">
+                        {t("wizard.dealTitleLabel")}
+                      </span>
                       <input
                         className={inputClass}
                         value={dealTitle}
                         onChange={(e) => setDealTitle(e.target.value)}
-                        placeholder={subject || "Předmět e-mailu"}
+                        placeholder={subject || t("wizard.dealTitlePlaceholder")}
                       />
                     </label>
                   ) : null}
@@ -424,7 +443,7 @@ export function BulkEmailWizard({
                 onClick={() => (step === 1 ? onClose() : setStep((s) => s - 1))}
                 className="h-9 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary hover:text-text-primary"
               >
-                {step === 1 ? "Zrušit" : "Zpět"}
+                {step === 1 ? t("wizard.cancel") : t("wizard.back")}
               </button>
 
               {step === 1 ? (
@@ -434,7 +453,7 @@ export function BulkEmailWizard({
                   disabled={totalSelected === 0}
                   className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Další ({totalSelected})
+                  {t("wizard.nextWithCount", { count: totalSelected })}
                 </button>
               ) : step === 2 ? (
                 <button
@@ -443,7 +462,7 @@ export function BulkEmailWizard({
                   disabled={!subject.trim() || !body.trim()}
                   className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Další
+                  {t("wizard.next")}
                 </button>
               ) : (
                 <button
@@ -452,13 +471,15 @@ export function BulkEmailWizard({
                   disabled={send.isPending || totalSelected === 0}
                   className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {send.isPending ? "Odesílání…" : `Odeslat (${totalSelected})`}
+                  {send.isPending
+                    ? t("wizard.sending")
+                    : t("wizard.sendWithCount", { count: totalSelected })}
                 </button>
               )}
             </footer>
             {step === 1 && emailableCount === 0 && candidates ? (
               <p className="px-5 pb-3 text-xs text-text-tertiary">
-                Žádná firma nemá použitelnou e-mailovou adresu.
+                {t("wizard.noEmailableCompanies")}
               </p>
             ) : null}
           </>
@@ -477,32 +498,32 @@ function SendResult({
   onClose: () => void;
   onHistory: () => void;
 }) {
+  const { t } = useTranslation("emails");
   return (
     <div className="px-5 py-6">
-      <p className="text-sm font-medium text-text-primary">Hotovo — e-maily byly zpracovány.</p>
+      <p className="text-sm font-medium text-text-primary">{t("wizard.resultDone")}</p>
       <ul className="mt-3 space-y-1 text-sm">
-        <li className="text-success">Odesláno: {result.sent_count}</li>
-        <li className="text-danger">Selhalo: {result.failed_count}</li>
-        <li className="text-text-tertiary">Přeskočeno: {result.skipped_count}</li>
+        <li className="text-success">{t("wizard.resultSent", { count: result.sent_count })}</li>
+        <li className="text-danger">{t("wizard.resultFailed", { count: result.failed_count })}</li>
+        <li className="text-text-tertiary">
+          {t("wizard.resultSkipped", { count: result.skipped_count })}
+        </li>
       </ul>
-      <p className="mt-3 text-xs text-text-tertiary">
-        „Odesláno" znamená, že váš poštovní server zprávu přijal. Doručení do schránky najdete v
-        historii.
-      </p>
+      <p className="mt-3 text-xs text-text-tertiary">{t("wizard.resultNote")}</p>
       <div className="mt-5 flex items-center gap-2">
         <button
           type="button"
           onClick={onHistory}
           className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent hover:opacity-90"
         >
-          Zobrazit historii
+          {t("wizard.viewHistory")}
         </button>
         <button
           type="button"
           onClick={onClose}
           className="h-9 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary hover:text-text-primary"
         >
-          Zavřít
+          {t("wizard.close")}
         </button>
       </div>
     </div>

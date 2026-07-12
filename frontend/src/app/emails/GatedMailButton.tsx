@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
@@ -17,10 +18,11 @@ interface GatedMailButtonProps {
 }
 
 /**
- * A "Poslat e-mail" button that is gated on verified SMTP. When SMTP is not
+ * A "Send email" button that is gated on verified SMTP. When SMTP is not
  * verified the button stays focusable (`aria-disabled`, not `disabled`) and
  * no-ops on click, and a small popover — shown on hover AND focus — explains
- * how to fix it with a link to Nastavení → Integrace (review finding #2/#7/#9).
+ * how to fix it with a link to the Integrations settings section (review
+ * finding #2/#7/#9).
  *
  * The popover is positioned with `position: fixed` off the button's rect so it
  * is never clipped by an ancestor's `overflow-hidden`/`overflow-x-auto` (the
@@ -33,6 +35,7 @@ export function GatedMailButton({
   className,
   ariaLabel,
 }: GatedMailButtonProps) {
+  const { t } = useTranslation("emails");
   const tooltipId = useId();
   const btnRef = useRef<HTMLButtonElement>(null);
   const hideTimer = useRef<number | undefined>(undefined);
@@ -95,14 +98,14 @@ export function GatedMailButton({
           onMouseLeave={scheduleHide}
           className="rounded-md border border-border bg-surface-elevated p-3 text-xs text-text-secondary shadow-lg"
         >
-          Nejprve nastavte a ověřte SMTP.{" "}
+          {t("gatedMail.hint")}{" "}
           <Link
             to="/app/settings/integrations"
             className="font-medium text-accent hover:text-accent-hover"
             onFocus={show}
             onBlur={scheduleHide}
           >
-            Nastavení → Integrace
+            {t("gatedMail.settingsLink")}
           </Link>
         </div>
       ) : null}

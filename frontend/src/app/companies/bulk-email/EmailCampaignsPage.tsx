@@ -1,5 +1,7 @@
+import type { ParseKeys } from "i18next";
 import { ArrowLeft, Mail } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import {
@@ -12,10 +14,10 @@ import { useCurrentUser } from "@/auth/useCurrentUser";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 
-const STATUS_LABEL: Record<string, string> = {
-  sent: "Odesláno",
-  failed: "Selhalo",
-  skipped: "Přeskočeno",
+const STATUS_LABEL_KEY: Record<string, ParseKeys<"emails">> = {
+  sent: "campaigns.statusSent",
+  failed: "campaigns.statusFailed",
+  skipped: "campaigns.statusSkipped",
 };
 
 const STATUS_CLASS: Record<string, string> = {
@@ -25,7 +27,8 @@ const STATUS_CLASS: Record<string, string> = {
 };
 
 export function EmailCampaignsPage() {
-  usePageTitle("Historie hromadných e-mailů");
+  const { t } = useTranslation("emails");
+  usePageTitle(t("campaigns.pageTitle"));
   const { data, isPending, isError } = useEmailCampaigns();
   const { data: user } = useCurrentUser();
   const [openId, setOpenId] = useState<string | null>(null);
@@ -40,24 +43,22 @@ export function EmailCampaignsPage() {
           to="/app/companies"
           className="inline-flex items-center gap-1 text-sm text-text-tertiary hover:text-text-primary"
         >
-          <ArrowLeft size={14} strokeWidth={1.75} /> Zpět na firmy
+          <ArrowLeft size={14} strokeWidth={1.75} /> {t("campaigns.backToCompanies")}
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold">Historie hromadných e-mailů</h1>
-        <p className="mt-1 text-sm text-text-tertiary">
-          Přehled odeslaných kampaní a stav doručení jednotlivých příjemců.
-        </p>
+        <h1 className="mt-2 text-2xl font-semibold">{t("campaigns.pageTitle")}</h1>
+        <p className="mt-1 text-sm text-text-tertiary">{t("campaigns.subtitle")}</p>
       </div>
 
       {isError ? (
         <div className="rounded-md border border-danger-subtle bg-danger-subtle px-4 py-3 text-sm text-danger">
-          Historii se nepodařilo načíst.
+          {t("campaigns.loadError")}
         </div>
       ) : !isPending && (data?.items.length ?? 0) === 0 ? (
         <div className="rounded-lg border border-border bg-surface">
           <EmptyState
             icon={Mail}
-            title="Zatím žádné kampaně"
-            body="Až odešlete hromadný e-mail, najdete ho tady i s výsledkem doručení."
+            title={t("campaigns.emptyTitle")}
+            body={t("campaigns.emptyBody")}
           />
         </div>
       ) : (
@@ -85,21 +86,27 @@ export function EmailCampaignsPage() {
 }
 
 function CampaignCounts({ c }: { c: CampaignOut }) {
+  const { t } = useTranslation("emails");
   return (
     <div className="flex shrink-0 gap-3 text-xs tabular-nums">
-      <span className="text-success">{c.sent_count} odesláno</span>
-      {c.failed_count > 0 ? <span className="text-danger">{c.failed_count} selhalo</span> : null}
+      <span className="text-success">{t("campaigns.sentCount", { count: c.sent_count })}</span>
+      {c.failed_count > 0 ? (
+        <span className="text-danger">{t("campaigns.failedCount", { count: c.failed_count })}</span>
+      ) : null}
       {c.skipped_count > 0 ? (
-        <span className="text-text-tertiary">{c.skipped_count} přeskočeno</span>
+        <span className="text-text-tertiary">
+          {t("campaigns.skippedCount", { count: c.skipped_count })}
+        </span>
       ) : null}
     </div>
   );
 }
 
 function CampaignDetail({ id }: { id: string }) {
+  const { t } = useTranslation("emails");
   const { data, isPending } = useEmailCampaign(id);
   if (isPending) {
-    return <p className="px-4 py-3 text-sm text-text-tertiary">Načítání…</p>;
+    return <p className="px-4 py-3 text-sm text-text-tertiary">{t("campaigns.loading")}</p>;
   }
   if (!data) return null;
   return (
@@ -107,9 +114,9 @@ function CampaignDetail({ id }: { id: string }) {
       <table className="min-w-full divide-y divide-border-subtle text-sm">
         <thead>
           <tr className="text-left text-xs uppercase tracking-wider text-text-tertiary">
-            <th className="px-4 py-2 font-medium">Firma</th>
-            <th className="px-4 py-2 font-medium">E-mail</th>
-            <th className="px-4 py-2 font-medium">Stav</th>
+            <th className="px-4 py-2 font-medium">{t("campaigns.tableCompany")}</th>
+            <th className="px-4 py-2 font-medium">{t("campaigns.tableEmail")}</th>
+            <th className="px-4 py-2 font-medium">{t("campaigns.tableStatus")}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border-subtle">
@@ -118,7 +125,7 @@ function CampaignDetail({ id }: { id: string }) {
               <td className="px-4 py-2 text-text-secondary">{r.company_name}</td>
               <td className="px-4 py-2 text-text-tertiary">{r.email || "—"}</td>
               <td className={cn("px-4 py-2 font-medium", STATUS_CLASS[r.status])}>
-                {STATUS_LABEL[r.status] ?? r.status}
+                {STATUS_LABEL_KEY[r.status] ? t(STATUS_LABEL_KEY[r.status]!) : r.status}
                 {r.error && r.status !== "sent" ? (
                   <span className="ml-1 text-xs text-text-tertiary">({r.error})</span>
                 ) : null}
