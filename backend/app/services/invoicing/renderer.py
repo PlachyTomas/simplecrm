@@ -32,7 +32,7 @@ accountant doesn't need are omitted to keep the document small.
 from __future__ import annotations
 
 import os
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -45,6 +45,8 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from lxml import etree
 from qrplatba import QRPlatbaGenerator
 from weasyprint import HTML
+
+from app.core.i18n import t
 
 if TYPE_CHECKING:
     from app.db.models import Invoice, InvoiceLine
@@ -65,35 +67,101 @@ _NSMAP: dict[str | None, str] = {None: _ISDOC_NS}
 
 
 # --------------------------------------------------------------------------- #
-# Czech-locale formatters
+# Locale formatters
 # --------------------------------------------------------------------------- #
 
-
-def _fmt_money_cs(amount_minor: int, currency: str = "CZK") -> str:
-    """`12 345,00 Kč` for 1 234 500 minor units."""
-    amount = Decimal(amount_minor) / Decimal(100)
-    return format_currency(amount, currency, locale="cs_CZ")
+# UI language -> Babel locale for money / quantity / date formatting.
+BABEL_LOCALE = {"cs": "cs_CZ", "en": "en_GB"}
 
 
-def _fmt_qty_cs(value: Decimal | int | float) -> str:
-    """`1,000` style — always 3 fractional digits stripped of trailing
-    zeros for display, but with comma as decimal separator."""
-    if not isinstance(value, Decimal):
-        value = Decimal(str(value))
-    # Strip trailing zeros while keeping at least one digit after the
-    # comma to look numeric (e.g. "1,000" → "1", "1,500" → "1,5").
-    quantized = value.normalize()
-    # `format_decimal` follows the Czech locale (comma decimal separator,
-    # space thousands separator). Pass the normalized Decimal so trailing
-    # zeros don't bloat the rendered cell.
-    return format_decimal(quantized, locale="cs_CZ")
+def formatters(
+    lang: str,
+) -> tuple[Callable[..., str], Callable[..., str], Callable[..., str]]:
+    """Return ``(fmt_money, fmt_qty, fmt_date)`` closures bound to ``lang``'s
+    Babel locale.
+
+    Shared by the invoice PDF renderer and the invoice mailer, so a document
+    and its accompanying e-mail format money / quantities / dates identically.
+    ``lang`` is one of ``BABEL_LOCALE``'s keys ("cs"/"en"); callers resolve it
+    via ``app.core.i18n.language_for_locale``.
+    """
+    babel_locale = BABEL_LOCALE[lang]
+
+    def fmt_money(amount_minor: int, currency: str = "CZK") -> str:
+        """`12 345,00 Kč` (cs) for 1 234 500 minor units, per ``lang``'s locale."""
+        amount = Decimal(amount_minor) / Decimal(100)
+        return format_currency(amount, currency, locale=babel_locale)
+
+    def fmt_qty(value: Decimal | int | float) -> str:
+        """Quantity with the locale's decimal separator, trailing zeros stripped
+        (e.g. cs "1,000" → "1", "1,500" → "1,5")."""
+        if not isinstance(value, Decimal):
+            value = Decimal(str(value))
+        return format_decimal(value.normalize(), locale=babel_locale)
+
+    def fmt_date(value: date | datetime) -> str:
+        """Long-form localized date (`9. května 2026` cs / `9 May 2026` en)."""
+        if isinstance(value, datetime):
+            value = value.date()
+        return format_date(value, format="long", locale=babel_locale)
+
+    return fmt_money, fmt_qty, fmt_date
 
 
-def _fmt_date_cs(value: date | datetime) -> str:
-    """`9. května 2026` (long Czech form)."""
-    if isinstance(value, datetime):
-        value = value.date()
-    return format_date(value, format="long", locale="cs_CZ")
+# Backwards-compatible cs-only formatters. The invoice mailer still imports
+# these; once it migrates to `formatters("cs"|"en")` (i18n Task 7) they can be
+# removed. Kept as thin aliases so there is a single formatting implementation.
+_fmt_money_cs, _fmt_qty_cs, _fmt_date_cs = formatters("cs")
+
+
+# --------------------------------------------------------------------------- #
+# Invoice-template labels
+# --------------------------------------------------------------------------- #
+
+# Static invoice-template labels — value comes verbatim from the
+# ``(lang, "invoice")`` catalog. Interpolated labels (title, vatRow) are added
+# per-render because they close over invoice-specific values.
+_STATIC_LABEL_KEYS: tuple[str, ...] = (
+    "kindVatInvoice",
+    "kindVatProforma",
+    "kindVatCreditNote",
+    "kindInvoice",
+    "kindProforma",
+    "kindCreditNote",
+    "relatedNote",
+    "supplier",
+    "customer",
+    "ico",
+    "dic",
+    "issueDate",
+    "taxSupplyDate",
+    "dueDate",
+    "description",
+    "quantity",
+    "unitPrice",
+    "vatRate",
+    "total",
+    "taxBase",
+    "totalDue",
+    "bankDetails",
+    "iban",
+    "account",
+    "variableSymbol",
+    "paymentMethod",
+    "paymentCard",
+    "qrPlatba",
+    "paymentBankTransfer",
+    "nonVatNotice",
+    "footerThanks",
+)
+
+
+def _invoice_labels(lang: str, invoice: Invoice, fmt_qty: Callable[..., str]) -> dict[str, str]:
+    """Build the invoice template's label dict for ``lang`` from the catalog."""
+    labels = {key: t(lang, f"invoice.{key}") for key in _STATIC_LABEL_KEYS}
+    labels["title"] = t(lang, "invoice.title", number=invoice.number)
+    labels["vatRow"] = t(lang, "invoice.vatRow", rate=fmt_qty(invoice.vat_rate_percent))
+    return labels
 
 
 # --------------------------------------------------------------------------- #
@@ -101,15 +169,21 @@ def _fmt_date_cs(value: date | datetime) -> str:
 # --------------------------------------------------------------------------- #
 
 
-def _qr_svg(invoice: Invoice) -> str:
-    """Generate a SPAYD-format QR code as an inline `<svg>` string for
-    embedding in the PDF template.
+def _qr_svg(invoice: Invoice) -> str | None:
+    """Generate a SPAYD-format QR Platba code as an inline `<svg>` string for
+    embedding in the PDF template — or ``None`` for non-CZK invoices.
+
+    QR Platba is a Czech domestic-payment standard (SPAYD); it is only valid
+    for CZK invoices, so no SPAYD payload is generated for a foreign-currency
+    invoice and the template omits the QR block.
 
     `qrplatba.QRPlatbaGenerator` requires the amount as a `Decimal` (the
     library's SPAYD formatter uses `f"{x:.2f}"` and bombs on `str` input).
     `make_image()` returns a `QRPlatbaSVGImage` whose `.to_string()`
     yields a `bytes` SVG payload — decode to UTF-8 for template insertion.
     """
+    if invoice.currency != "CZK":
+        return None
     generator = QRPlatbaGenerator(
         account=invoice.issuer_iban,
         amount=Decimal(invoice.total_minor) / Decimal(100),
@@ -133,6 +207,29 @@ _jinja_env = Environment(
     trim_blocks=True,
     lstrip_blocks=True,
 )
+
+
+def _render_html(invoice: Invoice, lines: Iterable[InvoiceLine], lang: str = "cs") -> str:
+    """Render the invoice HTML for ``lang`` — the source WeasyPrint turns into
+    the PDF. Kept separate from ``render_pdf`` so the localized markup can be
+    asserted without the (compressed) PDF byte stream.
+
+    Labels come from the ``(lang, "invoice")`` catalog; money / quantity / date
+    use ``lang``'s Babel locale. For ``lang="cs"`` the output is byte-identical
+    to the pre-i18n template (labels resolve to the original Czech literals).
+    """
+    fmt_money, fmt_qty, fmt_date = formatters(lang)
+    sorted_lines = sorted(lines, key=lambda line_: line_.position)
+    return _jinja_env.get_template("invoice.html.j2").render(
+        invoice=invoice,
+        lines=sorted_lines,
+        qr_svg=_qr_svg(invoice),
+        lang=lang,
+        labels=_invoice_labels(lang, invoice, fmt_qty),
+        fmt_money=lambda minor: fmt_money(minor, invoice.currency),
+        fmt_qty=fmt_qty,
+        fmt_date=fmt_date,
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -209,25 +306,20 @@ class InvoiceRenderer:
     # which `storage.py`'s `pdf_sha256` integrity check requires.
     _warmed = False
 
-    def render_pdf(self, invoice: Invoice, lines: Iterable[InvoiceLine]) -> bytes:
-        """Render `invoice` to a PDF/A-2b byte string.
+    def render_pdf(
+        self, invoice: Invoice, lines: Iterable[InvoiceLine], lang: str = "cs"
+    ) -> bytes:
+        """Render `invoice` to a PDF/A-2b byte string in ``lang`` (cs/en).
 
         Determinism is enforced by a finisher that pins ``CreationDate``
         and ``ModDate`` to ``invoice.issued_at``. Without the finisher,
         WeasyPrint stamps ``datetime.now()`` into the PDF trailer and
         two renders moments apart would byte-differ — invalidating the
-        stored ``pdf_sha256`` on every read.
+        stored ``pdf_sha256`` on every read. For ``lang="cs"`` the bytes
+        are identical to the pre-i18n renderer.
         """
         self._ensure_warm()
-        sorted_lines = sorted(lines, key=lambda line_: line_.position)
-        html = _jinja_env.get_template("invoice.html.j2").render(
-            invoice=invoice,
-            lines=sorted_lines,
-            qr_svg=_qr_svg(invoice),
-            fmt_money=lambda minor: _fmt_money_cs(minor, invoice.currency),
-            fmt_qty=_fmt_qty_cs,
-            fmt_date=_fmt_date_cs,
-        )
+        html = _render_html(invoice, lines, lang)
         weasy_html = HTML(string=html, base_url=str(_TEMPLATES_DIR))
         pdf: bytes = weasy_html.write_pdf(finisher=_pin_pdf_dates(invoice.issued_at))
         return pdf
@@ -242,7 +334,14 @@ class InvoiceRenderer:
         _render_warmup_pdf()
 
     def render_isdoc(self, invoice: Invoice, lines: Iterable[InvoiceLine]) -> bytes:
-        """Render `invoice` to an ISDOC 6.0.1 XML byte string."""
+        """Render `invoice` to an ISDOC 6.0.1 XML byte string.
+
+        ISDOC is a Czech accounting-interchange format; it is only produced for
+        CZK invoices. A non-CZK invoice returns ``b""`` and callers must not
+        attach an ISDOC document.
+        """
+        if invoice.currency != "CZK":
+            return b""
         return _build_isdoc(invoice, lines).encode("utf-8")
 
 
@@ -342,4 +441,4 @@ def _money_decimal(amount_minor: int) -> str:
     return f"{Decimal(amount_minor) / Decimal(100):.2f}"
 
 
-__all__ = ["InvoiceRenderer"]
+__all__ = ["InvoiceRenderer", "formatters"]
