@@ -1,10 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ParseKeys } from "i18next";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { ApiError, apiFetch } from "@/lib/api";
+import { formatDate } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import type { components } from "@/types/api.generated";
 
 type AdminAccessLogList = components["schemas"]["AdminAccessLogList"];
@@ -12,24 +16,13 @@ type AdminAccessLogRow = components["schemas"]["AdminAccessLogRow"];
 type OrganizationEraseOut = components["schemas"]["OrganizationEraseOut"];
 type OrganizationOut = components["schemas"]["OrganizationOut"];
 
-const ACTION_LABEL: Record<AdminAccessLogRow["action"], string> = {
-  list_users: "Zobrazení seznamu uživatelů",
-  view_subscription: "Zobrazení detailu předplatného",
-  view_invoices: "Zobrazení fakturační historie",
-  view_activity: "Zobrazení aktivity předplatného",
-  impersonate: "Přihlášení jménem uživatele (impersonace)",
+const ACTION_LABEL_KEY: Record<AdminAccessLogRow["action"], ParseKeys<"settings">> = {
+  list_users: "privacy.actions.list_users",
+  view_subscription: "privacy.actions.view_subscription",
+  view_invoices: "privacy.actions.view_invoices",
+  view_activity: "privacy.actions.view_activity",
+  impersonate: "privacy.actions.impersonate",
 };
-
-function formatTimestamp(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleString("cs-CZ", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function useAdminAccessLog() {
   const { accessToken } = useAuth();
@@ -66,6 +59,8 @@ function useEraseOrganization() {
 }
 
 export function PrivacySection() {
+  const { t } = useTranslation("settings");
+  const locale = useLocale();
   const query = useAdminAccessLog();
   const org = useCurrentOrganization();
   const me = useCurrentUser();
@@ -73,18 +68,18 @@ export function PrivacySection() {
   return (
     <section className="space-y-6">
       <div className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="text-lg font-semibold text-text-primary">Přístup operátora</h2>
+        <h2 className="text-lg font-semibold text-text-primary">
+          {t("privacy.operatorAccess.title")}
+        </h2>
         <p className="mt-2 text-sm text-text-secondary">
-          Pověřené osoby provozovatele SimpleCRM mají pro účely podpory, řešení incidentů a údržby
-          omezený přístup k Vašim datům. Každý takový přístup je zaznamenán a najdete ho v tabulce
-          níže. Podrobnosti k povinnostem provozovatele jsou v{" "}
+          {t("privacy.operatorAccess.bodyPrefix")}{" "}
           <Link
             to="/zpracovatelska-smlouva#cl-5"
             className="underline hover:text-text-primary"
             target="_blank"
             rel="noreferrer"
           >
-            čl. 5 Zpracovatelské smlouvy
+            {t("privacy.operatorAccess.linkText")}
           </Link>
           .
         </p>
@@ -92,29 +87,30 @@ export function PrivacySection() {
         <div className="mt-5">
           {query.isPending ? (
             <p className="text-sm text-text-tertiary" role="status">
-              Načítání…
+              {t("privacy.operatorAccess.loading")}
             </p>
           ) : query.isError ? (
             <p className="text-sm text-danger" role="alert">
-              Načtení historie přístupů se nezdařilo.
+              {t("privacy.operatorAccess.error")}
             </p>
           ) : query.data && query.data.items.length === 0 ? (
-            <p className="text-sm text-text-tertiary">
-              Žádný přístup nebyl zaznamenán. Pokud někdo z týmu SimpleCRM kdykoli do vašich dat
-              nahlédne, objeví se zde nový záznam.
-            </p>
+            <p className="text-sm text-text-tertiary">{t("privacy.operatorAccess.empty")}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left text-sm">
                 <thead className="text-xs uppercase tracking-wide text-text-tertiary">
                   <tr>
-                    <th className="border-b border-border-subtle py-2 pr-4 font-medium">Kdy</th>
-                    <th className="border-b border-border-subtle py-2 pr-4 font-medium">Akce</th>
                     <th className="border-b border-border-subtle py-2 pr-4 font-medium">
-                      Pověřená osoba
+                      {t("privacy.operatorAccess.table.when")}
+                    </th>
+                    <th className="border-b border-border-subtle py-2 pr-4 font-medium">
+                      {t("privacy.operatorAccess.table.action")}
+                    </th>
+                    <th className="border-b border-border-subtle py-2 pr-4 font-medium">
+                      {t("privacy.operatorAccess.table.by")}
                     </th>
                     <th className="border-b border-border-subtle py-2 font-medium">
-                      Dotčený uživatel
+                      {t("privacy.operatorAccess.table.target")}
                     </th>
                   </tr>
                 </thead>
@@ -122,10 +118,16 @@ export function PrivacySection() {
                   {query.data?.items.map((row) => (
                     <tr key={row.id} className="align-top">
                       <td className="border-b border-border-subtle py-2 pr-4 text-text-secondary">
-                        {formatTimestamp(row.created_at)}
+                        {formatDate(row.created_at, locale, {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                       </td>
                       <td className="border-b border-border-subtle py-2 pr-4 text-text-primary">
-                        {ACTION_LABEL[row.action]}
+                        {t(ACTION_LABEL_KEY[row.action])}
                       </td>
                       <td className="border-b border-border-subtle py-2 pr-4 text-text-secondary">
                         {row.super_admin_email}
@@ -148,26 +150,20 @@ export function PrivacySection() {
 }
 
 function DangerZone({ orgName }: { orgName: string }) {
+  const { t } = useTranslation("settings");
   const [open, setOpen] = useState(false);
 
   return (
     <div className="rounded-lg border border-danger/40 bg-danger-subtle p-6">
-      <h2 className="text-lg font-semibold text-text-primary">Trvale smazat organizaci</h2>
-      <p className="mt-2 text-sm text-text-secondary">
-        Nevratně smaže veškerá osobní data: kontakty, firmy, obchody, aktivity i uživatelské účty.
-        Vystavené daňové doklady ze zákona uchováváme dalších 10 let dle § 31 zákona o účetnictví —
-        bez Vašich přístupových údajů.
-      </p>
-      <p className="mt-2 text-xs text-text-tertiary">
-        Před smazáním Vám doporučujeme exportovat data ze sekce Reporty. Aktivní předplatné
-        automaticky zrušíme v rámci smazání.
-      </p>
+      <h2 className="text-lg font-semibold text-text-primary">{t("privacy.dangerZone.title")}</h2>
+      <p className="mt-2 text-sm text-text-secondary">{t("privacy.dangerZone.body1")}</p>
+      <p className="mt-2 text-xs text-text-tertiary">{t("privacy.dangerZone.body2")}</p>
       <button
         type="button"
         onClick={() => setOpen(true)}
         className="mt-4 inline-flex h-10 items-center justify-center rounded-md border border-danger bg-surface px-5 text-sm font-medium text-danger transition-colors duration-fast hover:bg-danger hover:text-text-on-accent"
       >
-        Smazat organizaci…
+        {t("privacy.dangerZone.button")}
       </button>
 
       {open ? <EraseOrgDialog orgName={orgName} onClose={() => setOpen(false)} /> : null}
@@ -176,6 +172,7 @@ function DangerZone({ orgName }: { orgName: string }) {
 }
 
 function EraseOrgDialog({ orgName, onClose }: { orgName: string; onClose: () => void }) {
+  const { t } = useTranslation("settings");
   const [typed, setTyped] = useState("");
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -213,7 +210,7 @@ function EraseOrgDialog({ orgName, onClose }: { orgName: string; onClose: () => 
         onError: (err) => {
           const detail =
             err instanceof ApiError ? (err.body as { detail?: string } | null)?.detail : undefined;
-          setError(detail ?? "Smazání se nezdařilo. Zkuste to prosím znovu.");
+          setError(detail ?? t("privacy.eraseDialog.genericError"));
         },
       },
     );
@@ -234,16 +231,16 @@ function EraseOrgDialog({ orgName, onClose }: { orgName: string; onClose: () => 
         className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg"
       >
         <h2 id="erase-org-title" className="text-lg font-semibold text-text-primary">
-          Trvale smazat organizaci?
+          {t("privacy.eraseDialog.title")}
         </h2>
         <p className="mt-2 text-sm text-text-secondary">
-          Tuto akci nelze vrátit zpět. Pro potvrzení opište přesný název organizace:
+          {t("privacy.eraseDialog.confirmBody")}
         </p>
         <p className="mt-2 rounded-md border border-border bg-surface-overlay px-3 py-2 font-mono text-sm text-text-primary">
           {orgName}
         </p>
         <label className="mt-4 block text-xs font-medium text-text-tertiary">
-          Název organizace
+          {t("privacy.eraseDialog.nameLabel")}
           <input
             type="text"
             value={typed}
@@ -265,7 +262,7 @@ function EraseOrgDialog({ orgName, onClose }: { orgName: string; onClose: () => 
             disabled={submitDisabled}
             className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-danger/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {erase.isPending ? "Mažeme…" : "Trvale smazat"}
+            {erase.isPending ? t("privacy.eraseDialog.submitting") : t("privacy.eraseDialog.submit")}
           </button>
           <button
             type="button"
@@ -273,7 +270,7 @@ function EraseOrgDialog({ orgName, onClose }: { orgName: string; onClose: () => 
             onClick={onClose}
             className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface px-4 text-sm font-medium text-text-secondary hover:text-text-primary"
           >
-            Zrušit
+            {t("privacy.eraseDialog.cancel")}
           </button>
         </div>
       </form>

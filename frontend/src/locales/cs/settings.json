@@ -2,6 +2,587 @@
   "appearance": {
     "language": "Jazyk aplikace",
     "languageSaved": "Jazyk aplikace byl uložen.",
-    "languageSaveFailed": "Jazyk se nepodařilo uložit. Zkuste to prosím znovu."
+    "languageSaveFailed": "Jazyk se nepodařilo uložit. Zkuste to prosím znovu.",
+    "title": "Vzhled",
+    "subtitle": "Vyberte světlý nebo tmavý motiv. Volba se ukládá lokálně v prohlížeči."
+  },
+  "nav": {
+    "groups": {
+      "personal": "Osobní",
+      "organization": "Organizace",
+      "sales": "Prodej & data",
+      "billing": "Předplatné"
+    },
+    "sections": {
+      "appearance": { "label": "Vzhled", "description": "Motiv, barvy a další vizuální nastavení." },
+      "integrations": {
+        "label": "Integrace",
+        "description": "Propojení s externími službami a odesílání e-mailů (SMTP)."
+      },
+      "organization": {
+        "label": "Organizace",
+        "description": "Smluvní počet uživatelů a způsob fakturace."
+      },
+      "teams": { "label": "Týmy", "description": "Sdružujte obchodníky pod manažery." },
+      "users": {
+        "label": "Uživatelé",
+        "description": "Spravujte role, týmovou příslušnost a aktivitu členů."
+      },
+      "invitations": {
+        "label": "Pozvánky",
+        "description": "Pozvěte nové členy a spravujte oprávnění."
+      },
+      "permissions": {
+        "label": "Oprávnění",
+        "description": "Pravidla, kdo a co může v aplikaci dělat."
+      },
+      "pipeline": {
+        "label": "Pipeline",
+        "description": "Spravujte fáze pipeline a jejich pořadí."
+      },
+      "blocked-companies": {
+        "label": "Blokovaná IČO",
+        "description": "Seznam IČO, která obchodníci nemohou přidat jako firmu."
+      },
+      "privacy": {
+        "label": "Soukromí",
+        "description": "Historie přístupů týmu SimpleCRM k Vašim datům a zrušení organizace."
+      },
+      "billing": {
+        "label": "Fakturace",
+        "description": "Detaily plánu, faktur a způsobu platby."
+      }
+    },
+    "importItem": {
+      "label": "Import z CSV",
+      "description": "Hromadný import firem a kontaktů z CSV souborů."
+    }
+  },
+  "home": {
+    "pageTitle": "Nastavení",
+    "title": "Nastavení",
+    "loading": "Načítání…"
+  },
+  "sectionPage": {
+    "pageTitleWithSection": "Nastavení — {{label}}",
+    "pageTitleDefault": "Nastavení",
+    "loading": "Načítání…",
+    "backLink": "Nastavení"
+  },
+  "layout": {
+    "navAriaLabel": "Sekce nastavení",
+    "title": "Nastavení",
+    "loading": "Načítání…",
+    "gcalConnected": "Google Kalendář byl propojen",
+    "gcalDenied": "Propojení Google Kalendáře bylo zrušeno",
+    "gcalFailed": "Propojení Google Kalendáře se nezdařilo, zkuste to prosím znovu"
+  },
+  "privacy": {
+    "operatorAccess": {
+      "title": "Přístup operátora",
+      "bodyPrefix": "Pověřené osoby provozovatele SimpleCRM mají pro účely podpory, řešení incidentů a údržby omezený přístup k Vašim datům. Každý takový přístup je zaznamenán a najdete ho v tabulce níže. Podrobnosti k povinnostem provozovatele jsou v",
+      "linkText": "čl. 5 Zpracovatelské smlouvy",
+      "loading": "Načítání…",
+      "error": "Načtení historie přístupů se nezdařilo.",
+      "empty": "Žádný přístup nebyl zaznamenán. Pokud někdo z týmu SimpleCRM kdykoli do vašich dat nahlédne, objeví se zde nový záznam.",
+      "table": {
+        "when": "Kdy",
+        "action": "Akce",
+        "by": "Pověřená osoba",
+        "target": "Dotčený uživatel"
+      }
+    },
+    "actions": {
+      "list_users": "Zobrazení seznamu uživatelů",
+      "view_subscription": "Zobrazení detailu předplatného",
+      "view_invoices": "Zobrazení fakturační historie",
+      "view_activity": "Zobrazení aktivity předplatného",
+      "impersonate": "Přihlášení jménem uživatele (impersonace)"
+    },
+    "dangerZone": {
+      "title": "Trvale smazat organizaci",
+      "body1": "Nevratně smaže veškerá osobní data: kontakty, firmy, obchody, aktivity i uživatelské účty. Vystavené daňové doklady ze zákona uchováváme dalších 10 let dle § 31 zákona o účetnictví — bez Vašich přístupových údajů.",
+      "body2": "Před smazáním Vám doporučujeme exportovat data ze sekce Reporty. Aktivní předplatné automaticky zrušíme v rámci smazání.",
+      "button": "Smazat organizaci…"
+    },
+    "eraseDialog": {
+      "title": "Trvale smazat organizaci?",
+      "confirmBody": "Tuto akci nelze vrátit zpět. Pro potvrzení opište přesný název organizace:",
+      "nameLabel": "Název organizace",
+      "submit": "Trvale smazat",
+      "submitting": "Mažeme…",
+      "cancel": "Zrušit",
+      "genericError": "Smazání se nezdařilo. Zkuste to prosím znovu."
+    }
+  },
+  "blockedCompanies": {
+    "title": "Blokovaná IČO",
+    "subtitle": "Obchodníci nemohou přidat firmu s tímto IČO. Doplňující název doplníme z ARES.",
+    "form": {
+      "icoLabel": "IČO",
+      "categoryLabel": "Kategorie",
+      "noteLabel": "Poznámka (volitelné)",
+      "addButton": "Přidat",
+      "adding": "Přidávám…"
+    },
+    "errors": {
+      "invalidIco": "IČO musí mít 8 číslic.",
+      "duplicate": "Toto IČO už na blokovaném seznamu je.",
+      "generic": "Přidání selhalo. Zkuste to prosím znovu."
+    },
+    "table": {
+      "ico": "IČO",
+      "company": "Firma",
+      "category": "Kategorie",
+      "note": "Poznámka",
+      "added": "Přidáno"
+    },
+    "loading": "Načítání…",
+    "empty": "Zatím nic. Přidejte první IČO výše.",
+    "removeConfirm": "Odstranit IČO {{ico}} z blokovaných?",
+    "removeAriaLabel": "Odstranit {{ico}}",
+    "reasons": {
+      "competitor": "Konkurent",
+      "do_not_contact": "Nekontaktovat",
+      "bankrupt": "Insolvence",
+      "legal_issue": "Právní problém",
+      "other": "Jiný"
+    }
+  },
+  "invitations": {
+    "permissionDenied": {
+      "title": "Pozvánky",
+      "body": "Pozvánky může spravovat administrátor nebo uživatel s povolením „Může zvát ostatní“."
+    },
+    "invite": {
+      "title": "Pozvat uživatele",
+      "subtitle": "Pošleme e-mail s odkazem, kterým se pozvaný přihlásí přes Google a automaticky se zařadí do vaší organizace.",
+      "emailLabel": "E-mail",
+      "emailPlaceholder": "kolega@firma.cz",
+      "roleLabel": "Role",
+      "teamLabel": "Tým",
+      "noTeamOption": "— bez týmu —",
+      "defaultTeamSuffix": " (výchozí)",
+      "canInviteLabel": "Může zvát další uživatele",
+      "inviteLinkLabel": "Odkaz pro přijetí:",
+      "submit": "Odeslat pozvánku",
+      "submitting": "Odesílám…"
+    },
+    "errors": {
+      "invalidEmail": "Zadejte platnou e-mailovou adresu.",
+      "createGeneric": "Vytvoření pozvánky se nezdařilo."
+    },
+    "createdToast": "Pozvánka odeslána na {{email}}.",
+    "pending": {
+      "title": "Nevyřízené pozvánky",
+      "loading": "Načítání…",
+      "error": "Pozvánky se nepodařilo načíst.",
+      "empty": "Žádné nevyřízené pozvánky.",
+      "table": {
+        "email": "E-mail",
+        "role": "Role",
+        "team": "Tým",
+        "canInvite": "Zve další",
+        "expires": "Vyprší",
+        "actions": "Akce"
+      },
+      "canInviteYes": "Ano",
+      "canInviteNo": "Ne",
+      "revokeConfirm": "Zrušit pozvánku pro {{email}}?",
+      "revokeAriaLabel": "Zrušit pozvánku pro {{email}}",
+      "revokeSuccess": "Pozvánka zrušena.",
+      "revokeError": "Zrušení pozvánky selhalo."
+    },
+    "roles": {
+      "admin": "Administrátor",
+      "manager": "Manažer",
+      "salesperson": "Obchodník"
+    }
+  },
+  "users": {
+    "title": "Uživatelé",
+    "subtitle": "Spravujte role, týmovou příslušnost a aktivitu členů vaší organizace.",
+    "loading": "Načítání…",
+    "errorLoad": "Seznam uživatelů se nepodařilo načíst.",
+    "errorUpdate": "Aktualizace selhala.",
+    "cancelQueueConfirm": "Tím zrušíte celou naplánovanou změnu počtu uživatelů. Pokračovat?",
+    "cancelQueueError": "Zrušení naplánované změny se nezdařilo.",
+    "table": {
+      "nameEmail": "Jméno / email",
+      "role": "Role",
+      "team": "Tým",
+      "canInvite": "Smí zvát",
+      "capLimit": "Limit firem",
+      "capLimitTitle": "Maximální počet firem, které smí mít obchodník současně v držení. Prázdné = bez limitu.",
+      "active": "Aktivní"
+    },
+    "noTeamOption": "— bez týmu —",
+    "managerBadgeTitle": "Tento uživatel je manažerem těchto týmů. Pro změnu otevřete kartu Týmy.",
+    "managerBadgePrefix": "Manažer týmu",
+    "canInviteAriaLabel": "Smí zvát uživatele — {{email}}",
+    "canInviteTitleAdmin": "Administrátor může zvát vždy.",
+    "canInviteTitleOther": "Když je zaškrtnuto, smí tento uživatel posílat pozvánky.",
+    "capAriaLabel": "Limit firem — {{email}}",
+    "capTitle": "Maximální počet firem, které tento uživatel může současně vlastnit. Prázdné = bez limitu.",
+    "active": "Aktivní",
+    "deactivated": "Deaktivovaný",
+    "deactivateConfirm": "Opravdu deaktivovat uživatele {{name}}? Okamžitě ztratí přístup do aplikace.",
+    "scheduledPillTitle": "Tento uživatel ztratí přístup {{date}}.",
+    "scheduledPillText": "Deaktivace naplánovaná na {{date}}",
+    "cancelScheduledAriaLabel": "Zrušit naplánovanou deaktivaci",
+    "roles": {
+      "admin": "Administrátor",
+      "manager": "Manažer",
+      "salesperson": "Obchodník"
+    }
+  },
+  "teams": {
+    "title": "Týmy",
+    "subtitle": "Týmy sdružují obchodníky pod manažera; ten vidí pipeline celého týmu.",
+    "loading": "Načítání…",
+    "errorLoad": "Nepodařilo se načíst týmy.",
+    "createError": "Vytvoření týmu selhalo.",
+    "deleteError": "Smazání týmu selhalo.",
+    "saveError": "Uložení týmu selhalo.",
+    "noManagerOption": "— bez manažera —",
+    "namePlaceholder": "Název týmu",
+    "addButton": "Přidat",
+    "saveButton": "Uložit",
+    "deleteAriaLabel": "Smazat tým {{name}}",
+    "deleteConfirm": "Smazat tým \"{{name}}\"?",
+    "table": {
+      "name": "Název",
+      "manager": "Manažer",
+      "actions": "Akce"
+    }
+  },
+  "smtp": {
+    "title": "Odesílání e-mailů (SMTP)",
+    "subtitle": "Hromadné e-maily se odesílají z vaší vlastní schránky. Zadejte přihlašovací údaje ke svému SMTP serveru a ověřte připojení.",
+    "verifiedBadge": "Ověřeno",
+    "unverifiedBadge": "Neověřeno",
+    "fields": {
+      "host": "SMTP server (host)",
+      "port": "Port",
+      "security": "Zabezpečení",
+      "username": "Uživatel",
+      "password": "Heslo",
+      "fromEmail": "Odesílatel (e-mail)",
+      "fromName": "Jméno odesílatele (volitelné)"
+    },
+    "placeholders": {
+      "host": "smtp.vasefirma.cz",
+      "username": "jan@vasefirma.cz",
+      "fromEmail": "jan@vasefirma.cz",
+      "fromName": "Jan Novák",
+      "passwordStored": "•••••••• (beze změny)",
+      "passwordNew": "heslo nebo app password"
+    },
+    "securityOptions": {
+      "ssl": "SSL/TLS (obvykle port 465)",
+      "starttls": "STARTTLS (obvykle port 587)"
+    },
+    "save": "Uložit",
+    "saving": "Ukládání…",
+    "test": "Otestovat připojení",
+    "testing": "Testuji…",
+    "saveSuccess": "Nastavení SMTP uloženo. Otestujte připojení.",
+    "saveErrorDetailed": "Uložení se nezdařilo — zkontrolujte zadané údaje.",
+    "saveErrorGeneric": "Uložení se nezdařilo, zkuste to prosím znovu.",
+    "testSuccess": "Připojení k SMTP ověřeno ✓",
+    "testFailPrefix": "Test selhal:",
+    "testUnknownError": "neznámá chyba",
+    "testError": "Test se nezdařil, zkuste to prosím znovu."
+  },
+  "invoiceDetails": {
+    "title": "Fakturační údaje",
+    "subtitle": "Tyto údaje se objeví na vašich daňových dokladech. Zadejte IČO a zbytek doplníme z ARES — každé pole pak můžete upravit.",
+    "loading": "Načítání…",
+    "error": "Načítání fakturačních údajů se nezdařilo.",
+    "save": "Uložit fakturační údaje",
+    "saving": "Ukládám…",
+    "saveSuccess": "Fakturační údaje uloženy.",
+    "saveError": "Uložení se nezdařilo. Zkuste to prosím znovu."
+  },
+  "organization": {
+    "loading": "Načítání…",
+    "error": "Načítání předplatného se nezdařilo.",
+    "shared": {
+      "saving": "Ukládáme…",
+      "saved": "Uloženo."
+    },
+    "seatCount": {
+      "title": "Smluvní počet uživatelů",
+      "subtitle": "Aktuálně máte {{activeCount}} aktivních uživatelů z {{seatCount}} smluvních. Limit ovlivňuje, kolik pozvánek lze odeslat, a odpovídá fakturované ceně.",
+      "pendingBanner": {
+        "text": "Naplánovaná změna: počet klesne na {{count}}.",
+        "textWithDate": "Naplánovaná změna: počet klesne na {{count}} ke dni {{date}}.",
+        "loseAccess": "Přístup ztratí: {{names}}. Do té doby si plně užijí placené sloty.",
+        "cancelButton": "Zrušit naplánovanou změnu"
+      },
+      "targetLabel": "Cílový počet uživatelů",
+      "willLoseAccess_one": "Po skončení současného období{{dateSuffix}} ztratí přístup {{count}} uživatel.",
+      "willLoseAccess_few": "Po skončení současného období{{dateSuffix}} ztratí přístup {{count}} uživatelé.",
+      "willLoseAccess_other": "Po skončení současného období{{dateSuffix}} ztratí přístup {{count}} uživatelů.",
+      "deactivateHint": "Vyberte koho. Sami sebe odstranit nemůžete. Do konce období mají vybraní lidé plný přístup; deaktivace proběhne při dalším zúčtování. Účet zůstane v databázi (pro historii dat), ale přihlášení skončí.",
+      "noEligible": "Nelze snížit pod 1 — jste jediný aktivní uživatel.",
+      "selectedOfRequired": "Vybráno {{picked}} z {{required}}.",
+      "error": {
+        "range": "Hodnota musí být v rozsahu 1–500.",
+        "needsSelectAll": "Snížením na {{target}} ztratí přístup {{required}} uživatelů — vyberte přesně {{required}}.",
+        "generic": "Uložení se nezdařilo.",
+        "connection": "Něco se pokazilo. Zkontrolujte připojení."
+      },
+      "submit": "Uložit počet",
+      "redirecting": "Přesměrování na platební bránu…"
+    },
+    "livePreview": {
+      "newCostLabel": "Nový náklad:",
+      "perMonth": "měsíc",
+      "perYear": "rok"
+    },
+    "billingInterval": {
+      "title": "Způsob fakturace",
+      "subtitleTemplate": "Změna se projeví {{when}}. Nezasahuje do aktuálního období.",
+      "switchTakesEffect": {
+        "trial": "po skončení zkušební doby",
+        "default": "při dalším zúčtovacím období"
+      },
+      "monthly": {
+        "title": "Měsíční",
+        "subtitle": "Účtováno každý měsíc"
+      },
+      "annual": {
+        "title": "Roční",
+        "subtitleWithSavings": "Účtováno jednou ročně, ušetříte 16 % — {{amount}} / rok",
+        "subtitleNoSavings": "Účtováno jednou ročně, ušetříte 16 %"
+      },
+      "currentLabel": {
+        "monthly": "měsíčně",
+        "annual": "ročně",
+        "other": "dle vašeho plánu"
+      },
+      "pendingLabel": {
+        "monthly": "měsíční",
+        "annual": "roční"
+      },
+      "pendingNotice": "Aktuálně účtujeme {{current}}. Při dalším období přejdete na {{pending}} fakturaci.",
+      "error": "Uložení se nezdařilo. Zkuste to znovu.",
+      "submit": "Uložit způsob fakturace"
+    }
+  },
+  "integrations": {
+    "title": "Integrace",
+    "subtitle": "Propojte SimpleCRM s nástroji, které již používáte.",
+    "comingSoonBadge": "Brzy",
+    "activeBadge": "Aktivní",
+    "googleCalendar": {
+      "title": "Google Kalendář",
+      "subtitle": "Události u obchodů se na přání zapíší i do vašeho Google kalendáře.",
+      "connectedWith": "Propojeno s účtem",
+      "needsReconnect": "Google přístup odvolal — propojte kalendář prosím znovu.",
+      "reconnectButton": "Propojit znovu",
+      "disconnectButton": "Odpojit",
+      "connectButton": "Propojit",
+      "connecting": "Přesměrování…",
+      "disconnectSuccessToast": "Google Kalendář byl odpojen",
+      "disconnectErrorToast": "Odpojení se nezdařilo, zkuste to prosím znovu",
+      "connectErrorToast": "Propojení se nepodařilo zahájit, zkuste to znovu"
+    },
+    "items": {
+      "ares": {
+        "name": "ARES",
+        "body": "Automatické doplňování firemních údajů z veřejného registru."
+      },
+      "slack": {
+        "name": "Slack",
+        "body": "Notifikace o vyhraných obchodech do týmového kanálu."
+      },
+      "webhooks": {
+        "name": "Webhooky",
+        "body": "Posílejte události (deal won / company freed) na vlastní URL."
+      }
+    }
+  },
+  "pipeline": {
+    "title": "Fáze",
+    "addButton": "Přidat fázi",
+    "loading": "Načítání pipeline…",
+    "errorLoad": "Pipeline se nepodařilo načíst.",
+    "moveError": "Přesun se nezdařil.",
+    "deleteConfirm": "Smazat fázi \"{{name}}\"?",
+    "deleteError": "Smazání se nezdařilo.",
+    "form": {
+      "nameLabel": "Název",
+      "probabilityLabel": "Pravděp. (%)",
+      "colorLabel": "Barva",
+      "typeLabel": "Typ",
+      "createSubmit": "Vytvořit",
+      "saveSubmit": "Uložit",
+      "cancel": "Zrušit",
+      "errorUnknown": "Neznámá chyba."
+    },
+    "stageTypes": {
+      "open": "Otevřená",
+      "won": "Výhra",
+      "lost": "Prohra"
+    },
+    "row": {
+      "moveUpAriaLabel": "Posunout nahoru",
+      "moveDownAriaLabel": "Posunout dolů",
+      "editAriaLabel": "Upravit",
+      "deleteAriaLabel": "Smazat"
+    }
+  },
+  "permissions": {
+    "visibility": {
+      "title": "Viditelnost",
+      "subtitle": "Co vidí jednotlivé role v Reportech a na Přehledu."
+    },
+    "leaderboard": {
+      "label": "Zobrazit obchodníkům žebříček",
+      "subtitle": "Když je vypnuto, obchodníci v Reportech vidí pouze své vlastní výsledky. Manažeři a administrátoři žebříček vidí vždy.",
+      "error": "Uložení se nezdařilo."
+    },
+    "companyRules": {
+      "title": "Pravidla pro firmy",
+      "subtitle": "Doba, po které neaktivní firmy připadají manažerům zpět k přerozdělení."
+    },
+    "ownershipWindow": {
+      "label": "Doba držení firem (dny)",
+      "subtitle": "Po této době bez vyhraného obchodu se firma automaticky uvolní z poolu obchodníka zpět manažerům k přerozdělení. Výchozí hodnota je 365 dní (1 rok). Povolený rozsah 1–3650 dní.",
+      "save": "Uložit",
+      "saving": "Ukládáme…",
+      "savedFlash": "Uloženo.",
+      "error": {
+        "range": "Hodnota musí být mezi 1 a 3650 dny.",
+        "generic": "Uložení se nezdařilo. Zkuste to prosím znovu."
+      }
+    },
+    "table": {
+      "title": "Oprávnění",
+      "subtitle": "Oprávnění jsou v této verzi pevně daná. Pokud potřebujete vlastní role, dejte nám vědět.",
+      "action": "Akce",
+      "rep": "Obchodník",
+      "manager": "Manažer",
+      "admin": "Administrátor"
+    },
+    "rows": {
+      "viewAllDeals": "Vidět všechny obchody v rámci pipeline",
+      "editCompanies": "Editovat firmy",
+      "deleteCompanies": "Mazat firmy a uvolňovat z poolu",
+      "manageUsers": "Spravovat uživatele a týmy",
+      "editPipeline": "Editovat fáze pipeline",
+      "exportReports": "Exportovat reporty"
+    },
+    "scope": {
+      "own": "Jen vlastní",
+      "team": "Tým",
+      "all": "Vše",
+      "yes": "Ano"
+    }
+  },
+  "import": {
+    "page": {
+      "pageTitle": "Import",
+      "title": "Hromadný import",
+      "subtitle": "Nahrajte jeden nebo více CSV souborů. U každého si ověříme, co obsahuje, a vy potvrdíte mapování polí. Náhled si vždy zobrazíte před zápisem.",
+      "backLink": "Zpět do nastavení"
+    },
+    "stepper": {
+      "upload": "Nahrát soubory",
+      "mapping": "Namapovat sloupce",
+      "preview": "Náhled a potvrzení"
+    },
+    "roles": {
+      "companies": "Firmy",
+      "contacts": "Kontakty",
+      "combined": "Firmy + kontakty (jeden řádek = kontakt)",
+      "unknown": "Neznámé (vyberte ručně)"
+    },
+    "upload": {
+      "dropzoneText": "Přetáhněte CSV soubory sem nebo klikněte pro výběr",
+      "dropzoneHint": "Můžete nahrát více souborů najednou (firmy, kontakty, případně oboje v jednom).",
+      "columnsCount_one": "{{count}} sloupec",
+      "columnsCount_few": "{{count}} sloupce",
+      "columnsCount_other": "{{count}} sloupců",
+      "roleLabel": "Role:",
+      "removeAriaLabel": "Odebrat soubor",
+      "continueButton": "Pokračovat",
+      "errors": {
+        "missingHeaderRow": "CSV nemá hlavičku.",
+        "emptyHeaderRow": "Hlavička CSV je prázdná.",
+        "generic": "Soubor se nepodařilo přečíst."
+      }
+    },
+    "mapping": {
+      "companyColumnsTitle": "Sloupce firem",
+      "contactColumnsTitle": "Sloupce kontaktů",
+      "matchKeyLabel": "Sloupec pro propojení s firmou",
+      "matchKeyPlaceholder": "— vyberte —",
+      "backButton": "Zpět",
+      "previewButton": "Spustit náhled",
+      "matchSource": {
+        "legend": "Klíč pro spárování kontaktů s firmou",
+        "typeLabel": "Typ klíče",
+        "ico": "IČO",
+        "name": "Název firmy",
+        "email": "E-mail",
+        "hint": "Podle této hodnoty kontakt najde svou firmu — buď mezi firmami v nahraných souborech, nebo mezi firmami, které už v CRM máte. Stačí tedy nahrát jen kontakty."
+      },
+      "bulkOwner": {
+        "legend": "Přiřadit všem importovaným firmám jednoho obchodníka",
+        "checkboxLabel": "Aktivovat hromadné přiřazení",
+        "selectLabel": "Obchodník",
+        "selectPlaceholder": "— vyberte —",
+        "overrideWarning": "Sloupec „Obchodník\" je v mapování zapnutý, ale hromadné přiřazení má přednost — sloupec bude ignorován.",
+        "hint": "Bez aktivace zůstanou firmy buď bez vlastníka (společný pool), nebo dostanou vlastníka ze sloupce „Obchodník\" v CSV (e-mail nebo jméno)."
+      }
+    },
+    "mappingTable": {
+      "emptyMessage": "Nahrajte CSV v předchozím kroku, ať máme sloupce k namapování.",
+      "csvColumnHeader": "Sloupec v CSV",
+      "appFieldHeader": "Pole v aplikaci",
+      "ignoreOption": "— Ignorovat —",
+      "missingRequiredPrefix": "Chybí povinná pole:",
+      "columnAriaLabel": "Mapování sloupce {{header}}"
+    },
+    "preview": {
+      "counts": {
+        "companiesNew": "Firmy — nové",
+        "companiesUpdate": "Firmy — aktualizace",
+        "contactsNew": "Kontakty — nové",
+        "contactsUpdate": "Kontakty — aktualizace",
+        "invalidRows": "Chybné řádky",
+        "unmatchedContacts": "Nezpárované kontakty"
+      },
+      "errorsSummary": "Chybové řádky ({{count}})",
+      "rowLabel": "ř. {{row}} ({{side}})",
+      "rowLabelWithField": "ř. {{row}} ({{side}}, {{field}})",
+      "rowPrefix": "ř. {{row}}",
+      "hiddenErrors_one": "…dalších {{count}} chyba skryta.",
+      "hiddenErrors_few": "…dalších {{count}} chyby skryty.",
+      "hiddenErrors_other": "…dalších {{count}} chyb skryto.",
+      "diffSummary": "Bude změněno: {{count}} záznamů",
+      "diffTruncatedNote": "(zobrazeno prvních 200)",
+      "unmatchedSummary": "Nezpárované kontakty ({{count}})",
+      "unmatchedRow": "ř. {{row}} — {{name}} (klíč: {{key}})",
+      "unmatchedRowFallback": "?",
+      "skipUnmatchedLabel": "Přeskočit nezpárované kontakty bez chybové hlášky",
+      "skipUnmatchedHint": "Pokud zatrhnete, kontakty bez nalezené firmy se přeskočí — chybové hlášky nezablokují import. Jinak je import považuje za chyby a zapíše pouze úspěšné řádky.",
+      "backButton": "Upravit mapování",
+      "cancelButton": "Zrušit",
+      "commitButton": "Potvrdit a importovat",
+      "blockedLabel": "Není co importovat",
+      "createdCompanies_one": "{{count}} firma",
+      "createdCompanies_few": "{{count}} firmy",
+      "createdCompanies_other": "{{count}} firem",
+      "createdContacts_one": "{{count}} kontakt",
+      "createdContacts_few": "{{count}} kontakty",
+      "createdContacts_other": "{{count}} kontaktů",
+      "doneToast": "Hotovo. Vytvořeno: {{companies}}, {{contacts}}.",
+      "previewFailed": "Náhled selhal.",
+      "importFailed": "Import selhal."
+    }
   }
 }

@@ -62,6 +62,12 @@ function parseLine(line: string, delimiter: string): string[] {
   return out;
 }
 
+/**
+ * Thrown with a stable machine-readable `message` (not user-facing text —
+ * the rendering component maps it to a catalog key via `SNIFF_ERROR_KEY`).
+ */
+export class CsvSniffError extends Error {}
+
 export async function sniffCsvHeaders(file: File): Promise<SniffResult> {
   // Read only the first ~8 KB so a 10 MB CSV still resolves instantly.
   const blob = file.slice(0, 8192);
@@ -70,12 +76,12 @@ export async function sniffCsvHeaders(file: File): Promise<SniffResult> {
   const newlineIdx = stripped.search(/\r?\n/);
   const firstLine = newlineIdx === -1 ? stripped : stripped.slice(0, newlineIdx);
   if (!firstLine.trim()) {
-    throw new Error("CSV nemá hlavičku.");
+    throw new CsvSniffError("missing_header_row");
   }
   const delimiter = detectDelimiter(firstLine);
   const headers = parseLine(firstLine, delimiter).filter((h) => h.length > 0);
   if (headers.length === 0) {
-    throw new Error("Hlavička CSV je prázdná.");
+    throw new CsvSniffError("empty_header_row");
   }
   return { headers, delimiter };
 }

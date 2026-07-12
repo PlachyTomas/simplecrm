@@ -1,5 +1,6 @@
 import { Mail } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   isSmtpConfigured,
@@ -37,6 +38,7 @@ const inputClass =
   "mt-1 block w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none";
 
 export function SmtpSettingsCard() {
+  const { t } = useTranslation("settings");
   const toast = useToast();
   const { data } = useSmtpSettings();
   const save = useSaveSmtpSettings();
@@ -81,13 +83,13 @@ export function SmtpSettingsCard() {
     save.mutate(body, {
       onSuccess: () => {
         setForm((f) => ({ ...f, password: "" }));
-        toast.success("Nastavení SMTP uloženo. Otestujte připojení.");
+        toast.success(t("smtp.saveSuccess"));
       },
       onError: (err) =>
         toast.error(
           err instanceof ApiError && typeof err.body === "object"
-            ? "Uložení se nezdařilo — zkontrolujte zadané údaje."
-            : "Uložení se nezdařilo, zkuste to prosím znovu.",
+            ? t("smtp.saveErrorDetailed")
+            : t("smtp.saveErrorGeneric"),
         ),
     });
   };
@@ -95,10 +97,10 @@ export function SmtpSettingsCard() {
   const onTest = () => {
     test.mutate(undefined, {
       onSuccess: (res) => {
-        if (res.ok) toast.success("Připojení k SMTP ověřeno ✓");
-        else toast.error(`Test selhal: ${res.error ?? "neznámá chyba"}`);
+        if (res.ok) toast.success(t("smtp.testSuccess"));
+        else toast.error(`${t("smtp.testFailPrefix")} ${res.error ?? t("smtp.testUnknownError")}`);
       },
-      onError: () => toast.error("Test se nezdařil, zkuste to prosím znovu."),
+      onError: () => toast.error(t("smtp.testError")),
     });
   };
 
@@ -110,35 +112,36 @@ export function SmtpSettingsCard() {
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-medium text-text-primary">Odesílání e-mailů (SMTP)</p>
+            <p className="text-sm font-medium text-text-primary">{t("smtp.title")}</p>
             {verified ? (
               <span className="inline-flex items-center rounded-full bg-success-subtle px-2 py-0.5 text-xs font-medium text-success">
-                Ověřeno
+                {t("smtp.verifiedBadge")}
               </span>
             ) : configured ? (
               <span className="inline-flex items-center rounded-full bg-warning-subtle px-2 py-0.5 text-xs font-medium text-warning">
-                Neověřeno
+                {t("smtp.unverifiedBadge")}
               </span>
             ) : null}
           </div>
-          <p className="mt-0.5 text-sm text-text-secondary">
-            Hromadné e-maily se odesílají z vaší vlastní schránky. Zadejte přihlašovací údaje ke
-            svému SMTP serveru a ověřte připojení.
-          </p>
+          <p className="mt-0.5 text-sm text-text-secondary">{t("smtp.subtitle")}</p>
 
           <form onSubmit={onSubmit} className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block sm:col-span-2">
-              <span className="text-xs font-medium text-text-secondary">SMTP server (host)</span>
+              <span className="text-xs font-medium text-text-secondary">
+                {t("smtp.fields.host")}
+              </span>
               <input
                 className={inputClass}
                 value={form.host}
                 onChange={(e) => set("host", e.target.value)}
-                placeholder="smtp.vasefirma.cz"
+                placeholder={t("smtp.placeholders.host")}
                 required
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-text-secondary">Port</span>
+              <span className="text-xs font-medium text-text-secondary">
+                {t("smtp.fields.port")}
+              </span>
               <input
                 className={inputClass}
                 type="number"
@@ -148,60 +151,70 @@ export function SmtpSettingsCard() {
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-text-secondary">Zabezpečení</span>
+              <span className="text-xs font-medium text-text-secondary">
+                {t("smtp.fields.security")}
+              </span>
               <select
                 className={inputClass}
                 value={form.security}
                 onChange={(e) => set("security", e.target.value as Security)}
               >
-                <option value="ssl">SSL/TLS (obvykle port 465)</option>
-                <option value="starttls">STARTTLS (obvykle port 587)</option>
+                <option value="ssl">{t("smtp.securityOptions.ssl")}</option>
+                <option value="starttls">{t("smtp.securityOptions.starttls")}</option>
               </select>
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-text-secondary">Uživatel</span>
+              <span className="text-xs font-medium text-text-secondary">
+                {t("smtp.fields.username")}
+              </span>
               <input
                 className={inputClass}
                 value={form.username}
                 onChange={(e) => set("username", e.target.value)}
-                placeholder="jan@vasefirma.cz"
+                placeholder={t("smtp.placeholders.username")}
                 autoComplete="off"
                 required
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-text-secondary">Heslo</span>
+              <span className="text-xs font-medium text-text-secondary">
+                {t("smtp.fields.password")}
+              </span>
               <input
                 className={inputClass}
                 type="password"
                 value={form.password}
                 onChange={(e) => set("password", e.target.value)}
                 placeholder={
-                  hasStoredPassword ? "•••••••• (beze změny)" : "heslo nebo app password"
+                  hasStoredPassword
+                    ? t("smtp.placeholders.passwordStored")
+                    : t("smtp.placeholders.passwordNew")
                 }
                 autoComplete="new-password"
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-text-secondary">Odesílatel (e-mail)</span>
+              <span className="text-xs font-medium text-text-secondary">
+                {t("smtp.fields.fromEmail")}
+              </span>
               <input
                 className={inputClass}
                 type="email"
                 value={form.from_email}
                 onChange={(e) => set("from_email", e.target.value)}
-                placeholder="jan@vasefirma.cz"
+                placeholder={t("smtp.placeholders.fromEmail")}
                 required
               />
             </label>
             <label className="block">
               <span className="text-xs font-medium text-text-secondary">
-                Jméno odesílatele (volitelné)
+                {t("smtp.fields.fromName")}
               </span>
               <input
                 className={inputClass}
                 value={form.from_name}
                 onChange={(e) => set("from_name", e.target.value)}
-                placeholder="Jan Novák"
+                placeholder={t("smtp.placeholders.fromName")}
               />
             </label>
 
@@ -211,7 +224,7 @@ export function SmtpSettingsCard() {
                 disabled={save.isPending}
                 className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {save.isPending ? "Ukládání…" : "Uložit"}
+                {save.isPending ? t("smtp.saving") : t("smtp.save")}
               </button>
               <button
                 type="button"
@@ -219,7 +232,7 @@ export function SmtpSettingsCard() {
                 disabled={!configured || test.isPending}
                 className="h-9 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {test.isPending ? "Testuji…" : "Otestovat připojení"}
+                {test.isPending ? t("smtp.testing") : t("smtp.test")}
               </button>
             </div>
           </form>

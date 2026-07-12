@@ -12,6 +12,7 @@
 
 import { AlertCircle, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { ImportPreviewOut } from "@/app/settings/import/useImport";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ export function ImportPreviewReport(props: {
   isCommitting: boolean;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation("settings");
   const { result } = props;
   const totalCreated = result.counts.companies_to_create + result.counts.contacts_to_create;
   const totalUpdated = result.counts.companies_to_update + result.counts.contacts_to_update;
@@ -35,17 +37,29 @@ export function ImportPreviewReport(props: {
   return (
     <section className="space-y-6">
       <div className="grid gap-3 md:grid-cols-4">
-        <CountCard label="Firmy — nové" value={result.counts.companies_to_create} />
-        <CountCard label="Firmy — aktualizace" value={result.counts.companies_to_update} />
-        <CountCard label="Kontakty — nové" value={result.counts.contacts_to_create} />
-        <CountCard label="Kontakty — aktualizace" value={result.counts.contacts_to_update} />
         <CountCard
-          label="Chybné řádky"
+          label={t("import.preview.counts.companiesNew")}
+          value={result.counts.companies_to_create}
+        />
+        <CountCard
+          label={t("import.preview.counts.companiesUpdate")}
+          value={result.counts.companies_to_update}
+        />
+        <CountCard
+          label={t("import.preview.counts.contactsNew")}
+          value={result.counts.contacts_to_create}
+        />
+        <CountCard
+          label={t("import.preview.counts.contactsUpdate")}
+          value={result.counts.contacts_to_update}
+        />
+        <CountCard
+          label={t("import.preview.counts.invalidRows")}
           value={result.counts.invalid_rows}
           tone={result.counts.invalid_rows > 0 ? "danger" : "neutral"}
         />
         <CountCard
-          label="Nezpárované kontakty"
+          label={t("import.preview.counts.unmatchedContacts")}
           value={result.counts.unmatched_contacts}
           tone={result.counts.unmatched_contacts > 0 ? "warning" : "neutral"}
         />
@@ -67,11 +81,10 @@ export function ImportPreviewReport(props: {
             onChange={(e) => props.setSkipUnmatched(e.target.checked)}
             data-testid="import-skip-unmatched"
           />
-          Přeskočit nezpárované kontakty bez chybové hlášky
+          {t("import.preview.skipUnmatchedLabel")}
         </label>
         <p className="mt-1 pl-6 text-xs text-text-tertiary">
-          Pokud zatrhnete, kontakty bez nalezené firmy se přeskočí — chybové hlášky nezablokují
-          import. Jinak je import považuje za chyby a zapíše pouze úspěšné řádky.
+          {t("import.preview.skipUnmatchedHint")}
         </p>
       </fieldset>
 
@@ -82,14 +95,14 @@ export function ImportPreviewReport(props: {
             onClick={props.onBack}
             className="rounded-md border border-border px-4 py-2 text-sm hover:bg-bg"
           >
-            Upravit mapování
+            {t("import.preview.backButton")}
           </button>
           <button
             type="button"
             onClick={props.onCancel}
             className="rounded-md border border-border px-4 py-2 text-sm text-text-tertiary hover:text-text-primary"
           >
-            Zrušit
+            {t("import.preview.cancelButton")}
           </button>
         </div>
         <button
@@ -100,7 +113,7 @@ export function ImportPreviewReport(props: {
           data-testid="import-confirm-commit"
         >
           {props.isCommitting && <Loader2 className="animate-spin" size={14} />}
-          {blocked ? "Není co importovat" : "Potvrdit a importovat"}
+          {blocked ? t("import.preview.blockedLabel") : t("import.preview.commitButton")}
         </button>
       </div>
     </section>
@@ -129,12 +142,13 @@ function CountCard(props: {
 }
 
 function ErrorList({ errors }: { errors: ImportPreviewOut["errors"] }) {
+  const { t } = useTranslation("settings");
   const visible = errors.slice(0, MAX_ERRORS_RENDERED);
   const overflow = errors.length - visible.length;
   return (
     <details open className="rounded-md border border-danger bg-danger/5 p-4">
       <summary className="cursor-pointer text-sm font-medium text-danger">
-        Chybové řádky ({errors.length})
+        {t("import.preview.errorsSummary", { count: errors.length })}
       </summary>
       <ul className="mt-3 space-y-2 text-sm">
         {visible.map((err, idx) => (
@@ -142,8 +156,13 @@ function ErrorList({ errors }: { errors: ImportPreviewOut["errors"] }) {
             <AlertCircle size={14} strokeWidth={1.75} className="mt-0.5 shrink-0 text-danger" />
             <span>
               <span className="font-mono text-xs text-text-tertiary">
-                ř. {err.row_index} ({err.side}
-                {err.field ? `, ${err.field}` : ""})
+                {err.field
+                  ? t("import.preview.rowLabelWithField", {
+                      row: err.row_index,
+                      side: err.side,
+                      field: err.field,
+                    })
+                  : t("import.preview.rowLabel", { row: err.row_index, side: err.side })}
               </span>{" "}
               — {err.message}
             </span>
@@ -151,13 +170,16 @@ function ErrorList({ errors }: { errors: ImportPreviewOut["errors"] }) {
         ))}
       </ul>
       {overflow > 0 && (
-        <p className="mt-2 text-xs text-text-tertiary">…dalších {overflow} chyb skryto.</p>
+        <p className="mt-2 text-xs text-text-tertiary">
+          {t("import.preview.hiddenErrors", { count: overflow })}
+        </p>
       )}
     </details>
   );
 }
 
 function DiffPanel(props: { diffs: ImportPreviewOut["update_diffs"]; truncated: boolean }) {
+  const { t } = useTranslation("settings");
   const [open, setOpen] = useState(true);
   return (
     <div className="rounded-md border border-border bg-surface">
@@ -167,9 +189,11 @@ function DiffPanel(props: { diffs: ImportPreviewOut["update_diffs"]; truncated: 
         className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium"
       >
         {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-        Bude změněno: {props.diffs.length} záznamů
+        {t("import.preview.diffSummary", { count: props.diffs.length })}
         {props.truncated && (
-          <span className="ml-2 text-xs text-text-tertiary">(zobrazeno prvních 200)</span>
+          <span className="ml-2 text-xs text-text-tertiary">
+            {t("import.preview.diffTruncatedNote")}
+          </span>
         )}
       </button>
       {open && (
@@ -177,7 +201,8 @@ function DiffPanel(props: { diffs: ImportPreviewOut["update_diffs"]; truncated: 
           {props.diffs.map((diff) => (
             <div key={`${diff.entity_id}-${diff.row_index}`}>
               <div className="text-xs text-text-tertiary">
-                ř. {diff.row_index} · {diff.entity_type} · {diff.entity_id}
+                {t("import.preview.rowPrefix", { row: diff.row_index })} · {diff.entity_type} ·{" "}
+                {diff.entity_id}
               </div>
               <ul className="mt-1 space-y-0.5">
                 {Object.entries(diff.changes).map(([field, change]) => (
@@ -198,16 +223,20 @@ function DiffPanel(props: { diffs: ImportPreviewOut["update_diffs"]; truncated: 
 }
 
 function UnmatchedList({ unmatched }: { unmatched: ImportPreviewOut["unmatched"] }) {
+  const { t } = useTranslation("settings");
   return (
     <details className="rounded-md border border-warning bg-warning/5 p-4">
       <summary className="cursor-pointer text-sm font-medium text-warning">
-        Nezpárované kontakty ({unmatched.length})
+        {t("import.preview.unmatchedSummary", { count: unmatched.length })}
       </summary>
       <ul className="mt-3 space-y-1 text-sm">
         {unmatched.map((u) => (
           <li key={u.row_index} className="font-mono text-xs">
-            ř. {u.row_index} — {u.first_name ?? "?"} {u.last_name ?? "?"} (klíč:{" "}
-            {u.match_key_value ?? "—"})
+            {t("import.preview.unmatchedRow", {
+              row: u.row_index,
+              name: `${u.first_name ?? t("import.preview.unmatchedRowFallback")} ${u.last_name ?? t("import.preview.unmatchedRowFallback")}`,
+              key: u.match_key_value ?? "—",
+            })}
           </li>
         ))}
       </ul>

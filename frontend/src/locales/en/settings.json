@@ -2,6 +2,582 @@
   "appearance": {
     "language": "Application language",
     "languageSaved": "Application language saved.",
-    "languageSaveFailed": "Couldn't save the language. Please try again."
+    "languageSaveFailed": "Couldn't save the language. Please try again.",
+    "title": "Appearance",
+    "subtitle": "Choose a light or dark theme. The choice is saved locally in your browser."
+  },
+  "nav": {
+    "groups": {
+      "personal": "Personal",
+      "organization": "Organization",
+      "sales": "Sales & data",
+      "billing": "Subscription"
+    },
+    "sections": {
+      "appearance": { "label": "Appearance", "description": "Theme, colors, and other visual settings." },
+      "integrations": {
+        "label": "Integrations",
+        "description": "Connections to external services and sending emails (SMTP)."
+      },
+      "organization": {
+        "label": "Organization",
+        "description": "Contracted user count and billing method."
+      },
+      "teams": { "label": "Teams", "description": "Group salespeople under managers." },
+      "users": {
+        "label": "Users",
+        "description": "Manage roles, team membership, and member activity."
+      },
+      "invitations": {
+        "label": "Invitations",
+        "description": "Invite new members and manage permissions."
+      },
+      "permissions": {
+        "label": "Permissions",
+        "description": "Rules for who can do what in the app."
+      },
+      "pipeline": {
+        "label": "Pipeline",
+        "description": "Manage pipeline stages and their order."
+      },
+      "blocked-companies": {
+        "label": "Blocked company IDs",
+        "description": "List of company IDs (IČO) salespeople can't add as a company."
+      },
+      "privacy": {
+        "label": "Privacy",
+        "description": "History of the SimpleCRM team's access to your data, and organization deletion."
+      },
+      "billing": {
+        "label": "Billing",
+        "description": "Plan, invoice, and payment method details."
+      }
+    },
+    "importItem": {
+      "label": "Import from CSV",
+      "description": "Bulk import of companies and contacts from CSV files."
+    }
+  },
+  "home": {
+    "pageTitle": "Settings",
+    "title": "Settings",
+    "loading": "Loading…"
+  },
+  "sectionPage": {
+    "pageTitleWithSection": "Settings — {{label}}",
+    "pageTitleDefault": "Settings",
+    "loading": "Loading…",
+    "backLink": "Settings"
+  },
+  "layout": {
+    "navAriaLabel": "Settings sections",
+    "title": "Settings",
+    "loading": "Loading…",
+    "gcalConnected": "Google Calendar connected",
+    "gcalDenied": "Google Calendar connection was cancelled",
+    "gcalFailed": "Google Calendar connection failed, please try again"
+  },
+  "privacy": {
+    "operatorAccess": {
+      "title": "Operator access",
+      "bodyPrefix": "Authorized SimpleCRM operator staff have limited access to your data for support, incident response, and maintenance purposes. Every such access is logged and shown in the table below. Details on the operator's obligations are in",
+      "linkText": "Art. 5 of the Data Processing Agreement",
+      "loading": "Loading…",
+      "error": "Loading the access history failed.",
+      "empty": "No access has been logged. If anyone from the SimpleCRM team ever views your data, a new entry will appear here.",
+      "table": {
+        "when": "When",
+        "action": "Action",
+        "by": "Authorized person",
+        "target": "Affected user"
+      }
+    },
+    "actions": {
+      "list_users": "Viewed the user list",
+      "view_subscription": "Viewed subscription details",
+      "view_invoices": "Viewed billing history",
+      "view_activity": "Viewed subscription activity",
+      "impersonate": "Logged in as a user (impersonation)"
+    },
+    "dangerZone": {
+      "title": "Permanently delete organization",
+      "body1": "Irreversibly deletes all personal data: contacts, companies, deals, activities, and user accounts. Issued tax documents are retained for a further 10 years as required by law under § 31 of the Accounting Act — without your access credentials.",
+      "body2": "Before deleting, we recommend exporting your data from the Reports section. Any active subscription will be automatically cancelled as part of the deletion.",
+      "button": "Delete organization…"
+    },
+    "eraseDialog": {
+      "title": "Permanently delete organization?",
+      "confirmBody": "This action can't be undone. To confirm, type the organization's exact name:",
+      "nameLabel": "Organization name",
+      "submit": "Delete permanently",
+      "submitting": "Deleting…",
+      "cancel": "Cancel",
+      "genericError": "Deletion failed. Please try again."
+    }
+  },
+  "blockedCompanies": {
+    "title": "Blocked company IDs",
+    "subtitle": "Salespeople can't add a company with this ID (IČO). We'll fill in the name from ARES.",
+    "form": {
+      "icoLabel": "IČO",
+      "categoryLabel": "Category",
+      "noteLabel": "Note (optional)",
+      "addButton": "Add",
+      "adding": "Adding…"
+    },
+    "errors": {
+      "invalidIco": "The company ID (IČO) must have 8 digits.",
+      "duplicate": "This company ID is already on the blocked list.",
+      "generic": "Adding failed. Please try again."
+    },
+    "table": {
+      "ico": "IČO",
+      "company": "Company",
+      "category": "Category",
+      "note": "Note",
+      "added": "Added"
+    },
+    "loading": "Loading…",
+    "empty": "Nothing yet. Add the first company ID above.",
+    "removeConfirm": "Remove company ID {{ico}} from the blocked list?",
+    "removeAriaLabel": "Remove {{ico}}",
+    "reasons": {
+      "competitor": "Competitor",
+      "do_not_contact": "Do not contact",
+      "bankrupt": "Insolvency",
+      "legal_issue": "Legal issue",
+      "other": "Other"
+    }
+  },
+  "invitations": {
+    "permissionDenied": {
+      "title": "Invitations",
+      "body": "Invitations can be managed by an administrator or a user with the \"Can invite others\" permission."
+    },
+    "invite": {
+      "title": "Invite a user",
+      "subtitle": "We'll send an email with a link the invitee can use to sign in with Google and automatically join your organization.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "colleague@company.com",
+      "roleLabel": "Role",
+      "teamLabel": "Team",
+      "noTeamOption": "— no team —",
+      "defaultTeamSuffix": " (default)",
+      "canInviteLabel": "Can invite other users",
+      "inviteLinkLabel": "Acceptance link:",
+      "submit": "Send invitation",
+      "submitting": "Sending…"
+    },
+    "errors": {
+      "invalidEmail": "Enter a valid email address.",
+      "createGeneric": "Creating the invitation failed."
+    },
+    "createdToast": "Invitation sent to {{email}}.",
+    "pending": {
+      "title": "Pending invitations",
+      "loading": "Loading…",
+      "error": "Couldn't load invitations.",
+      "empty": "No pending invitations.",
+      "table": {
+        "email": "Email",
+        "role": "Role",
+        "team": "Team",
+        "canInvite": "Can invite",
+        "expires": "Expires",
+        "actions": "Actions"
+      },
+      "canInviteYes": "Yes",
+      "canInviteNo": "No",
+      "revokeConfirm": "Revoke the invitation for {{email}}?",
+      "revokeAriaLabel": "Revoke the invitation for {{email}}",
+      "revokeSuccess": "Invitation revoked.",
+      "revokeError": "Revoking the invitation failed."
+    },
+    "roles": {
+      "admin": "Administrator",
+      "manager": "Manager",
+      "salesperson": "Salesperson"
+    }
+  },
+  "users": {
+    "title": "Users",
+    "subtitle": "Manage roles, team membership, and activity of your organization's members.",
+    "loading": "Loading…",
+    "errorLoad": "Couldn't load the user list.",
+    "errorUpdate": "Update failed.",
+    "cancelQueueConfirm": "This will cancel the entire planned user-count change. Continue?",
+    "cancelQueueError": "Cancelling the planned change failed.",
+    "table": {
+      "nameEmail": "Name / email",
+      "role": "Role",
+      "team": "Team",
+      "canInvite": "Can invite",
+      "capLimit": "Company limit",
+      "capLimitTitle": "Maximum number of companies this salesperson may hold at once. Empty = no limit.",
+      "active": "Active"
+    },
+    "noTeamOption": "— no team —",
+    "managerBadgeTitle": "This user manages these teams. Open the Teams tab to change it.",
+    "managerBadgePrefix": "Manages team",
+    "canInviteAriaLabel": "Can invite users — {{email}}",
+    "canInviteTitleAdmin": "Administrators can always invite.",
+    "canInviteTitleOther": "When checked, this user can send invitations.",
+    "capAriaLabel": "Company limit — {{email}}",
+    "capTitle": "Maximum number of companies this user may own at once. Empty = no limit.",
+    "active": "Active",
+    "deactivated": "Deactivated",
+    "deactivateConfirm": "Deactivate user {{name}}? They will lose access to the app immediately.",
+    "scheduledPillTitle": "This user will lose access on {{date}}.",
+    "scheduledPillText": "Deactivation scheduled for {{date}}",
+    "cancelScheduledAriaLabel": "Cancel scheduled deactivation",
+    "roles": {
+      "admin": "Administrator",
+      "manager": "Manager",
+      "salesperson": "Salesperson"
+    }
+  },
+  "teams": {
+    "title": "Teams",
+    "subtitle": "Teams group salespeople under a manager, who sees the whole team's pipeline.",
+    "loading": "Loading…",
+    "errorLoad": "Couldn't load teams.",
+    "createError": "Creating the team failed.",
+    "deleteError": "Deleting the team failed.",
+    "saveError": "Saving the team failed.",
+    "noManagerOption": "— no manager —",
+    "namePlaceholder": "Team name",
+    "addButton": "Add",
+    "saveButton": "Save",
+    "deleteAriaLabel": "Delete team {{name}}",
+    "deleteConfirm": "Delete team \"{{name}}\"?",
+    "table": {
+      "name": "Name",
+      "manager": "Manager",
+      "actions": "Actions"
+    }
+  },
+  "smtp": {
+    "title": "Sending emails (SMTP)",
+    "subtitle": "Bulk emails are sent from your own mailbox. Enter your SMTP server credentials and verify the connection.",
+    "verifiedBadge": "Verified",
+    "unverifiedBadge": "Unverified",
+    "fields": {
+      "host": "SMTP server (host)",
+      "port": "Port",
+      "security": "Security",
+      "username": "Username",
+      "password": "Password",
+      "fromEmail": "Sender (email)",
+      "fromName": "Sender name (optional)"
+    },
+    "placeholders": {
+      "host": "smtp.yourcompany.com",
+      "username": "jan@yourcompany.com",
+      "fromEmail": "jan@yourcompany.com",
+      "fromName": "Jan Novák",
+      "passwordStored": "•••••••• (unchanged)",
+      "passwordNew": "password or app password"
+    },
+    "securityOptions": {
+      "ssl": "SSL/TLS (usually port 465)",
+      "starttls": "STARTTLS (usually port 587)"
+    },
+    "save": "Save",
+    "saving": "Saving…",
+    "test": "Test connection",
+    "testing": "Testing…",
+    "saveSuccess": "SMTP settings saved. Test the connection.",
+    "saveErrorDetailed": "Saving failed — check the entered details.",
+    "saveErrorGeneric": "Saving failed, please try again.",
+    "testSuccess": "SMTP connection verified ✓",
+    "testFailPrefix": "Test failed:",
+    "testUnknownError": "unknown error",
+    "testError": "The test failed, please try again."
+  },
+  "invoiceDetails": {
+    "title": "Invoice details",
+    "subtitle": "This information appears on your tax documents. Enter your company ID (IČO) and we'll fill in the rest from ARES — every field can then be edited.",
+    "loading": "Loading…",
+    "error": "Loading the invoice details failed.",
+    "save": "Save invoice details",
+    "saving": "Saving…",
+    "saveSuccess": "Invoice details saved.",
+    "saveError": "Saving failed. Please try again."
+  },
+  "organization": {
+    "loading": "Loading…",
+    "error": "Loading the subscription failed.",
+    "shared": {
+      "saving": "Saving…",
+      "saved": "Saved."
+    },
+    "seatCount": {
+      "title": "Contracted user count",
+      "subtitle": "You currently have {{activeCount}} active users out of {{seatCount}} contracted. The limit affects how many invitations can be sent and matches the billed price.",
+      "pendingBanner": {
+        "text": "Planned change: the count will drop to {{count}}.",
+        "textWithDate": "Planned change: the count will drop to {{count}} on {{date}}.",
+        "loseAccess": "Will lose access: {{names}}. Until then they fully keep their paid seats.",
+        "cancelButton": "Cancel the planned change"
+      },
+      "targetLabel": "Target user count",
+      "willLoseAccess_one": "After the current period{{dateSuffix}}, {{count}} user will lose access.",
+      "willLoseAccess_other": "After the current period{{dateSuffix}}, {{count}} users will lose access.",
+      "deactivateHint": "Choose who. You can't remove yourself. Selected people keep full access until the end of the period; deactivation happens at the next billing cycle. The account stays in the database (for data history), but sign-in ends.",
+      "noEligible": "Can't go below 1 — you're the only active user.",
+      "selectedOfRequired": "Selected {{picked}} of {{required}}.",
+      "error": {
+        "range": "The value must be between 1 and 500.",
+        "needsSelectAll": "Lowering to {{target}} will lose access for {{required}} users — select exactly {{required}}.",
+        "generic": "Saving failed.",
+        "connection": "Something went wrong. Check your connection."
+      },
+      "submit": "Save count",
+      "redirecting": "Redirecting to the payment gateway…"
+    },
+    "livePreview": {
+      "newCostLabel": "New cost:",
+      "perMonth": "month",
+      "perYear": "year"
+    },
+    "billingInterval": {
+      "title": "Billing method",
+      "subtitleTemplate": "The change takes effect {{when}}. It doesn't affect the current period.",
+      "switchTakesEffect": {
+        "trial": "after the trial ends",
+        "default": "at the next billing period"
+      },
+      "monthly": {
+        "title": "Monthly",
+        "subtitle": "Billed every month"
+      },
+      "annual": {
+        "title": "Annual",
+        "subtitleWithSavings": "Billed once a year, save 16% — {{amount}} / year",
+        "subtitleNoSavings": "Billed once a year, save 16%"
+      },
+      "currentLabel": {
+        "monthly": "monthly",
+        "annual": "annually",
+        "other": "per your plan"
+      },
+      "pendingLabel": {
+        "monthly": "monthly",
+        "annual": "annual"
+      },
+      "pendingNotice": "You're currently billed {{current}}. At the next period you'll switch to {{pending}} billing.",
+      "error": "Saving failed. Please try again.",
+      "submit": "Save billing method"
+    }
+  },
+  "integrations": {
+    "title": "Integrations",
+    "subtitle": "Connect SimpleCRM with the tools you already use.",
+    "comingSoonBadge": "Coming soon",
+    "activeBadge": "Active",
+    "googleCalendar": {
+      "title": "Google Calendar",
+      "subtitle": "Deal events can also be written to your Google Calendar on request.",
+      "connectedWith": "Connected with account",
+      "needsReconnect": "Google access was revoked — please reconnect the calendar.",
+      "reconnectButton": "Reconnect",
+      "disconnectButton": "Disconnect",
+      "connectButton": "Connect",
+      "connecting": "Redirecting…",
+      "disconnectSuccessToast": "Google Calendar disconnected",
+      "disconnectErrorToast": "Disconnecting failed, please try again",
+      "connectErrorToast": "Couldn't start the connection, please try again"
+    },
+    "items": {
+      "ares": {
+        "name": "ARES",
+        "body": "Automatically fills in company details from the public registry."
+      },
+      "slack": {
+        "name": "Slack",
+        "body": "Notifications about won deals into a team channel."
+      },
+      "webhooks": {
+        "name": "Webhooks",
+        "body": "Send events (deal won / company freed) to your own URL."
+      }
+    }
+  },
+  "pipeline": {
+    "title": "Stages",
+    "addButton": "Add stage",
+    "loading": "Loading pipeline…",
+    "errorLoad": "Couldn't load the pipeline.",
+    "moveError": "Moving failed.",
+    "deleteConfirm": "Delete stage \"{{name}}\"?",
+    "deleteError": "Deletion failed.",
+    "form": {
+      "nameLabel": "Name",
+      "probabilityLabel": "Prob. (%)",
+      "colorLabel": "Color",
+      "typeLabel": "Type",
+      "createSubmit": "Create",
+      "saveSubmit": "Save",
+      "cancel": "Cancel",
+      "errorUnknown": "Unknown error."
+    },
+    "stageTypes": {
+      "open": "Open",
+      "won": "Won",
+      "lost": "Lost"
+    },
+    "row": {
+      "moveUpAriaLabel": "Move up",
+      "moveDownAriaLabel": "Move down",
+      "editAriaLabel": "Edit",
+      "deleteAriaLabel": "Delete"
+    }
+  },
+  "permissions": {
+    "visibility": {
+      "title": "Visibility",
+      "subtitle": "What each role sees in Reports and on the Dashboard."
+    },
+    "leaderboard": {
+      "label": "Show the leaderboard to salespeople",
+      "subtitle": "When off, salespeople in Reports only see their own results. Managers and administrators always see the leaderboard.",
+      "error": "Saving failed."
+    },
+    "companyRules": {
+      "title": "Company rules",
+      "subtitle": "How long before inactive companies fall back to managers for reassignment."
+    },
+    "ownershipWindow": {
+      "label": "Company holding period (days)",
+      "subtitle": "After this period without a won deal, the company is automatically released from the salesperson's pool back to managers for reassignment. The default is 365 days (1 year). Allowed range 1–3650 days.",
+      "save": "Save",
+      "saving": "Saving…",
+      "savedFlash": "Saved.",
+      "error": {
+        "range": "The value must be between 1 and 3650 days.",
+        "generic": "Saving failed. Please try again."
+      }
+    },
+    "table": {
+      "title": "Permissions",
+      "subtitle": "Permissions are fixed in this version. Let us know if you need custom roles.",
+      "action": "Action",
+      "rep": "Salesperson",
+      "manager": "Manager",
+      "admin": "Administrator"
+    },
+    "rows": {
+      "viewAllDeals": "See all deals across the pipeline",
+      "editCompanies": "Edit companies",
+      "deleteCompanies": "Delete companies and release from the pool",
+      "manageUsers": "Manage users and teams",
+      "editPipeline": "Edit pipeline stages",
+      "exportReports": "Export reports"
+    },
+    "scope": {
+      "own": "Own only",
+      "team": "Team",
+      "all": "All",
+      "yes": "Yes"
+    }
+  },
+  "import": {
+    "page": {
+      "pageTitle": "Import",
+      "title": "Bulk import",
+      "subtitle": "Upload one or more CSV files. For each, we'll check what it contains and you'll confirm the field mapping. You'll always see a preview before committing.",
+      "backLink": "Back to settings"
+    },
+    "stepper": {
+      "upload": "Upload files",
+      "mapping": "Map columns",
+      "preview": "Preview and confirm"
+    },
+    "roles": {
+      "companies": "Companies",
+      "contacts": "Contacts",
+      "combined": "Companies + contacts (one row = a contact)",
+      "unknown": "Unknown (choose manually)"
+    },
+    "upload": {
+      "dropzoneText": "Drop CSV files here or click to choose",
+      "dropzoneHint": "You can upload several files at once (companies, contacts, or both in one).",
+      "columnsCount_one": "{{count}} column",
+      "columnsCount_other": "{{count}} columns",
+      "roleLabel": "Role:",
+      "removeAriaLabel": "Remove file",
+      "continueButton": "Continue",
+      "errors": {
+        "missingHeaderRow": "The CSV has no header row.",
+        "emptyHeaderRow": "The CSV header row is empty.",
+        "generic": "Couldn't read the file."
+      }
+    },
+    "mapping": {
+      "companyColumnsTitle": "Company columns",
+      "contactColumnsTitle": "Contact columns",
+      "matchKeyLabel": "Column to link to the company",
+      "matchKeyPlaceholder": "— choose —",
+      "backButton": "Back",
+      "previewButton": "Run preview",
+      "matchSource": {
+        "legend": "Key to match contacts to a company",
+        "typeLabel": "Key type",
+        "ico": "IČO",
+        "name": "Company name",
+        "email": "Email",
+        "hint": "A contact finds its company by this value — either among companies in the uploaded files, or among companies you already have in the CRM. So you can upload just contacts."
+      },
+      "bulkOwner": {
+        "legend": "Assign one salesperson to all imported companies",
+        "checkboxLabel": "Enable bulk assignment",
+        "selectLabel": "Salesperson",
+        "selectPlaceholder": "— choose —",
+        "overrideWarning": "The \"Salesperson\" column is enabled in the mapping, but bulk assignment takes precedence — the column will be ignored.",
+        "hint": "Without enabling this, companies will either have no owner (shared pool) or get an owner from the \"Salesperson\" column in the CSV (email or name)."
+      }
+    },
+    "mappingTable": {
+      "emptyMessage": "Upload a CSV in the previous step so we have columns to map.",
+      "csvColumnHeader": "CSV column",
+      "appFieldHeader": "App field",
+      "ignoreOption": "— Ignore —",
+      "missingRequiredPrefix": "Missing required fields:",
+      "columnAriaLabel": "Mapping for column {{header}}"
+    },
+    "preview": {
+      "counts": {
+        "companiesNew": "Companies — new",
+        "companiesUpdate": "Companies — update",
+        "contactsNew": "Contacts — new",
+        "contactsUpdate": "Contacts — update",
+        "invalidRows": "Invalid rows",
+        "unmatchedContacts": "Unmatched contacts"
+      },
+      "errorsSummary": "Error rows ({{count}})",
+      "rowLabel": "row {{row}} ({{side}})",
+      "rowLabelWithField": "row {{row}} ({{side}}, {{field}})",
+      "rowPrefix": "row {{row}}",
+      "hiddenErrors_one": "…{{count}} more error hidden.",
+      "hiddenErrors_other": "…{{count}} more errors hidden.",
+      "diffSummary": "Will change: {{count}} records",
+      "diffTruncatedNote": "(showing the first 200)",
+      "unmatchedSummary": "Unmatched contacts ({{count}})",
+      "unmatchedRow": "row {{row}} — {{name}} (key: {{key}})",
+      "unmatchedRowFallback": "?",
+      "skipUnmatchedLabel": "Skip unmatched contacts without an error message",
+      "skipUnmatchedHint": "If checked, contacts with no matching company are skipped — error messages won't block the import. Otherwise the import treats them as errors and only writes the successful rows.",
+      "backButton": "Edit mapping",
+      "cancelButton": "Cancel",
+      "commitButton": "Confirm and import",
+      "blockedLabel": "Nothing to import",
+      "createdCompanies_one": "{{count}} company",
+      "createdCompanies_other": "{{count}} companies",
+      "createdContacts_one": "{{count}} contact",
+      "createdContacts_other": "{{count}} contacts",
+      "doneToast": "Done. Created: {{companies}}, {{contacts}}.",
+      "previewFailed": "Preview failed.",
+      "importFailed": "Import failed."
+    }
   }
 }

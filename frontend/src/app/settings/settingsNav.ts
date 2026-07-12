@@ -1,3 +1,4 @@
+import type { ParseKeys } from "i18next";
 import {
   Ban,
   Building2,
@@ -31,17 +32,17 @@ export type SettingsGroup = "personal" | "organization" | "sales" | "billing";
 
 export const GROUP_ORDER: SettingsGroup[] = ["personal", "organization", "sales", "billing"];
 
-export const GROUP_LABELS: Record<SettingsGroup, string> = {
-  personal: "Osobní",
-  organization: "Organizace",
-  sales: "Prodej & data",
-  billing: "Předplatné",
+export const GROUP_LABELS: Record<SettingsGroup, ParseKeys<"settings">> = {
+  personal: "nav.groups.personal",
+  organization: "nav.groups.organization",
+  sales: "nav.groups.sales",
+  billing: "nav.groups.billing",
 };
 
 export interface SettingsSectionMeta {
   key: SettingsSectionKey;
-  label: string;
-  description: string;
+  labelKey: ParseKeys<"settings">;
+  descriptionKey: ParseKeys<"settings">;
   group: SettingsGroup;
   icon: LucideIcon;
   /** Per-user setting reachable by any role (not just admins). */
@@ -51,88 +52,88 @@ export interface SettingsSectionMeta {
 export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
   {
     key: "appearance",
-    label: "Vzhled",
-    description: "Motiv, barvy a další vizuální nastavení.",
+    labelKey: "nav.sections.appearance.label",
+    descriptionKey: "nav.sections.appearance.description",
     group: "personal",
     icon: Palette,
     personal: true,
   },
   {
     key: "integrations",
-    label: "Integrace",
-    description: "Propojení s externími službami a odesílání e-mailů (SMTP).",
+    labelKey: "nav.sections.integrations.label",
+    descriptionKey: "nav.sections.integrations.description",
     group: "personal",
     icon: Plug,
     personal: true,
   },
   {
     key: "organization",
-    label: "Organizace",
-    description: "Smluvní počet uživatelů a způsob fakturace.",
+    labelKey: "nav.sections.organization.label",
+    descriptionKey: "nav.sections.organization.description",
     group: "organization",
     icon: Building2,
   },
   {
     key: "teams",
-    label: "Týmy",
-    description: "Sdružujte obchodníky pod manažery.",
+    labelKey: "nav.sections.teams.label",
+    descriptionKey: "nav.sections.teams.description",
     group: "organization",
     icon: Users,
   },
   {
     key: "users",
-    label: "Uživatelé",
-    description: "Spravujte role, týmovou příslušnost a aktivitu členů.",
+    labelKey: "nav.sections.users.label",
+    descriptionKey: "nav.sections.users.description",
     group: "organization",
     icon: UserRound,
   },
   {
     key: "invitations",
-    label: "Pozvánky",
-    description: "Pozvěte nové členy a spravujte oprávnění.",
+    labelKey: "nav.sections.invitations.label",
+    descriptionKey: "nav.sections.invitations.description",
     group: "organization",
     icon: MailPlus,
   },
   {
     key: "permissions",
-    label: "Oprávnění",
-    description: "Pravidla, kdo a co může v aplikaci dělat.",
+    labelKey: "nav.sections.permissions.label",
+    descriptionKey: "nav.sections.permissions.description",
     group: "organization",
     icon: ShieldCheck,
   },
   {
     key: "pipeline",
-    label: "Pipeline",
-    description: "Spravujte fáze pipeline a jejich pořadí.",
+    labelKey: "nav.sections.pipeline.label",
+    descriptionKey: "nav.sections.pipeline.description",
     group: "sales",
     icon: Kanban,
   },
   {
     key: "blocked-companies",
-    label: "Blokovaná IČO",
-    description: "Seznam IČO, která obchodníci nemohou přidat jako firmu.",
+    labelKey: "nav.sections.blocked-companies.label",
+    descriptionKey: "nav.sections.blocked-companies.description",
     group: "sales",
     icon: Ban,
   },
   {
     key: "privacy",
-    label: "Soukromí",
-    description: "Historie přístupů týmu SimpleCRM k Vašim datům a zrušení organizace.",
+    labelKey: "nav.sections.privacy.label",
+    descriptionKey: "nav.sections.privacy.description",
     group: "sales",
     icon: Lock,
   },
   {
     key: "billing",
-    label: "Fakturace",
-    description: "Detaily plánu, faktur a způsobu platby.",
+    labelKey: "nav.sections.billing.label",
+    descriptionKey: "nav.sections.billing.description",
     group: "billing",
     icon: CreditCard,
   },
 ];
 
 export const IMPORT_NAV_ITEM = {
-  label: "Import z CSV",
-  description: "Hromadný import firem a kontaktů z CSV souborů.",
+  labelKey: "nav.importItem.label" as ParseKeys<"settings">,
+  descriptionKey: "nav.importItem.description" as ParseKeys<"settings">,
   icon: Upload,
   to: "/app/settings/import",
   group: "sales" as SettingsGroup,
@@ -145,7 +146,7 @@ export function isSettingsSectionKey(
 }
 
 /** Admins get everything; everyone else gets their personal settings, plus
- * Pozvánky when they hold the invite privilege. */
+ * the invitations section when they hold the invite privilege. */
 export function visibleSectionKeys(role: string, canInvite: boolean): SettingsSectionKey[] {
   if (role === "admin") return SETTINGS_SECTIONS.map((s) => s.key);
   const keys = SETTINGS_SECTIONS.filter((s) => s.personal).map((s) => s.key);

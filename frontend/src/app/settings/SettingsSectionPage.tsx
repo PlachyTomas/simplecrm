@@ -1,5 +1,6 @@
 import { ArrowLeft } from "lucide-react";
 import { type ComponentType } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, Navigate, useParams } from "react-router-dom";
 
 import { BlockedCompaniesSection } from "@/app/settings/BlockedCompaniesSection";
@@ -38,17 +39,23 @@ const SECTION_COMPONENTS: Record<SettingsSectionKey, ComponentType> = {
 };
 
 export function SettingsSectionPage() {
+  const { t } = useTranslation("settings");
   const { section } = useParams();
   const { data: user } = useCurrentUser();
   const meta = isSettingsSectionKey(section)
     ? SETTINGS_SECTIONS.find((s) => s.key === section)
     : undefined;
-  usePageTitle(meta ? `Nastavení — ${meta.label}` : "Nastavení");
+  const sectionLabel = meta ? t(meta.labelKey) : null;
+  usePageTitle(
+    sectionLabel
+      ? t("sectionPage.pageTitleWithSection", { label: sectionLabel })
+      : t("sectionPage.pageTitleDefault"),
+  );
 
   if (!user) {
     return (
       <div className="p-8 text-sm text-text-tertiary" role="status">
-        Načítání…
+        {t("sectionPage.loading")}
       </div>
     );
   }
@@ -69,11 +76,11 @@ export function SettingsSectionPage() {
         className="mb-4 inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary md:hidden"
       >
         <ArrowLeft size={16} strokeWidth={1.75} aria-hidden />
-        Nastavení
+        {t("sectionPage.backLink")}
       </Link>
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold">{meta.label}</h1>
-        <p className="mt-1 text-sm text-text-tertiary">{meta.description}</p>
+        <h1 className="text-2xl font-semibold">{sectionLabel}</h1>
+        <p className="mt-1 text-sm text-text-tertiary">{t(meta.descriptionKey)}</p>
       </header>
       <Section />
     </div>

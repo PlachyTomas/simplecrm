@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ParseKeys } from "i18next";
 import { Plus, Trash2 } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useOrgTeams } from "@/app/settings/useUsersTeams";
 import { useAuth } from "@/auth/useAuth";
@@ -18,10 +20,10 @@ type Page = components["schemas"]["Page_InvitationOut_"];
 
 const INVITES_KEY = ["org", "invitations"] as const;
 
-const ROLE_LABEL: Record<string, string> = {
-  admin: "Administrátor",
-  manager: "Manažer",
-  salesperson: "Obchodník",
+const ROLE_LABEL_KEY: Record<string, ParseKeys<"settings">> = {
+  admin: "invitations.roles.admin",
+  manager: "invitations.roles.manager",
+  salesperson: "invitations.roles.salesperson",
 };
 
 function useInvitations() {
@@ -82,6 +84,7 @@ function emptyInvite(defaultTeamId: string): NewInvite {
 }
 
 export function InvitationsSection() {
+  const { t } = useTranslation("settings");
   const { data: currentUser } = useCurrentUser();
   const invitations = useInvitations();
   const teams = useOrgTeams();
@@ -108,9 +111,9 @@ export function InvitationsSection() {
   if (!canManage) {
     return (
       <section className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="text-lg font-semibold">Pozvánky</h2>
+        <h2 className="text-lg font-semibold">{t("invitations.permissionDenied.title")}</h2>
         <p className="mt-2 text-sm text-text-secondary">
-          Pozvánky může spravovat administrátor nebo uživatel s povolením „Může zvát ostatní“.
+          {t("invitations.permissionDenied.body")}
         </p>
       </section>
     );
@@ -122,7 +125,7 @@ export function InvitationsSection() {
     setLastInviteUrl(null);
     const trimmed = draft.email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setError("Zadejte platnou e-mailovou adresu.");
+      setError(t("invitations.errors.invalidEmail"));
       return;
     }
     try {
@@ -134,27 +137,27 @@ export function InvitationsSection() {
       });
       setLastInviteUrl(result.invite_url);
       setDraft(emptyInvite(defaultTeamId));
-      toast.success(`Pozvánka odeslána na ${result.invitation.email}.`);
+      toast.success(t("invitations.createdToast", { email: result.invitation.email }));
     } catch (err) {
       if (err instanceof ApiError) {
         const detail = (err.body as { detail?: unknown })?.detail;
         if (typeof detail === "string") setError(detail);
         else if (detail && typeof detail === "object" && "detail" in detail)
           setError(String((detail as { detail: unknown }).detail));
-        else setError("Vytvoření pozvánky se nezdařilo.");
+        else setError(t("invitations.errors.createGeneric"));
       } else {
-        setError(err instanceof Error ? err.message : "Vytvoření pozvánky se nezdařilo.");
+        setError(err instanceof Error ? err.message : t("invitations.errors.createGeneric"));
       }
     }
   }
 
   async function onRevoke(invite: InvitationOut) {
-    if (!window.confirm(`Zrušit pozvánku pro ${invite.email}?`)) return;
+    if (!window.confirm(t("invitations.pending.revokeConfirm", { email: invite.email }))) return;
     try {
       await revoke.mutateAsync(invite.id);
-      toast.success("Pozvánka zrušena.");
+      toast.success(t("invitations.pending.revokeSuccess"));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Zrušení pozvánky selhalo.";
+      const msg = err instanceof Error ? err.message : t("invitations.pending.revokeError");
       toast.error(msg);
     }
   }
@@ -162,28 +165,25 @@ export function InvitationsSection() {
   return (
     <section className="space-y-6">
       <div className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="text-lg font-semibold">Pozvat uživatele</h2>
-        <p className="mt-1 text-sm text-text-tertiary">
-          Pošleme e-mail s odkazem, kterým se pozvaný přihlásí přes Google a automaticky se zařadí
-          do vaší organizace.
-        </p>
+        <h2 className="text-lg font-semibold">{t("invitations.invite.title")}</h2>
+        <p className="mt-1 text-sm text-text-tertiary">{t("invitations.invite.subtitle")}</p>
 
         <form onSubmit={onSubmit} className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-12">
           <label className="text-xs font-medium text-text-tertiary sm:col-span-5">
-            E-mail
+            {t("invitations.invite.emailLabel")}
             <input
               type="email"
               required
               autoComplete="off"
               value={draft.email}
               onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
-              placeholder="kolega@firma.cz"
+              placeholder={t("invitations.invite.emailPlaceholder")}
               className="mt-1 block w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm text-text-primary"
             />
           </label>
 
           <label className="text-xs font-medium text-text-tertiary sm:col-span-3">
-            Role
+            {t("invitations.invite.roleLabel")}
             <select
               value={draft.role}
               onChange={(e) =>
@@ -194,24 +194,24 @@ export function InvitationsSection() {
               }
               className="mt-1 block w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm text-text-primary"
             >
-              <option value="salesperson">{ROLE_LABEL.salesperson}</option>
-              <option value="manager">{ROLE_LABEL.manager}</option>
-              <option value="admin">{ROLE_LABEL.admin}</option>
+              <option value="salesperson">{t(ROLE_LABEL_KEY.salesperson!)}</option>
+              <option value="manager">{t(ROLE_LABEL_KEY.manager!)}</option>
+              <option value="admin">{t(ROLE_LABEL_KEY.admin!)}</option>
             </select>
           </label>
 
           <label className="text-xs font-medium text-text-tertiary sm:col-span-4">
-            Tým
+            {t("invitations.invite.teamLabel")}
             <select
               value={draft.team_id}
               onChange={(e) => setDraft((d) => ({ ...d, team_id: e.target.value }))}
               className="mt-1 block w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm text-text-primary"
             >
-              <option value="">— bez týmu —</option>
-              {teamItems.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                  {t.is_default ? " (výchozí)" : ""}
+              <option value="">{t("invitations.invite.noTeamOption")}</option>
+              {teamItems.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
+                  {team.is_default ? t("invitations.invite.defaultTeamSuffix") : ""}
                 </option>
               ))}
             </select>
@@ -224,7 +224,7 @@ export function InvitationsSection() {
               onChange={(e) => setDraft((d) => ({ ...d, can_invite: e.target.checked }))}
               className="h-4 w-4 rounded border-border accent-accent"
             />
-            Může zvát další uživatele
+            {t("invitations.invite.canInviteLabel")}
           </label>
 
           {error ? (
@@ -241,7 +241,7 @@ export function InvitationsSection() {
               className="rounded-md border border-border-subtle bg-surface-overlay px-3 py-2 text-xs text-text-secondary sm:col-span-12"
               role="status"
             >
-              Odkaz pro přijetí:{" "}
+              {t("invitations.invite.inviteLinkLabel")}{" "}
               <code className="break-all font-mono text-text-primary">{lastInviteUrl}</code>
             </p>
           ) : null}
@@ -253,30 +253,32 @@ export function InvitationsSection() {
               className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-text-on-accent hover:bg-accent-hover disabled:opacity-50"
             >
               <Plus size={16} strokeWidth={1.75} />{" "}
-              {create.isPending ? "Odesílám…" : "Odeslat pozvánku"}
+              {create.isPending ? t("invitations.invite.submitting") : t("invitations.invite.submit")}
             </button>
           </div>
         </form>
       </div>
 
       <div className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="text-lg font-semibold">Nevyřízené pozvánky</h2>
+        <h2 className="text-lg font-semibold">{t("invitations.pending.title")}</h2>
         {invitations.isPending ? (
-          <p className="mt-3 text-sm text-text-tertiary">Načítání…</p>
+          <p className="mt-3 text-sm text-text-tertiary">{t("invitations.pending.loading")}</p>
         ) : invitations.isError ? (
-          <p className="mt-3 text-sm text-danger">Pozvánky se nepodařilo načíst.</p>
+          <p className="mt-3 text-sm text-danger">{t("invitations.pending.error")}</p>
         ) : invitations.data.items.length === 0 ? (
-          <p className="mt-3 text-sm text-text-tertiary">Žádné nevyřízené pozvánky.</p>
+          <p className="mt-3 text-sm text-text-tertiary">{t("invitations.pending.empty")}</p>
         ) : (
           <table className="mt-4 w-full">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-text-tertiary">
-                <th className="py-2 font-medium">E-mail</th>
-                <th className="py-2 font-medium">Role</th>
-                <th className="py-2 font-medium">Tým</th>
-                <th className="py-2 font-medium">Zve další</th>
-                <th className="py-2 font-medium">Vyprší</th>
-                <th className="py-2 text-right font-medium">Akce</th>
+                <th className="py-2 font-medium">{t("invitations.pending.table.email")}</th>
+                <th className="py-2 font-medium">{t("invitations.pending.table.role")}</th>
+                <th className="py-2 font-medium">{t("invitations.pending.table.team")}</th>
+                <th className="py-2 font-medium">{t("invitations.pending.table.canInvite")}</th>
+                <th className="py-2 font-medium">{t("invitations.pending.table.expires")}</th>
+                <th className="py-2 text-right font-medium">
+                  {t("invitations.pending.table.actions")}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -284,7 +286,7 @@ export function InvitationsSection() {
                 <InvitationRow
                   key={inv.id}
                   invitation={inv}
-                  teamName={teamItems.find((t) => t.id === inv.team_id)?.name ?? "—"}
+                  teamName={teamItems.find((team) => team.id === inv.team_id)?.name ?? "—"}
                   onRevoke={() => void onRevoke(inv)}
                 />
               ))}
@@ -305,22 +307,27 @@ function InvitationRow({
   teamName: string;
   onRevoke: () => void;
 }) {
+  const { t } = useTranslation("settings");
   const locale = useLocale();
   const expires = formatDate(invitation.expires_at, locale, { dateStyle: "medium" });
   return (
     <tr className="border-b border-border-subtle last:border-0">
       <td className="py-3 text-sm text-text-primary">{invitation.email}</td>
       <td className="py-3 text-sm text-text-secondary">
-        {ROLE_LABEL[invitation.role] ?? invitation.role}
+        {invitation.role in ROLE_LABEL_KEY
+          ? t(ROLE_LABEL_KEY[invitation.role]!)
+          : invitation.role}
       </td>
       <td className="py-3 text-sm text-text-secondary">{teamName}</td>
-      <td className="py-3 text-sm text-text-secondary">{invitation.can_invite ? "Ano" : "Ne"}</td>
+      <td className="py-3 text-sm text-text-secondary">
+        {invitation.can_invite ? t("invitations.pending.canInviteYes") : t("invitations.pending.canInviteNo")}
+      </td>
       <td className="py-3 text-sm text-text-tertiary">{expires}</td>
       <td className="py-3 text-right">
         <button
           type="button"
           onClick={onRevoke}
-          aria-label={`Zrušit pozvánku pro ${invitation.email}`}
+          aria-label={t("invitations.pending.revokeAriaLabel", { email: invitation.email })}
           className="rounded p-1.5 text-text-secondary hover:bg-danger-subtle hover:text-danger"
         >
           <Trash2 size={16} strokeWidth={1.75} />

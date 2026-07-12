@@ -9,11 +9,13 @@
  * redirect to /app instead of the form.
  */
 
+import type { ParseKeys } from "i18next";
 import { ArrowLeft, FileText, Loader2, ShieldAlert, UserCheck, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, Navigate } from "react-router-dom";
 
-import { sniffCsvHeaders } from "@/app/settings/import/csvSniff";
+import { CsvSniffError, sniffCsvHeaders } from "@/app/settings/import/csvSniff";
 import {
   autoMap,
   detectFileRole,
@@ -39,12 +41,19 @@ import { cn } from "@/lib/utils";
 
 type Step = 1 | 2 | 3;
 
-const ROLE_OPTIONS: { value: DetectedRole; label: string }[] = [
-  { value: "companies", label: "Firmy" },
-  { value: "contacts", label: "Kontakty" },
-  { value: "combined", label: "Firmy + kontakty (jeden řádek = kontakt)" },
-  { value: "unknown", label: "Neznámé (vyberte ručně)" },
-];
+const ROLE_KEYS: DetectedRole[] = ["companies", "contacts", "combined", "unknown"];
+
+const ROLE_LABEL_KEY: Record<DetectedRole, ParseKeys<"settings">> = {
+  companies: "import.roles.companies",
+  contacts: "import.roles.contacts",
+  combined: "import.roles.combined",
+  unknown: "import.roles.unknown",
+};
+
+const SNIFF_ERROR_KEY: Record<string, ParseKeys<"settings">> = {
+  missing_header_row: "import.upload.errors.missingHeaderRow",
+  empty_header_row: "import.upload.errors.emptyHeaderRow",
+};
 
 interface FileEntry {
   id: string;
@@ -62,7 +71,8 @@ function makeId(): string {
 }
 
 export function ImportPage() {
-  usePageTitle("Import");
+  const { t } = useTranslation("settings");
+  usePageTitle(t("import.page.pageTitle"));
   const me = useCurrentUser();
   if (me.isPending) {
     return (
@@ -78,6 +88,7 @@ export function ImportPage() {
 }
 
 function ImportPageInner() {
+  const { t } = useTranslation("settings");
   const fields = useImportFields();
   const preview = usePreviewImport();
   const commit = useCommitImport();
@@ -92,7 +103,7 @@ function ImportPageInner() {
 
   const needsContactSide = entries.some((e) => e.role === "contacts" || e.role === "combined");
   // Matching by e-mail only works against companies in the same batch — a
-  // contacts-only import matches existing firms, which support IČO/name only.
+  // contacts-only import matches existing firms, which support company-ID/name only.
   const hasCompanySource = entries.some((e) => e.role === "companies" || e.role === "combined");
   useEffect(() => {
     if (!hasCompanySource && matchSource === "email") setMatchSource("ico");
@@ -108,7 +119,10 @@ function ImportPageInner() {
         try {
           headers = (await sniffCsvHeaders(f)).headers;
         } catch (e) {
-          sniffError = e instanceof Error ? e.message : String(e);
+          sniffError =
+            e instanceof CsvSniffError
+              ? t(SNIFF_ERROR_KEY[e.message] ?? "import.upload.errors.generic")
+              : t("import.upload.errors.generic");
         }
         const detected = sniffError ? "unknown" : detectFileRole(headers);
         const mappingCompany =
@@ -132,7 +146,7 @@ function ImportPageInner() {
       }
       setEntries((prev) => [...prev, ...newEntries]);
     },
-    [fields.data],
+    [fields.data, t],
   );
 
   const updateEntry = useCallback((id: string, patch: Partial<FileEntry>) => {
@@ -203,9 +217,9 @@ function ImportPageInner() {
       setPreviewResult(result);
       setStep(3);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Náhled selhal.");
+      toast.error(e instanceof Error ? e.message : t("import.preview.previewFailed"));
     }
-  }, [buildPayload, preview, toast]);
+  }, [buildPayload, preview, toast, t]);
 
   const resetWizard = useCallback(() => {
     setStep(1);
@@ -221,30 +235,34 @@ function ImportPageInner() {
     try {
       const result = await commit.mutateAsync(payload);
       toast.success(
-        `Hotovo. Vytvořeno: ${result.created_company_ids.length} firem, ${result.created_contact_ids.length} kontaktů.`,
+        t("import.preview.doneToast", {
+          companies: t("import.preview.createdCompanies", {
+            count: result.created_company_ids.length,
+          }),
+          contacts: t("import.preview.createdContacts", {
+            count: result.created_contact_ids.length,
+          }),
+        }),
       );
       resetWizard();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Import selhal.");
+      toast.error(e instanceof Error ? e.message : t("import.preview.importFailed"));
     }
-  }, [buildPayload, commit, skipUnmatched, toast, resetWizard]);
+  }, [buildPayload, commit, skipUnmatched, toast, resetWizard, t]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 md:px-8">
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Hromadný import</h1>
-          <p className="mt-0.5 text-sm text-text-tertiary">
-            Nahrajte jeden nebo více CSV souborů. U každého si ověříme, co obsahuje, a vy potvrdíte
-            mapování polí. Náhled si vždy zobrazíte před zápisem.
-          </p>
+          <h1 className="text-2xl font-semibold">{t("import.page.title")}</h1>
+          <p className="mt-0.5 text-sm text-text-tertiary">{t("import.page.subtitle")}</p>
         </div>
         <Link
           to="/app/settings"
           className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary"
         >
           <ArrowLeft size={16} strokeWidth={1.75} />
-          Zpět do nastavení
+          {t("import.page.backLink")}
         </Link>
       </div>
 
@@ -297,7 +315,12 @@ function ImportPageInner() {
 }
 
 function Stepper({ step }: { step: Step }) {
-  const labels = ["Nahrát soubory", "Namapovat sloupce", "Náhled a potvrzení"];
+  const { t } = useTranslation("settings");
+  const labels = [
+    t("import.stepper.upload"),
+    t("import.stepper.mapping"),
+    t("import.stepper.preview"),
+  ];
   return (
     <ol className="mb-8 flex items-center gap-2 text-xs">
       {labels.map((label, idx) => {
@@ -343,6 +366,7 @@ function StepUpload(props: {
   canContinue: boolean;
   onContinue: () => void;
 }) {
+  const { t } = useTranslation("settings");
   return (
     <section className="space-y-6">
       <label
@@ -363,10 +387,8 @@ function StepUpload(props: {
           data-testid="import-files-input"
         />
         <FileText size={28} strokeWidth={1.5} aria-hidden />
-        <span>Přetáhněte CSV soubory sem nebo klikněte pro výběr</span>
-        <span className="text-xs">
-          Můžete nahrát více souborů najednou (firmy, kontakty, případně oboje v jednom).
-        </span>
+        <span>{t("import.upload.dropzoneText")}</span>
+        <span className="text-xs">{t("import.upload.dropzoneHint")}</span>
       </label>
 
       {props.entries.length > 0 && (
@@ -390,7 +412,7 @@ function StepUpload(props: {
           className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
           data-testid="import-continue-to-mapping"
         >
-          Pokračovat
+          {t("import.upload.continueButton")}
         </button>
       </div>
     </section>
@@ -402,6 +424,7 @@ function FileEntryRow(props: {
   onUpdate: (id: string, patch: Partial<FileEntry>) => void;
   onRemove: (id: string) => void;
 }) {
+  const { t } = useTranslation("settings");
   const { entry } = props;
   return (
     <li
@@ -419,11 +442,11 @@ function FileEntryRow(props: {
         {entry.sniffError ? (
           <span className="text-danger">{entry.sniffError}</span>
         ) : (
-          <>{entry.headers.length} sloupců</>
+          <>{t("import.upload.columnsCount", { count: entry.headers.length })}</>
         )}
       </span>
       <label className="flex items-center gap-2 text-xs">
-        <span className="text-text-tertiary">Role:</span>
+        <span className="text-text-tertiary">{t("import.upload.roleLabel")}</span>
         <select
           value={entry.role}
           onChange={(e) => props.onUpdate(entry.id, { role: e.target.value as DetectedRole })}
@@ -431,9 +454,9 @@ function FileEntryRow(props: {
           className="rounded-md border border-border bg-bg px-2 py-1"
           data-testid="import-file-role-select"
         >
-          {ROLE_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
+          {ROLE_KEYS.map((value) => (
+            <option key={value} value={value}>
+              {t(ROLE_LABEL_KEY[value])}
             </option>
           ))}
         </select>
@@ -441,7 +464,7 @@ function FileEntryRow(props: {
       <button
         type="button"
         onClick={() => props.onRemove(entry.id)}
-        aria-label="Odebrat soubor"
+        aria-label={t("import.upload.removeAriaLabel")}
         className="rounded p-1 text-text-tertiary hover:text-text-primary"
       >
         <X size={16} strokeWidth={1.75} />
@@ -467,6 +490,7 @@ function StepMapping(props: {
   isPreviewing: boolean;
   canPreview: boolean;
 }) {
+  const { t } = useTranslation("settings");
   if (props.fieldsLoading) {
     return (
       <div className="flex h-32 items-center justify-center text-text-tertiary">
@@ -509,7 +533,7 @@ function StepMapping(props: {
           onClick={props.onBack}
           className="rounded-md border border-border px-4 py-2 text-sm hover:bg-bg"
         >
-          Zpět
+          {t("import.mapping.backButton")}
         </button>
         <button
           type="button"
@@ -519,7 +543,7 @@ function StepMapping(props: {
           data-testid="import-run-preview"
         >
           {props.isPreviewing && <Loader2 className="animate-spin" size={14} />}
-          Spustit náhled
+          {t("import.mapping.previewButton")}
         </button>
       </div>
     </section>
@@ -532,6 +556,7 @@ function FileMapping(props: {
   contactFields: FieldDescriptor[];
   onUpdate: (id: string, patch: Partial<FileEntry>) => void;
 }) {
+  const { t } = useTranslation("settings");
   const { entry } = props;
   const showCompany = entry.role === "companies" || entry.role === "combined";
   const showContact = entry.role === "contacts" || entry.role === "combined";
@@ -551,7 +576,7 @@ function FileMapping(props: {
       <div className="space-y-4 border-t border-border px-4 py-4">
         {showCompany && (
           <ImportMappingTable
-            title="Sloupce firem"
+            title={t("import.mapping.companyColumnsTitle")}
             headers={entry.headers}
             fields={props.companyFields}
             value={entry.mappingCompany}
@@ -562,7 +587,7 @@ function FileMapping(props: {
         {showContact && (
           <>
             <ImportMappingTable
-              title="Sloupce kontaktů"
+              title={t("import.mapping.contactColumnsTitle")}
               headers={entry.headers}
               fields={props.contactFields}
               value={entry.mappingContact}
@@ -571,7 +596,7 @@ function FileMapping(props: {
             />
             <label className="block text-sm">
               <span className="mb-1 block text-xs uppercase text-text-tertiary">
-                Sloupec pro propojení s firmou
+                {t("import.mapping.matchKeyLabel")}
               </span>
               <select
                 value={entry.matchKeyContact}
@@ -579,7 +604,7 @@ function FileMapping(props: {
                 className="w-full rounded-md border border-border bg-bg px-2 py-1.5"
                 data-testid="import-match-key-contact"
               >
-                <option value="">— vyberte —</option>
+                <option value="">{t("import.mapping.matchKeyPlaceholder")}</option>
                 {entry.headers.map((h) => (
                   <option key={h} value={h}>
                     {h}
@@ -599,29 +624,31 @@ function MatchSourcePicker(props: {
   setMatchSource: (s: MatchSource) => void;
   allowEmailKey: boolean;
 }) {
+  const { t } = useTranslation("settings");
   return (
     <fieldset className="space-y-3 rounded-md border border-border bg-surface p-4">
       <legend className="flex items-center gap-2 px-2 text-sm font-medium">
         <ShieldAlert size={14} strokeWidth={1.75} className="text-accent" />
-        Klíč pro spárování kontaktů s firmou
+        {t("import.mapping.matchSource.legend")}
       </legend>
       <label className="block text-sm">
-        <span className="mb-1 block text-xs uppercase text-text-tertiary">Typ klíče</span>
+        <span className="mb-1 block text-xs uppercase text-text-tertiary">
+          {t("import.mapping.matchSource.typeLabel")}
+        </span>
         <select
           value={props.matchSource}
           onChange={(e) => props.setMatchSource(e.target.value as MatchSource)}
           className="w-full rounded-md border border-border bg-bg px-2 py-1.5"
           data-testid="import-match-source"
         >
-          <option value="ico">IČO</option>
-          <option value="name">Název firmy</option>
-          {props.allowEmailKey && <option value="email">E-mail</option>}
+          <option value="ico">{t("import.mapping.matchSource.ico")}</option>
+          <option value="name">{t("import.mapping.matchSource.name")}</option>
+          {props.allowEmailKey && (
+            <option value="email">{t("import.mapping.matchSource.email")}</option>
+          )}
         </select>
       </label>
-      <p className="text-xs text-text-tertiary">
-        Podle této hodnoty kontakt najde svou firmu — buď mezi firmami v nahraných souborech, nebo
-        mezi firmami, které už v CRM máte. Stačí tedy nahrát jen kontakty.
-      </p>
+      <p className="text-xs text-text-tertiary">{t("import.mapping.matchSource.hint")}</p>
     </fieldset>
   );
 }
@@ -631,6 +658,7 @@ function BulkOwnerPicker(props: {
   setBulkOwnerUserId: (id: string | null) => void;
   hasPerRowOwnerMapping: boolean;
 }) {
+  const { t } = useTranslation("settings");
   const usersQuery = useOrgUsers();
   const eligible = useMemo(
     () =>
@@ -644,7 +672,7 @@ function BulkOwnerPicker(props: {
     <fieldset className="space-y-3 rounded-md border border-border bg-surface p-4">
       <legend className="flex items-center gap-2 px-2 text-sm font-medium">
         <UserCheck size={14} strokeWidth={1.75} className="text-accent" />
-        Přiřadit všem importovaným firmám jednoho obchodníka
+        {t("import.mapping.bulkOwner.legend")}
       </legend>
       <label className="flex items-center gap-2 text-sm">
         <input
@@ -655,18 +683,20 @@ function BulkOwnerPicker(props: {
           }
           data-testid="import-bulk-owner-toggle"
         />
-        Aktivovat hromadné přiřazení
+        {t("import.mapping.bulkOwner.checkboxLabel")}
       </label>
       {enabled && (
         <label className="block text-sm">
-          <span className="mb-1 block text-xs uppercase text-text-tertiary">Obchodník</span>
+          <span className="mb-1 block text-xs uppercase text-text-tertiary">
+            {t("import.mapping.bulkOwner.selectLabel")}
+          </span>
           <select
             value={props.bulkOwnerUserId ?? ""}
             onChange={(e) => props.setBulkOwnerUserId(e.target.value || null)}
             className="w-full rounded-md border border-border bg-bg px-2 py-1.5"
             data-testid="import-bulk-owner-select"
           >
-            <option value="">— vyberte —</option>
+            <option value="">{t("import.mapping.bulkOwner.selectPlaceholder")}</option>
             {eligible.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.name} ({u.email})
@@ -677,14 +707,10 @@ function BulkOwnerPicker(props: {
       )}
       {props.hasPerRowOwnerMapping && enabled && (
         <p className="text-xs text-warning" role="alert">
-          Sloupec „Obchodník" je v mapování zapnutý, ale hromadné přiřazení má přednost — sloupec
-          bude ignorován.
+          {t("import.mapping.bulkOwner.overrideWarning")}
         </p>
       )}
-      <p className="text-xs text-text-tertiary">
-        Bez aktivace zůstanou firmy buď bez vlastníka (společný pool), nebo dostanou vlastníka ze
-        sloupce „Obchodník" v CSV (e-mail nebo jméno).
-      </p>
+      <p className="text-xs text-text-tertiary">{t("import.mapping.bulkOwner.hint")}</p>
     </fieldset>
   );
 }

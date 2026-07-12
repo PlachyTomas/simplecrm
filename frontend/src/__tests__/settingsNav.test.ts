@@ -36,10 +36,10 @@ describe("settingsNav", () => {
     expect(isSettingsSectionKey(null)).toBe(false);
   });
 
-  it("every section has an icon and a description", () => {
+  it("every section has an icon and a description key", () => {
     for (const s of SETTINGS_SECTIONS) {
       expect(s.icon).toBeTruthy();
-      expect(s.description.length).toBeGreaterThan(0);
+      expect(s.descriptionKey.length).toBeGreaterThan(0);
     }
   });
 });

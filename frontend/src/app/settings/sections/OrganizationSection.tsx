@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { InvoiceDetailsCard } from "@/app/settings/InvoiceDetailsCard";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
@@ -7,7 +8,12 @@ import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { formatCzkMinor } from "@/components/billing/format";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
-import { isSeatUpgradePaymentRequired, useSeatChangeInit } from "@/components/billing/usePayments";
+import {
+  billingErrorCode,
+  billingErrorMessage,
+  isSeatUpgradePaymentRequired,
+  useSeatChangeInit,
+} from "@/components/billing/usePayments";
 import { ApiError, apiFetch } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
@@ -26,6 +32,7 @@ interface SubscriptionLite {
 }
 
 export function OrganizationSection() {
+  const { t } = useTranslation("settings");
   const subQuery = useCurrentSubscription();
   const sub = subQuery.data as SubscriptionLite | null | undefined;
   const usersPage = useOrgUsers();
@@ -34,7 +41,7 @@ export function OrganizationSection() {
   if (subQuery.isPending) {
     return (
       <section className="rounded-lg border border-border bg-surface p-6 text-sm text-text-tertiary">
-        Načítání…
+        {t("organization.loading")}
       </section>
     );
   }
@@ -44,7 +51,7 @@ export function OrganizationSection() {
         className="rounded-lg border border-border bg-surface p-6 text-sm text-danger"
         role="alert"
       >
-        Načítání předplatného se nezdařilo.
+        {t("organization.error")}
       </section>
     );
   }
@@ -65,6 +72,8 @@ interface SeatCountCardProps {
 }
 
 function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps) {
+  const { t } = useTranslation("settings");
+  const { t: tBilling } = useTranslation("billing");
   const { accessToken } = useAuth();
   const qc = useQueryClient();
   const { data: me } = useCurrentUser();
@@ -122,9 +131,9 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
             onSuccess: () => {
               window.location.assign("/app/billing/return?status=pending");
             },
-            onError: () => {
+            onError: (initErr) => {
               setRedirecting(false);
-              setError("Platební brána není dostupná, zkuste to prosím za chvíli.");
+              setError(billingErrorMessage(billingErrorCode(initErr), tBilling));
             },
           },
         );
@@ -133,9 +142,9 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
       if (err instanceof ApiError) {
         const detail = (err.body as { detail?: { detail?: string } })?.detail;
         const msg = typeof detail === "string" ? detail : detail?.detail;
-        setError(msg ?? "Uložení se nezdařilo.");
+        setError(msg ?? t("organization.seatCount.error.generic"));
       } else {
-        setError("Něco se pokazilo. Zkontrolujte připojení.");
+        setError(t("organization.seatCount.error.connection"));
       }
     },
   });
@@ -144,13 +153,16 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
     e.preventDefault();
     setError(null);
     if (!targetValid) {
-      setError("Hodnota musí být v rozsahu 1–500.");
+      setError(t("organization.seatCount.error.range"));
       return;
     }
     if (target === sub.seat_count) return;
     if (needsToDeactivate && picked.size !== requiredCount) {
       setError(
-        `Snížením na ${target} ztratí přístup ${requiredCount} uživatelů — vyberte přesně ${requiredCount}.`,
+        t("organization.seatCount.error.needsSelectAll", {
+          target,
+          required: requiredCount,
+        }),
       );
       return;
     }
@@ -190,16 +202,18 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
         void qc.invalidateQueries({ queryKey: ["billing-summary", "current"] });
         void qc.invalidateQueries({ queryKey: ["users", "org"] });
       })
-      .catch(() => setError("Zrušení naplánované změny se nezdařilo."));
+      .catch(() => setError(t("organization.seatCount.error.generic")));
   }
 
   return (
     <form onSubmit={onSubmit} className="rounded-lg border border-border bg-surface p-6">
       <header>
-        <h2 className="text-lg font-semibold">Smluvní počet uživatelů</h2>
+        <h2 className="text-lg font-semibold">{t("organization.seatCount.title")}</h2>
         <p className="mt-1 text-sm text-text-tertiary">
-          Aktuálně máte {activeUserCount} aktivních uživatelů z {sub.seat_count} smluvních. Limit
-          ovlivňuje, kolik pozvánek lze odeslat, a odpovídá fakturované ceně.
+          {t("organization.seatCount.subtitle", {
+            activeCount: activeUserCount,
+            seatCount: sub.seat_count,
+          })}
         </p>
       </header>
 
@@ -209,25 +223,32 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
           className="mt-4 rounded-md border border-info/40 bg-info-subtle p-4"
         >
           <p className="text-sm font-medium text-text-primary">
-            Naplánovaná změna: počet klesne na {sub.pending_seat_count}
-            {periodEndsAt ? ` ke dni ${periodEndsAt}` : ""}.
+            {periodEndsAt
+              ? t("organization.seatCount.pendingBanner.textWithDate", {
+                  count: sub.pending_seat_count,
+                  date: periodEndsAt,
+                })
+              : t("organization.seatCount.pendingBanner.text", {
+                  count: sub.pending_seat_count,
+                })}
           </p>
           <p className="mt-1 text-xs text-text-secondary">
-            Přístup ztratí: {queuedUsers.map((u) => u.name).join(", ")}. Do té doby si plně užijí
-            placené sloty.
+            {t("organization.seatCount.pendingBanner.loseAccess", {
+              names: queuedUsers.map((u) => u.name).join(", "),
+            })}
           </p>
           <button
             type="button"
             onClick={cancelQueue}
             className="mt-3 inline-flex h-9 items-center justify-center rounded-md border border-border bg-surface px-3 text-xs font-medium text-text-primary transition-colors duration-fast hover:bg-surface-overlay"
           >
-            Zrušit naplánovanou změnu
+            {t("organization.seatCount.pendingBanner.cancelButton")}
           </button>
         </div>
       ) : null}
 
       <label className="mt-4 block text-sm font-medium text-text-primary">
-        Cílový počet uživatelů
+        {t("organization.seatCount.targetLabel")}
         <input
           type="number"
           min={1}
@@ -249,15 +270,13 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
       {needsToDeactivate ? (
         <div className="mt-4 rounded-md border border-warning/40 bg-warning-subtle p-4">
           <p className="text-sm font-medium text-text-primary">
-            {periodEndsAt
-              ? `Po skončení současného období (${periodEndsAt}) ztratí přístup ${requiredCount} `
-              : `Po skončení současného období ztratí přístup ${requiredCount} `}
-            {requiredCount === 1 ? "uživatel" : "uživatelů"}.
+            {t("organization.seatCount.willLoseAccess", {
+              count: requiredCount,
+              dateSuffix: periodEndsAt ? ` (${periodEndsAt})` : "",
+            })}
           </p>
           <p className="mt-1 text-xs text-text-secondary">
-            Vyberte koho. Sami sebe odstranit nemůžete. Do konce období mají vybraní lidé plný
-            přístup; deaktivace proběhne při dalším zúčtování. Účet zůstane v databázi (pro historii
-            dat), ale přihlášení skončí.
+            {t("organization.seatCount.deactivateHint")}
           </p>
           <ul className="mt-3 space-y-1.5">
             {eligibleVictims.map((u) => {
@@ -279,12 +298,15 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
             })}
             {eligibleVictims.length === 0 ? (
               <li className="text-xs text-text-tertiary">
-                Nelze snížit pod 1 — jste jediný aktivní uživatel.
+                {t("organization.seatCount.noEligible")}
               </li>
             ) : null}
           </ul>
           <p className="mt-2 text-xs text-text-tertiary">
-            Vybráno {picked.size} z {requiredCount}.
+            {t("organization.seatCount.selectedOfRequired", {
+              picked: picked.size,
+              required: requiredCount,
+            })}
           </p>
         </div>
       ) : null}
@@ -311,14 +333,14 @@ function SeatCountCard({ sub, activeUserCount, activeUsers }: SeatCountCardProps
           className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           {redirecting
-            ? "Přesměrování na platební bránu…"
+            ? t("organization.seatCount.redirecting")
             : mutation.isPending
-              ? "Ukládáme…"
-              : "Uložit počet"}
+              ? t("organization.shared.saving")
+              : t("organization.seatCount.submit")}
         </button>
         {savedFlash ? (
           <span className="text-sm text-success" role="status">
-            Uloženo.
+            {t("organization.shared.saved")}
           </span>
         ) : null}
       </div>
@@ -344,11 +366,14 @@ function LiveSeatCostPreview({
   // bill will look like before committing. Skipped when the per-user
   // price isn't surfaced (trial / enterprise / comp orgs sit outside
   // the published ladder).
+  const { t } = useTranslation("settings");
   if (!targetValid) return null;
   if (perUserMinor == null) return null;
   if (planCode !== "monthly" && planCode !== "annual") return null;
   const isAnnual = planCode === "annual";
-  const periodLabel = isAnnual ? "rok" : "měsíc";
+  const periodLabel = isAnnual
+    ? t("organization.livePreview.perYear")
+    : t("organization.livePreview.perMonth");
   const multiplier = isAnnual ? 12 : 1;
   const newTotal = perUserMinor * multiplier * target;
   const oldTotal = perUserMinor * multiplier * currentSeatCount;
@@ -360,7 +385,7 @@ function LiveSeatCostPreview({
       data-testid="seat-cost-preview"
     >
       <p className="text-text-secondary">
-        Nový náklad:{" "}
+        {t("organization.livePreview.newCostLabel")}{" "}
         <span className="font-semibold tabular-nums text-text-primary">
           {formatCzkMinor(newTotal)}
         </span>{" "}
@@ -381,6 +406,7 @@ function LiveSeatCostPreview({
 }
 
 function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
+  const { t } = useTranslation("settings");
   const { accessToken } = useAuth();
   const qc = useQueryClient();
 
@@ -418,7 +444,7 @@ function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
       setSavedFlash(true);
       window.setTimeout(() => setSavedFlash(false), 2500);
     },
-    onError: () => setError("Uložení se nezdařilo. Zkuste to znovu."),
+    onError: () => setError(t("organization.billingInterval.error")),
   });
 
   function onSubmit(e: FormEvent) {
@@ -432,11 +458,13 @@ function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
   // pending plan is what they intend to land on. Show that wording
   // explicitly so the admin understands what changes when.
   const isTrial = sub.plan.code === "trial";
-  const switchTakesEffect = isTrial ? "po skončení zkušební doby" : "při dalším zúčtovacím období";
+  const switchTakesEffect = isTrial
+    ? t("organization.billingInterval.switchTakesEffect.trial")
+    : t("organization.billingInterval.switchTakesEffect.default");
 
-  // Published price ladder: 99 Kč / month vs 996 Kč / year. Mirrors
+  // Published price ladder: 99 CZK / month vs 996 CZK / year. Mirrors
   // `compute_savings` on the backend. We render both the percent and
-  // the absolute koruna amount the org would save this year on its
+  // the absolute currency amount the org would save this year on its
   // current seat count.
   const MONTHLY_PER_USER_MINOR = 9900;
   const ANNUAL_PER_USER_MINOR = 99600;
@@ -444,33 +472,35 @@ function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
     Math.max(0, MONTHLY_PER_USER_MINOR * 12 - ANNUAL_PER_USER_MINOR) * sub.seat_count;
   const annualSubtitle =
     annualSavingsMinor > 0
-      ? `Účtováno jednou ročně, ušetříte 16 % — ${formatCzkMinor(annualSavingsMinor)} / rok`
-      : "Účtováno jednou ročně, ušetříte 16 %";
+      ? t("organization.billingInterval.annual.subtitleWithSavings", {
+          amount: formatCzkMinor(annualSavingsMinor),
+        })
+      : t("organization.billingInterval.annual.subtitleNoSavings");
 
   return (
     <form onSubmit={onSubmit} className="rounded-lg border border-border bg-surface p-6">
       <header>
-        <h2 className="text-lg font-semibold">Způsob fakturace</h2>
+        <h2 className="text-lg font-semibold">{t("organization.billingInterval.title")}</h2>
         <p className="mt-1 text-sm text-text-tertiary">
-          Změna se projeví {switchTakesEffect}. Nezasahuje do aktuálního období.
+          {t("organization.billingInterval.subtitleTemplate", { when: switchTakesEffect })}
         </p>
       </header>
 
       <div
         role="radiogroup"
-        aria-label="Způsob fakturace"
+        aria-label={t("organization.billingInterval.title")}
         className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"
       >
         <IntervalRadio
           code="monthly"
-          title="Měsíční"
-          subtitle="Účtováno každý měsíc"
+          title={t("organization.billingInterval.monthly.title")}
+          subtitle={t("organization.billingInterval.monthly.subtitle")}
           selected={target === "monthly"}
           onSelect={() => setTarget("monthly")}
         />
         <IntervalRadio
           code="annual"
-          title="Roční"
+          title={t("organization.billingInterval.annual.title")}
           subtitle={annualSubtitle}
           selected={target === "annual"}
           onSelect={() => setTarget("annual")}
@@ -479,14 +509,10 @@ function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
 
       {pendingInterval && pendingInterval !== currentInterval ? (
         <p className="mt-4 rounded-md border border-info/40 bg-info-subtle px-3 py-2 text-sm text-info">
-          Aktuálně účtujeme{" "}
-          {currentInterval === "monthly"
-            ? "měsíčně"
-            : currentInterval === "annual"
-              ? "ročně"
-              : "dle vašeho plánu"}
-          . Při dalším období přejdete na {pendingInterval === "annual" ? "roční" : "měsíční"}{" "}
-          fakturaci.
+          {t("organization.billingInterval.pendingNotice", {
+            current: t(`organization.billingInterval.currentLabel.${currentInterval}`),
+            pending: t(`organization.billingInterval.pendingLabel.${pendingInterval}`),
+          })}
         </p>
       ) : null}
 
@@ -505,11 +531,11 @@ function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
           disabled={mutation.isPending || target === effective}
           className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {mutation.isPending ? "Ukládáme…" : "Uložit způsob fakturace"}
+          {mutation.isPending ? t("organization.shared.saving") : t("organization.billingInterval.submit")}
         </button>
         {savedFlash ? (
           <span className="text-sm text-success" role="status">
-            Uloženo.
+            {t("organization.shared.saved")}
           </span>
         ) : null}
       </div>

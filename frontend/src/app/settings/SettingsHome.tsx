@@ -1,4 +1,5 @@
 import { ChevronRight, type LucideIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link, Navigate, useLocation } from "react-router-dom";
 
 import {
@@ -47,15 +48,16 @@ function HomeRow({
 }
 
 export function SettingsHome() {
+  const { t } = useTranslation("settings");
   const { data: user } = useCurrentUser();
-  usePageTitle("Nastavení");
+  usePageTitle(t("home.pageTitle"));
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const location = useLocation();
 
   if (!user) {
     return (
       <div className="p-8 text-sm text-text-tertiary" role="status">
-        Načítání…
+        {t("home.loading")}
       </div>
     );
   }
@@ -75,7 +77,7 @@ export function SettingsHome() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold">Nastavení</h1>
+      <h1 className="text-2xl font-semibold">{t("home.title")}</h1>
       <div className="mt-5 space-y-6">
         {GROUP_ORDER.map((group) => {
           const items = SETTINGS_SECTIONS.filter(
@@ -86,7 +88,7 @@ export function SettingsHome() {
           return (
             <section key={group}>
               <h2 className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
-                {GROUP_LABELS[group]}
+                {t(GROUP_LABELS[group])}
               </h2>
               <ul className="mt-2 divide-y divide-border-subtle overflow-hidden rounded-lg border border-border bg-surface">
                 {items.map((s) => (
@@ -94,16 +96,16 @@ export function SettingsHome() {
                     key={s.key}
                     to={`/app/settings/${s.key}`}
                     icon={s.icon}
-                    label={s.label}
-                    description={s.description}
+                    label={t(s.labelKey)}
+                    description={t(s.descriptionKey)}
                   />
                 ))}
                 {withImport ? (
                   <HomeRow
                     to={IMPORT_NAV_ITEM.to}
                     icon={IMPORT_NAV_ITEM.icon}
-                    label={IMPORT_NAV_ITEM.label}
-                    description={IMPORT_NAV_ITEM.description}
+                    label={t(IMPORT_NAV_ITEM.labelKey)}
+                    description={t(IMPORT_NAV_ITEM.descriptionKey)}
                   />
                 ) : null}
               </ul>

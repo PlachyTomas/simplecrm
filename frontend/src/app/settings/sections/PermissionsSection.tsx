@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
@@ -9,6 +10,7 @@ import type { components } from "@/types/api.generated";
 type OrganizationOut = components["schemas"]["OrganizationOut"];
 
 function LeaderboardVisibilityToggle() {
+  const { t } = useTranslation("settings");
   const { data: user } = useCurrentUser();
   const { accessToken } = useAuth();
   const qc = useQueryClient();
@@ -51,15 +53,14 @@ function LeaderboardVisibilityToggle() {
       />
       <span>
         <span className="block text-sm font-medium text-text-primary">
-          Zobrazit obchodníkům žebříček
+          {t("permissions.leaderboard.label")}
         </span>
         <span className="mt-0.5 block text-xs text-text-tertiary">
-          Když je vypnuto, obchodníci v Reportech vidí pouze své vlastní výsledky. Manažeři a
-          administrátoři žebříček vidí vždy.
+          {t("permissions.leaderboard.subtitle")}
         </span>
         {mutation.isError ? (
           <span className="mt-1 block text-xs text-danger" role="alert">
-            Uložení se nezdařilo.
+            {t("permissions.leaderboard.error")}
           </span>
         ) : null}
       </span>
@@ -68,6 +69,7 @@ function LeaderboardVisibilityToggle() {
 }
 
 function OwnershipWindowSetting() {
+  const { t } = useTranslation("settings");
   const { data: user } = useCurrentUser();
   const { accessToken } = useAuth();
   const qc = useQueryClient();
@@ -94,7 +96,7 @@ function OwnershipWindowSetting() {
       setSavedFlash(true);
       window.setTimeout(() => setSavedFlash(false), 2500);
     },
-    onError: () => setError("Uložení se nezdařilo. Zkuste to prosím znovu."),
+    onError: () => setError(t("permissions.ownershipWindow.error.generic")),
   });
 
   function onSubmit(e: FormEvent) {
@@ -102,7 +104,7 @@ function OwnershipWindowSetting() {
     setError(null);
     const n = Number(days);
     if (!Number.isFinite(n) || n < 1 || n > 3650) {
-      setError("Hodnota musí být mezi 1 a 3650 dny.");
+      setError(t("permissions.ownershipWindow.error.range"));
       return;
     }
     if (n === initial) return; // no-op
@@ -119,11 +121,10 @@ function OwnershipWindowSetting() {
           htmlFor="ownership-window-days"
           className="block text-sm font-medium text-text-primary"
         >
-          Doba držení firem (dny)
+          {t("permissions.ownershipWindow.label")}
         </label>
         <p className="mt-1 text-xs text-text-tertiary">
-          Po této době bez vyhraného obchodu se firma automaticky uvolní z poolu obchodníka zpět
-          manažerům k přerozdělení. Výchozí hodnota je 365 dní (1 rok). Povolený rozsah 1–3650 dní.
+          {t("permissions.ownershipWindow.subtitle")}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-3">
@@ -142,11 +143,11 @@ function OwnershipWindowSetting() {
           disabled={mutation.isPending || Number(days) === initial}
           className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-4 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {mutation.isPending ? "Ukládáme…" : "Uložit"}
+          {mutation.isPending ? t("permissions.ownershipWindow.saving") : t("permissions.ownershipWindow.save")}
         </button>
         {savedFlash ? (
           <span className="text-sm text-success" role="status">
-            Uloženo.
+            {t("permissions.ownershipWindow.savedFlash")}
           </span>
         ) : null}
       </div>
@@ -163,52 +164,56 @@ function OwnershipWindowSetting() {
 }
 
 export function PermissionsSection() {
+  const { t } = useTranslation("settings");
+  const own = t("permissions.scope.own");
+  const team = t("permissions.scope.team");
+  const all = t("permissions.scope.all");
+  const yes = t("permissions.scope.yes");
+  const dash = "—";
   const rows: { action: string; rep: string; manager: string; admin: string }[] = [
     {
-      action: "Vidět všechny obchody v rámci pipeline",
-      rep: "Jen vlastní",
-      manager: "Tým",
-      admin: "Vše",
+      action: t("permissions.rows.viewAllDeals"),
+      rep: own,
+      manager: team,
+      admin: all,
     },
-    { action: "Editovat firmy", rep: "Jen vlastní", manager: "Tým", admin: "Vše" },
-    { action: "Mazat firmy a uvolňovat z poolu", rep: "—", manager: "—", admin: "Ano" },
-    { action: "Spravovat uživatele a týmy", rep: "—", manager: "—", admin: "Ano" },
-    { action: "Editovat fáze pipeline", rep: "—", manager: "—", admin: "Ano" },
-    { action: "Exportovat reporty", rep: "—", manager: "Ano", admin: "Ano" },
+    { action: t("permissions.rows.editCompanies"), rep: own, manager: team, admin: all },
+    { action: t("permissions.rows.deleteCompanies"), rep: dash, manager: dash, admin: yes },
+    { action: t("permissions.rows.manageUsers"), rep: dash, manager: dash, admin: yes },
+    { action: t("permissions.rows.editPipeline"), rep: dash, manager: dash, admin: yes },
+    { action: t("permissions.rows.exportReports"), rep: dash, manager: yes, admin: yes },
   ];
   return (
     <section className="space-y-4">
       <div className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="text-lg font-semibold">Viditelnost</h2>
+        <h2 className="text-lg font-semibold">{t("permissions.visibility.title")}</h2>
         <p className="mt-1 text-sm text-text-tertiary">
-          Co vidí jednotlivé role v Reportech a na Přehledu.
+          {t("permissions.visibility.subtitle")}
         </p>
         <div className="mt-4">
           <LeaderboardVisibilityToggle />
         </div>
       </div>
       <div className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="text-lg font-semibold">Pravidla pro firmy</h2>
+        <h2 className="text-lg font-semibold">{t("permissions.companyRules.title")}</h2>
         <p className="mt-1 text-sm text-text-tertiary">
-          Doba, po které neaktivní firmy připadají manažerům zpět k přerozdělení.
+          {t("permissions.companyRules.subtitle")}
         </p>
         <div className="mt-4">
           <OwnershipWindowSetting />
         </div>
       </div>
       <div className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="text-lg font-semibold">Oprávnění</h2>
-        <p className="mt-1 text-sm text-text-tertiary">
-          Oprávnění jsou v této verzi pevně daná. Pokud potřebujete vlastní role, dejte nám vědět.
-        </p>
+        <h2 className="text-lg font-semibold">{t("permissions.table.title")}</h2>
+        <p className="mt-1 text-sm text-text-tertiary">{t("permissions.table.subtitle")}</p>
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-text-tertiary">
-                <th className="py-2 pr-4 font-medium">Akce</th>
-                <th className="py-2 pr-4 font-medium">Obchodník</th>
-                <th className="py-2 pr-4 font-medium">Manažer</th>
-                <th className="py-2 font-medium">Administrátor</th>
+                <th className="py-2 pr-4 font-medium">{t("permissions.table.action")}</th>
+                <th className="py-2 pr-4 font-medium">{t("permissions.table.rep")}</th>
+                <th className="py-2 pr-4 font-medium">{t("permissions.table.manager")}</th>
+                <th className="py-2 font-medium">{t("permissions.table.admin")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-subtle">
