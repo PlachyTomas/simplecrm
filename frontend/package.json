@@ -15,7 +15,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "types:generate": "node scripts/generate-api-types.mjs",
-    "types:check": "node scripts/generate-api-types.mjs --check"
+    "types:check": "node scripts/generate-api-types.mjs --check",
+    "i18n:check": "node scripts/check-catalog-parity.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -25,10 +26,14 @@
     "@types/react-grid-layout": "^2.1.0",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
+    "i18next": "^26.3.6",
+    "i18next-browser-languagedetector": "^8.2.1",
+    "i18next-resources-to-backend": "^1.2.1",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-grid-layout": "^2.2.3",
+    "react-i18next": "^17.0.9",
     "react-router-dom": "^6.28.0",
     "recharts": "^3.8.1",
     "tailwind-merge": "^2.5.5"
