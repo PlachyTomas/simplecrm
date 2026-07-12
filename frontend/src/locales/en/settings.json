@@ -1,1 +1,7 @@
-{}
+{
+  "appearance": {
+    "language": "Application language",
+    "languageSaved": "Application language saved.",
+    "languageSaveFailed": "Couldn't save the language. Please try again."
+  }
+}

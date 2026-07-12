@@ -1,1 +1,7 @@
-{}
+{
+  "appearance": {
+    "language": "Jazyk aplikace",
+    "languageSaved": "Jazyk aplikace byl uložen.",
+    "languageSaveFailed": "Jazyk se nepodařilo uložit. Zkuste to prosím znovu."
+  }
+}

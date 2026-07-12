@@ -8,6 +8,7 @@ import { InvoiceDetailDrawer } from "@/admin/InvoiceDetailDrawer";
 import { InvoicesList } from "@/admin/InvoicesList";
 import { OrgDetailDrawer } from "@/admin/OrgDetailDrawer";
 import { OrgList } from "@/admin/OrgList";
+import { useSyncUserLanguage } from "@/lib/i18n/useSyncUserLanguage";
 import { ThemeToggle } from "@/lib/ThemeToggle";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ const TABS: { key: AdminTab; label: string }[] = [
 
 export function AdminPage() {
   usePageTitle("Admin");
+  useSyncUserLanguage();
   const [activeTab, setActiveTab] = useState<AdminTab>("organizations");
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   // Carry the user_count alongside the selected id so the drawer's

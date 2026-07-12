@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { authErrorCode, login } from "@/auth/api";
 import { useAuth } from "@/auth/useAuth";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ApiError, API_BASE_URL } from "@/lib/api";
 import { ThemeToggle } from "@/lib/ThemeToggle";
 import { usePageTitle } from "@/lib/usePageTitle";
@@ -149,6 +150,10 @@ export function LoginPage() {
             Zaregistrovat se
           </Link>
         </p>
+
+        <div className="mt-6 flex justify-center">
+          <LanguageSwitcher />
+        </div>
       </main>
     </div>
   );

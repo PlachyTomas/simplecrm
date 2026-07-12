@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { authErrorCode, authErrorMessage, resendVerification, signup } from "@/auth/api";
 import { useAuth } from "@/auth/useAuth";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ApiError, API_BASE_URL } from "@/lib/api";
 import { ThemeToggle } from "@/lib/ThemeToggle";
 import { usePageTitle } from "@/lib/usePageTitle";
@@ -219,6 +220,10 @@ export function SignupPage() {
             </p>
           </>
         )}
+
+        <div className="mt-6 flex justify-center">
+          <LanguageSwitcher />
+        </div>
       </main>
     </div>
   );

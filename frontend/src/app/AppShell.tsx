@@ -13,11 +13,13 @@ import { useCurrentSubscription } from "@/components/billing/useCurrentSubscript
 import { apiFetch } from "@/lib/api";
 import { csNoun } from "@/lib/i18n/nouns";
 import { useLocale } from "@/lib/i18n/useLocale";
+import { useSyncUserLanguage } from "@/lib/i18n/useSyncUserLanguage";
 import { queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 
 export function AppShell() {
   const { data: user } = useCurrentUser();
+  useSyncUserLanguage();
   const locale = useLocale();
   const { data: subscription } = useCurrentSubscription();
   const { accessToken, clearAuth } = useAuth();
