@@ -6,9 +6,9 @@ import { cn } from "@/lib/utils";
 interface EmptyStateProps {
   /** Lucide icon rendered in the monochrome glyph. */
   icon: LucideIcon;
-  /** 18/600 headline — Czech, warm, specific. */
+  /** 18/600 headline — warm, specific. */
   title: string;
-  /** 14/regular body — single sentence, vykání. */
+  /** 14/regular body — single sentence, formal register (vykani). */
   body: ReactNode;
   /** Optional primary action — verb that matches the headline. */
   primary?: { label: string; onClick?: () => void; href?: string };

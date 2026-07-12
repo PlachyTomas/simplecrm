@@ -1,7 +1,6 @@
 import { AlertTriangle, X } from "lucide-react";
 import { useEffect, useState } from "react";
-
-import { csNoun } from "@/lib/i18n/nouns";
+import { useTranslation } from "react-i18next";
 
 const SESSION_KEY = "simplecrm-trial-banner-dismissed-at";
 
@@ -18,6 +17,7 @@ interface TrialBannerProps {
  * because conversion is itself a celebration moment per the brief.
  */
 export function TrialBanner({ daysRemaining, endsOn, onUpgrade }: TrialBannerProps) {
+  const { t } = useTranslation("common");
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
@@ -47,8 +47,8 @@ export function TrialBanner({ daysRemaining, endsOn, onUpgrade }: TrialBannerPro
       <div className="flex min-w-0 items-center gap-2 text-sm text-danger">
         <AlertTriangle size={16} strokeWidth={1.75} aria-hidden />
         <span className="truncate">
-          Zkušební verze končí za {daysRemaining} {csNoun(daysRemaining, "den")}
-          <span className="hidden sm:inline"> — vyprší {endsOn}</span>
+          {t("trial.endsIn", { count: daysRemaining })}
+          <span className="hidden sm:inline"> — {t("trial.expiresOn", { date: endsOn })}</span>
         </span>
       </div>
       <div className="flex shrink-0 items-center gap-2">
@@ -57,12 +57,12 @@ export function TrialBanner({ daysRemaining, endsOn, onUpgrade }: TrialBannerPro
           onClick={onUpgrade}
           className="inline-flex h-8 items-center justify-center rounded-md bg-brand-accent px-3 text-xs font-semibold text-text-on-brand-accent transition-colors duration-fast hover:bg-brand-accent-hover"
         >
-          Upgradovat na Plný
+          {t("trial.upgradeCta")}
         </button>
         <button
           type="button"
           onClick={handleDismiss}
-          aria-label="Zavřít upozornění"
+          aria-label={t("trial.dismissAriaLabel")}
           className="rounded-md p-1 text-danger hover:bg-danger-subtle"
         >
           <X size={14} strokeWidth={1.75} aria-hidden />

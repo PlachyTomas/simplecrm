@@ -1,13 +1,14 @@
 /**
  * React Query hooks for the customer-facing tax-invoice endpoints.
  *
- * These rows are the legal Czech-law tax-invoice documents (faktury) —
+ * These rows are the legal Czech-law tax-invoice documents (invoices) —
  * distinct from `usePayments.ChargeOut` which represents ComGate
- * charge attempts (platby). The user surfaces both: invoices in
- * the "Faktury" section, charges in the "Platby" section.
+ * charge attempts (payments). The user surfaces both: invoices in
+ * the "Invoices" section, charges in the "Payments" section.
  */
 
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "@/auth/useAuth";
 import { API_BASE_URL, apiFetch } from "@/lib/api";
@@ -77,12 +78,13 @@ export function useTaxInvoices() {
 }
 
 /**
- * "Stáhnout PDF" hook. Uses raw fetch (not `apiFetch`) because the
+ * "Download PDF" hook. Uses raw fetch (not `apiFetch`) because the
  * response is a binary PDF body, not JSON, and we need the blob to
  * hand to a temporary anchor for the browser download.
  */
 export function useDownloadTaxInvoicePdf() {
   const { accessToken } = useAuth();
+  const { t } = useTranslation("common");
   return useMutation({
     mutationFn: async ({ id, number }: { id: string; number: string }) => {
       const res = await fetch(`${API_BASE_URL}/api/v1/organizations/current/invoices/${id}/pdf`, {
@@ -96,7 +98,7 @@ export function useDownloadTaxInvoicePdf() {
         throw new Error(`PDF download failed (${res.status})`);
       }
       const blob = await res.blob();
-      triggerDownload(blob, `Faktura-${number}.pdf`);
+      triggerDownload(blob, t("taxInvoices.fileName", { number }));
     },
   });
 }

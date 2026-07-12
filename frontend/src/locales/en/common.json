@@ -1,1 +1,148 @@
-{ "actions": { "save": "Save", "cancel": "Cancel", "close": "Close" } }
+{
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close"
+  },
+  "shell": {
+    "skipToContent": "Skip to content",
+    "adminLink": "Admin"
+  },
+  "trial": {
+    "remaining_one": "{{count}} day left",
+    "remaining_other": "{{count}} days left",
+    "untilPrefix": "Trial until",
+    "choosePlanCta": "Choose a plan →",
+    "endsIn_one": "Trial ends in {{count}} day",
+    "endsIn_other": "Trial ends in {{count}} days",
+    "expiresOn": "expires {{date}}",
+    "upgradeCta": "Upgrade to Full",
+    "dismissAriaLabel": "Dismiss notice"
+  },
+  "companyCombobox": {
+    "placeholder": "Start typing a company name…",
+    "noResults": "No company matches your search."
+  },
+  "orgBillingFields": {
+    "kindBusiness": "Business",
+    "kindIndividual": "Individual",
+    "icoLabel": "Company ID (IČO)",
+    "icoHintSaved": "Saved company ID — you can edit the fields below, or enter a different ID to look it up in ARES.",
+    "icoHintEmpty": "Enter your company ID (8 digits) — we'll fill in the rest from ARES.",
+    "icoHintTyping": "Keep typing — we'll search once you've entered 8 digits.",
+    "icoHintLoading": "Searching ARES…",
+    "icoHintSuccess": "Details filled in from ARES — feel free to edit them.",
+    "icoRetryCta": "Try again",
+    "billingNameLabel": "Invoice name",
+    "billingNameHint": "If left blank, we'll invoice “{{orgName}}”.",
+    "dicLabel": "VAT ID (DIČ)",
+    "legalFormLabel": "Legal form",
+    "individualNameLabel": "Full name",
+    "streetLabel": "Street",
+    "cityLabel": "City",
+    "zipLabel": "ZIP code",
+    "billingEmailLabel": "Billing email",
+    "billingEmailHint": "We'll send tax documents to this address. If left blank, we'll use your login email.",
+    "errors": {
+      "notFound": "Company ID {{ico}} was not found in ARES. Check the number or fill in the fields manually.",
+      "tooMany": "Too many searches. Wait a moment and try again.",
+      "badFormat": "The company ID isn't in the right format. Enter 8 digits.",
+      "unavailable": "ARES is currently unavailable. Try again or fill in the fields manually.",
+      "generic": "The search failed. Please try again."
+    }
+  },
+  "recurringPaymentConsent": {
+    "heading": "Recurring payments (Card-on-File)",
+    "chargeBullet": "We'll regularly charge your card the plan price × your number of user seats ({{period}}).",
+    "durationBullet": "Payments continue until you cancel them.",
+    "receiptBullet": "We'll email you a tax document after every charge.",
+    "priceChangeBullet": "We'll notify you of any price change at least 30 days in advance.",
+    "cancelBulletPrefix": "Cancel recurring payments in Settings → Subscription or by emailing support — see",
+    "cancelLinkText": "Subscription & payments",
+    "consentPrefix": "I agree to recurring payments under the terms above and to",
+    "termsLinkText": "Art. 6 of the Terms of Service",
+    "period": {
+      "annual": "annually",
+      "monthly": "monthly",
+      "unspecified": "for the selected period"
+    }
+  },
+  "priceDisplay": {
+    "suffixMonthly": "/user/month",
+    "suffixAnnual": "/user/year",
+    "exVat": "excl. VAT",
+    "inclVatParen": "({{amount}} incl. VAT)",
+    "notVatPayer": "Not VAT registered"
+  },
+  "taxInvoices": {
+    "fileName": "Invoice-{{number}}.pdf"
+  },
+  "activities": {
+    "types": {
+      "note": "Note",
+      "stage_change": "Stage change",
+      "owner_change": "Owner change",
+      "deal_won": "Deal won",
+      "deal_lost": "Deal lost",
+      "company_freed": "Company released from pool",
+      "ownership_reassigned": "Ownership reassigned",
+      "subscription_change": "Subscription change",
+      "email_sent": "Email sent",
+      "deal_created": "Deal created",
+      "deal_updated": "Deal updated",
+      "company_updated": "Company updated",
+      "event_created": "Event added"
+    },
+    "fields": {
+      "name": "name",
+      "value": "value",
+      "currency": "currency",
+      "stage_id": "stage",
+      "owner_user_id": "owner",
+      "primary_contact_id": "primary contact",
+      "expected_close_date": "expected close date",
+      "probability_override": "probability",
+      "lost_reason": "loss reason",
+      "company_id": "company",
+      "phone": "phone",
+      "email": "email",
+      "website": "website",
+      "note": "note",
+      "main_contact_id": "primary contact",
+      "address_street": "street",
+      "address_city": "city",
+      "address_zip": "ZIP code",
+      "industry": "industry",
+      "legal_form": "legal form",
+      "dic": "VAT ID (DIČ)",
+      "owner": "owner"
+    },
+    "changeFields": {
+      "name": "Name",
+      "value": "Value",
+      "expected_close_date": "Expected close date",
+      "probability_override": "Probability",
+      "owner_user_id": "Owner",
+      "stage_id": "Stage",
+      "primary_contact_id": "Primary contact",
+      "currency": "Currency",
+      "ico": "Company ID (IČO)",
+      "dic": "VAT ID (DIČ)",
+      "email": "Email",
+      "phone": "Phone",
+      "website": "Website",
+      "note": "Note",
+      "industry": "Industry",
+      "legal_form": "Legal form",
+      "address_street": "Street",
+      "address_city": "City",
+      "address_zip": "ZIP code",
+      "main_contact_id": "Primary contact"
+    },
+    "stageChangeFromTo": "Stage: {{from}} → {{to}}",
+    "stageChangeTo": "Stage: {{to}}",
+    "dealPrefix": "Deal “{{dealName}}”",
+    "showAll": "Show all ({{count}})",
+    "hide": "Hide"
+  }
+}

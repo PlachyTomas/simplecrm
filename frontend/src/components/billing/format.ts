@@ -19,17 +19,17 @@ const CZK_WITH_FRACTION = new Intl.NumberFormat("cs-CZ", {
   maximumFractionDigits: 2,
 });
 
-/** Format a CZK whole-koruna value (no fractional haléře). */
+/** Format a CZK whole-crown value (no fractional cents). */
 export function formatCzk(czk: number): string {
   return CZK.format(czk);
 }
 
-/** Format a CZK amount given in minor units (haléře) as "1 512 Kč". */
+/** Format a CZK amount given in minor units (cents) as a currency string. */
 export function formatCzkMinor(minor: number): string {
   return CZK.format(minor / 100);
 }
 
-/** Format a CZK amount given in minor units, including fractional haléře — used for "(s DPH)" lines. */
+/** Format a CZK amount given in minor units, including fractional cents — used for VAT-inclusive lines. */
 export function formatCzkMinorWithFraction(minor: number): string {
   return CZK_WITH_FRACTION.format(minor / 100);
 }

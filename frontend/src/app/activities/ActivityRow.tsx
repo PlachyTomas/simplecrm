@@ -1,7 +1,15 @@
+import type { TFunction } from "i18next";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { useTranslation } from "react-i18next";
 
-import { activityDetail, activityLabel, changeFieldLabel } from "@/app/activities/activityLabels";
+import {
+  ACTIVITY_LABEL_KEY,
+  activityDetail,
+  type ActivityDetailValue,
+  changeFieldLabelKey,
+  fieldLabelKey,
+} from "@/app/activities/activityLabels";
 import type { ActivityOut } from "@/app/activities/useActivities";
 import { useLocale } from "@/lib/i18n/useLocale";
 
@@ -30,15 +38,35 @@ function formatDateTime(iso: string, locale: string): string {
     : new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(d);
 }
 
+/** Turn a structured `ActivityDetailValue` into display text. */
+function renderDetail(detail: ActivityDetailValue, t: TFunction<"common">): string {
+  switch (detail.kind) {
+    case "text":
+      return detail.value;
+    case "stageChangeFromTo":
+      return t("activities.stageChangeFromTo", { from: detail.from, to: detail.to });
+    case "stageChangeTo":
+      return t("activities.stageChangeTo", { to: detail.to });
+    case "fieldsChanged":
+      return detail.fields
+        .map((field) => {
+          const key = fieldLabelKey(field);
+          return key ? t(key) : field;
+        })
+        .join(", ");
+  }
+}
+
 function DetailLine({ children }: { children: ReactNode }) {
   return <p className="mt-0.5 text-sm text-text-secondary">{children}</p>;
 }
 
 /**
- * Per-field edit list ("Název: staré → nové"). More than three changed fields
- * collapse to the first two behind a "Zobrazit vše (N)" toggle.
+ * Per-field edit list ("Name: old → new"). More than three changed fields
+ * collapse to the first two behind a "Show all (N)" toggle.
  */
 function ChangesDetail({ entries }: { entries: [string, unknown][] }): JSX.Element {
+  const { t } = useTranslation("common");
   const [expanded, setExpanded] = useState(false);
   const collapsible = entries.length > 3;
   const visible = collapsible && !expanded ? entries.slice(0, 2) : entries;
@@ -46,9 +74,10 @@ function ChangesDetail({ entries }: { entries: [string, unknown][] }): JSX.Eleme
     <div className="mt-0.5 space-y-0.5">
       {visible.map(([field, delta]) => {
         const d = (delta ?? {}) as Record<string, unknown>;
+        const key = changeFieldLabelKey(field);
         return (
           <p key={field} className="text-sm text-text-secondary">
-            <span className="text-text-tertiary">{changeFieldLabel(field)}:</span>{" "}
+            <span className="text-text-tertiary">{key ? t(key) : field}:</span>{" "}
             {sideValue(d.from)} → {sideValue(d.to)}
           </p>
         );
@@ -61,12 +90,12 @@ function ChangesDetail({ entries }: { entries: [string, unknown][] }): JSX.Eleme
         >
           {expanded ? (
             <>
-              <ChevronUp size={14} strokeWidth={1.75} aria-hidden /> Skrýt
+              <ChevronUp size={14} strokeWidth={1.75} aria-hidden /> {t("activities.hide")}
             </>
           ) : (
             <>
-              <ChevronDown size={14} strokeWidth={1.75} aria-hidden /> Zobrazit vše (
-              {entries.length})
+              <ChevronDown size={14} strokeWidth={1.75} aria-hidden />{" "}
+              {t("activities.showAll", { count: entries.length })}
             </>
           )}
         </button>
@@ -84,6 +113,7 @@ function ActivityDetail({
   payload: Record<string, unknown>;
   locale: string;
 }): JSX.Element | null {
+  const { t } = useTranslation("common");
   const type = activity.activity_type;
 
   // Field-level edits: render the structured `changes` map when present,
@@ -95,7 +125,7 @@ function ActivityDetail({
       if (entries.length > 0) return <ChangesDetail entries={entries} />;
     }
     const legacy = activityDetail(activity);
-    return legacy ? <DetailLine>{legacy}</DetailLine> : null;
+    return legacy ? <DetailLine>{renderDetail(legacy, t)}</DetailLine> : null;
   }
 
   // Calendar events carry a title and an ISO start time.
@@ -107,19 +137,20 @@ function ActivityDetail({
   }
 
   const detail = activityDetail(activity);
-  return detail ? <DetailLine>{detail}</DetailLine> : null;
+  return detail ? <DetailLine>{renderDetail(detail, t)}</DetailLine> : null;
 }
 
 /**
  * A single timeline row. Deal-scoped rows lead with the deal name
- * (`Obchod „X" · Změna fáze`); everything else shows the bare action label.
+ * (`Deal "X" · Stage change`); everything else shows the bare action label.
  * Renders as an `<li>` to slot into the timeline `<ol>` at the call site.
  */
 export function ActivityRow({ activity }: { activity: ActivityItem }): JSX.Element {
+  const { t } = useTranslation("common");
   const locale = useLocale();
   const payload = (activity.payload ?? {}) as Record<string, unknown>;
   const dealName = asString(payload.deal_name);
-  const label = activityLabel(activity.activity_type);
+  const label = t(ACTIVITY_LABEL_KEY[activity.activity_type]);
   const userName = asString(activity.user_name);
 
   return (
@@ -131,7 +162,8 @@ export function ActivityRow({ activity }: { activity: ActivityItem }): JSX.Eleme
       <p className="text-sm font-medium text-text-primary">
         {dealName ? (
           <>
-            Obchod „{dealName}“<span className="font-normal text-text-secondary"> · {label}</span>
+            {t("activities.dealPrefix", { dealName })}
+            <span className="font-normal text-text-secondary"> · {label}</span>
           </>
         ) : (
           label

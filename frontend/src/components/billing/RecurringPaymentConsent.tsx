@@ -1,3 +1,6 @@
+import type { ParseKeys } from "i18next";
+import { useTranslation } from "react-i18next";
+
 type PlanCode = "monthly" | "annual";
 
 interface RecurringPaymentConsentProps {
@@ -7,14 +10,20 @@ interface RecurringPaymentConsentProps {
   disabled: boolean;
 }
 
+const PERIOD_KEY: Record<PlanCode | "unspecified", ParseKeys<"common">> = {
+  annual: "recurringPaymentConsent.period.annual",
+  monthly: "recurringPaymentConsent.period.monthly",
+  unspecified: "recurringPaymentConsent.period.unspecified",
+};
+
 /**
  * Card-on-File consent block — required at the moment of the first charge
- * by Visa/Mastercard rules + Comgate's opakované-platby docs. The five
+ * by Visa/Mastercard rules + Comgate's recurring-payments docs. The five
  * bullets mirror help.comgate.cz/docs/opakovane-platby item-by-item
  * (amount, frequency, duration, receipt, advance notice).
  *
- * Used both by the in-app ChoosePlanModal in Settings → Předplatné and by
- * the TrialExpiredGate. Both routes ultimately call the same
+ * Used both by the in-app ChoosePlanModal in Settings -> Subscription and
+ * by the TrialExpiredGate. Both routes ultimately call the same
  * `initial-payment-init` endpoint, so the consent moment must gate both.
  */
 export function RecurringPaymentConsent({
@@ -23,28 +32,27 @@ export function RecurringPaymentConsent({
   onChange,
   disabled,
 }: RecurringPaymentConsentProps) {
-  const periodLabel =
-    selected === "annual" ? "ročně" : selected === "monthly" ? "měsíčně" : "ve zvoleném období";
+  const { t } = useTranslation("common");
+  const periodLabel = t(PERIOD_KEY[selected ?? "unspecified"]);
   return (
     <div className="rounded-md border border-border-subtle bg-surface-overlay p-4">
-      <p className="text-sm font-medium text-text-primary">Opakované platby (Card-on-File)</p>
+      <p className="text-sm font-medium text-text-primary">
+        {t("recurringPaymentConsent.heading")}
+      </p>
       <ul className="mt-2 space-y-1 text-xs text-text-secondary">
+        <li>• {t("recurringPaymentConsent.chargeBullet", { period: periodLabel })}</li>
+        <li>• {t("recurringPaymentConsent.durationBullet")}</li>
+        <li>• {t("recurringPaymentConsent.receiptBullet")}</li>
+        <li>• {t("recurringPaymentConsent.priceChangeBullet")}</li>
         <li>
-          • Z vaší platební karty budeme pravidelně strhávat částku odpovídající plánu × počtu
-          uživatelských licencí ({periodLabel}).
-        </li>
-        <li>• Platby trvají do doby, než je zrušíte.</li>
-        <li>• Po každém stržení vám e-mailem zašleme daňový doklad.</li>
-        <li>• O jakékoli změně ceny vás budeme informovat nejméně 30 dní předem.</li>
-        <li>
-          • Opakované platby zrušíte v Nastavení → Předplatné nebo e-mailem na podpora — viz{" "}
+          • {t("recurringPaymentConsent.cancelBulletPrefix")}{" "}
           <a
             href="/predplatne"
             target="_blank"
             rel="noreferrer noopener"
             className="underline hover:text-text-primary"
           >
-            Předplatné a platby
+            {t("recurringPaymentConsent.cancelLinkText")}
           </a>
           .
         </li>
@@ -59,14 +67,14 @@ export function RecurringPaymentConsent({
           aria-required="true"
         />
         <span>
-          Souhlasím s opakovanými platbami za výše uvedených podmínek a s{" "}
+          {t("recurringPaymentConsent.consentPrefix")}{" "}
           <a
             href="/obchodni-podminky#cl-6"
             target="_blank"
             rel="noreferrer noopener"
             className="underline hover:text-text-primary"
           >
-            čl. 6 Obchodních podmínek
+            {t("recurringPaymentConsent.termsLinkText")}
           </a>
           .
         </span>

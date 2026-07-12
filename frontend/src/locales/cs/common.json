@@ -1,1 +1,150 @@
-{ "actions": { "save": "Uložit", "cancel": "Zrušit", "close": "Zavřít" } }
+{
+  "actions": {
+    "save": "Uložit",
+    "cancel": "Zrušit",
+    "close": "Zavřít"
+  },
+  "shell": {
+    "skipToContent": "Přeskočit na obsah",
+    "adminLink": "Admin"
+  },
+  "trial": {
+    "remaining_one": "Zbývá {{count}} den",
+    "remaining_few": "Zbývají {{count}} dny",
+    "remaining_other": "Zbývá {{count}} dnů",
+    "untilPrefix": "Zkušební doba do",
+    "choosePlanCta": "Vybrat plán →",
+    "endsIn_one": "Zkušební verze končí za {{count}} den",
+    "endsIn_few": "Zkušební verze končí za {{count}} dny",
+    "endsIn_other": "Zkušební verze končí za {{count}} dnů",
+    "expiresOn": "vyprší {{date}}",
+    "upgradeCta": "Upgradovat na Plný",
+    "dismissAriaLabel": "Zavřít upozornění"
+  },
+  "companyCombobox": {
+    "placeholder": "Začněte psát název firmy…",
+    "noResults": "Žádná firma neodpovídá hledání."
+  },
+  "orgBillingFields": {
+    "kindBusiness": "Firma",
+    "kindIndividual": "Soukromá osoba",
+    "icoLabel": "IČO",
+    "icoHintSaved": "Uložené IČO — pole níže můžete upravit, nebo zadejte jiné IČO pro načtení z ARES.",
+    "icoHintEmpty": "Zadejte IČO (8 číslic) — automaticky doplníme z ARES.",
+    "icoHintTyping": "Pokračujte ve psaní — po 8 číslicích spustíme vyhledávání.",
+    "icoHintLoading": "Hledám v ARES…",
+    "icoHintSuccess": "Údaje doplněny z ARES — můžete je upravit.",
+    "icoRetryCta": "Zkusit znovu",
+    "billingNameLabel": "Název pro fakturu",
+    "billingNameHint": "Pokud necháte prázdné, fakturujeme na „{{orgName}}“.",
+    "dicLabel": "DIČ",
+    "legalFormLabel": "Právní forma",
+    "individualNameLabel": "Jméno a příjmení",
+    "streetLabel": "Ulice",
+    "cityLabel": "Město",
+    "zipLabel": "PSČ",
+    "billingEmailLabel": "Fakturační e-mail",
+    "billingEmailHint": "Na tuto adresu budeme posílat daňové doklady. Pokud necháte prázdné, použijeme váš přihlašovací e-mail.",
+    "errors": {
+      "notFound": "IČO {{ico}} nebylo v ARES nalezeno. Zkontrolujte zadání nebo vyplňte ručně.",
+      "tooMany": "Příliš mnoho vyhledávání. Počkejte chvíli a zkuste to znovu.",
+      "badFormat": "IČO není ve správném formátu. Zadejte 8 číslic.",
+      "unavailable": "ARES je momentálně nedostupný. Zkuste to znovu nebo vyplňte ručně.",
+      "generic": "Vyhledání selhalo. Zkuste to prosím znovu."
+    }
+  },
+  "recurringPaymentConsent": {
+    "heading": "Opakované platby (Card-on-File)",
+    "chargeBullet": "Z vaší platební karty budeme pravidelně strhávat částku odpovídající plánu × počtu uživatelských licencí ({{period}}).",
+    "durationBullet": "Platby trvají do doby, než je zrušíte.",
+    "receiptBullet": "Po každém stržení vám e-mailem zašleme daňový doklad.",
+    "priceChangeBullet": "O jakékoli změně ceny vás budeme informovat nejméně 30 dní předem.",
+    "cancelBulletPrefix": "Opakované platby zrušíte v Nastavení → Předplatné nebo e-mailem na podpora — viz",
+    "cancelLinkText": "Předplatné a platby",
+    "consentPrefix": "Souhlasím s opakovanými platbami za výše uvedených podmínek a s",
+    "termsLinkText": "čl. 6 Obchodních podmínek",
+    "period": {
+      "annual": "ročně",
+      "monthly": "měsíčně",
+      "unspecified": "ve zvoleném období"
+    }
+  },
+  "priceDisplay": {
+    "suffixMonthly": "/uživatel/měsíc",
+    "suffixAnnual": "/uživatel/rok",
+    "exVat": "bez DPH",
+    "inclVatParen": "({{amount}} s DPH)",
+    "notVatPayer": "Nejsem plátce DPH"
+  },
+  "taxInvoices": {
+    "fileName": "Faktura-{{number}}.pdf"
+  },
+  "activities": {
+    "types": {
+      "note": "Poznámka",
+      "stage_change": "Změna fáze",
+      "owner_change": "Změna vlastníka",
+      "deal_won": "Obchod vyhrán",
+      "deal_lost": "Obchod neúspěšný",
+      "company_freed": "Firma uvolněna z poolu",
+      "ownership_reassigned": "Vlastnictví přeřazeno",
+      "subscription_change": "Změna předplatného",
+      "email_sent": "E-mail odeslán",
+      "deal_created": "Obchod vytvořen",
+      "deal_updated": "Obchod upraven",
+      "company_updated": "Firma upravena",
+      "event_created": "Událost přidána"
+    },
+    "fields": {
+      "name": "název",
+      "value": "hodnota",
+      "currency": "měna",
+      "stage_id": "fáze",
+      "owner_user_id": "vlastník",
+      "primary_contact_id": "hlavní kontakt",
+      "expected_close_date": "očekávané uzavření",
+      "probability_override": "pravděpodobnost",
+      "lost_reason": "důvod neúspěchu",
+      "company_id": "firma",
+      "phone": "telefon",
+      "email": "e-mail",
+      "website": "web",
+      "note": "poznámka",
+      "main_contact_id": "hlavní kontakt",
+      "address_street": "ulice",
+      "address_city": "město",
+      "address_zip": "PSČ",
+      "industry": "obor",
+      "legal_form": "právní forma",
+      "dic": "DIČ",
+      "owner": "vlastník"
+    },
+    "changeFields": {
+      "name": "Název",
+      "value": "Hodnota",
+      "expected_close_date": "Očekávané uzavření",
+      "probability_override": "Pravděpodobnost",
+      "owner_user_id": "Vlastník",
+      "stage_id": "Fáze",
+      "primary_contact_id": "Hlavní kontakt",
+      "currency": "Měna",
+      "ico": "IČO",
+      "dic": "DIČ",
+      "email": "E-mail",
+      "phone": "Telefon",
+      "website": "Web",
+      "note": "Poznámka",
+      "industry": "Obor",
+      "legal_form": "Právní forma",
+      "address_street": "Ulice",
+      "address_city": "Město",
+      "address_zip": "PSČ",
+      "main_contact_id": "Hlavní kontakt"
+    },
+    "stageChangeFromTo": "Fáze: {{from}} → {{to}}",
+    "stageChangeTo": "Fáze: {{to}}",
+    "dealPrefix": "Obchod „{{dealName}}“",
+    "showAll": "Zobrazit vše ({{count}})",
+    "hide": "Skrýt"
+  }
+}
