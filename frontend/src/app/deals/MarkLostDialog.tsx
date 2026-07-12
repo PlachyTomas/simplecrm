@@ -1,15 +1,27 @@
 import { useEffect, useState } from "react";
+import type { ParseKeys } from "i18next";
+import { useTranslation } from "react-i18next";
 
 import { useModalDialog } from "@/lib/useModalDialog";
 
-const LOST_REASONS = [
-  "Cena",
-  "Konkurence",
-  "Nevhodný čas",
-  "Rozpočet",
-  "Nedosaženo dohody",
-  "Jiný",
-];
+const LOST_REASON_KEYS = [
+  "price",
+  "competition",
+  "badTiming",
+  "budget",
+  "noAgreement",
+  "other",
+] as const;
+type LostReasonKey = (typeof LOST_REASON_KEYS)[number];
+
+const LOST_REASON_LABEL_KEY: Record<LostReasonKey, ParseKeys<"deals">> = {
+  price: "markLostDialog.reasons.price",
+  competition: "markLostDialog.reasons.competition",
+  badTiming: "markLostDialog.reasons.badTiming",
+  budget: "markLostDialog.reasons.budget",
+  noAgreement: "markLostDialog.reasons.noAgreement",
+  other: "markLostDialog.reasons.other",
+};
 
 interface MarkLostDialogProps {
   open: boolean;
@@ -26,20 +38,21 @@ export function MarkLostDialog({
   pending,
   dealName,
 }: MarkLostDialogProps) {
+  const { t } = useTranslation("deals");
   const dialogRef = useModalDialog<HTMLDivElement>(onClose, open);
-  const [reason, setReason] = useState(LOST_REASONS[0]);
+  const [reason, setReason] = useState<LostReasonKey>(LOST_REASON_KEYS[0]);
   const [custom, setCustom] = useState("");
 
   useEffect(() => {
     if (open) {
-      setReason(LOST_REASONS[0]);
+      setReason(LOST_REASON_KEYS[0]);
       setCustom("");
     }
   }, [open]);
 
   if (!open) return null;
 
-  const finalReason = reason === "Jiný" ? custom.trim() : reason;
+  const finalReason = reason === "other" ? custom.trim() : t(LOST_REASON_LABEL_KEY[reason]);
 
   return (
     <div
@@ -61,36 +74,38 @@ export function MarkLostDialog({
         className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg"
       >
         <h2 id="mark-lost-title" className="text-xl font-semibold">
-          Označit jako neúspěch
+          {t("markLostDialog.title")}
         </h2>
         <p className="mt-2 text-sm text-text-secondary">
           {dealName ? (
             <>
-              Obchod <strong className="text-text-primary">{dealName}</strong>. Vyberte hlavní
-              důvod, abychom mohli sestavit report neúspěšných obchodů.
+              {t("markLostDialog.bodyPrefix")}{" "}
+              <strong className="text-text-primary">{dealName}</strong>. {t("markLostDialog.bodySuffix")}
             </>
           ) : (
-            "Vyberte hlavní důvod, abychom mohli sestavit report neúspěšných obchodů."
+            t("markLostDialog.bodySuffix")
           )}
         </p>
         <fieldset className="mt-4 space-y-2">
-          <legend className="sr-only">Důvod</legend>
-          {LOST_REASONS.map((opt) => (
-            <label key={opt} className="flex items-center gap-2 text-sm">
+          <legend className="sr-only">{t("markLostDialog.reasonLegend")}</legend>
+          {LOST_REASON_KEYS.map((key) => (
+            <label key={key} className="flex items-center gap-2 text-sm">
               <input
                 type="radio"
                 name="lost-reason"
-                value={opt}
-                checked={reason === opt}
-                onChange={() => setReason(opt)}
+                value={key}
+                checked={reason === key}
+                onChange={() => setReason(key)}
               />
-              {opt}
+              {t(LOST_REASON_LABEL_KEY[key])}
             </label>
           ))}
         </fieldset>
-        {reason === "Jiný" ? (
+        {reason === "other" ? (
           <label className="mt-3 block">
-            <span className="text-xs font-medium text-text-secondary">Vlastní důvod</span>
+            <span className="text-xs font-medium text-text-secondary">
+              {t("markLostDialog.customLabel")}
+            </span>
             <input
               type="text"
               value={custom}
@@ -107,14 +122,14 @@ export function MarkLostDialog({
             onClick={onClose}
             className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
           >
-            Zrušit
+            {t("markLostDialog.cancel")}
           </button>
           <button
             type="submit"
             disabled={pending || !finalReason}
             className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-medium text-white transition-colors duration-fast hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {pending ? "Ukládám…" : "Uložit"}
+            {pending ? t("markLostDialog.saving") : t("markLostDialog.submit")}
           </button>
         </div>
       </form>

@@ -2,7 +2,7 @@
  * Resolve the accent color for a pipeline stage.
  *
  * Precedence:
- *   1. The admin-configured `stage.color` (set in Nastavení → Pipeline).
+ *   1. The admin-configured `stage.color` (set in Settings → Pipeline).
  *   2. A position-indexed default palette for stages that have never had
  *      a color set (e.g. legacy rows or a fresh seed with placeholder color).
  *   3. Zinc fallback for stages beyond the palette.

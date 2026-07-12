@@ -20,6 +20,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 
 import { AddDealModal } from "@/app/deals/AddDealModal";
 import { DealDetailDialog } from "@/app/deals/DealDetailDialog";
@@ -44,7 +45,6 @@ import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
 import { celebrateWin } from "@/lib/celebrate";
 import { formatMoney } from "@/lib/format";
-import { csNoun } from "@/lib/i18n/nouns";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { useModalDialog } from "@/lib/useModalDialog";
 import { useToast } from "@/lib/toast";
@@ -52,12 +52,7 @@ import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 
 const WON_WINDOW_STORAGE_KEY = "pipeline-won-window-days";
-const WON_WINDOW_OPTIONS: { value: WonWindow; label: string }[] = [
-  { value: 7, label: "7 dní" },
-  { value: 30, label: "30 dní" },
-  { value: 90, label: "90 dní" },
-  { value: "all", label: "Vše" },
-];
+const WON_WINDOW_VALUES: WonWindow[] = [7, 30, 90, "all"];
 
 function loadWonWindow(): WonWindow {
   // localStorage can be absent (SSR, some webviews) or throw on access (Safari
@@ -74,8 +69,8 @@ function loadWonWindow(): WonWindow {
 }
 
 // A deal with value 0 is treated as "value not yet entered" — we hide
-// the money line on the card / list / detail rather than render "0 Kč"
-// everywhere. See docs/tasks/2026-05-13-feedback-batch.md §2.
+// the money line on the card / list / detail rather than render a zero
+// amount everywhere. See docs/tasks/2026-05-13-feedback-batch.md §2.
 function hasValue(value: string): boolean {
   const n = Number(value);
   return Number.isFinite(n) && n > 0;
@@ -98,7 +93,7 @@ function formatCreatedDate(iso: string, locale: string): string {
 }
 
 interface CardActionButtonProps {
-  /** Short tooltip text ("Označit jako vyhráno"). */
+  /** Short tooltip text shown on hover/focus. */
   label: string;
   /** Full screen-reader label including the deal name. */
   ariaLabel: string;
@@ -204,6 +199,7 @@ function DealCard({
   losing,
   paymentPending,
 }: DealCardProps) {
+  const { t } = useTranslation("deals");
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: deal.id,
     data: { type: "deal", stageId: deal.stage_id },
@@ -248,7 +244,7 @@ function DealCard({
       aria-label={
         valueShown
           ? `${deal.name} — ${formatMoney(deal.value, deal.currency, locale)}`
-          : `${deal.name} — vytvořeno ${formatCreatedDate(deal.created_at, locale)}`
+          : `${deal.name} — ${t("pipelinePage.card.createdAriaSuffix", { date: formatCreatedDate(deal.created_at, locale) })}`
       }
       className={cn(
         "group/card relative cursor-grab select-none rounded-md border bg-surface px-3 py-2.5 shadow-sm transition-shadow duration-fast hover:shadow-md active:cursor-grabbing",
@@ -266,7 +262,7 @@ function DealCard({
         </p>
       ) : (
         <p className="mt-1 text-xs tabular-nums text-text-tertiary">
-          Vytvořeno {formatCreatedDate(deal.created_at, locale)}
+          {t("pipelinePage.card.createdLabel", { date: formatCreatedDate(deal.created_at, locale) })}
         </p>
       )}
       {onTogglePaid ? (
@@ -283,7 +279,7 @@ function DealCard({
             onChange={(e) => onTogglePaid(e.target.checked)}
             className="h-3.5 w-3.5 rounded border-border text-brand-accent focus:ring-brand-accent"
           />
-          Zaplaceno
+          {t("pipelinePage.card.paid")}
         </label>
       ) : null}
       {onWin || onLose ? (
@@ -293,8 +289,8 @@ function DealCard({
         <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity duration-fast focus-within:opacity-100 group-hover/card:opacity-100">
           {onWin ? (
             <CardActionButton
-              label="Označit jako vyhráno"
-              ariaLabel={`Označit obchod ${deal.name} jako vyhraný`}
+              label={t("pipelinePage.card.winTooltip")}
+              ariaLabel={t("pipelinePage.card.winAriaLabel", { name: deal.name })}
               disabled={winning}
               onActivate={(el) => onWin(el)}
               className="bg-brand-accent text-text-on-brand-accent hover:bg-brand-accent-hover"
@@ -304,8 +300,8 @@ function DealCard({
           ) : null}
           {onLose ? (
             <CardActionButton
-              label="Označit jako neúspěch"
-              ariaLabel={`Označit obchod ${deal.name} jako neúspěch`}
+              label={t("pipelinePage.card.loseTooltip")}
+              ariaLabel={t("pipelinePage.card.loseAriaLabel", { name: deal.name })}
               disabled={losing}
               onActivate={() => onLose()}
               className="border border-border bg-surface-overlay text-text-secondary hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger"
@@ -349,6 +345,7 @@ function MobileDealCard({
   losing?: boolean;
   paymentPending?: boolean;
 }) {
+  const { t } = useTranslation("deals");
   const valueShown = hasValue(deal.value);
   return (
     <article
@@ -376,7 +373,7 @@ function MobileDealCard({
         </p>
       ) : (
         <p className="mt-1 text-xs tabular-nums text-text-tertiary">
-          Vytvořeno {formatCreatedDate(deal.created_at, locale)}
+          {t("pipelinePage.card.createdLabel", { date: formatCreatedDate(deal.created_at, locale) })}
         </p>
       )}
       {stageType === "won" ? (
@@ -388,7 +385,7 @@ function MobileDealCard({
             onChange={(e) => onTogglePaid?.(e.target.checked)}
             className="h-3.5 w-3.5 rounded border-border text-brand-accent focus:ring-brand-accent"
           />
-          Zaplaceno
+          {t("pipelinePage.card.paid")}
         </label>
       ) : (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -398,7 +395,7 @@ function MobileDealCard({
             disabled={winning}
             className="inline-flex h-7 items-center gap-1 rounded-md bg-brand-accent px-2 text-xs font-semibold text-text-on-brand-accent transition-colors duration-fast hover:bg-brand-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Crown size={12} strokeWidth={2} aria-hidden /> Vyhráno
+            <Crown size={12} strokeWidth={2} aria-hidden /> {t("pipelinePage.mobileCard.won")}
           </button>
           <button
             type="button"
@@ -406,12 +403,12 @@ function MobileDealCard({
             disabled={losing}
             className="inline-flex h-7 items-center gap-1 rounded-md border border-border bg-surface-overlay px-2 text-xs font-medium text-text-secondary transition-colors duration-fast hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <X size={12} strokeWidth={2} aria-hidden /> Neúspěch
+            <X size={12} strokeWidth={2} aria-hidden /> {t("pipelinePage.mobileCard.lost")}
           </button>
         </div>
       )}
       <label className="mt-2 block">
-        <span className="sr-only">Přesunout obchod do jiné fáze</span>
+        <span className="sr-only">{t("pipelinePage.mobileCard.moveAriaLabel")}</span>
         <select
           value={deal.stage_id}
           onChange={(e) => {
@@ -464,12 +461,13 @@ function MobileBoard({
   losingDealId,
   payingDealId,
 }: MobileBoardProps) {
+  const { t } = useTranslation("deals");
   const active = stages[activeIndex];
   return (
     <div className="flex select-none flex-col gap-3 px-4 pb-24 md:hidden">
       <div
         role="tablist"
-        aria-label="Fáze pipeline"
+        aria-label={t("pipelinePage.mobileBoard.tablistAriaLabel")}
         className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
       >
         {stages.map((s, i) => (
@@ -499,11 +497,13 @@ function MobileBoard({
       {active ? (
         <>
           <p className="text-xs text-text-tertiary">
-            {active.deal_count} {csNoun(active.deal_count, "obchod")} ·{" "}
+            {t("dealCount", { count: active.deal_count })} ·{" "}
             {formatMoney(active.total_value, boardCurrency, locale)}
           </p>
           {active.deals.length === 0 ? (
-            <p className="py-8 text-center text-xs text-text-tertiary">Zatím žádné obchody.</p>
+            <p className="py-8 text-center text-xs text-text-tertiary">
+              {t("pipelinePage.stageColumn.empty")}
+            </p>
           ) : (
             <ul className="flex flex-col gap-2">
               {active.deals.map((deal) => (
@@ -565,6 +565,7 @@ function StageColumn({
   losingDealId,
   payingDealId,
 }: StageColumnProps) {
+  const { t } = useTranslation("deals");
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
     data: { type: "stage" },
@@ -581,7 +582,7 @@ function StageColumn({
 
   return (
     <section
-      aria-label={`Fáze ${stage.name}`}
+      aria-label={t("pipelinePage.stageColumn.ariaLabel", { name: stage.name })}
       style={seamStyle}
       className={cn(
         "group/column relative flex flex-col rounded-lg border border-border bg-surface transition-colors duration-fast",
@@ -602,14 +603,14 @@ function StageColumn({
             <h2 className="truncate text-sm font-semibold">{stage.name}</h2>
           </div>
           <p className="mt-0.5 truncate text-xs text-text-tertiary">
-            {stage.deal_count} {csNoun(stage.deal_count, "obchod")} ·{" "}
+            {t("dealCount", { count: stage.deal_count })} ·{" "}
             {formatMoney(stage.total_value, boardCurrency, locale)}
           </p>
         </div>
         <button
           type="button"
           onClick={() => onAddDeal(stage.id)}
-          aria-label={`Přidat obchod do fáze ${stage.name}`}
+          aria-label={t("pipelinePage.stageColumn.addDealAriaLabel", { name: stage.name })}
           className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-tertiary opacity-0 transition-opacity duration-fast hover:bg-surface-overlay hover:text-text-primary focus-visible:opacity-100 group-hover/column:opacity-100 max-md:opacity-100"
         >
           <Plus size={16} strokeWidth={1.75} />
@@ -624,7 +625,7 @@ function StageColumn({
         )}
       >
         {stage.deals.length === 0 ? (
-          <p className="text-xs text-text-tertiary">Zatím žádné obchody.</p>
+          <p className="text-xs text-text-tertiary">{t("pipelinePage.stageColumn.empty")}</p>
         ) : (
           stage.deals.map((deal) => (
             <DealCard
@@ -650,6 +651,7 @@ function StageColumn({
 }
 
 export function PipelinePage() {
+  const { t } = useTranslation("deals");
   usePageTitle("Pipeline");
   const [wonWindow, setWonWindow] = useState<WonWindow>(() => loadWonWindow());
   const { data: board, isPending, isError } = usePipelineBoard(wonWindow);
@@ -686,6 +688,18 @@ export function PipelinePage() {
 
   const locale = useLocale();
 
+  const wonWindowOptions = useMemo(
+    () =>
+      WON_WINDOW_VALUES.map((value) => ({
+        value,
+        label:
+          value === "all"
+            ? t("pipelinePage.wonWindow.all")
+            : t("pipelinePage.wonWindow.days", { count: value }),
+      })),
+    [t],
+  );
+
   const moneyFmt = useMemo(
     () =>
       board
@@ -707,8 +721,8 @@ export function PipelinePage() {
       const formattedValue = valueShown && moneyFmt ? moneyFmt.format(Number(deal.value)) : null;
       setWinToast(
         formattedValue
-          ? `🎉 Gratulujeme! Obchod ${deal.name} ve výši ${formattedValue} uzavřen.`
-          : `🎉 Gratulujeme! Obchod ${deal.name} uzavřen.`,
+          ? t("pipelinePage.winToast.withValue", { name: deal.name, value: formattedValue })
+          : t("pipelinePage.winToast.withoutValue", { name: deal.name }),
       );
       winMutation.mutate(
         { dealId: deal.id },
@@ -717,7 +731,7 @@ export function PipelinePage() {
         },
       );
     },
-    [winMutation, winningDealId, moneyFmt],
+    [winMutation, winningDealId, moneyFmt, t],
   );
 
   const handleLoseDeal = useCallback((deal: BoardDeal) => {
@@ -732,13 +746,13 @@ export function PipelinePage() {
         { dealId: deal.id, paid: next },
         {
           onError: () => {
-            toast.error("Nepodařilo se uložit stav platby.");
+            toast.error(t("pipelinePage.toast.paymentSaveError"));
           },
           onSettled: () => setPayingDealId(null),
         },
       );
     },
-    [paymentMutation, payingDealId, toast],
+    [paymentMutation, payingDealId, toast, t],
   );
 
   const handleConfirmLose = useCallback(
@@ -749,16 +763,16 @@ export function PipelinePage() {
         { dealId: target.id, lost_reason: reason },
         {
           onSuccess: () => {
-            toast.success(`Obchod ${target.name} označen jako neúspěch.`);
+            toast.success(t("pipelinePage.toast.lostSuccess", { name: target.name }));
             setLosingDealTarget(null);
           },
           onError: () => {
-            toast.error("Obchod se nepodařilo označit jako neúspěch.");
+            toast.error(t("pipelinePage.toast.lostError"));
           },
         },
       );
     },
-    [loseMutation, losingDealTarget, toast],
+    [loseMutation, losingDealTarget, toast, t],
   );
 
   const handleConfirmDelete = useCallback(() => {
@@ -768,15 +782,15 @@ export function PipelinePage() {
       { dealId: target.id },
       {
         onSuccess: () => {
-          toast.success(`Obchod ${target.name} smazán.`);
+          toast.success(t("pipelinePage.toast.deleteSuccess", { name: target.name }));
           setDeletingDealTarget(null);
         },
         onError: () => {
-          toast.error("Obchod se nepodařilo smazat.");
+          toast.error(t("pipelinePage.toast.deleteError"));
         },
       },
     );
-  }, [deleteMutation, deletingDealTarget, toast]);
+  }, [deleteMutation, deletingDealTarget, toast, t]);
 
   const filteredStages = useMemo<BoardStage[]>(() => {
     if (!board) return [];
@@ -856,7 +870,7 @@ export function PipelinePage() {
   if (isPending) {
     return (
       <div className="p-8 text-sm text-text-tertiary" role="status">
-        Načítání pipeline…
+        {t("pipelinePage.loading")}
       </div>
     );
   }
@@ -867,7 +881,7 @@ export function PipelinePage() {
         className="m-8 rounded-md border border-danger-subtle bg-danger-subtle px-4 py-3 text-sm text-danger"
         role="alert"
       >
-        Pipeline se nepodařilo načíst.
+        {t("pipelinePage.loadError")}
       </div>
     );
   }
@@ -893,21 +907,21 @@ export function PipelinePage() {
               className="hidden h-9 items-center gap-1 rounded-md bg-accent px-3 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover md:inline-flex"
             >
               <Plus size={16} strokeWidth={1.75} aria-hidden />
-              <span>Přidat obchod</span>
+              <span>{t("pipelinePage.toolbar.addDeal")}</span>
             </button>
           ) : null}
           <label className="flex flex-col text-xs font-medium text-text-tertiary">
-            Hledat
+            {t("pipelinePage.toolbar.searchLabel")}
             <input
               type="search"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Název obchodu…"
+              placeholder={t("pipelinePage.toolbar.searchPlaceholder")}
               className="mt-1 w-48 rounded-md border border-border bg-surface px-2 py-1.5 text-sm"
             />
           </label>
           <label className="flex flex-col text-xs font-medium text-text-tertiary">
-            Vyhrané za
+            {t("pipelinePage.toolbar.wonWindowLabel")}
             <select
               value={String(wonWindow)}
               onChange={(e) => {
@@ -922,7 +936,7 @@ export function PipelinePage() {
               }}
               className="mt-1 rounded-md border border-border bg-surface px-2 py-1.5 text-sm"
             >
-              {WON_WINDOW_OPTIONS.map((opt) => (
+              {wonWindowOptions.map((opt) => (
                 <option key={String(opt.value)} value={String(opt.value)}>
                   {opt.label}
                 </option>
@@ -931,15 +945,15 @@ export function PipelinePage() {
           </label>
           {canPickOwner ? (
             <label className="flex flex-col text-xs font-medium text-text-tertiary">
-              Vlastník
+              {t("pipelinePage.toolbar.ownerLabel")}
               <select
                 value={ownerFilter}
                 onChange={(e) => setOwnerFilter(e.target.value)}
                 className="mt-1 rounded-md border border-border bg-surface px-2 py-1.5 text-sm"
               >
-                <option value="all">Všichni</option>
-                <option value="mine">Moje obchody</option>
-                <optgroup label="Obchodníci">
+                <option value="all">{t("pipelinePage.toolbar.ownerAll")}</option>
+                <option value="mine">{t("pipelinePage.toolbar.ownerMine")}</option>
+                <optgroup label={t("pipelinePage.toolbar.salespeopleGroup")}>
                   {(usersPage?.items ?? [])
                     .filter((u) => u.is_active)
                     .map((u) => (
@@ -952,14 +966,14 @@ export function PipelinePage() {
             </label>
           ) : (
             <label className="flex flex-col text-xs font-medium text-text-tertiary">
-              Zobrazit
+              {t("pipelinePage.toolbar.visibilityLabel")}
               <select
                 value={ownerFilter === "mine" ? "mine" : "all"}
                 onChange={(e) => setOwnerFilter(e.target.value === "mine" ? "mine" : "all")}
                 className="mt-1 rounded-md border border-border bg-surface px-2 py-1.5 text-sm"
               >
-                <option value="all">Vše v mém rozsahu</option>
-                <option value="mine">Pouze moje obchody</option>
+                <option value="all">{t("pipelinePage.toolbar.visibilityAll")}</option>
+                <option value="mine">{t("pipelinePage.toolbar.visibilityMine")}</option>
               </select>
             </label>
           )}
@@ -972,7 +986,7 @@ export function PipelinePage() {
               }}
               className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary"
             >
-              Zrušit filtr
+              {t("pipelinePage.toolbar.clearFilter")}
             </button>
           ) : null}
         </div>
@@ -982,10 +996,10 @@ export function PipelinePage() {
         <div className="mx-4 rounded-lg border border-border bg-surface md:mx-8">
           <EmptyState
             icon={Workflow}
-            title="Přidejte první obchod"
-            body="Sledujte obchody napříč fázemi pipeline. Karty přetahujte mezi sloupci podle vývoje."
+            title={t("pipelinePage.emptyState.title")}
+            body={t("pipelinePage.emptyState.body")}
             primary={{
-              label: "+ Přidat obchod",
+              label: t("pipelinePage.emptyState.cta"),
               onClick: () => {
                 setAddDealStageId(firstOpenStageId);
                 setAddDealOpen(true);
@@ -1056,7 +1070,7 @@ export function PipelinePage() {
 
           {!hasFilteredDeals ? (
             <p className="px-4 pb-4 text-center text-sm text-text-tertiary md:px-8" role="status">
-              Žádné obchody neodpovídají filtru.
+              {t("pipelinePage.noFilterMatches")}
             </p>
           ) : null}
         </>
@@ -1071,7 +1085,7 @@ export function PipelinePage() {
             setAddDealStageId(firstOpenStageId);
             setAddDealOpen(true);
           }}
-          aria-label="Přidat obchod"
+          aria-label={t("pipelinePage.toolbar.addDeal")}
           className="fixed bottom-20 right-4 z-30 inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent text-text-on-accent shadow-lg transition-colors duration-fast hover:bg-accent-hover md:hidden"
         >
           <Plus size={22} strokeWidth={2} />
@@ -1109,12 +1123,13 @@ export function PipelinePage() {
 }
 
 function TrashDropZone({ visible }: { visible: boolean }) {
+  const { t } = useTranslation("deals");
   const { setNodeRef, isOver } = useDroppable({ id: "trash", data: { type: "trash" } });
   return (
     <div
       ref={setNodeRef}
       role="region"
-      aria-label="Smazat obchod"
+      aria-label={t("pipelinePage.trash.ariaLabel")}
       aria-hidden={!visible}
       className={cn(
         "pointer-events-none fixed inset-x-0 bottom-0 z-30 flex items-center justify-center px-4 pb-4 transition-opacity duration-fast",
@@ -1130,7 +1145,9 @@ function TrashDropZone({ visible }: { visible: boolean }) {
         )}
       >
         <Trash2 size={16} strokeWidth={1.75} aria-hidden />
-        <span>{isOver ? "Pustit pro smazání" : "Sem přetáhněte pro smazání"}</span>
+        <span>
+          {isOver ? t("pipelinePage.trash.dropHere") : t("pipelinePage.trash.dragHere")}
+        </span>
       </div>
     </div>
   );
@@ -1149,6 +1166,7 @@ function DeleteConfirmDialog({
   onConfirm: () => void;
   moneyFmt: Intl.NumberFormat | null;
 }) {
+  const { t } = useTranslation("deals");
   const dialogRef = useModalDialog<HTMLDivElement>(onCancel, Boolean(deal));
   if (!deal) return null;
   const valueShown = hasValue(deal.value);
@@ -1167,11 +1185,12 @@ function DeleteConfirmDialog({
     >
       <div className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg">
         <h2 id="delete-deal-title" className="text-xl font-semibold">
-          Smazat obchod?
+          {t("pipelinePage.deleteDialog.title")}
         </h2>
         <p className="mt-2 text-sm text-text-secondary">
-          Smaže obchod <strong className="text-text-primary">{deal.name}</strong>
-          {formattedValue ? ` (${formattedValue})` : ""} natrvalo. Akci nelze vrátit zpět.
+          {t("pipelinePage.deleteDialog.bodyPrefix")}{" "}
+          <strong className="text-text-primary">{deal.name}</strong>
+          {formattedValue ? ` (${formattedValue})` : ""} {t("pipelinePage.deleteDialog.bodySuffix")}
         </p>
         <div className="mt-6 flex items-center justify-end gap-3">
           <button
@@ -1179,7 +1198,7 @@ function DeleteConfirmDialog({
             onClick={onCancel}
             className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
           >
-            Zrušit
+            {t("pipelinePage.deleteDialog.cancel")}
           </button>
           <button
             type="button"
@@ -1187,7 +1206,7 @@ function DeleteConfirmDialog({
             disabled={pending}
             className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-medium text-white transition-colors duration-fast hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {pending ? "Mažu…" : "Smazat"}
+            {pending ? t("pipelinePage.deleteDialog.deleting") : t("pipelinePage.deleteDialog.confirm")}
           </button>
         </div>
       </div>
@@ -1196,6 +1215,7 @@ function DeleteConfirmDialog({
 }
 
 function WinToast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+  const { t } = useTranslation("deals");
   // Auto-dismiss after 4 seconds (sonner-like default for non-error toasts).
   useEffect(() => {
     const id = window.setTimeout(onDismiss, 4000);
@@ -1215,7 +1235,7 @@ function WinToast({ message, onDismiss }: { message: string; onDismiss: () => vo
         <button
           type="button"
           onClick={onDismiss}
-          aria-label="Zavřít oznámení"
+          aria-label={t("pipelinePage.winToast.dismissAriaLabel")}
           className="text-text-tertiary hover:text-text-primary"
         >
           ×

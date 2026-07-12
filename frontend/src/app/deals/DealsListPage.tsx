@@ -1,5 +1,6 @@
 import { Handshake } from "lucide-react";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { DealDetailDialog } from "@/app/deals/DealDetailDialog";
@@ -9,14 +10,14 @@ import { stageColor } from "@/app/pipeline/colors";
 import { usePipelineBoard } from "@/app/pipeline/useBoard";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatMoney } from "@/lib/format";
-import { csNoun } from "@/lib/i18n/nouns";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { usePageTitle } from "@/lib/usePageTitle";
 
 const TH = "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary";
 
 export function DealsListPage() {
-  usePageTitle("Obchody");
+  const { t } = useTranslation("deals");
+  usePageTitle(t("dealsList.pageTitle"));
   const navigate = useNavigate();
   const { data: deals, isPending, isError } = useDeals();
   const { data: board } = usePipelineBoard();
@@ -39,7 +40,7 @@ export function DealsListPage() {
         className="m-8 rounded-md border border-danger-subtle bg-danger-subtle px-4 py-3 text-sm text-danger"
         role="alert"
       >
-        Obchody se nepodařilo načíst.
+        {t("dealsList.loadError")}
       </div>
     );
   }
@@ -47,7 +48,7 @@ export function DealsListPage() {
   if (isPending) {
     return (
       <div className="p-8 text-sm text-text-tertiary" role="status">
-        Načítání obchodů…
+        {t("dealsList.loading")}
       </div>
     );
   }
@@ -56,14 +57,14 @@ export function DealsListPage() {
     return (
       <div className="px-4 py-6 md:px-8 md:py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold">Obchody</h1>
+          <h1 className="text-2xl font-semibold">{t("dealsList.pageTitle")}</h1>
         </div>
         <EmptyState
           icon={Handshake}
-          title="Zatím žádné obchody"
-          body="Obchody zakládáte v Pipeline. Tady je uvidíte všechny v seznamu — s firmou, hodnotou, fází a vlastníkem."
+          title={t("dealsList.emptyTitle")}
+          body={t("dealsList.emptyBody")}
           primary={{
-            label: "Přejít do Pipeline",
+            label: t("dealsList.emptyCta"),
             onClick: () => navigate("/app/pipeline"),
           }}
         />
@@ -74,9 +75,9 @@ export function DealsListPage() {
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Obchody</h1>
+        <h1 className="text-2xl font-semibold">{t("dealsList.pageTitle")}</h1>
         <p className="mt-1 text-sm text-text-tertiary">
-          Celkem {deals.total} {csNoun(deals.total, "obchod")}
+          {t("dealsList.totalPrefix")} {t("dealCount", { count: deals.total })}
         </p>
       </div>
 
@@ -85,22 +86,22 @@ export function DealsListPage() {
           <thead>
             <tr>
               <th scope="col" className={TH}>
-                Název
+                {t("dealsList.columns.name")}
               </th>
               <th scope="col" className={`${TH} hidden md:table-cell`}>
-                Firma
+                {t("dealsList.columns.company")}
               </th>
               <th scope="col" className={`${TH} text-right`}>
-                Hodnota
+                {t("dealsList.columns.value")}
               </th>
               <th scope="col" className={`${TH} hidden md:table-cell`}>
-                Fáze
+                {t("dealsList.columns.stage")}
               </th>
               <th scope="col" className={`${TH} hidden lg:table-cell`}>
-                Vlastník
+                {t("dealsList.columns.owner")}
               </th>
               <th scope="col" className={`${TH} hidden md:table-cell`}>
-                Uzavření
+                {t("dealsList.columns.closed")}
               </th>
             </tr>
           </thead>
