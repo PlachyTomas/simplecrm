@@ -1,5 +1,6 @@
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { type FormEvent, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 
 import { authErrorCode, authErrorMessage, resendVerification, signup } from "@/auth/api";
@@ -17,7 +18,8 @@ type Phase =
   | { kind: "error"; message: string };
 
 export function SignupPage() {
-  usePageTitle("Registrace");
+  const { t } = useTranslation("auth");
+  usePageTitle(t("signup.pageTitle"));
   const navigate = useNavigate();
   const { setAccessToken } = useAuth();
   const [name, setName] = useState("");
@@ -49,23 +51,21 @@ export function SignupPage() {
         if (code === "email_already_registered") {
           setPhase({
             kind: "error",
-            message: "Tento e-mail už je u nás registrovaný. Přihlaste se, nebo si obnovte heslo.",
+            message: t("signup.errors.emailAlreadyRegistered"),
           });
         } else if (code === "weak_password") {
           setPhase({
             kind: "error",
-            message:
-              authErrorMessage(err.body) ??
-              "Heslo nesplňuje požadavky (alespoň 12 znaků, písmeno + číslice).",
+            message: authErrorMessage(err.body) ?? t("shared.weakPasswordFallback"),
           });
         } else {
           setPhase({
             kind: "error",
-            message: "Registrace se nezdařila. Zkuste to prosím znovu.",
+            message: t("signup.errors.generic"),
           });
         }
       } else {
-        setPhase({ kind: "error", message: "Registrace se nezdařila." });
+        setPhase({ kind: "error", message: t("signup.errors.genericNoResponse") });
       }
     } finally {
       setSubmitting(false);
@@ -77,15 +77,15 @@ export function SignupPage() {
     setResendInfo(null);
     try {
       await resendVerification(phase.email);
-      setResendInfo("Nový ověřovací e-mail jsme vám právě odeslali.");
+      setResendInfo(t("signup.resend.success"));
     } catch (err) {
       if (err instanceof ApiError && err.status === 429) {
         const retryAfter =
           (err.body as { detail?: { retry_after_seconds?: number } } | undefined)?.detail
             ?.retry_after_seconds ?? 60;
-        setResendInfo(`Počkejte prosím ${retryAfter} s před dalším pokusem.`);
+        setResendInfo(t("shared.rateLimited", { seconds: retryAfter }));
       } else {
-        setResendInfo("Odeslání se nezdařilo. Zkuste to prosím za chvíli.");
+        setResendInfo(t("signup.resend.failed"));
       }
     }
   }
@@ -97,7 +97,7 @@ export function SignupPage() {
         className="absolute left-4 top-4 inline-flex h-10 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary"
       >
         <ArrowLeft size={16} strokeWidth={1.75} aria-hidden />
-        Zpět na úvod
+        {t("shared.backToHome")}
       </Link>
       <div className="absolute right-4 top-4">
         <ThemeToggle variant="compact" />
@@ -113,21 +113,22 @@ export function SignupPage() {
           <Sparkles size={24} strokeWidth={1.75} />
         </div>
         <h1 id="signup-title" className="text-center text-2xl font-semibold">
-          {phase.kind === "sent" ? "Zkontrolujte svůj e-mail" : "Registrace do SimpleCRM"}
+          {phase.kind === "sent" ? t("signup.sentHeading") : t("signup.heading")}
         </h1>
 
         {phase.kind === "sent" ? (
           <div className="mt-6 space-y-4 text-center">
             <p className="text-sm text-text-secondary">
-              Na adresu <strong className="text-text-primary">{phase.email}</strong> jsme odeslali
-              ověřovací e-mail. Kliknutím na odkaz dokončíte registraci.
+              {t("signup.sentMessagePrefix")}{" "}
+              <strong className="text-text-primary">{phase.email}</strong>{" "}
+              {t("signup.sentMessageSuffix")}
             </p>
             <button
               type="button"
               onClick={handleResend}
               className="hover:bg-bg-subtle inline-flex h-10 items-center justify-center rounded-md border border-border bg-bg px-5 text-sm font-medium text-text-primary"
             >
-              Odeslat e-mail znovu
+              {t("signup.resendCta")}
             </button>
             {resendInfo ? (
               <p className="bg-bg-subtle rounded-md px-3 py-2 text-sm text-text-secondary">
@@ -136,7 +137,7 @@ export function SignupPage() {
             ) : null}
             <p className="text-sm text-text-secondary">
               <Link to="/login" className="underline">
-                Zpět na přihlášení
+                {t("shared.backToLogin")}
               </Link>
             </p>
           </div>
@@ -144,7 +145,9 @@ export function SignupPage() {
           <>
             <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-text-secondary">Jméno</span>
+                <span className="mb-1 block text-sm font-medium text-text-secondary">
+                  {t("signup.nameLabel")}
+                </span>
                 <input
                   type="text"
                   autoComplete="name"
@@ -155,7 +158,9 @@ export function SignupPage() {
                 />
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-text-secondary">E-mail</span>
+                <span className="mb-1 block text-sm font-medium text-text-secondary">
+                  {t("shared.emailLabel")}
+                </span>
                 <input
                   type="email"
                   autoComplete="email"
@@ -166,7 +171,9 @@ export function SignupPage() {
                 />
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-text-secondary">Heslo</span>
+                <span className="mb-1 block text-sm font-medium text-text-secondary">
+                  {t("shared.passwordLabel")}
+                </span>
                 <input
                   type="password"
                   autoComplete="new-password"
@@ -177,7 +184,7 @@ export function SignupPage() {
                   className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent"
                 />
                 <span className="mt-1 block text-xs text-text-tertiary">
-                  Alespoň 12 znaků, jedno písmeno a jedna číslice.
+                  {t("shared.passwordHint")}
                 </span>
               </label>
 
@@ -195,13 +202,15 @@ export function SignupPage() {
                 disabled={submitting}
                 className="inline-flex h-10 w-full items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:opacity-50"
               >
-                {submitting ? "Odesílání…" : "Zaregistrovat se"}
+                {submitting ? t("shared.submitting") : t("signup.submit")}
               </button>
             </form>
 
             <div className="my-6 flex items-center gap-3">
               <div className="h-px flex-1 bg-border" />
-              <span className="text-xs uppercase tracking-wide text-text-tertiary">nebo</span>
+              <span className="text-xs uppercase tracking-wide text-text-tertiary">
+                {t("shared.or")}
+              </span>
               <div className="h-px flex-1 bg-border" />
             </div>
 
@@ -209,13 +218,13 @@ export function SignupPage() {
               href={`${API_BASE_URL}${GOOGLE_LOGIN_PATH}`}
               className="hover:bg-bg-subtle inline-flex h-10 w-full items-center justify-center rounded-md border border-border bg-bg px-5 text-sm font-medium text-text-primary"
             >
-              Zaregistrovat se přes Google
+              {t("signup.googleCta")}
             </a>
 
             <p className="mt-6 text-center text-sm text-text-secondary">
-              Už máte účet?{" "}
+              {t("signup.haveAccount")}{" "}
               <Link to="/login" className="font-medium text-accent underline">
-                Přihlásit se
+                {t("signup.loginCta")}
               </Link>
             </p>
           </>

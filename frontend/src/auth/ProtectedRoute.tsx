@@ -1,4 +1,5 @@
 import { Navigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "@/auth/useAuth";
 import { TrialExpiredGate } from "@/auth/TrialExpiredGate";
@@ -59,6 +60,7 @@ async function downloadDataExport(accessToken: string): Promise<void> {
 }
 
 export function ProtectedRoute({ children, requireOrg = true }: ProtectedRouteProps) {
+  const { t } = useTranslation("auth");
   const { accessToken, refreshSettled } = useAuth();
   const query = useCurrentUser();
 
@@ -68,7 +70,7 @@ export function ProtectedRoute({ children, requireOrg = true }: ProtectedRoutePr
   if (!accessToken && !refreshSettled) {
     return (
       <div className="flex h-full min-h-screen items-center justify-center bg-bg text-sm text-text-tertiary">
-        Načítání…
+        {t("shared.loading")}
       </div>
     );
   }
@@ -80,7 +82,7 @@ export function ProtectedRoute({ children, requireOrg = true }: ProtectedRoutePr
   if (query.isPending) {
     return (
       <div className="flex h-full min-h-screen items-center justify-center bg-bg text-sm text-text-tertiary">
-        Načítání…
+        {t("shared.loading")}
       </div>
     );
   }

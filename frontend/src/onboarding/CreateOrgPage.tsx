@@ -1,6 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Building2, Check, Sparkles, Users } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
+import type { ParseKeys } from "i18next";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/auth/useAuth";
@@ -9,6 +11,7 @@ import { formatCzkMinor } from "@/components/billing/format";
 import { PriceDisplay } from "@/components/billing/PriceDisplay";
 import { usePublicPlans } from "@/components/billing/usePublicPlans";
 import { ApiError, apiFetch } from "@/lib/api";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { queryClient } from "@/lib/queryClient";
 import { testIds } from "@/lib/testids";
 import { ThemeToggle } from "@/lib/ThemeToggle";
@@ -37,13 +40,14 @@ type SubmitBody = {
  *   3. 30-day trial info + monthly/yearly plan picker (with per-user and
  *      overall totals)
  *
- * Submitting promotes the user to admin, creates the default team
- * ("Hlavní tým"), seeds the default pipeline, and queues the chosen
+ * Submitting promotes the user to admin, creates the default team,
+ * seeds the default pipeline, and queues the chosen
  * plan via Subscription.pending_plan_id so the existing super-admin
- * Aktivovat path applies it on payment receipt.
+ * activation path applies it on payment receipt.
  */
 export function CreateOrgPage() {
-  usePageTitle("Vytvořit organizaci");
+  const { t } = useTranslation("onboarding");
+  usePageTitle(t("createOrg.pageTitle"));
   const { accessToken, clearAuth } = useAuth();
   const { data: user } = useCurrentUser();
   const navigate = useNavigate();
@@ -75,7 +79,7 @@ export function CreateOrgPage() {
     setError(null);
     if (step === 1) {
       if (name.trim().length === 0) {
-        setError("Zadejte název organizace.");
+        setError(t("createOrg.errors.nameRequired"));
         return;
       }
       setStep(2);
@@ -83,7 +87,7 @@ export function CreateOrgPage() {
     }
     if (step === 2) {
       if (!Number.isFinite(seatCount) || seatCount < 1 || seatCount > 500) {
-        setError("Počet uživatelů musí být v rozsahu 1–500.");
+        setError(t("createOrg.errors.seatRange"));
         return;
       }
       setStep(3);
@@ -113,9 +117,9 @@ export function CreateOrgPage() {
         onError: (err) => {
           if (err instanceof ApiError) {
             const detail = (err.body as { detail?: unknown })?.detail;
-            setError(typeof detail === "string" ? detail : "Vytvoření selhalo.");
+            setError(typeof detail === "string" ? detail : t("createOrg.errors.generic"));
           } else {
-            setError(err.message || "Vytvoření selhalo.");
+            setError(err.message || t("createOrg.errors.generic"));
           }
         },
       },
@@ -135,7 +139,7 @@ export function CreateOrgPage() {
             }}
             className="text-xs text-text-tertiary hover:text-text-primary"
           >
-            Odhlásit se
+            {t("createOrg.signOut")}
           </button>
         </div>
         <main
@@ -149,7 +153,7 @@ export function CreateOrgPage() {
             <Sparkles size={24} strokeWidth={1.75} />
           </div>
           <h1 id="create-org-title" className="text-center text-2xl font-semibold">
-            Vytvořte si organizaci
+            {t("createOrg.heading")}
           </h1>
           <StepDots step={step} />
 
@@ -177,7 +181,7 @@ export function CreateOrgPage() {
                 className="inline-flex h-10 items-center gap-1.5 rounded-md bg-transparent px-3 text-sm font-medium text-text-secondary hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <ArrowLeft size={16} strokeWidth={1.75} />
-                Zpět
+                {t("createOrg.back")}
               </button>
               {step < 3 ? (
                 <button
@@ -186,7 +190,7 @@ export function CreateOrgPage() {
                   data-testid={testIds.onboarding.wizard.next}
                   className="inline-flex h-10 items-center gap-1.5 rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
                 >
-                  Pokračovat
+                  {t("createOrg.next")}
                   <ArrowRight size={16} strokeWidth={1.75} />
                 </button>
               ) : (
@@ -197,34 +201,32 @@ export function CreateOrgPage() {
                   className="inline-flex h-10 items-center gap-1.5 rounded-md bg-accent px-6 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Check size={16} strokeWidth={2} />
-                  {mutation.isPending ? "Vytvářím…" : "Vytvořit organizaci"}
+                  {mutation.isPending ? t("createOrg.submitting") : t("createOrg.submit")}
                 </button>
               )}
             </div>
           </form>
 
-          <p className="mt-6 text-center text-xs text-text-tertiary">
-            Pozvánka od kolegů? Použijte odkaz, který vám přišel e-mailem, místo zakládání nové
-            organizace.
-          </p>
+          <p className="mt-6 text-center text-xs text-text-tertiary">{t("createOrg.inviteHint")}</p>
         </main>
       </div>
     </div>
   );
 }
 
-const STEP_LABELS: Record<Step, string> = {
-  1: "Organizace",
-  2: "Uživatelé",
-  3: "Plán",
+const STEP_LABEL_KEY: Record<Step, ParseKeys<"onboarding">> = {
+  1: "createOrg.steps.org",
+  2: "createOrg.steps.users",
+  3: "createOrg.steps.plan",
 };
 
 const STEP_NUMBERS: Step[] = [1, 2, 3];
 
 function StepDots({ step }: { step: Step }) {
+  const { t } = useTranslation("onboarding");
   return (
     <ol
-      aria-label="Kroky vytvoření organizace"
+      aria-label={t("createOrg.stepsAriaLabel")}
       className="mx-auto mt-5 flex items-center justify-center gap-3 text-xs"
     >
       {STEP_NUMBERS.map((n, idx) => {
@@ -255,7 +257,7 @@ function StepDots({ step }: { step: Step }) {
                     : "text-text-tertiary",
               )}
             >
-              {STEP_LABELS[n]}
+              {t(STEP_LABEL_KEY[n])}
             </span>
             {idx < STEP_NUMBERS.length - 1 ? (
               <span
@@ -274,13 +276,14 @@ function StepDots({ step }: { step: Step }) {
 }
 
 function NameStep({ name, setName }: { name: string; setName: (v: string) => void }) {
+  const { t } = useTranslation("onboarding");
   return (
     <div>
-      <p className="text-center text-sm text-text-secondary">
-        Začněte názvem. Detaily firmy lze doplnit kdykoli později.
-      </p>
+      <p className="text-center text-sm text-text-secondary">{t("createOrg.nameStep.intro")}</p>
       <label className="mt-5 block">
-        <span className="text-xs font-medium text-text-secondary">Název organizace</span>
+        <span className="text-xs font-medium text-text-secondary">
+          {t("createOrg.nameStep.label")}
+        </span>
         <div className="relative mt-2">
           <Building2
             aria-hidden
@@ -296,7 +299,7 @@ function NameStep({ name, setName }: { name: string; setName: (v: string) => voi
             data-testid={testIds.onboarding.wizard.nameInput}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Acme s.r.o."
+            placeholder={t("createOrg.nameStep.placeholder")}
             className="block h-10 w-full rounded-md border border-border bg-surface-overlay pl-10 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
           />
         </div>
@@ -314,6 +317,7 @@ function SeatsStep({
   setSeatCount: (n: number) => void;
   planCode: PlanCode;
 }) {
+  const { t } = useTranslation("onboarding");
   const plans = usePublicPlans();
   const monthlyPlan = useMemo(() => plans.data?.find((p) => p.code === "monthly"), [plans.data]);
   const annualPlan = useMemo(() => plans.data?.find((p) => p.code === "annual"), [plans.data]);
@@ -327,15 +331,15 @@ function SeatsStep({
       : perUserMonthly != null
         ? perUserMonthly * seatCount
         : null;
-  const previewSuffix = planCode === "annual" ? "rok" : "měsíc";
+  const previewSuffix = planCode === "annual" ? t("createOrg.perYear") : t("createOrg.perMonth");
 
   return (
     <div>
-      <p className="text-center text-sm text-text-secondary">
-        Kolik obchodníků bude SimpleCRM používat? Můžete kdykoli později změnit v Nastavení.
-      </p>
+      <p className="text-center text-sm text-text-secondary">{t("createOrg.seatsStep.intro")}</p>
       <label className="mt-5 block">
-        <span className="text-xs font-medium text-text-secondary">Počet obchodníků</span>
+        <span className="text-xs font-medium text-text-secondary">
+          {t("createOrg.seatsStep.label")}
+        </span>
         <div className="relative mt-2">
           <Users
             aria-hidden
@@ -355,9 +359,7 @@ function SeatsStep({
             className="block h-10 w-32 rounded-md border border-border bg-surface-overlay pl-10 pr-3 text-sm tabular-nums text-text-primary focus:border-accent focus:outline-none"
           />
         </div>
-        <span className="mt-2 block text-xs text-text-tertiary">
-          Tato hodnota slouží jako limit pro pozvánky a podle ní se počítá výsledná fakturace.
-        </span>
+        <span className="mt-2 block text-xs text-text-tertiary">{t("createOrg.seatsStep.hint")}</span>
       </label>
 
       {previewMinor != null ? (
@@ -367,28 +369,19 @@ function SeatsStep({
           aria-live="polite"
         >
           <p className="text-text-secondary">
-            Při {seatCount} {csNoun(seatCount, "obchodnik")} by fakturace činila{" "}
+            {t("createOrg.seatsPhrase", { count: seatCount })}{" "}
+            {t("createOrg.seatsStep.billingWouldTotal")}{" "}
             <span className="font-semibold tabular-nums text-text-primary">
               {formatCzkMinor(previewMinor)}
             </span>{" "}
             / {previewSuffix}.
           </p>
-          <p className="mt-1 text-xs text-text-tertiary">
-            Účtujeme až po skončení 30denní zkušebky. Cenu si vyberete v dalším kroku.
-          </p>
+          <p className="mt-1 text-xs text-text-tertiary">{t("createOrg.seatsStep.hint2")}</p>
         </div>
       ) : null}
     </div>
   );
 }
-
-function csNoun(n: number, kind: "obchodnik"): string {
-  // Czech locative plural: "1 obchodníkovi", "2/3/4 obchodnících", "5+ obchodnících"
-  if (kind === "obchodnik") return n === 1 ? "obchodníkovi" : "obchodnících";
-  return "";
-}
-
-const csLongDate = new Intl.DateTimeFormat("cs-CZ", { dateStyle: "long" });
 
 function PlanStep({
   seatCount,
@@ -399,6 +392,8 @@ function PlanStep({
   planCode: PlanCode;
   setPlanCode: (c: PlanCode) => void;
 }) {
+  const { t } = useTranslation("onboarding");
+  const locale = useLocale();
   const plans = usePublicPlans();
   const monthlyPlan = useMemo(() => plans.data?.find((p) => p.code === "monthly"), [plans.data]);
   const annualPlan = useMemo(() => plans.data?.find((p) => p.code === "annual"), [plans.data]);
@@ -412,9 +407,12 @@ function PlanStep({
     d.setDate(d.getDate() + 30);
     return d;
   }, []);
-  const trialEndsLabel = csLongDate.format(trialEndsAt);
+  const trialEndsLabel = useMemo(
+    () => new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(trialEndsAt),
+    [trialEndsAt, locale],
+  );
 
-  // Absolute Kč savings for the currently-typed seat count. The marketing
+  // Absolute CZK savings for the currently-typed seat count. The marketing
   // 16 % discount is derived from the published per-user prices, so we
   // compute the exact koruna delta off the same source.
   const annualSavingsMinor = useMemo(() => {
@@ -428,27 +426,30 @@ function PlanStep({
   return (
     <div>
       <div className="rounded-md border border-border-subtle bg-surface-overlay p-4 text-sm">
-        <p className="font-medium text-text-primary">30denní zkušební doba zdarma.</p>
+        <p className="font-medium text-text-primary">{t("createOrg.planStep.trialHeading")}</p>
         <p className="mt-2 text-text-secondary">
-          Před koncem zkušebky vám zašleme fakturu se splatností v den ukončení zkoušky (
-          <span className="font-medium text-text-primary">{trialEndsLabel}</span>). Můžete ji
-          uhradit kartou nebo bankovním převodem.
+          {t("createOrg.planStep.dueDatePrefix")}
+          <span className="font-medium text-text-primary">{trialEndsLabel}</span>
+          {t("createOrg.planStep.dueDateSuffix")}
         </p>
         <p className="mt-2 text-text-tertiary">
-          Stav úhrady a další doklady najdete kdykoli v{" "}
-          <span className="font-medium text-text-secondary">Nastavení → Předplatné</span>.
+          {t("createOrg.planStep.statusPrefix")}{" "}
+          <span className="font-medium text-text-secondary">
+            {t("createOrg.planStep.statusLocation")}
+          </span>
+          .
         </p>
       </div>
 
       <div
         role="radiogroup"
-        aria-label="Plán pro placené období"
+        aria-label={t("createOrg.planStep.ariaLabel")}
         className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2"
       >
         <BillingPlanCard
           code="monthly"
-          title="Měsíční"
-          per="měsíc"
+          title={t("createOrg.planMonthly")}
+          per={t("createOrg.perMonth")}
           priceMinor={monthlyPlan?.price_per_user_minor ?? null}
           priceInterval="monthly"
           seatCount={seatCount}
@@ -457,14 +458,14 @@ function PlanStep({
         />
         <BillingPlanCard
           code="annual"
-          title="Roční"
-          per="rok"
+          title={t("createOrg.planAnnual")}
+          per={t("createOrg.perYear")}
           priceMinor={annualPlan?.price_per_user_minor ?? null}
           priceInterval="annual"
           seatCount={seatCount}
           selected={planCode === "annual"}
           onSelect={() => setPlanCode("annual")}
-          badge="Ušetříte 16 %"
+          badge={t("createOrg.annualBadge")}
           savingsMinor={annualSavingsMinor}
         />
       </div>
@@ -498,6 +499,7 @@ function BillingPlanCard({
   badge,
   savingsMinor,
 }: BillingPlanCardProps) {
+  const { t } = useTranslation("onboarding");
   const totalMinor = priceMinor != null ? priceMinor * seatCount : null;
   return (
     <div
@@ -537,7 +539,7 @@ function BillingPlanCard({
           className="mt-3 text-sm text-text-secondary"
           aria-live="polite"
         >
-          Při {seatCount} {seatCount === 1 ? "obchodníkovi" : "obchodnících"} fakturujeme{" "}
+          {t("createOrg.seatsPhrase", { count: seatCount })} {t("createOrg.planCard.weInvoice")}{" "}
           <span className="font-semibold tabular-nums text-text-primary">
             {formatCzkMinor(totalMinor)}
           </span>{" "}
@@ -550,9 +552,9 @@ function BillingPlanCard({
           className="mt-2 text-sm text-success"
           aria-live="polite"
         >
-          Ušetříte{" "}
-          <span className="font-semibold tabular-nums">{formatCzkMinor(savingsMinor)}</span> oproti
-          měsíčnímu plánu.
+          {t("createOrg.planCard.savingsPrefix")}{" "}
+          <span className="font-semibold tabular-nums">{formatCzkMinor(savingsMinor)}</span>{" "}
+          {t("createOrg.planCard.savingsSuffix")}
         </p>
       ) : null}
     </div>

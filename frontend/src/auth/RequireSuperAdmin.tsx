@@ -1,4 +1,5 @@
 import { Navigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
@@ -15,13 +16,14 @@ interface RequireSuperAdminProps {
  * unauthenticated visitors — they always see /login.
  */
 export function RequireSuperAdmin({ children }: RequireSuperAdminProps) {
+  const { t } = useTranslation("auth");
   const { accessToken, refreshSettled } = useAuth();
   const query = useCurrentUser();
 
   if (!accessToken && !refreshSettled) {
     return (
       <div className="flex h-full min-h-screen items-center justify-center bg-bg text-sm text-text-tertiary">
-        Načítání…
+        {t("shared.loading")}
       </div>
     );
   }
@@ -33,7 +35,7 @@ export function RequireSuperAdmin({ children }: RequireSuperAdminProps) {
   if (query.isPending) {
     return (
       <div className="flex h-full min-h-screen items-center justify-center bg-bg text-sm text-text-tertiary">
-        Načítání…
+        {t("shared.loading")}
       </div>
     );
   }

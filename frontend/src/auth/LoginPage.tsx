@@ -1,5 +1,6 @@
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { type FormEvent, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 
 import { authErrorCode, login } from "@/auth/api";
@@ -17,7 +18,8 @@ interface ErrorState {
 }
 
 export function LoginPage() {
-  usePageTitle("Přihlášení");
+  const { t } = useTranslation("auth");
+  usePageTitle(t("login.pageTitle"));
   const navigate = useNavigate();
   const { setAccessToken } = useAuth();
   const [email, setEmail] = useState("");
@@ -38,15 +40,14 @@ export function LoginPage() {
         const code = authErrorCode(err.body);
         if (code === "oauth_only_account") {
           setError({
-            message:
-              "Tento e-mail je registrován přes Google. Použijte prosím přihlášení přes Google.",
+            message: t("login.errors.oauthOnlyAccount"),
             showGoogleCta: true,
           });
         } else {
-          setError({ message: "Nesprávný e-mail nebo heslo." });
+          setError({ message: t("login.errors.invalidCredentials") });
         }
       } else {
-        setError({ message: "Přihlášení se nezdařilo. Zkuste to prosím znovu." });
+        setError({ message: t("login.errors.generic") });
       }
     } finally {
       setSubmitting(false);
@@ -60,7 +61,7 @@ export function LoginPage() {
         className="absolute left-4 top-4 inline-flex h-10 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary"
       >
         <ArrowLeft size={16} strokeWidth={1.75} aria-hidden />
-        Zpět na úvod
+        {t("shared.backToHome")}
       </Link>
       <div className="absolute right-4 top-4">
         <ThemeToggle variant="compact" />
@@ -76,12 +77,14 @@ export function LoginPage() {
           <Sparkles size={24} strokeWidth={1.75} />
         </div>
         <h1 id="login-title" className="text-center text-2xl font-semibold">
-          Přihlášení do SimpleCRM
+          {t("login.heading")}
         </h1>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-text-secondary">E-mail</span>
+            <span className="mb-1 block text-sm font-medium text-text-secondary">
+              {t("shared.emailLabel")}
+            </span>
             <input
               type="email"
               autoComplete="email"
@@ -92,7 +95,9 @@ export function LoginPage() {
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-text-secondary">Heslo</span>
+            <span className="mb-1 block text-sm font-medium text-text-secondary">
+              {t("shared.passwordLabel")}
+            </span>
             <input
               type="password"
               autoComplete="current-password"
@@ -111,7 +116,7 @@ export function LoginPage() {
                   href={`${API_BASE_URL}${GOOGLE_LOGIN_PATH}`}
                   className="mt-2 inline-block text-sm font-medium underline"
                 >
-                  Přihlásit se přes Google
+                  {t("login.googleCta")}
                 </a>
               ) : null}
             </div>
@@ -122,18 +127,20 @@ export function LoginPage() {
             disabled={submitting}
             className="inline-flex h-10 w-full items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:opacity-50"
           >
-            {submitting ? "Přihlašování…" : "Přihlásit se"}
+            {submitting ? t("login.submitting") : t("login.submit")}
           </button>
           <div className="text-right">
             <Link to="/forgot-password" className="text-sm text-text-secondary underline">
-              Zapomněli jste heslo?
+              {t("login.forgotPasswordLink")}
             </Link>
           </div>
         </form>
 
         <div className="my-6 flex items-center gap-3">
           <div className="h-px flex-1 bg-border" />
-          <span className="text-xs uppercase tracking-wide text-text-tertiary">nebo</span>
+          <span className="text-xs uppercase tracking-wide text-text-tertiary">
+            {t("shared.or")}
+          </span>
           <div className="h-px flex-1 bg-border" />
         </div>
 
@@ -141,13 +148,13 @@ export function LoginPage() {
           href={`${API_BASE_URL}${GOOGLE_LOGIN_PATH}`}
           className="hover:bg-bg-subtle inline-flex h-10 w-full items-center justify-center rounded-md border border-border bg-bg px-5 text-sm font-medium text-text-primary transition-colors duration-fast"
         >
-          Přihlásit se přes Google
+          {t("login.googleCta")}
         </a>
 
         <p className="mt-6 text-center text-sm text-text-secondary">
-          Nemáte účet?{" "}
+          {t("login.noAccount")}{" "}
           <Link to="/signup" className="font-medium text-accent underline">
-            Zaregistrovat se
+            {t("login.signupCta")}
           </Link>
         </p>
 
