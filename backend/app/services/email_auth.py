@@ -272,6 +272,7 @@ async def signup_email_user(
             recipient=user.email,
             name=user.name,
             link=link_builder(signed),
+            lang=user.language,
         )
     )
 
@@ -309,6 +310,7 @@ async def resend_verification(
             recipient=user.email,
             name=user.name,
             link=link_builder(signed),
+            lang=user.language,
         )
     )
 
@@ -442,6 +444,7 @@ async def issue_password_reset(
             recipient=user.email,
             name=user.name,
             link=link_builder(signed),
+            lang=user.language,
         )
     )
 

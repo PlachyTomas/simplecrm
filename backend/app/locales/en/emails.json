@@ -1,1 +1,21 @@
-{}
+{
+  "verification": {
+    "subject": "SimpleCRM: verify your email"
+  },
+  "password_reset": {
+    "subject": "SimpleCRM: password reset"
+  },
+  "invitation": {
+    "subject": "SimpleCRM: invitation to {organization_name}"
+  },
+  "freed_company": {
+    "subject_one": "SimpleCRM: {count} company freed",
+    "subject_other": "SimpleCRM: {count} companies freed"
+  },
+  "subscription_pending": {
+    "subject": "SimpleCRM: {org_name} chose the {plan_display} plan"
+  },
+  "billing_info_reminder": {
+    "subject": "SimpleCRM: complete your billing details (trial ends in {days_remaining} days)"
+  }
+}

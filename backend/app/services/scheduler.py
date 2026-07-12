@@ -148,6 +148,7 @@ async def run_freeing_sweep() -> int:
             owner_email=recipient.email,
             owner_name=recipient.name,
             company_names=names,
+            lang=recipient.language,
         )
         try:
             await send_email(message)
@@ -616,6 +617,7 @@ async def run_billing_info_reminder_sweep() -> int:
                             org_name=org.name,
                             days_remaining=days_remaining,
                             settings_link=settings_link,
+                            lang=recipient.language,
                         )
                     )
                 except Exception:
