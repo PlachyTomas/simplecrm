@@ -136,9 +136,10 @@ export function DashboardPage() {
   const locale = useLocale();
   const monthLabel = useMemo(() => {
     try {
-      return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" })
-        .format(new Date())
-        .replace(/^\w/, (c) => c.toUpperCase());
+      // Intl casing already follows the locale's convention: Czech long
+      // months are lowercase ("červenec"), English are capitalized ("July").
+      // Both read correctly mid-sentence, so we don't force a case here.
+      return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date());
     } catch {
       return "";
     }
@@ -173,7 +174,7 @@ export function DashboardPage() {
         </h1>
         <p className="mt-1 text-sm text-text-tertiary">
           {t("dashboardPage.summaryFor", {
-            month: monthLabel.toLowerCase() || t("dashboardPage.summaryForFallback"),
+            month: monthLabel || t("dashboardPage.summaryForFallback"),
           })}
         </p>
       </header>
