@@ -36,7 +36,7 @@ export function HomeEditChrome({
   if (!isEditMode) return <>{children}</>;
 
   return (
-    <div className="flex h-full flex-col rounded-lg ring-1 ring-accent">
+    <div className="flex h-full flex-col">
       {/* Reserved strip instead of a floating overlay so the controls can
           never cover the card's own top-right content (KPI icon, badges). */}
       <div className="flex shrink-0 items-center justify-end gap-1 px-1 pb-1">
@@ -70,7 +70,9 @@ export function HomeEditChrome({
           </button>
         ) : null}
       </div>
-      <div className={cn("min-h-0 flex-1")}>{children}</div>
+      {/* Ring hugs the card itself, not the strip, so the accent outline
+          matches the widget's visible border. */}
+      <div className={cn("min-h-0 flex-1 rounded-lg ring-1 ring-accent")}>{children}</div>
     </div>
   );
 }
