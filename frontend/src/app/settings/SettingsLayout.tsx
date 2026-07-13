@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Navigate, NavLink, Outlet, useSearchParams } from "react-router-dom";
 
 import {
@@ -20,6 +21,7 @@ const navItemActive = "bg-accent-subtle text-accent";
 const navItemIdle = "text-text-secondary hover:bg-surface-overlay hover:text-text-primary";
 
 export function SettingsLayout() {
+  const { t } = useTranslation("settings");
   const { data: user } = useCurrentUser();
   const [searchParams, setSearchParams] = useSearchParams();
   const toast = useToast();
@@ -37,18 +39,18 @@ export function SettingsLayout() {
     const errorCode = searchParams.get("gcal_error");
     if (!connected && !errorCode) return;
     if (connected === "connected") {
-      toast.success("Google Kalendář byl propojen");
+      toast.success(t("layout.gcalConnected"));
     } else if (errorCode === "denied") {
-      toast.error("Propojení Google Kalendáře bylo zrušeno");
+      toast.error(t("layout.gcalDenied"));
     } else if (errorCode) {
-      toast.error("Propojení Google Kalendáře se nezdařilo, zkuste to prosím znovu");
+      toast.error(t("layout.gcalFailed"));
     }
     const next = new URLSearchParams(searchParams);
     next.delete("gcal");
     next.delete("gcal_error");
     next.delete("tab");
     setSearchParams(next, { replace: true });
-  }, [pendingTab, searchParams, setSearchParams, toast]);
+  }, [pendingTab, searchParams, setSearchParams, toast, t]);
 
   if (pendingTab) {
     const rest = new URLSearchParams(searchParams);
@@ -60,7 +62,7 @@ export function SettingsLayout() {
   if (!user) {
     return (
       <div className="p-8 text-sm text-text-tertiary" role="status">
-        Načítání…
+        {t("layout.loading")}
       </div>
     );
   }
@@ -72,11 +74,11 @@ export function SettingsLayout() {
     <div className="flex">
       {isDesktop ? (
         <nav
-          aria-label="Sekce nastavení"
+          aria-label={t("layout.navAriaLabel")}
           className="w-56 shrink-0 border-r border-border-subtle px-3 py-6"
         >
           <div className="sticky top-20 space-y-5">
-            <h2 className="px-3 text-lg font-semibold">Nastavení</h2>
+            <h2 className="px-3 text-lg font-semibold">{t("layout.title")}</h2>
             {GROUP_ORDER.map((group) => {
               const items = SETTINGS_SECTIONS.filter(
                 (s) => s.group === group && visibleKeys.includes(s.key),
@@ -86,7 +88,7 @@ export function SettingsLayout() {
               return (
                 <div key={group}>
                   <p className="px-3 text-xs font-medium uppercase tracking-wider text-text-tertiary">
-                    {GROUP_LABELS[group]}
+                    {t(GROUP_LABELS[group])}
                   </p>
                   <ul className="mt-1 space-y-0.5">
                     {items.map((s) => (
@@ -98,7 +100,7 @@ export function SettingsLayout() {
                           }
                         >
                           <s.icon size={16} strokeWidth={1.75} aria-hidden />
-                          {s.label}
+                          {t(s.labelKey)}
                         </NavLink>
                       </li>
                     ))}
@@ -111,7 +113,7 @@ export function SettingsLayout() {
                           }
                         >
                           <IMPORT_NAV_ITEM.icon size={16} strokeWidth={1.75} aria-hidden />
-                          {IMPORT_NAV_ITEM.label}
+                          {t(IMPORT_NAV_ITEM.labelKey)}
                         </NavLink>
                       </li>
                     ) : null}

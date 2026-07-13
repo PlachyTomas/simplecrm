@@ -12,6 +12,7 @@
 
 import { Sparkles, X } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { TourStep } from "@/app/tutorial/tutorialSteps";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ const CARD_WIDTH = 360;
 const CARD_MARGIN = 16;
 
 export function TourCard(props: TourCardProps) {
+  const { t } = useTranslation("common");
   const cardRef = useRef<HTMLDivElement | null>(null);
   // Focus the title on each step change so screen readers announce it
   // and Esc / Enter keyboard handling lands on the card.
@@ -78,13 +80,13 @@ export function TourCard(props: TourCardProps) {
             <Sparkles size={16} strokeWidth={1.75} />
           </span>
           <span className="text-xs uppercase tracking-wide text-text-tertiary">
-            Krok {props.index + 1} / {props.total}
+            {t("tutorial.stepCounter", { current: props.index + 1, total: props.total })}
           </span>
         </div>
         <button
           type="button"
           onClick={props.onDismiss}
-          aria-label="Zavřít průvodce"
+          aria-label={t("tutorial.closeAriaLabel")}
           className="rounded p-1 text-text-tertiary transition-colors hover:bg-surface-overlay hover:text-text-primary"
           data-testid="tour-dismiss"
         >
@@ -96,9 +98,9 @@ export function TourCard(props: TourCardProps) {
         id={`tour-step-title-${props.step.id}`}
         className="mb-2 text-base font-semibold text-text-primary"
       >
-        {props.step.title}
+        {t(props.step.titleKey)}
       </h2>
-      <p className="text-sm leading-snug text-text-secondary">{props.step.body}</p>
+      <p className="text-sm leading-snug text-text-secondary">{t(props.step.bodyKey)}</p>
 
       <footer className="mt-4 flex items-center justify-between gap-2">
         <button
@@ -107,7 +109,7 @@ export function TourCard(props: TourCardProps) {
           disabled={props.isFirst || props.isPersisting}
           className="rounded-md px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Zpět
+          {t("tutorial.back")}
         </button>
 
         <div className="flex items-center gap-2">
@@ -116,14 +118,14 @@ export function TourCard(props: TourCardProps) {
             onClick={props.onDismiss}
             className="rounded-md px-3 py-1.5 text-sm text-text-tertiary transition-colors hover:text-text-primary"
           >
-            Přeskočit
+            {t("tutorial.skip")}
           </button>
           <PrimaryButton
             isLast={props.isLast}
             isPersisting={props.isPersisting}
             onClick={props.onNext}
           >
-            {props.isLast ? "Hotovo" : "Další"}
+            {t(props.isLast ? "tutorial.done" : "tutorial.next")}
           </PrimaryButton>
         </div>
       </footer>
@@ -140,7 +142,7 @@ function PrimaryButton(props: {
   // Final step keeps the magenta accent only on the icon background —
   // the button itself stays indigo, both because we want one magenta
   // *moment* per screen and because the magenta "+" CTA pattern is
-  // reserved for the "Označit jako vyhráno" action elsewhere.
+  // reserved for the "Mark as won" action elsewhere.
   return (
     <button
       type="button"

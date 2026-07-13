@@ -10,7 +10,9 @@
 
 import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
+import { billingErrorMessage } from "@/components/billing/usePayments";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
 import { usePageTitle } from "@/lib/usePageTitle";
 
@@ -21,7 +23,8 @@ function isStatus(v: string | null): v is ReturnStatus {
 }
 
 export function BillingReturnPage() {
-  usePageTitle("Návrat z platební brány");
+  const { t } = useTranslation("billing");
+  usePageTitle(t("billingReturnPage.pageTitle"));
   const [params] = useSearchParams();
   const queryStatus = params.get("status");
   const status: ReturnStatus | "unknown" = isStatus(queryStatus) ? queryStatus : "unknown";
@@ -54,13 +57,13 @@ export function BillingReturnPage() {
           to="/app/nastaveni/predplatne"
           className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
         >
-          Zpět na fakturaci
+          {t("billingReturnPage.backToBillingCta")}
         </Link>
         <Link
           to="/app"
           className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface px-5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-overlay"
         >
-          Přehled
+          {t("billingReturnPage.overviewCta")}
         </Link>
       </div>
     </div>
@@ -68,52 +71,52 @@ export function BillingReturnPage() {
 }
 
 function SuccessPanel() {
+  const { t } = useTranslation("billing");
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-text-primary">Platba byla úspěšná.</h1>
-      <p className="mt-3 text-sm text-text-secondary">
-        Děkujeme — vaše předplatné je aktivní. Faktura dorazila na e-mail a najdete ji v sekci
-        Fakturace.
-      </p>
+      <h1 className="text-2xl font-semibold text-text-primary">
+        {t("billingReturnPage.successHeading")}
+      </h1>
+      <p className="mt-3 text-sm text-text-secondary">{t("billingReturnPage.successBody")}</p>
     </div>
   );
 }
 
 function PendingPanel() {
+  const { t } = useTranslation("billing");
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-text-primary">Zpracováváme vaši platbu.</h1>
-      <p className="mt-3 text-sm text-text-secondary">
-        U platby kartou trvá potvrzení obvykle pár vteřin. U bankovního převodu může trvat až
-        několik hodin, než nám banka přijetí potvrdí — předplatné se aktivuje automaticky a fakturu
-        vám pošleme e-mailem v okamžiku, kdy se platba spáruje.
-      </p>
+      <h1 className="text-2xl font-semibold text-text-primary">
+        {t("billingReturnPage.pendingHeading")}
+      </h1>
+      <p className="mt-3 text-sm text-text-secondary">{t("billingReturnPage.pendingBody")}</p>
     </div>
   );
 }
 
 function FailedPanel() {
+  // No structured error code reaches this page (the return route never
+  // reflects charge state — see the route's docstring in payments.py), so
+  // this always resolves to the shared `errors.generic` copy. Routed
+  // through `billingErrorMessage` anyway so the heading and the /payments
+  // error codes stay backed by the same catalog entry.
+  const { t } = useTranslation("billing");
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-danger">Platba se nezdařila.</h1>
-      <p className="mt-3 text-sm text-text-secondary">
-        Žádné peníze vám nebyly strženy. Zkuste platbu znovu, nebo kontaktujte podporu pokud problém
-        přetrvává.
-      </p>
+      <h1 className="text-2xl font-semibold text-danger">{billingErrorMessage(undefined, t)}</h1>
+      <p className="mt-3 text-sm text-text-secondary">{t("billingReturnPage.failedBody")}</p>
     </div>
   );
 }
 
 function UnknownPanel() {
+  const { t } = useTranslation("billing");
   return (
     <div>
       <h1 className="text-2xl font-semibold text-text-primary">
-        Vrátili jste se z platební brány.
+        {t("billingReturnPage.unknownHeading")}
       </h1>
-      <p className="mt-3 text-sm text-text-secondary">
-        Stav platby zatím nebyl potvrzen. Zkontrolujte sekci Fakturace, kam ihned po přijetí platby
-        přistanou faktury.
-      </p>
+      <p className="mt-3 text-sm text-text-secondary">{t("billingReturnPage.unknownBody")}</p>
     </div>
   );
 }

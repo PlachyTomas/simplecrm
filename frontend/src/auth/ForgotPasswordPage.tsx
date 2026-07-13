@@ -1,5 +1,6 @@
 import { Sparkles } from "lucide-react";
 import { type FormEvent, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { requestPasswordReset } from "@/auth/api";
@@ -8,7 +9,8 @@ import { ThemeToggle } from "@/lib/ThemeToggle";
 import { usePageTitle } from "@/lib/usePageTitle";
 
 export function ForgotPasswordPage() {
-  usePageTitle("Obnovení hesla");
+  const { t } = useTranslation("auth");
+  usePageTitle(t("forgotPassword.pageTitle"));
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -26,9 +28,9 @@ export function ForgotPasswordPage() {
         const retryAfter =
           (err.body as { detail?: { retry_after_seconds?: number } } | undefined)?.detail
             ?.retry_after_seconds ?? 60;
-        setErrorMessage(`Počkejte prosím ${retryAfter} s před dalším pokusem.`);
+        setErrorMessage(t("shared.rateLimited", { seconds: retryAfter }));
       } else {
-        setErrorMessage("Nepodařilo se odeslat. Zkuste to prosím znovu.");
+        setErrorMessage(t("forgotPassword.errors.generic"));
       }
     } finally {
       setSubmitting(false);
@@ -51,27 +53,27 @@ export function ForgotPasswordPage() {
           <Sparkles size={24} strokeWidth={1.75} />
         </div>
         <h1 id="forgot-title" className="text-2xl font-semibold">
-          Zapomenuté heslo
+          {t("forgotPassword.heading")}
         </h1>
 
         {done ? (
           <div className="mt-4 space-y-4">
             <p className="text-sm text-text-secondary">
-              Pokud je <strong className="text-text-primary">{email}</strong> u nás registrovaný,
-              poslali jsme na něj odkaz pro obnovení hesla. Odkaz je platný 1 hodinu.
+              {t("forgotPassword.doneMessagePrefix")}{" "}
+              <strong className="text-text-primary">{email}</strong>{" "}
+              {t("forgotPassword.doneMessageSuffix")}
             </p>
             <Link to="/login" className="text-sm text-accent underline">
-              Zpět na přihlášení
+              {t("shared.backToLogin")}
             </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-left" noValidate>
-            <p className="text-sm text-text-secondary">
-              Zadejte e-mail, kterým se obvykle přihlašujete. Pošleme vám odkaz pro nastavení nového
-              hesla.
-            </p>
+            <p className="text-sm text-text-secondary">{t("forgotPassword.intro")}</p>
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-text-secondary">E-mail</span>
+              <span className="mb-1 block text-sm font-medium text-text-secondary">
+                {t("shared.emailLabel")}
+              </span>
               <input
                 type="email"
                 autoComplete="email"
@@ -91,11 +93,11 @@ export function ForgotPasswordPage() {
               disabled={submitting}
               className="inline-flex h-10 w-full items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent hover:bg-accent-hover disabled:opacity-50"
             >
-              {submitting ? "Odesílání…" : "Odeslat odkaz"}
+              {submitting ? t("shared.submitting") : t("forgotPassword.submit")}
             </button>
             <p className="text-center text-sm text-text-secondary">
               <Link to="/login" className="underline">
-                Zpět na přihlášení
+                {t("shared.backToLogin")}
               </Link>
             </p>
           </form>

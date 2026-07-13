@@ -44,6 +44,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.i18n import language_for_locale
 from app.db.models import (
     BillingSettings,
     Charge,
@@ -666,17 +667,22 @@ class InvoiceService:
 
         # Render + store BEFORE flipping status, because the immutability
         # trigger blocks UPDATE of pdf_*/isdoc_* columns once status leaves
-        # 'draft'.
-        pdf_bytes = self._renderer.render_pdf(invoice, lines)
-        isdoc_bytes = self._renderer.render_isdoc(invoice, lines)
+        # 'draft'. The PDF language follows the customer org's locale.
+        pdf_bytes = self._renderer.render_pdf(
+            invoice, lines, lang=language_for_locale(organization.locale)
+        )
         pdf_result = self._storage.store_pdf(invoice, pdf_bytes)
-        isdoc_result = self._storage.store_isdoc(invoice, isdoc_bytes)
-
         invoice.pdf_object_key = pdf_result.object_key
         invoice.pdf_sha256 = pdf_result.sha256
         invoice.pdf_size_bytes = pdf_result.size_bytes
-        invoice.isdoc_object_key = isdoc_result.object_key
-        invoice.isdoc_sha256 = isdoc_result.sha256
+
+        # ISDOC is a Czech accounting-interchange artifact — attach it only to
+        # CZK invoices.
+        if invoice.currency == "CZK":
+            isdoc_bytes = self._renderer.render_isdoc(invoice, lines)
+            isdoc_result = self._storage.store_isdoc(invoice, isdoc_bytes)
+            invoice.isdoc_object_key = isdoc_result.object_key
+            invoice.isdoc_sha256 = isdoc_result.sha256
         invoice.status = "issued"
 
         # Audit trail. Three rows for the issuance flow; mark_paid /

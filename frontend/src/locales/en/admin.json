@@ -1,0 +1,338 @@
+{
+  "page": {
+    "title": "Admin",
+    "subtitle": "Manage organizations, subscriptions, and billing details.",
+    "backToApp": "Back to the app",
+    "sectionsAriaLabel": "Admin sections",
+    "tabs": {
+      "organizations": "Organizations",
+      "invoices": "Invoices",
+      "settings": "Settings"
+    },
+    "selectOrgPrompt": "Select an organization from the list to view its details.",
+    "selectInvoicePrompt": "Select an invoice from the list to view its details."
+  },
+  "modalShell": {
+    "close": "Close"
+  },
+  "orgList": {
+    "columns": {
+      "name": "Name",
+      "plan": "Plan",
+      "status": "Status",
+      "userCount": "Users",
+      "endsAt": "Ends",
+      "lastActivity": "Last activity"
+    },
+    "status": {
+      "complementary": "Complimentary",
+      "trialing": "Trial",
+      "pendingActivation": "Awaiting payment",
+      "active": "Active",
+      "pastDue": "Past due",
+      "canceled": "Canceled"
+    },
+    "searchPlaceholder": "Search organization…",
+    "count_one": "{{count}} organization",
+    "count_other": "{{count}} organizations",
+    "loading": "Loading…",
+    "loadError": "Failed to load the list.",
+    "empty": "No organizations match the filter.",
+    "pageRange": "{{from}}–{{to}} of {{total}}",
+    "noResults": "0 of 0",
+    "prevPage": "Previous page",
+    "nextPage": "Next page"
+  },
+  "orgDetail": {
+    "loading": "Loading details…",
+    "loadError": "Failed to load the details.",
+    "labels": {
+      "plan": "Plan",
+      "status": "Status",
+      "start": "Start",
+      "periodEnd": "Period end",
+      "canceled": "Canceled",
+      "effectivePrice": "Effective price",
+      "perUser": "/ user",
+      "compReasonPrefix": "Complimentary reason: ",
+      "notesPrefix": "Notes: "
+    },
+    "status": {
+      "complementary": "Complimentary",
+      "activeEnterprise": "Active · Enterprise",
+      "trialing": "Trial",
+      "pendingActivation": "Awaiting payment",
+      "active": "Active",
+      "pastDue": "Past due",
+      "canceled": "Canceled"
+    },
+    "actions": {
+      "activate": "Activate subscription",
+      "setComp": "Set as complimentary",
+      "setEnterprise": "Set Enterprise price",
+      "extendTrial": "Extend trial",
+      "cancel": "Cancel subscription"
+    },
+    "modalFooter": {
+      "cancel": "Cancel",
+      "submitting": "Submitting…"
+    },
+    "activateModal": {
+      "title": "Activate subscription",
+      "planLabel": "Plan",
+      "planOptions": {
+        "monthly": "Monthly",
+        "annual": "Annual",
+        "enterprise": "Enterprise"
+      },
+      "priceLabel": "Price per user (CZK excl. VAT)",
+      "priceHintRequired": "(required)",
+      "priceHintOptional": "(optional)",
+      "periodLabel": "Period length (months)",
+      "periodHintRequired": "(required)",
+      "periodHintOptional": "(optional, defaults to the plan)",
+      "errorEnterprisePriceRequired": "A per-user price is required for the Enterprise plan.",
+      "errorWithDetail": "Activation failed: {{detail}}",
+      "errorGeneric": "Activation failed. Please try again.",
+      "submit": "Activate"
+    },
+    "setCompModal": {
+      "title": "Set as complimentary",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "E.g. partner / internal use…",
+      "endsAtLabel": "Valid until (optional)",
+      "errorReasonRequired": "A reason is required.",
+      "errorGeneric": "The change failed. Please try again.",
+      "submit": "Set"
+    },
+    "setEnterpriseModal": {
+      "title": "Set Enterprise price",
+      "priceLabel": "Price per user (CZK excl. VAT)",
+      "periodLabel": "Period length (months)",
+      "notesLabel": "Notes (optional)",
+      "monthlyTotalPrefix": "Monthly bill: ",
+      "perMonthExVat": " / month excl. VAT",
+      "previewUnavailable": "The total price preview isn't available yet (user count is loading).",
+      "errorPriceRequired": "A price per user is required.",
+      "errorPeriodInvalid": "The period must be at least 1 month.",
+      "errorGeneric": "The change failed. Please try again.",
+      "submit": "Save"
+    },
+    "extendTrialModal": {
+      "title": "Extend trial",
+      "daysLabel": "Number of days",
+      "newEndPrefix": "New trial end date: ",
+      "errorDaysRange": "The number of days must be between 1 and 365.",
+      "errorGeneric": "The extension failed. Please try again.",
+      "submit": "Extend"
+    },
+    "cancelModal": {
+      "title": "Cancel subscription",
+      "confirmPrefix": "To confirm, type the exact plan name: ",
+      "effectiveAtLabel": "Effective date (optional)",
+      "errorGeneric": "Cancellation failed. Please try again.",
+      "cancel": "Cancel",
+      "submitting": "Canceling…",
+      "submit": "Cancel subscription"
+    },
+    "role": {
+      "admin": "Admin",
+      "manager": "Manager",
+      "salesperson": "Salesperson"
+    },
+    "membersList": {
+      "title": "Organization members",
+      "impersonationNote": "Switching (impersonation) is audited in the server log. Reloading the page returns you to your own super-admin session.",
+      "loading": "Loading…",
+      "empty": "No members.",
+      "superAdminBadge": "super-admin",
+      "inactiveBadge": "inactive",
+      "impersonateButton": "Switch to user",
+      "impersonating": "Switching…",
+      "impersonateError": "Impersonation failed."
+    },
+    "activityTimeline": {
+      "title": "Change history",
+      "loading": "Loading…",
+      "empty": "No activity recorded yet.",
+      "systemActor": "System"
+    }
+  },
+  "integrityPanel": {
+    "title": "Archive integrity",
+    "description": "Hash verification of every stored PDF and ISDOC file. Runs automatically every week; you can also trigger it manually here.",
+    "runButton": "Run check",
+    "running": "Check in progress…",
+    "loading": "Loading…",
+    "noRunYet": "No check has run yet. Click \"Run check\".",
+    "stats": {
+      "checked": "Checked",
+      "ok": "OK",
+      "failed": "Failed"
+    },
+    "lastRun": "Last run: {{date}} (run_id: {{runId}}…)",
+    "allVerified": "All verified. No mismatches between the stored files and the hashes in the database."
+  },
+  "invoicesList": {
+    "title": "Invoices",
+    "exportCsv": "CSV {{year}}",
+    "exportCsvTitle": "Export {{year}} – CSV",
+    "exportPdfZip": "PDF ZIP {{year}}",
+    "exportFull": "Full {{year}}",
+    "downloading": "Downloading…",
+    "issueManually": "Issue manually",
+    "exportCsvError": "CSV export failed.",
+    "exportPdfError": "PDF export failed.",
+    "exportFullError": "Full export failed.",
+    "searchPlaceholder": "Search (number, customer)…",
+    "yearPlaceholder": "Year",
+    "status": {
+      "draft": "Draft",
+      "issued": "Issued",
+      "paid": "Paid",
+      "overdue": "Past due",
+      "voided": "Voided"
+    },
+    "kind": {
+      "invoice": "Invoice",
+      "credit_note": "Credit note",
+      "proforma": "Proforma"
+    },
+    "columns": {
+      "number": "Number",
+      "customer": "Customer",
+      "kind": "Kind",
+      "issuedAt": "Issued",
+      "dueAt": "Due",
+      "status": "Status",
+      "total": "Total"
+    },
+    "loading": "Loading…",
+    "loadError": "Failed to load invoices.",
+    "empty": "No invoices match the filter.",
+    "shown": "Showing {{count}} of {{total}} invoices."
+  },
+  "invoiceDetail": {
+    "loading": "Loading invoice…",
+    "loadError": "Failed to load the invoice details.",
+    "labels": {
+      "issuedAt": "Issued",
+      "taxableSupplyDate": "Taxable supply date",
+      "dueAt": "Due",
+      "variableSymbol": "Variable symbol",
+      "total": "Total",
+      "email": "Email"
+    },
+    "status": {
+      "draft": "Draft",
+      "issued": "Issued",
+      "paid": "Paid",
+      "overdue": "Past due",
+      "voided": "Voided"
+    },
+    "lineItems": {
+      "title": "Line items",
+      "description": "Description",
+      "quantity": "Quantity",
+      "price": "Price",
+      "total": "Total"
+    },
+    "actions": {
+      "title": "Actions",
+      "markPaid": "Mark as paid",
+      "send": "Send",
+      "voidPlaceholder": "Void reason…",
+      "void": "Void",
+      "issueCreditNote": "Issue credit note",
+      "markPaidError": "Marking as paid failed.",
+      "sendError": "Sending failed.",
+      "voidError": "Voiding failed.",
+      "voidReasonRequired": "A void reason is required (min. 3 characters)."
+    },
+    "auditLog": {
+      "title": "Audit log",
+      "empty": "No entries.",
+      "event": {
+        "allocated": "Number allocated",
+        "issued": "Issued",
+        "pdf_stored": "PDF stored",
+        "pdf_verified": "PDF verified",
+        "sent": "Sent",
+        "send_failed": "Send failed",
+        "paid": "Marked as paid",
+        "voided": "Voided",
+        "credit_note_created": "Credit note issued",
+        "export_run": "Export run",
+        "integrity_failure": "Integrity failure"
+      }
+    }
+  },
+  "manualInvoiceModal": {
+    "title": "Issue invoice manually",
+    "description": "Issues a new invoice outside the standard ComGate flow (refunds, comp orgs, corrections).",
+    "customerLabel": "Customer",
+    "customerSearchPlaceholder": "Search organization…",
+    "noResults": "No results.",
+    "lineItems": {
+      "title": "Line items",
+      "description": "Description",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "price": "Price (CZK)",
+      "remove": "Remove",
+      "add": "+ Add line item"
+    },
+    "dueAtLabel": "Due date (optional)",
+    "noteLabel": "Note (optional)",
+    "linkSubscription": "Link to the customer's subscription (extends the period once marked as paid)",
+    "linkSubscriptionHint": "Uncheck for refunds, credit notes, and one-off corrections.",
+    "subtotalPrefix": "Subtotal: ",
+    "vatHint": "(VAT is calculated according to your VAT settings)",
+    "cancel": "Cancel",
+    "submit": "Issue invoice",
+    "submitting": "Issuing…",
+    "errorCustomerRequired": "Select a customer.",
+    "errorDescriptionRequired": "Fill in a description for all line items.",
+    "errorGeneric": "Issuing the invoice failed."
+  },
+  "creditNoteModal": {
+    "title": "Issue credit note for invoice {{number}}",
+    "description": "The credit note deducts an amount from the original invoice. Negative unit prices are pre-filled.",
+    "lineItems": {
+      "title": "Credit note line items",
+      "description": "Description",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "price": "Price (CZK, ≤ 0)"
+    },
+    "descriptionPrefix": "Reversal: {{description}}",
+    "reasonLabel": "Credit note reason",
+    "reasonPlaceholder": "e.g. Refund after complaint",
+    "totalPrefix": "Credit note total: ",
+    "originalTotal": "(of the original {{amount}})",
+    "cancel": "Cancel",
+    "submit": "Issue credit note",
+    "submitting": "Issuing…",
+    "errorReasonRequired": "A credit note reason is required (min. 3 characters).",
+    "errorGeneric": "Issuing the credit note failed."
+  },
+  "billingSettings": {
+    "loading": "Loading…",
+    "title": "Billing settings",
+    "subtitle": "These settings affect all prices in the app and the invoices we send to customers.",
+    "isVatPayer": "I am a VAT payer",
+    "isVatPayerHint": "When enabled, all prices in the app are recalculated with VAT and billing documents include a VAT line.",
+    "vatRatePercent": "VAT rate (%)",
+    "iban": "IBAN",
+    "ico": "Company ID (IČO)",
+    "contactEmail": "Contact email",
+    "invoiceEmailSubjectTemplateEn": "Invoice email subject template (English)",
+    "invoiceEmailSubjectTemplateEnHint": "Used for organizations whose language is English. Same variables as the Czech template above.",
+    "invoiceEmailBodyTemplateEn": "Invoice email body template (English)",
+    "saving": "Saving…",
+    "save": "Save",
+    "saved": "Saved.",
+    "errorValidation": "Save failed. Please check the values and try again.",
+    "errorGeneric": "Something went wrong. Please try again."
+  }
+}

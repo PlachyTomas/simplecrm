@@ -1,5 +1,6 @@
 import { AlertTriangle, CalendarPlus, Pencil, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { EventFormModal } from "@/app/events/EventFormModal";
 import { type CalendarEventOut, useDeleteEvent, useEvents } from "@/app/events/useEvents";
@@ -26,6 +27,7 @@ function EventRow({
   deleting: boolean;
   past: boolean;
 }) {
+  const { t } = useTranslation("deals");
   const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
   const timeFmt = new Intl.DateTimeFormat(locale, { timeStyle: "short" });
   const starts = new Date(event.starts_at);
@@ -44,9 +46,10 @@ function EventRow({
           {event.google_sync_status === "error" ? (
             <span
               className="inline-flex items-center gap-1 rounded-full bg-warning-subtle px-2 py-0.5 text-xs font-medium text-warning"
-              title="Zápis do Google kalendáře selhal — uložením události se o něj pokusíme znovu."
+              title={t("eventsSection.googleSyncErrorTooltip")}
             >
-              <AlertTriangle size={12} strokeWidth={2} aria-hidden /> Google sync selhal
+              <AlertTriangle size={12} strokeWidth={2} aria-hidden />{" "}
+              {t("eventsSection.googleSyncFailed")}
             </span>
           ) : null}
         </p>
@@ -59,7 +62,7 @@ function EventRow({
         <button
           type="button"
           onClick={onEdit}
-          aria-label={`Upravit událost ${event.title}`}
+          aria-label={t("eventsSection.editAriaLabel", { title: event.title })}
           className="rounded p-1.5 text-text-secondary hover:bg-surface-elevated hover:text-text-primary"
         >
           <Pencil size={15} strokeWidth={1.75} />
@@ -68,7 +71,7 @@ function EventRow({
           type="button"
           onClick={onDelete}
           disabled={deleting}
-          aria-label={`Smazat událost ${event.title}`}
+          aria-label={t("eventsSection.deleteAriaLabel", { title: event.title })}
           className="rounded p-1.5 text-text-secondary hover:bg-danger-subtle hover:text-danger disabled:opacity-60"
         >
           <Trash2 size={15} strokeWidth={1.75} />
@@ -79,6 +82,7 @@ function EventRow({
 }
 
 export function DealEventsSection({ dealId, dealName, locale }: DealEventsSectionProps) {
+  const { t } = useTranslation("deals");
   const toast = useToast();
   const { data, isPending } = useEvents({ dealId });
   const deleteEvent = useDeleteEvent();
@@ -96,10 +100,10 @@ export function DealEventsSection({ dealId, dealName, locale }: DealEventsSectio
   }, [data]);
 
   function handleDelete(event: CalendarEventOut) {
-    if (!window.confirm(`Smazat událost "${event.title}"?`)) return;
+    if (!window.confirm(t("eventsSection.confirmDelete", { title: event.title }))) return;
     deleteEvent.mutate(event.id, {
-      onSuccess: () => toast.success("Událost smazána."),
-      onError: () => toast.error("Událost se nepodařilo smazat."),
+      onSuccess: () => toast.success(t("eventsSection.toastDeleted")),
+      onError: () => toast.error(t("eventsSection.toastDeleteError")),
     });
   }
 
@@ -107,10 +111,8 @@ export function DealEventsSection({ dealId, dealName, locale }: DealEventsSectio
     <section className="mt-6 rounded-lg border border-border bg-surface">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle px-6 py-4">
         <div>
-          <h2 className="text-base font-semibold">Události</h2>
-          <p className="mt-0.5 text-sm text-text-tertiary">
-            Schůzky a termíny k tomuto obchodu — volitelně i ve vašem Google kalendáři.
-          </p>
+          <h2 className="text-base font-semibold">{t("eventsSection.title")}</h2>
+          <p className="mt-0.5 text-sm text-text-tertiary">{t("eventsSection.subtitle")}</p>
         </div>
         <button
           type="button"
@@ -120,16 +122,16 @@ export function DealEventsSection({ dealId, dealName, locale }: DealEventsSectio
           }}
           className="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent hover:opacity-90"
         >
-          <CalendarPlus size={15} strokeWidth={1.75} /> Naplánovat událost
+          <CalendarPlus size={15} strokeWidth={1.75} /> {t("eventsSection.scheduleButton")}
         </button>
       </header>
 
       {isPending ? (
         <p className="px-6 py-4 text-sm text-text-tertiary" role="status">
-          Načítání…
+          {t("eventsSection.loading")}
         </p>
       ) : upcoming.length === 0 && past.length === 0 ? (
-        <p className="px-6 py-4 text-sm text-text-tertiary">Zatím žádné události.</p>
+        <p className="px-6 py-4 text-sm text-text-tertiary">{t("eventsSection.empty")}</p>
       ) : (
         <ul className="divide-y divide-border-subtle">
           {upcoming.map((event) => (

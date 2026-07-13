@@ -1,3 +1,4 @@
+import type { ParseKeys } from "i18next";
 import {
   Building2,
   Check,
@@ -15,10 +16,15 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
 
 import { Logo } from "@/components/Logo";
+import { formatMoney } from "@/lib/format";
+import { LANGUAGE_LABEL, SUPPORTED_LANGUAGES } from "@/lib/i18n/languages";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { ThemeToggle } from "@/lib/ThemeToggle";
+import { usePageTitle } from "@/lib/usePageTitle";
 
 import { HeroPlasma } from "./HeroPlasma";
 import { cn } from "@/lib/utils";
@@ -28,24 +34,74 @@ import { AresDemoSection } from "@/marketing/AresDemoSection";
 import { CalendarDemoSection } from "@/marketing/CalendarDemoSection";
 import { InteractivePipeline } from "@/marketing/InteractivePipeline";
 import { ReportsDemoSection } from "@/marketing/ReportsDemoSection";
+import {
+  counterpartPath,
+  type MarketingKey,
+  marketingLangFromPath,
+  marketingPath,
+} from "@/marketing/slugs";
 
 const SIGNUP_PATH = "/signup";
 
-// Monthly list price; the annual plan (996 Kč/yr) works out to 83 Kč/mo, which
-// is what we lead with on the landing page.
+// Monthly list price; the annual plan (996 CZK/yr) works out to 83 CZK/mo,
+// which is what we lead with on the landing page.
 const PRICE_PER_USER_CZK = 99;
 const PRICE_PER_USER_ANNUAL_MONTHLY_CZK = 83;
 
 type NavLink =
-  | { kind: "anchor"; href: string; label: string }
-  | { kind: "route"; to: string; label: string };
+  | { kind: "anchor"; href: string; labelKey: ParseKeys<"marketing"> }
+  | { kind: "route"; slug: MarketingKey; labelKey: ParseKeys<"marketing"> };
 
 const NAV_LINKS: NavLink[] = [
-  { kind: "anchor", href: "#funkce", label: "Funkce" },
-  { kind: "route", to: "/cenik", label: "Ceník" },
-  { kind: "anchor", href: "#faq", label: "FAQ" },
-  { kind: "route", to: "/kontakt", label: "Kontakt" },
+  { kind: "anchor", href: "#funkce", labelKey: "nav.features" },
+  { kind: "route", slug: "cenik", labelKey: "nav.pricing" },
+  { kind: "anchor", href: "#faq", labelKey: "nav.faq" },
+  { kind: "route", slug: "kontakt", labelKey: "nav.contact" },
 ];
+
+/**
+ * Language toggle for the marketing site. Each option is a plain `<Link>` to
+ * the counterpart URL in that language — navigating there is what flips the
+ * running language (via `MarketingLanguageLayout`). Query string is preserved
+ * so e.g. `?plan=annual` survives the switch.
+ */
+export function MarketingLanguageSwitcher({ className }: { className?: string }) {
+  const { t } = useTranslation("marketing");
+  const { pathname, search } = useLocation();
+  const current = marketingLangFromPath(pathname);
+  return (
+    <div
+      role="group"
+      aria-label={t("nav.languageAria")}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-md border border-border bg-surface p-0.5",
+        className,
+      )}
+    >
+      {SUPPORTED_LANGUAGES.map((lang) => {
+        const active = lang === current;
+        const target = active
+          ? pathname
+          : (counterpartPath(pathname) ?? marketingPath("landing", lang));
+        return (
+          <Link
+            key={lang}
+            to={target + search}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "inline-flex h-7 items-center rounded-sm px-2 text-xs font-medium transition-colors duration-fast",
+              active
+                ? "bg-accent-subtle text-accent"
+                : "text-text-tertiary hover:bg-surface-overlay hover:text-text-primary",
+            )}
+          >
+            {LANGUAGE_LABEL[lang]}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
 
 /**
  * On `/`, anchor hrefs let the browser smooth-scroll to the section
@@ -65,7 +121,8 @@ function HashNavLink({
   children: React.ReactNode;
 }) {
   const { pathname } = useLocation();
-  if (pathname === "/") {
+  const landingPath = marketingPath("landing", marketingLangFromPath(pathname));
+  if (pathname === landingPath) {
     return (
       <a href={href} onClick={onClick} className={className}>
         {children}
@@ -73,15 +130,17 @@ function HashNavLink({
     );
   }
   return (
-    <Link to={`/${href}`} onClick={onClick} className={className}>
+    <Link to={`${landingPath}${href}`} onClick={onClick} className={className}>
       {children}
     </Link>
   );
 }
 
 export function Nav() {
+  const { t } = useTranslation("marketing");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const lang = marketingLangFromPath(useLocation().pathname);
 
   // Close on Escape; lock body scroll while open.
   useEffect(() => {
@@ -101,18 +160,22 @@ export function Nav() {
   return (
     <header className="sticky top-0 z-30 border-b border-border-subtle bg-bg/70 backdrop-blur">
       <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-2 px-4 py-4 md:gap-8 md:px-8">
-        <Link to="/" className="flex items-center gap-2" aria-label="SimpleCRM">
+        <Link
+          to={marketingPath("landing", lang)}
+          className="flex items-center gap-2"
+          aria-label="SimpleCRM"
+        >
           <Logo />
         </Link>
-        <nav aria-label="Hlavní" className="hidden items-center gap-6 md:flex">
+        <nav aria-label={t("nav.mainNavAria")} className="hidden items-center gap-6 md:flex">
           {NAV_LINKS.map((link) =>
             link.kind === "route" ? (
               <Link
-                key={link.to}
-                to={link.to}
+                key={link.slug}
+                to={marketingPath(link.slug, lang)}
                 className="text-sm text-text-secondary hover:text-text-primary"
               >
-                {link.label}
+                {t(link.labelKey)}
               </Link>
             ) : (
               <HashNavLink
@@ -120,30 +183,31 @@ export function Nav() {
                 href={link.href}
                 className="text-sm text-text-secondary hover:text-text-primary"
               >
-                {link.label}
+                {t(link.labelKey)}
               </HashNavLink>
             ),
           )}
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">
+          <MarketingLanguageSwitcher className="hidden md:inline-flex" />
           <ThemeToggle variant="compact" className="hidden md:inline-flex" />
           <Link
             to="/login"
             className="hidden h-10 items-center justify-center rounded-md px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary md:inline-flex"
           >
-            Přihlásit se
+            {t("nav.login")}
           </Link>
           <Link
             to={SIGNUP_PATH}
             className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-3 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover sm:px-5"
           >
-            Vyzkoušet zdarma
+            {t("nav.tryFree")}
           </Link>
           <button
             ref={triggerRef}
             type="button"
             onClick={() => setDrawerOpen(true)}
-            aria-label="Otevřít menu"
+            aria-label={t("nav.openMenu")}
             aria-expanded={drawerOpen}
             aria-controls="landing-mobile-drawer"
             className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-surface text-text-secondary transition-colors duration-fast hover:text-text-primary md:hidden"
@@ -170,8 +234,10 @@ function MobileDrawer({
   onClose: () => void;
   triggerRef: React.RefObject<HTMLButtonElement | null>;
 }) {
+  const { t } = useTranslation("marketing");
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const lang = marketingLangFromPath(useLocation().pathname);
 
   // Move focus into the drawer on open; restore to the trigger on close.
   useEffect(() => {
@@ -227,28 +293,28 @@ function MobileDrawer({
           id="landing-mobile-drawer-title"
           className="text-sm font-semibold uppercase tracking-wider text-text-tertiary"
         >
-          Menu
+          {t("nav.menu")}
         </p>
         <button
           ref={closeButtonRef}
           type="button"
           onClick={onClose}
-          aria-label="Zavřít menu"
+          aria-label={t("nav.closeMenu")}
           className="inline-flex h-10 w-10 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary"
         >
           <X size={20} strokeWidth={1.75} />
         </button>
       </div>
-      <nav aria-label="Hlavní mobilní" className="flex flex-1 flex-col gap-1 p-4">
+      <nav aria-label={t("nav.mainNavMobileAria")} className="flex flex-1 flex-col gap-1 p-4">
         {NAV_LINKS.map((link) =>
           link.kind === "route" ? (
             <Link
-              key={link.to}
-              to={link.to}
+              key={link.slug}
+              to={marketingPath(link.slug, lang)}
               onClick={onClose}
               className="rounded-md px-3 py-3 text-base font-medium text-text-primary transition-colors duration-fast hover:bg-surface-overlay"
             >
-              {link.label}
+              {t(link.labelKey)}
             </Link>
           ) : (
             <HashNavLink
@@ -257,7 +323,7 @@ function MobileDrawer({
               onClick={onClose}
               className="rounded-md px-3 py-3 text-base font-medium text-text-primary transition-colors duration-fast hover:bg-surface-overlay"
             >
-              {link.label}
+              {t(link.labelKey)}
             </HashNavLink>
           ),
         )}
@@ -266,17 +332,20 @@ function MobileDrawer({
           onClick={onClose}
           className="mt-2 rounded-md px-3 py-3 text-base font-medium text-text-primary transition-colors duration-fast hover:bg-surface-overlay"
         >
-          Přihlásit se
+          {t("nav.login")}
         </Link>
       </nav>
-      <div className="flex items-center justify-between gap-3 border-t border-border-subtle px-4 py-4">
-        <ThemeToggle variant="compact" />
+      <div className="flex flex-col gap-3 border-t border-border-subtle px-4 py-4">
+        <div className="flex items-center gap-3">
+          <MarketingLanguageSwitcher />
+          <ThemeToggle variant="compact" />
+        </div>
         <Link
           to={SIGNUP_PATH}
           onClick={onClose}
-          className="inline-flex h-10 flex-1 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
+          className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
         >
-          Vyzkoušet zdarma
+          {t("nav.tryFree")}
         </Link>
       </div>
     </div>,
@@ -285,6 +354,8 @@ function MobileDrawer({
 }
 
 function Hero() {
+  const { t } = useTranslation("marketing");
+  const locale = useLocale();
   return (
     <section className="relative overflow-hidden">
       {/* Living blobs behind the hero — only the marketing hero is allowed
@@ -305,38 +376,37 @@ function Hero() {
       </div>
       <div className="relative mx-auto max-w-[1200px] px-4 pb-20 pt-16 text-center md:px-8 md:pb-24 md:pt-24">
         <p className="mb-4 text-sm font-medium uppercase tracking-wider text-text-tertiary">
-          Český CRM pro malé týmy
+          {t("hero.eyebrow")}
         </p>
         <h1 className="mx-auto max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
           <span className="block">
-            CRM pro{" "}
+            {t("hero.titleLead")}{" "}
             <span className="bg-[linear-gradient(transparent_82%,var(--color-brand-accent)_82%,var(--color-brand-accent)_94%,transparent_94%)] bg-no-repeat">
-              prodej
+              {t("hero.titleAccent")}
             </span>
             .
           </span>
-          <span className="block">Nic víc, nic míň.</span>
+          <span className="block">{t("hero.titleLine2")}</span>
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-base text-text-secondary md:text-lg">
-          Jednoduchý český CRM pro malé prodejní týmy. Funguje s ARES, automaticky vrací neaktivní
-          firmy zpět do sdíleného pool. 30 dní zdarma, bez kreditky.
+          {t("hero.subtitle")}
         </p>
 
         <div className="mt-8 flex flex-col items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-accent">
             <Sparkles size={13} strokeWidth={2} aria-hidden />
-            Nejlevnější CRM na trhu
+            {t("hero.cheapestBadge")}
           </span>
           <p className="flex items-baseline justify-center gap-2">
             <span className="text-5xl font-extrabold leading-none tracking-tight text-brand-accent md:text-6xl">
-              {PRICE_PER_USER_ANNUAL_MONTHLY_CZK}&nbsp;Kč
+              {formatMoney(PRICE_PER_USER_ANNUAL_MONTHLY_CZK, "CZK", locale)}
             </span>
             <span className="text-base font-medium text-text-secondary md:text-lg">
-              / uživatel / měsíc
+              {t("hero.pricePerUserMonth")}
             </span>
           </p>
           <p className="text-sm text-text-tertiary">
-            při roční platbě · {PRICE_PER_USER_CZK} Kč při měsíční platbě
+            {t("hero.priceNote", { monthly: formatMoney(PRICE_PER_USER_CZK, "CZK", locale) })}
           </p>
         </div>
 
@@ -345,19 +415,17 @@ function Hero() {
             to={SIGNUP_PATH}
             className="inline-flex h-12 items-center justify-center rounded-md bg-accent px-6 text-base font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
           >
-            Vyzkoušet 30 dní zdarma
+            {t("hero.ctaTrial")}
           </Link>
           <a
             href="#funkce"
             className="inline-flex h-12 items-center justify-center rounded-md border border-border bg-surface-overlay px-6 text-base font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
           >
-            Prohlédnout funkce
+            {t("hero.ctaFeatures")}
           </a>
         </div>
 
-        <p className="mt-4 text-xs text-text-tertiary">
-          Žádná kreditní karta při registraci. Registrace přes Google nebo e-mail.
-        </p>
+        <p className="mt-4 text-xs text-text-tertiary">{t("hero.noCard")}</p>
 
         <div className="mx-auto mt-16 max-w-5xl">
           <InteractivePipeline />
@@ -369,39 +437,40 @@ function Hero() {
 
 interface Differentiator {
   icon: LucideIcon;
-  title: string;
-  body: string;
+  titleKey: ParseKeys<"marketing">;
+  bodyKey: ParseKeys<"marketing">;
   tone: "accent" | "warning" | "lime";
 }
 
 const DIFFS: Differentiator[] = [
   {
     icon: Database,
-    title: "ARES integrace",
-    body: "Zadejte IČO a firma se sama doplní — název, adresa, DIČ, právní forma. Žádné přepisování z webu.",
+    titleKey: "diffs.aresTitle",
+    bodyKey: "diffs.aresBody",
     tone: "accent",
   },
   {
     icon: RefreshCw,
-    title: "Automatické uvolňování firem",
-    body: "Firma přiřazená obchodníkovi bez obchodu 365 dní se vrátí do sdíleného poolu. Nikdo si nesedí na leadu věčnost.",
+    titleKey: "diffs.autoReleaseTitle",
+    bodyKey: "diffs.autoReleaseBody",
     tone: "warning",
   },
   {
     icon: Mail,
-    title: "Hromadné nabídky e-mailem",
-    body: "Pošlete novou nabídku všem svým klientům najednou. Vyfiltrujte firmy podle oboru i aktivity a odešlete e-mail ze své vlastní adresy.",
+    titleKey: "diffs.bulkEmailTitle",
+    bodyKey: "diffs.bulkEmailBody",
     tone: "accent",
   },
   {
     icon: Scissors,
-    title: "Bez zbytečností",
-    body: "Žádné složité workflow ani marketingová automatizace. Jen nástroje, které obchodník opravdu denně potřebuje.",
+    titleKey: "diffs.noBloatTitle",
+    bodyKey: "diffs.noBloatBody",
     tone: "lime",
   },
 ];
 
 function Differentiators() {
+  const { t } = useTranslation("marketing");
   const toneClass = (tone: Differentiator["tone"]): string =>
     tone === "accent"
       ? "bg-accent-subtle text-accent"
@@ -413,14 +482,14 @@ function Differentiators() {
     <section id="funkce" className="mx-auto max-w-[1200px] px-4 py-16 md:px-8 md:py-24">
       <div className="mx-auto max-w-2xl text-center">
         <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
-          Proč SimpleCRM
+          {t("diffs.eyebrow")}
         </p>
-        <h2 className="mt-2 text-3xl font-bold md:text-4xl">Co u nás najdete (a jinde ne)</h2>
+        <h2 className="mt-2 text-3xl font-bold md:text-4xl">{t("diffs.title")}</h2>
       </div>
       <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-4">
-        {DIFFS.map(({ icon: Icon, title, body, tone }) => (
+        {DIFFS.map(({ icon: Icon, titleKey, bodyKey, tone }) => (
           <article
-            key={title}
+            key={titleKey}
             className="rounded-lg border border-border bg-surface p-6 shadow-sm transition-shadow duration-fast hover:shadow-md"
           >
             <div
@@ -432,8 +501,8 @@ function Differentiators() {
             >
               <Icon size={20} strokeWidth={1.75} />
             </div>
-            <h3 className="text-lg font-semibold">{title}</h3>
-            <p className="mt-2 text-sm text-text-secondary">{body}</p>
+            <h3 className="text-lg font-semibold">{t(titleKey)}</h3>
+            <p className="mt-2 text-sm text-text-secondary">{t(bodyKey)}</p>
           </article>
         ))}
       </div>
@@ -442,37 +511,39 @@ function Differentiators() {
 }
 
 function HowItWorks() {
-  const steps = [
-    {
-      icon: MousePointerClick,
-      title: "Zaregistrujte se přes Google nebo e-mail",
-      body: "Jedno kliknutí přes Google, nebo klasicky e-mailem. Za 30 sekund máte účet, svůj tým a 30 dní zdarma.",
-    },
-    {
-      icon: Building2,
-      title: "Přidejte první firmu",
-      body: "Zadejte IČO a ARES doplní zbytek. Nebo tabulku s firmami nahrajte jedním tahem (brzy).",
-    },
-    {
-      icon: Check,
-      title: "Spravujte obchody v pipeline",
-      body: "Kanban přehled s drag-and-drop. Vyhrané obchody resetují 365denní hodiny vlastnictví firmy.",
-    },
-  ];
+  const { t } = useTranslation("marketing");
+  const steps: { icon: LucideIcon; titleKey: ParseKeys<"marketing">; bodyKey: ParseKeys<"marketing"> }[] =
+    [
+      {
+        icon: MousePointerClick,
+        titleKey: "howItWorks.signupTitle",
+        bodyKey: "howItWorks.signupBody",
+      },
+      {
+        icon: Building2,
+        titleKey: "howItWorks.firstCompanyTitle",
+        bodyKey: "howItWorks.firstCompanyBody",
+      },
+      {
+        icon: Check,
+        titleKey: "howItWorks.pipelineTitle",
+        bodyKey: "howItWorks.pipelineBody",
+      },
+    ];
   return (
     <section className="bg-surface">
       <div className="mx-auto max-w-[1200px] px-4 py-16 md:px-8 md:py-24">
         <div className="mx-auto max-w-3xl text-center md:max-w-4xl">
           <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
-            Jak to funguje
+            {t("howItWorks.eyebrow")}
           </p>
           <h2 className="mt-2 text-3xl font-bold md:whitespace-nowrap md:text-4xl">
-            Od registrace k prvnímu obchodu za 5 minut
+            {t("howItWorks.title")}
           </h2>
         </div>
         <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
           {steps.map((step, i) => (
-            <div key={step.title} className="relative">
+            <div key={step.titleKey} className="relative">
               <div
                 aria-hidden
                 className="absolute -top-3 left-0 inline-flex h-8 w-8 items-center justify-center rounded-full bg-accent text-sm font-semibold text-text-on-accent"
@@ -486,8 +557,8 @@ function HowItWorks() {
                   strokeWidth={1.75}
                   className="text-text-secondary"
                 />
-                <h3 className="mt-3 text-lg font-semibold">{step.title}</h3>
-                <p className="mt-2 text-sm text-text-secondary">{step.body}</p>
+                <h3 className="mt-3 text-lg font-semibold">{t(step.titleKey)}</h3>
+                <p className="mt-2 text-sm text-text-secondary">{t(step.bodyKey)}</p>
               </div>
             </div>
           ))}
@@ -498,27 +569,38 @@ function HowItWorks() {
 }
 
 function Pricing() {
+  const { t } = useTranslation("marketing");
+  const locale = useLocale();
+  const trialBullets = [
+    t("landingPricing.trialBullet1"),
+    t("landingPricing.trialBullet2"),
+    t("landingPricing.trialBullet3"),
+    t("landingPricing.trialBullet4"),
+  ];
+  const paidBullets = [
+    t("landingPricing.paidBullet1"),
+    t("landingPricing.paidBullet2"),
+    t("landingPricing.paidBullet3"),
+    t("landingPricing.paidBullet4"),
+  ];
   return (
     <section id="cenik" className="mx-auto max-w-[1200px] px-4 py-16 md:px-8 md:py-24">
       <div className="mx-auto max-w-2xl text-center">
-        <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">Ceník</p>
-        <h2 className="mt-2 text-3xl font-bold md:text-4xl">Jedna cena, žádné hry</h2>
+        <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
+          {t("landingPricing.eyebrow")}
+        </p>
+        <h2 className="mt-2 text-3xl font-bold md:text-4xl">{t("landingPricing.title")}</h2>
       </div>
 
       <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2">
         <article className="rounded-xl border border-border bg-surface p-8 shadow-sm">
           <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
-            Zkušební verze
+            {t("landingPricing.trialEyebrow")}
           </p>
-          <p className="mt-3 text-4xl font-bold">Zdarma</p>
-          <p className="mt-1 text-sm text-text-secondary">Plná funkcionalita na 30 dní.</p>
+          <p className="mt-3 text-4xl font-bold">{t("landingPricing.trialPrice")}</p>
+          <p className="mt-1 text-sm text-text-secondary">{t("landingPricing.trialSub")}</p>
           <ul className="mt-6 space-y-3 text-sm text-text-primary">
-            {[
-              "Neomezený počet firem, kontaktů a obchodů",
-              "ARES integrace",
-              "Automatické uvolňování firem",
-              "Bez zadání platební karty",
-            ].map((item) => (
+            {trialBullets.map((item) => (
               <li key={item} className="flex items-start gap-2">
                 <Check size={16} strokeWidth={1.75} className="mt-0.5 text-success" />
                 <span>{item}</span>
@@ -529,29 +611,27 @@ function Pricing() {
             to={SIGNUP_PATH}
             className="mt-8 inline-flex h-11 w-full items-center justify-center rounded-md border border-border bg-surface-overlay px-5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-elevated"
           >
-            Vyzkoušet 30 dní zdarma
+            {t("landingPricing.trialCta")}
           </Link>
         </article>
 
         <article className="rounded-xl border-2 border-accent bg-surface p-8 shadow-md">
           <p className="text-sm font-medium uppercase tracking-wider text-accent">
-            Po zkušební době
+            {t("landingPricing.paidEyebrow")}
           </p>
           <p className="mt-3 text-4xl font-bold tabular-nums">
-            {PRICE_PER_USER_ANNUAL_MONTHLY_CZK} Kč{" "}
-            <span className="text-base font-normal text-text-tertiary">/ uživatel / měsíc</span>
+            {formatMoney(PRICE_PER_USER_ANNUAL_MONTHLY_CZK, "CZK", locale)}{" "}
+            <span className="text-base font-normal text-text-tertiary">
+              {t("landingPricing.paidPriceSuffix")}
+            </span>
           </p>
           <p className="mt-1 text-sm text-text-secondary">
-            Při roční platbě. {PRICE_PER_USER_CZK} Kč při měsíční platbě. Zrušení kdykoliv, data v
-            EU.
+            {t("landingPricing.paidSub", {
+              monthly: formatMoney(PRICE_PER_USER_CZK, "CZK", locale),
+            })}
           </p>
           <ul className="mt-6 space-y-3 text-sm text-text-primary">
-            {[
-              "Všechno ze zkušební verze",
-              "Neomezený počet uživatelů",
-              "Export dat kdykoliv",
-              "Podpora v češtině",
-            ].map((item) => (
+            {paidBullets.map((item) => (
               <li key={item} className="flex items-start gap-2">
                 <Check size={16} strokeWidth={1.75} className="mt-0.5 text-accent" />
                 <span>{item}</span>
@@ -562,7 +642,7 @@ function Pricing() {
             to={SIGNUP_PATH}
             className="mt-8 inline-flex h-11 w-full items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
           >
-            Vyzkoušet 30 dní zdarma
+            {t("landingPricing.paidCta")}
           </Link>
         </article>
       </div>
@@ -571,58 +651,43 @@ function Pricing() {
 }
 
 interface FaqItem {
-  q: string;
-  a: string;
+  qKey: ParseKeys<"marketing">;
+  aKey: ParseKeys<"marketing">;
 }
 
 const FAQ_ITEMS: FaqItem[] = [
-  {
-    q: "Kde jsou uložena data?",
-    a: "Všechna data ukládáme v datacentrech v EU (Hetzner, Frankfurt / Nuremberg). Splňujeme GDPR a smlouvu o zpracování dat podepíšeme na požádání.",
-  },
-  {
-    q: "Jak funguje ARES integrace?",
-    a: "Při založení firmy zadáte IČO a my se ptáme na veřejný rejstřík ARES. Zpět dostanete název, adresu, DIČ a právní formu. Zdarma, součástí aplikace.",
-  },
-  {
-    q: "Čím se lišíte od Raynet nebo Pipedrive?",
-    a: "Jsme levnější, jednodušší, česky a máme dvě funkce, které jinde nenajdete: ARES na jedno kliknutí a automatické uvolňování firem po roce bez obchodu.",
-  },
-  {
-    q: "Co když má firma víc než 25 uživatelů?",
-    a: "Žádný problém — cena je stejná. Enterprise tarif jsme zatím neuvedli, ale napište nám a dohodneme se.",
-  },
-  {
-    q: "Můžu si data kdykoli exportovat?",
-    a: "Ano. Export do CSV je součástí aplikace, i po skončení předplatného. Vaše data zůstávají vaše.",
-  },
-  {
-    q: "Jak se účtuje a dá se zrušit?",
-    a: "Měsíčně dopředu, zrušíte jedním klikem v nastavení. Po zrušení zachováme data ještě 30 dní, pak je natvrdo smažeme.",
-  },
+  { qKey: "faq.q1", aKey: "faq.a1" },
+  { qKey: "faq.q2", aKey: "faq.a2" },
+  { qKey: "faq.q3", aKey: "faq.a3" },
+  { qKey: "faq.q4", aKey: "faq.a4" },
+  { qKey: "faq.q5", aKey: "faq.a5" },
+  { qKey: "faq.q6", aKey: "faq.a6" },
 ];
 
 function Faq() {
+  const { t } = useTranslation("marketing");
   const [open, setOpen] = useState<number | null>(0);
   return (
     <section id="faq" className="bg-surface">
       <div className="mx-auto max-w-3xl px-4 py-16 md:px-8 md:py-24">
         <div className="text-center">
-          <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">FAQ</p>
-          <h2 className="mt-2 text-3xl font-bold md:text-4xl">Časté otázky</h2>
+          <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
+            {t("faq.eyebrow")}
+          </p>
+          <h2 className="mt-2 text-3xl font-bold md:text-4xl">{t("faq.title")}</h2>
         </div>
         <ul className="mt-10 divide-y divide-border-subtle rounded-lg border border-border bg-surface">
           {FAQ_ITEMS.map((item, i) => {
             const isOpen = open === i;
             return (
-              <li key={item.q}>
+              <li key={item.qKey}>
                 <button
                   type="button"
                   aria-expanded={isOpen}
                   onClick={() => setOpen(isOpen ? null : i)}
                   className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors duration-fast hover:bg-surface-overlay"
                 >
-                  <span className="text-base font-medium text-text-primary">{item.q}</span>
+                  <span className="text-base font-medium text-text-primary">{t(item.qKey)}</span>
                   <ChevronDown
                     size={18}
                     strokeWidth={1.75}
@@ -634,7 +699,7 @@ function Faq() {
                   />
                 </button>
                 {isOpen ? (
-                  <div className="px-5 pb-5 text-sm text-text-secondary">{item.a}</div>
+                  <div className="px-5 pb-5 text-sm text-text-secondary">{t(item.aKey)}</div>
                 ) : null}
               </li>
             );
@@ -646,29 +711,37 @@ function Faq() {
 }
 
 export function Footer() {
+  const { t } = useTranslation("marketing");
+  const lang = marketingLangFromPath(useLocation().pathname);
+  // Legal pages (and the subscription page) are Czech-only; on the English
+  // site we flag that with a quiet "(in Czech)" note.
+  const csNote =
+    lang === "en" ? <span className="text-text-tertiary">{t("footer.csNote")}</span> : null;
   return (
     <footer className="border-t border-border-subtle">
       <div className="mx-auto max-w-[1200px] px-4 py-10 md:px-8">
         <div className="grid gap-8 md:grid-cols-4">
           <div className="md:col-span-1">
-            <Link to="/" className="flex items-center gap-2" aria-label="SimpleCRM">
+            <Link
+              to={marketingPath("landing", lang)}
+              className="flex items-center gap-2"
+              aria-label="SimpleCRM"
+            >
               <Logo size="sm" />
             </Link>
-            <p className="mt-3 text-xs text-text-tertiary">
-              Jednoduché české CRM pro firmy do 30 obchodníků.
-            </p>
+            <p className="mt-3 text-xs text-text-tertiary">{t("footer.tagline")}</p>
           </div>
 
           <div className="md:col-span-1">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
-              Provozovatel
+              {t("footer.operatorHeading")}
             </h3>
             <address className="mt-3 text-xs not-italic leading-relaxed text-text-secondary">
               {LEGAL_ENTITY.fullName}
               <br />
               {LEGAL_ENTITY.address}
               <br />
-              IČO: {LEGAL_ENTITY.ico}
+              {t("footer.icoLabel")}: {LEGAL_ENTITY.ico}
               <br />
               <span className="text-text-tertiary">{LEGAL_ENTITY.registryClause}</span>
             </address>
@@ -688,68 +761,81 @@ export function Footer() {
 
           <div className="md:col-span-1">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
-              Produkt
+              {t("footer.productHeading")}
             </h3>
-            <nav aria-label="Patička – produkt" className="mt-3 flex flex-col gap-2 text-xs">
-              <Link to="/" className="text-text-secondary hover:text-text-primary">
-                Úvod
+            <nav aria-label={t("footer.productNavAria")} className="mt-3 flex flex-col gap-2 text-xs">
+              <Link
+                to={marketingPath("landing", lang)}
+                className="text-text-secondary hover:text-text-primary"
+              >
+                {t("footer.introLink")}
               </Link>
-              <Link to="/cenik" className="text-text-secondary hover:text-text-primary">
-                Ceník
+              <Link
+                to={marketingPath("cenik", lang)}
+                className="text-text-secondary hover:text-text-primary"
+              >
+                {t("footer.pricingLink")}
               </Link>
               <Link to="/predplatne" className="text-text-secondary hover:text-text-primary">
-                Předplatné a platby
+                {t("footer.subscriptionLink")}
+                {csNote}
               </Link>
-              <Link to="/kontakt" className="text-text-secondary hover:text-text-primary">
-                Kontakt
+              <Link
+                to={marketingPath("kontakt", lang)}
+                className="text-text-secondary hover:text-text-primary"
+              >
+                {t("footer.contactLink")}
               </Link>
             </nav>
           </div>
 
           <div className="md:col-span-1">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
-              Právní informace
+              {t("footer.legalHeading")}
             </h3>
-            <nav
-              aria-label="Patička – právní informace"
-              className="mt-3 flex flex-col gap-2 text-xs"
-            >
+            <nav aria-label={t("footer.legalNavAria")} className="mt-3 flex flex-col gap-2 text-xs">
               <Link to="/obchodni-podminky" className="text-text-secondary hover:text-text-primary">
-                Obchodní podmínky
+                {t("footer.terms")}
+                {csNote}
               </Link>
               <Link
                 to="/reklamacni-podminky"
                 className="text-text-secondary hover:text-text-primary"
               >
-                Reklamační podmínky
+                {t("footer.complaints")}
+                {csNote}
               </Link>
               <Link
                 to="/dodaci-a-platebni-podminky"
                 className="text-text-secondary hover:text-text-primary"
               >
-                Dodací a platební podmínky
+                {t("footer.delivery")}
+                {csNote}
               </Link>
               <Link
                 to="/ochrana-osobnich-udaju"
                 className="text-text-secondary hover:text-text-primary"
               >
-                Ochrana osobních údajů
+                {t("footer.privacy")}
+                {csNote}
               </Link>
               <Link
                 to="/zpracovatelska-smlouva"
                 className="text-text-secondary hover:text-text-primary"
               >
-                Zpracovatelská smlouva (DPA)
+                {t("footer.dpa")}
+                {csNote}
               </Link>
               <Link to="/cookies" className="text-text-secondary hover:text-text-primary">
-                Cookies
+                {t("footer.cookies")}
+                {csNote}
               </Link>
               <button
                 type="button"
                 onClick={() => openCookieSettings()}
                 className="text-left text-text-secondary hover:text-text-primary"
               >
-                Nastavení cookies
+                {t("footer.cookieSettings")}
               </button>
             </nav>
           </div>
@@ -758,18 +844,18 @@ export function Footer() {
         <div className="mt-8 border-t border-border-subtle pt-6">
           <div className="flex flex-wrap items-center gap-4">
             <span className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
-              Platební metody
+              {t("footer.paymentMethods")}
             </span>
-            {/* Oficiální logo strip Comgate (Comgate + Visa + Mastercard) dle
-                help.comgate.cz/docs/cs/loga-a-udaje-na-webu. Web je light-only, takže
-                používáme variantu pro světlé pozadí; tmavá varianta (…-dark-bg.png) leží
-                vedle pro případné budoucí tmavé téma. */}
+            {/* Official Comgate logo strip (Comgate + Visa + Mastercard) per
+                help.comgate.cz/docs/cs/loga-a-udaje-na-webu. The site is
+                light-only, so we use the light-background variant; the dark
+                variant (…-dark-bg.png) sits alongside for a future dark theme. */}
             <a
               href={COMGATE_INFO.gatewayUrl}
               target="_blank"
               rel="noreferrer noopener"
               className="inline-flex"
-              aria-label="Platební brána Comgate – platby kartou Visa a Mastercard"
+              aria-label={t("footer.comgateAria")}
             >
               <img
                 src="/payment/comgate-logos-light-bg.png"
@@ -784,13 +870,18 @@ export function Footer() {
           </p>
         </div>
 
-        <p className="mt-6 text-xs text-text-tertiary">© {new Date().getFullYear()} SimpleCRM</p>
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+          <p className="text-xs text-text-tertiary">© {new Date().getFullYear()} SimpleCRM</p>
+          <MarketingLanguageSwitcher />
+        </div>
       </div>
     </footer>
   );
 }
 
 export function LandingPage() {
+  const { t } = useTranslation("marketing");
+  usePageTitle(t("meta.landingTitle"));
   const { hash } = useLocation();
 
   // SPA navigation that lands here with a hash (e.g. /kontakt → /#funkce)

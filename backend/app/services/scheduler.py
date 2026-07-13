@@ -148,6 +148,7 @@ async def run_freeing_sweep() -> int:
             owner_email=recipient.email,
             owner_name=recipient.name,
             company_names=names,
+            lang=recipient.language,
         )
         try:
             await send_email(message)
@@ -612,10 +613,11 @@ async def run_billing_info_reminder_sweep() -> int:
                     await send_email(
                         build_billing_info_reminder_email(
                             recipient=recipient.email,
-                            name=recipient.name or "tým SimpleCRM",
+                            name=recipient.name,
                             org_name=org.name,
                             days_remaining=days_remaining,
                             settings_link=settings_link,
+                            lang=recipient.language,
                         )
                     )
                 except Exception:

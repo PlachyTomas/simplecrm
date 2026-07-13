@@ -1,0 +1,271 @@
+{
+  "dealCount_one": "{{count}} obchod",
+  "dealCount_few": "{{count}} obchody",
+  "dealCount_other": "{{count}} obchodů",
+
+  "pipelinePage": {
+    "loading": "Načítání pipeline…",
+    "loadError": "Pipeline se nepodařilo načíst.",
+    "noFilterMatches": "Žádné obchody neodpovídají filtru.",
+    "wonWindow": {
+      "all": "Vše",
+      "days_one": "{{count}} den",
+      "days_few": "{{count}} dny",
+      "days_other": "{{count}} dní"
+    },
+    "toolbar": {
+      "addDeal": "Přidat obchod",
+      "searchLabel": "Hledat",
+      "searchPlaceholder": "Název obchodu…",
+      "wonWindowLabel": "Vyhrané za",
+      "ownerLabel": "Vlastník",
+      "ownerAll": "Všichni",
+      "ownerMine": "Moje obchody",
+      "salespeopleGroup": "Obchodníci",
+      "visibilityLabel": "Zobrazit",
+      "visibilityAll": "Vše v mém rozsahu",
+      "visibilityMine": "Pouze moje obchody",
+      "clearFilter": "Zrušit filtr"
+    },
+    "emptyState": {
+      "title": "Přidejte první obchod",
+      "body": "Sledujte obchody napříč fázemi pipeline. Karty přetahujte mezi sloupci podle vývoje.",
+      "cta": "+ Přidat obchod"
+    },
+    "card": {
+      "createdLabel": "Vytvořeno {{date}}",
+      "createdAriaSuffix": "vytvořeno {{date}}",
+      "paid": "Zaplaceno",
+      "winTooltip": "Označit jako vyhráno",
+      "winAriaLabel": "Označit obchod {{name}} jako vyhraný",
+      "loseTooltip": "Označit jako neúspěch",
+      "loseAriaLabel": "Označit obchod {{name}} jako neúspěch"
+    },
+    "mobileCard": {
+      "won": "Vyhráno",
+      "lost": "Neúspěch",
+      "moveAriaLabel": "Přesunout obchod do jiné fáze"
+    },
+    "mobileBoard": {
+      "tablistAriaLabel": "Fáze pipeline"
+    },
+    "stageColumn": {
+      "ariaLabel": "Fáze {{name}}",
+      "addDealAriaLabel": "Přidat obchod do fáze {{name}}",
+      "empty": "Zatím žádné obchody."
+    },
+    "trash": {
+      "ariaLabel": "Smazat obchod",
+      "dropHere": "Pustit pro smazání",
+      "dragHere": "Sem přetáhněte pro smazání"
+    },
+    "deleteDialog": {
+      "title": "Smazat obchod?",
+      "bodyPrefix": "Smaže obchod",
+      "bodySuffix": "natrvalo. Akci nelze vrátit zpět.",
+      "cancel": "Zrušit",
+      "confirm": "Smazat",
+      "deleting": "Mažu…"
+    },
+    "winToast": {
+      "withValue": "🎉 Gratulujeme! Obchod {{name}} ve výši {{value}} uzavřen.",
+      "withoutValue": "🎉 Gratulujeme! Obchod {{name}} uzavřen.",
+      "dismissAriaLabel": "Zavřít oznámení"
+    },
+    "toast": {
+      "paymentSaveError": "Nepodařilo se uložit stav platby.",
+      "lostSuccess": "Obchod {{name}} označen jako neúspěch.",
+      "lostError": "Obchod se nepodařilo označit jako neúspěch.",
+      "deleteSuccess": "Obchod {{name}} smazán.",
+      "deleteError": "Obchod se nepodařilo smazat."
+    }
+  },
+
+  "dealsList": {
+    "pageTitle": "Obchody",
+    "loadError": "Obchody se nepodařilo načíst.",
+    "loading": "Načítání obchodů…",
+    "emptyTitle": "Zatím žádné obchody",
+    "emptyBody": "Obchody zakládáte v Pipeline. Tady je uvidíte všechny v seznamu — s firmou, hodnotou, fází a vlastníkem.",
+    "emptyCta": "Přejít do Pipeline",
+    "totalPrefix": "Celkem",
+    "columns": {
+      "name": "Název",
+      "company": "Firma",
+      "value": "Hodnota",
+      "stage": "Fáze",
+      "owner": "Vlastník",
+      "closed": "Uzavření"
+    }
+  },
+
+  "addDealModal": {
+    "title": "Přidat obchod",
+    "subtitle": "Pojmenujte obchod a přiřaďte ho k firmě a fázi pipeline. Detaily můžete doplnit kdykoliv později.",
+    "nameLabel": "Název obchodu",
+    "namePlaceholder": "Volitelné — doplní se podle názvu firmy",
+    "companyLabel": "Firma",
+    "companySearchPlaceholder": "Začněte psát název firmy…",
+    "noCompanyMatch": "Žádná firma neodpovídá hledání.",
+    "createCompanyButton": "Vytvořit firmu „{{name}}\"",
+    "newCompanyLabel": "Nová firma",
+    "hide": "Skrýt",
+    "icoLabel": "IČO",
+    "icoHintEmpty": "Zadejte IČO (8 číslic) — automaticky doplníme z ARES.",
+    "icoHintLoading": "Hledám v ARES…",
+    "icoHintSuccess": "Údaje doplněny z ARES.",
+    "icoRetry": "Zkusit znovu",
+    "icoNotFound": "IČO {{ico}} nebylo v ARES nalezeno. Zkontrolujte zadání nebo pokračujte ručně.",
+    "icoTooMany": "Příliš mnoho vyhledávání. Počkejte chvíli a zkuste to znovu.",
+    "icoBadFormat": "IČO není ve správném formátu. Zadejte 8 číslic.",
+    "icoAresDown": "ARES je momentálně nedostupný. Zkuste to znovu nebo vyplňte ručně.",
+    "icoGenericError": "Vyhledání selhalo. Zkuste to prosím znovu.",
+    "companyNameLabel": "Název firmy",
+    "companyNamePlaceholder": "Doplní se z ARES, nebo zadejte ručně",
+    "newCompanyHint": "Firmu uložíme společně s obchodem; další detaily můžete doplnit později z detailu firmy.",
+    "valueLabel": "Hodnota",
+    "expectedCloseLabel": "Očekávané uzavření",
+    "contactSectionLabel": "Kontaktní osoba (volitelné)",
+    "contactFirstNameAria": "Jméno kontaktní osoby",
+    "firstNamePlaceholder": "Jméno",
+    "contactLastNameAria": "Příjmení kontaktní osoby",
+    "lastNamePlaceholder": "Příjmení",
+    "contactEmailAria": "E-mail kontaktní osoby",
+    "emailPlaceholder": "E-mail",
+    "contactPhoneAria": "Telefon kontaktní osoby",
+    "phonePlaceholder": "Telefon",
+    "pickExistingContact": "Vybrat z existujících kontaktů",
+    "contactHint": "Vyplňte jméno i příjmení — uložíme osobu jako kontakt firmy.",
+    "noContactOption": "— bez kontaktu —",
+    "addNewPerson": "Přidat novou osobu",
+    "ownerLabel": "Vlastník",
+    "noOwnerOption": "Bez vlastníka",
+    "stageLabel": "Fáze",
+    "createError": "Obchod se nepodařilo uložit. Zkontrolujte údaje a zkuste to znovu.",
+    "missingSummaryPrefix": "Pro uložení vyplňte:",
+    "missingCompany": "firma",
+    "missingStage": "fáze",
+    "companyDuplicate": "Firma s tímto IČO už ve vaší organizaci existuje. Vyberte ji ze seznamu.",
+    "companySaveError": "Firmu se nepodařilo uložit. Zkuste to znovu.",
+    "contactSaveError": "Kontaktní osobu se nepodařilo uložit — obchod uložíme bez ní.",
+    "defaultDealName": "Nový obchod",
+    "toastSaved": "Obchod uložen.",
+    "companyCreatedDealFailed": "Firma byla vytvořena, ale obchod uložit nešel. Zkuste ho přidat z detailu firmy.",
+    "saveError": "Obchod se nepodařilo uložit. Zkuste to znovu.",
+    "cancel": "Zrušit",
+    "saving": "Ukládám…",
+    "submit": "Uložit obchod"
+  },
+
+  "markLostDialog": {
+    "title": "Označit jako neúspěch",
+    "bodyPrefix": "Obchod",
+    "bodySuffix": "Vyberte hlavní důvod, abychom mohli sestavit report neúspěšných obchodů.",
+    "reasonLegend": "Důvod",
+    "reasons": {
+      "price": "Cena",
+      "competition": "Konkurence",
+      "badTiming": "Nevhodný čas",
+      "budget": "Rozpočet",
+      "noAgreement": "Nedosaženo dohody",
+      "other": "Jiný"
+    },
+    "customLabel": "Vlastní důvod",
+    "cancel": "Zrušit",
+    "saving": "Ukládám…",
+    "submit": "Uložit"
+  },
+
+  "dealDetail": {
+    "loading": "Načítání…",
+    "loadError": "Obchod se nepodařilo načíst.",
+    "won": "Vyhráno",
+    "lost": "Neúspěch",
+    "open": "Otevřeno",
+    "reopen": "Znovu otevřít",
+    "edit": "Upravit",
+    "sendEmail": "Poslat e-mail",
+    "deleteAriaLabel": "Smazat obchod",
+    "closeAriaLabel": "Zavřít",
+    "confirmReopen": "Znovu otevřít tento obchod? Datum uzavření a důvod budou odstraněny.",
+    "confirmDelete": "Smazat obchod \"{{name}}\"? Akci nelze vrátit zpět.",
+    "goToCompany": "Přejít na firmu",
+    "noOwner": "Bez vlastníka",
+    "noPrimaryContact": "Bez hlavního kontaktu",
+    "probabilityPlaceholder": "dle fáze",
+    "saving": "Ukládám…",
+    "saveChanges": "Uložit změny",
+    "cancel": "Zrušit",
+    "fields": {
+      "status": "Stav",
+      "name": "Název",
+      "value": "Hodnota",
+      "company": "Firma",
+      "owner": "Vlastník",
+      "stage": "Fáze",
+      "primaryContact": "Hlavní kontakt",
+      "expectedClose": "Očekávané uzavření",
+      "probability": "Pravděpodobnost",
+      "created": "Vytvořeno",
+      "closed": "Uzavřeno"
+    },
+    "toast": {
+      "saved": "Obchod uložen.",
+      "saveError": "Obchod se nepodařilo uložit.",
+      "reopened": "Obchod znovu otevřen.",
+      "reopenError": "Obchod se nepodařilo znovu otevřít.",
+      "deleted": "Obchod smazán.",
+      "deleteError": "Obchod se nepodařilo smazat.",
+      "winError": "Obchod se nepodařilo označit jako vyhraný.",
+      "loseError": "Obchod se nepodařilo označit jako neúspěšný."
+    }
+  },
+
+  "dealDetailDialog": {
+    "ariaLabel": "Detail obchodu"
+  },
+
+  "eventsSection": {
+    "title": "Události",
+    "subtitle": "Schůzky a termíny k tomuto obchodu — volitelně i ve vašem Google kalendáři.",
+    "scheduleButton": "Naplánovat událost",
+    "loading": "Načítání…",
+    "empty": "Zatím žádné události.",
+    "googleSyncErrorTooltip": "Zápis do Google kalendáře selhal — uložením události se o něj pokusíme znovu.",
+    "googleSyncFailed": "Google sync selhal",
+    "editAriaLabel": "Upravit událost {{title}}",
+    "deleteAriaLabel": "Smazat událost {{title}}",
+    "confirmDelete": "Smazat událost \"{{title}}\"?",
+    "toastDeleted": "Událost smazána.",
+    "toastDeleteError": "Událost se nepodařilo smazat."
+  },
+
+  "eventFormModal": {
+    "titleCreate": "Naplánovat událost",
+    "titleEdit": "Upravit událost",
+    "dealLabel": "Obchod:",
+    "defaultTitle": "Schůzka — {{dealName}}",
+    "nameLabel": "Název",
+    "dateLabel": "Datum",
+    "fromLabel": "Od",
+    "toLabel": "Do",
+    "locationLabel": "Místo (volitelné)",
+    "descriptionLabel": "Popis (volitelné)",
+    "addToGoogle": "Přidat do Google kalendáře",
+    "connectCalendarLink": "nejprve propojte kalendář v Nastavení",
+    "errorRequired": "Vyplňte název, datum a časy.",
+    "errorEndBeforeStart": "Konec musí být po začátku.",
+    "cancel": "Zrušit",
+    "saving": "Ukládám…",
+    "submitEdit": "Uložit změny",
+    "submitCreate": "Vytvořit událost",
+    "toast": {
+      "created": "Událost vytvořena.",
+      "createdError": "Událost vytvořena, ale zápis do Google kalendáře selhal.",
+      "updated": "Událost uložena.",
+      "updatedError": "Událost uložena, ale zápis do Google kalendáře selhal.",
+      "createError": "Událost se nepodařilo vytvořit.",
+      "updateError": "Událost se nepodařilo uložit."
+    }
+  }
+}

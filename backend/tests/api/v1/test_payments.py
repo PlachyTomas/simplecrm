@@ -338,6 +338,64 @@ async def test_initial_payment_init_rejects_recent_pending_charge(
     assert resp.json()["detail"]["code"] == "payment_in_progress"
 
 
+async def test_initial_payment_init_returns_gateway_unavailable_code(
+    client: AsyncClient,
+    owned_payments_emails: list[str],
+) -> None:
+    """ComGate rejecting the hosted-page create call surfaces a structured
+    `gateway_unavailable` code (i18n: no raw Czech text on the wire)."""
+    from app.services.comgate import ComGateError
+
+    async with AsyncSessionLocal() as session:
+        org = Organization(
+            name="Payments Test Org",
+            ico="12345678",
+            address_street="Testovací 1",
+            address_city="Praha",
+            address_zip="100 00",
+        )
+        session.add(org)
+        await session.flush()
+        email = f"gwdown-{uuid.uuid4().hex[:8]}@ex.cz"
+        owned_payments_emails.append(email)
+        admin = User(email=email, name="A", role=UserRole.admin, organization_id=org.id)
+        session.add(admin)
+        monthly_plan_id = (
+            await session.execute(select(Plan.id).where(Plan.code == "monthly"))
+        ).scalar_one()
+        now = datetime.now(tz=UTC)
+        session.add(
+            Subscription(
+                organization_id=org.id,
+                plan_id=monthly_plan_id,
+                status="trialing",
+                started_at=now,
+                current_period_starts_at=now,
+                current_period_ends_at=now + timedelta(days=10),
+                seat_count=5,
+                contracted_seat_count=5,
+            )
+        )
+        await session.commit()
+        token = create_access_token(admin.id, org.id, UserRole.admin)
+
+    class _DownComgate:
+        async def create_initial_payment(self, **_kwargs: object) -> object:
+            raise ComGateError("upstream down")
+
+    app.dependency_overrides[get_comgate_client] = lambda: _DownComgate()
+    try:
+        resp = await client.post(
+            "/api/v1/payments/initial-payment-init",
+            json={"plan_code": "monthly"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    finally:
+        app.dependency_overrides.pop(get_comgate_client, None)
+    assert resp.status_code == 502, resp.text
+    assert resp.json()["detail"]["code"] == "gateway_unavailable"
+
+
 async def test_webhook_initial_paid_promotes_to_active(
     client: AsyncClient,
     owned_payments_emails: list[str],
@@ -858,6 +916,7 @@ async def test_seat_change_init_keeps_failed_charge_when_gateway_rejects(
             json={"seat_count": 50},
         )
         assert resp.status_code == 502, resp.text
+        assert resp.json()["detail"]["code"] == "gateway_declined"
     finally:
         app.dependency_overrides.pop(get_comgate_client, None)
 
@@ -958,6 +1017,32 @@ def demo_comgate():
         app.dependency_overrides.pop(get_demo_order_rate_limiter, None)
 
 
+async def test_demo_order_returns_gateway_unavailable_code(client: AsyncClient) -> None:
+    """ComGate rejecting the demo hosted-page create call surfaces a
+    structured `gateway_unavailable` code (i18n: no raw Czech text)."""
+    from app.api.v1.payments import get_demo_order_rate_limiter
+    from app.services.comgate import ComGateError, get_comgate_client
+    from app.services.lookup_cache import RateLimiter
+
+    class _DownComgate:
+        async def create_demo_payment(self, **_kwargs: object) -> object:
+            raise ComGateError("upstream down")
+
+    limiter = RateLimiter(max_calls=10, window_seconds=600)
+    app.dependency_overrides[get_comgate_client] = lambda: _DownComgate()
+    app.dependency_overrides[get_demo_order_rate_limiter] = lambda: limiter
+    try:
+        resp = await client.post(
+            "/api/v1/payments/demo-order",
+            json={"plan_code": "monthly", "seats": 3, "email": "reviewer@comgate.cz"},
+        )
+    finally:
+        app.dependency_overrides.pop(get_comgate_client, None)
+        app.dependency_overrides.pop(get_demo_order_rate_limiter, None)
+    assert resp.status_code == 502, resp.text
+    assert resp.json()["detail"]["code"] == "gateway_unavailable"
+
+
 async def test_demo_order_returns_redirect_without_auth(
     client: AsyncClient, demo_comgate: _FakeDemoComGate
 ) -> None:
@@ -1025,6 +1110,7 @@ async def test_demo_order_rate_limited_per_ip(client: AsyncClient) -> None:
             assert ok.status_code == 200
         blocked = await client.post("/api/v1/payments/demo-order", json=payload)
         assert blocked.status_code == 429
+        assert blocked.json()["detail"]["code"] == "too_many_attempts"
     finally:
         app.dependency_overrides.pop(get_comgate_client, None)
         app.dependency_overrides.pop(get_demo_order_rate_limiter, None)

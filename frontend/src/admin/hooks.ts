@@ -88,7 +88,7 @@ export function useAdminOrgActivity(orgId: string | null) {
   });
 }
 
-/** Singleton billing settings (drives the Nastavení tab). */
+/** Singleton billing settings (drives the Settings tab). */
 export function useAdminBillingSettings() {
   const { accessToken } = useAuth();
   return useQuery<BillingSettingsOut | null>({

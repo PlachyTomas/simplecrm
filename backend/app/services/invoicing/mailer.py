@@ -20,12 +20,10 @@ from jinja2 import Template
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import BillingSettings, Invoice, InvoiceAuditLog
+from app.core.i18n import language_for_locale, t
+from app.db.models import BillingSettings, Invoice, InvoiceAuditLog, Organization
 from app.services.email import Email, EmailAttachment, send_email
-from app.services.invoicing.renderer import (
-    _fmt_date_cs,
-    _fmt_money_cs,
-)
+from app.services.invoicing.renderer import formatters
 from app.services.invoicing.storage import InvoiceStorage
 
 logger = logging.getLogger(__name__)
@@ -58,6 +56,13 @@ class InvoiceMailer:
                 f"Invoice {invoice.number} has no recipient email and none was provided"
             )
 
+        # The email language follows the customer org's locale (same rule
+        # the PDF renderer uses), not the sender's — the founder's UI is
+        # cs regardless of which language goes out to the customer.
+        organization = await session.get(Organization, invoice.organization_id)
+        lang = language_for_locale(organization.locale if organization else None)
+        fmt_money, _fmt_qty, fmt_date = formatters(lang)
+
         # Verify the PDF is still byte-equal to its recorded hash before
         # we ship it. If the bucket got tampered with, fail loudly here
         # instead of attaching corrupted bytes to a customer email.
@@ -65,23 +70,33 @@ class InvoiceMailer:
 
         ctx = {
             "number": invoice.number,
-            "due_date": _fmt_date_cs(invoice.due_at),
+            "due_date": fmt_date(invoice.due_at),
             "customer_name": invoice.customer_name,
-            "period_start": _fmt_date_cs(invoice.taxable_supply_date),
-            "period_end": _fmt_date_cs(invoice.due_at),
-            "total_display": _fmt_money_cs(invoice.total_minor, invoice.currency),
+            "period_start": fmt_date(invoice.taxable_supply_date),
+            "period_end": fmt_date(invoice.due_at),
+            "total_display": fmt_money(invoice.total_minor, invoice.currency),
             "issuer_iban": invoice.issuer_iban,
             "variable_symbol": invoice.variable_symbol,
         }
-        subject = Template(billing.invoice_email_subject_template).render(**ctx)
-        body = Template(billing.invoice_email_body_template).render(**ctx)
+        subject_template = (
+            billing.invoice_email_subject_template_en
+            if lang == "en"
+            else billing.invoice_email_subject_template
+        )
+        body_template = (
+            billing.invoice_email_body_template_en
+            if lang == "en"
+            else billing.invoice_email_body_template
+        )
+        subject = Template(subject_template).render(**ctx)
+        body = Template(body_template).render(**ctx)
 
         # Slugify the invoice number for the attachment filename so a
         # customer's mail client doesn't choke on the raw `2026/00042`
         # form; the original number stays inside the PDF + audit log.
         safe_number = re.sub(r"[^A-Za-z0-9_.-]+", "-", invoice.number).strip("-") or "invoice"
         attachment = EmailAttachment(
-            filename=f"faktura-{safe_number}.pdf",
+            filename=f"{t(lang, 'invoice.pdfFilenamePrefix')}-{safe_number}.pdf",
             content_type="application/pdf",
             content=pdf_bytes,
         )

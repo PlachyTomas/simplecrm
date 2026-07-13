@@ -12,13 +12,14 @@ const FALLBACK: BillingSettingsPublic = {
 };
 
 /**
- * Single source of truth for the seller's DPH state. Cached for 5 minutes
- * because the operator only flips this when the SimpleCRM org crosses the
- * 2 M Kč obrat threshold — change is rare, downside of stale cache is one
- * window of slightly-wrong DPH copy on the pricing page.
+ * Single source of truth for the seller's VAT-payer state. Cached for 5
+ * minutes because the operator only flips this when the SimpleCRM org
+ * crosses the 2M CZK annual-turnover threshold — change is rare, downside
+ * of stale cache is one window of slightly-wrong VAT copy on the pricing
+ * page.
  *
  * Read-only and unauthenticated — backed by GET /plans/billing-settings/public.
- * If the network or the backend is down, returns the fallback (false, 21 %)
+ * If the network or the backend is down, returns the fallback (false, 21%)
  * so the UI never goes blank waiting on this read.
  */
 export function useBillingSettings() {

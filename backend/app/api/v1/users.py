@@ -6,11 +6,13 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.deps import get_current_user, require_role
+from app.core.i18n import SUPPORTED_LANGUAGES
 from app.db import get_db
 from app.db.models import Team, User, UserRole
 from app.schemas.pagination import Page, PaginationParams
@@ -137,3 +139,25 @@ async def patch_my_preferences(
     await session.commit()
     await session.refresh(user)
     return user.preferences
+
+
+class LanguageUpdate(BaseModel):
+    language: str
+
+
+@router.patch("/me/language", response_model=dict[str, str])
+async def patch_my_language(
+    payload: LanguageUpdate,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """Set the current user's UI language. Rejects anything outside
+    ``SUPPORTED_LANGUAGES`` with a coded 422 the frontend can map."""
+    if payload.language not in SUPPORTED_LANGUAGES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "invalid_language"},
+        )
+    user.language = payload.language
+    await session.commit()
+    return {"language": user.language}

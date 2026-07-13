@@ -1,0 +1,25 @@
+{
+  "syncBadge": {
+    "synced": "Google",
+    "errorTitle": "Writing to Google Calendar failed.",
+    "errorLabel": "Google sync failed"
+  },
+  "dayEventsList": {
+    "editAria": "Edit event {{title}}",
+    "deleteAria": "Delete event {{title}}"
+  },
+  "calendarPage": {
+    "title": "Calendar",
+    "today": "Today",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "loading": "Loading…",
+    "loadError": "Failed to load events — this isn't necessarily an empty calendar. Please try again.",
+    "noEventsDay": "No events. You can schedule one from a deal's detail.",
+    "noEventsMonth": "There are no events this month. You can schedule one from a deal's detail.",
+    "moreEvents": "+{{count}} more",
+    "deleteConfirm": "Delete the event \"{{title}}\"?",
+    "deleteSuccess": "Event deleted.",
+    "deleteError": "Failed to delete the event."
+  }
+}

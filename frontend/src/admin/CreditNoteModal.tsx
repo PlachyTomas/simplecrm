@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   type AdminInvoiceDetail,
   type CreditNoteLineDraft,
   useIssueCreditNote,
 } from "@/admin/useAdminInvoices";
-import { formatCzkMinor } from "@/components/billing/format";
+import { formatMoneyMinor } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 
 interface CreditNoteModalProps {
   parent: AdminInvoiceDetail;
@@ -14,9 +16,11 @@ interface CreditNoteModalProps {
 }
 
 export function CreditNoteModal({ parent, onClose, onIssued }: CreditNoteModalProps) {
+  const { t } = useTranslation("admin");
+  const locale = useLocale();
   const [lines, setLines] = useState<CreditNoteLineDraft[]>(() =>
     parent.lines.map((line) => ({
-      description: `Storno: ${line.description}`,
+      description: t("creditNoteModal.descriptionPrefix", { description: line.description }),
       quantity: line.quantity,
       unit_price_minor: -Math.abs(line.unit_price_minor),
       unit_label: line.unit_label,
@@ -44,7 +48,7 @@ export function CreditNoteModal({ parent, onClose, onIssued }: CreditNoteModalPr
 
   async function handleSubmit() {
     if (reason.trim().length < 3) {
-      setError("Důvod dobropisu je povinný (min. 3 znaky).");
+      setError(t("creditNoteModal.errorReasonRequired"));
       return;
     }
     setError(null);
@@ -52,7 +56,7 @@ export function CreditNoteModal({ parent, onClose, onIssued }: CreditNoteModalPr
       { reason: reason.trim(), lines },
       {
         onSuccess: (data) => onIssued(data.id),
-        onError: (err) => setError(extractMessage(err) ?? "Vystavení dobropisu selhalo."),
+        onError: (err) => setError(extractMessage(err) ?? t("creditNoteModal.errorGeneric")),
       },
     );
   }
@@ -70,11 +74,9 @@ export function CreditNoteModal({ parent, onClose, onIssued }: CreditNoteModalPr
         className="max-h-full w-full max-w-3xl overflow-y-auto rounded-lg border border-border bg-surface p-6 shadow-xl"
       >
         <h2 id="credit-note-title" className="text-lg font-semibold">
-          Vystavit dobropis k faktuře {parent.number}
+          {t("creditNoteModal.title", { number: parent.number })}
         </h2>
-        <p className="mt-1 text-sm text-text-secondary">
-          Dobropis odečte částku z původní faktury. Záporné jednotkové ceny jsou předvyplněné.
-        </p>
+        <p className="mt-1 text-sm text-text-secondary">{t("creditNoteModal.description")}</p>
 
         {error ? (
           <p
@@ -87,14 +89,14 @@ export function CreditNoteModal({ parent, onClose, onIssued }: CreditNoteModalPr
 
         <div className="mt-5 space-y-5">
           <div>
-            <h3 className="mb-2 text-sm font-medium">Položky dobropisu</h3>
+            <h3 className="mb-2 text-sm font-medium">{t("creditNoteModal.lineItems.title")}</h3>
             <table className="w-full text-sm">
               <thead className="text-xs text-text-tertiary">
                 <tr className="border-b border-border">
-                  <th className="py-1 text-left">Popis</th>
-                  <th className="py-1 text-right">Množství</th>
-                  <th className="py-1 text-right">Jed.</th>
-                  <th className="py-1 text-right">Cena (Kč, ≤ 0)</th>
+                  <th className="py-1 text-left">{t("creditNoteModal.lineItems.description")}</th>
+                  <th className="py-1 text-right">{t("creditNoteModal.lineItems.quantity")}</th>
+                  <th className="py-1 text-right">{t("creditNoteModal.lineItems.unit")}</th>
+                  <th className="py-1 text-right">{t("creditNoteModal.lineItems.price")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -148,23 +150,27 @@ export function CreditNoteModal({ parent, onClose, onIssued }: CreditNoteModalPr
 
           <div>
             <label className="mb-1 block text-sm font-medium" htmlFor="credit-reason">
-              Důvod dobropisu
+              {t("creditNoteModal.reasonLabel")}
             </label>
             <input
               id="credit-reason"
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="např. Refund po reklamaci"
+              placeholder={t("creditNoteModal.reasonPlaceholder")}
               className="w-full rounded-md border border-border bg-bg px-3 py-1.5 text-sm"
             />
           </div>
 
           <p className="rounded-md border border-border bg-bg px-3 py-2 text-sm">
-            Dobropis celkem:{" "}
-            <span className="font-medium tabular-nums">{formatCzkMinor(creditTotalMinor)}</span>{" "}
+            {t("creditNoteModal.totalPrefix")}
+            <span className="font-medium tabular-nums">
+              {formatMoneyMinor(creditTotalMinor, "CZK", locale)}
+            </span>{" "}
             <span className="text-text-tertiary">
-              (z původních {formatCzkMinor(-Math.abs(parent.subtotal_minor))})
+              {t("creditNoteModal.originalTotal", {
+                amount: formatMoneyMinor(-Math.abs(parent.subtotal_minor), "CZK", locale),
+              })}
             </span>
           </p>
         </div>
@@ -175,7 +181,7 @@ export function CreditNoteModal({ parent, onClose, onIssued }: CreditNoteModalPr
             onClick={onClose}
             className="hover:bg-bg-elevated rounded-md border border-border bg-bg px-4 py-1.5 text-sm"
           >
-            Zrušit
+            {t("creditNoteModal.cancel")}
           </button>
           <button
             type="button"
@@ -183,7 +189,7 @@ export function CreditNoteModal({ parent, onClose, onIssued }: CreditNoteModalPr
             disabled={issue.isPending}
             className="rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
           >
-            {issue.isPending ? "Vystavuji…" : "Vystavit dobropis"}
+            {issue.isPending ? t("creditNoteModal.submitting") : t("creditNoteModal.submit")}
           </button>
         </div>
       </div>

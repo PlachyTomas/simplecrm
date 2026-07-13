@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
 
@@ -35,7 +36,7 @@ const FALLBACK: ToastContextValue = {
 
 /**
  * Tiny in-memory toast system. Each mutation in the app can call
- * `toast.success("Firma uložena")` or `toast.error("...")`. No external dep.
+ * `toast.success(t("company.saved"))` or `toast.error("...")`. No external dep.
  * Toasts auto-dismiss after 4s (success/info) or 6s (error). Keeps copy
  * consistent (past-tense success, specific error) per FIXES_TASK B12.
  */
@@ -99,6 +100,7 @@ function ToastViewport({
 }
 
 function ToastCard({ entry, onDismiss }: { entry: ToastEntry; onDismiss: () => void }) {
+  const { t } = useTranslation("common");
   // Trigger the same auto-dismiss as the provider so dismissing manually
   // still cleans up if the user beat the timer (the parent already removes
   // by id, this is just defensive).
@@ -131,7 +133,7 @@ function ToastCard({ entry, onDismiss }: { entry: ToastEntry; onDismiss: () => v
       <button
         type="button"
         onClick={onDismiss}
-        aria-label="Zavřít oznámení"
+        aria-label={t("toast.dismissAriaLabel")}
         className="text-text-tertiary hover:text-text-primary"
       >
         <X size={14} strokeWidth={1.75} aria-hidden />

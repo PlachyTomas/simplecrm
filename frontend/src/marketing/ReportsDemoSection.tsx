@@ -12,29 +12,33 @@
  * stale-deals is a tiny static table.
  */
 
+import type { ParseKeys } from "i18next";
 import { Crown, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
+import { formatMoney, formatPercent } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { cn } from "@/lib/utils";
 
 const PRESETS = ["last_7_days", "last_30_days", "this_quarter"] as const;
 type Preset = (typeof PRESETS)[number];
 
-const PRESET_LABEL: Record<Preset, string> = {
-  last_7_days: "Posledních 7 dní",
-  last_30_days: "Posledních 30 dní",
-  this_quarter: "Tento kvartál",
+const PRESET_LABEL_KEY: Record<Preset, ParseKeys<"marketing">> = {
+  last_7_days: "reports.presetLast7",
+  last_30_days: "reports.presetLast30",
+  this_quarter: "reports.presetQuarter",
 };
 
 interface DemoData {
   pipelineValue: number;
   pipelineDeltaPct: number;
-  leaderboard: { name: string; value: number }[];
-  lostReasons: { reason: string; count: number }[];
+  leaderboard: { nameKey: ParseKeys<"marketing">; value: number }[];
+  lostReasons: { reasonKey: ParseKeys<"marketing">; count: number }[];
   staleDeals: {
-    name: string;
-    company: string;
+    nameKey: ParseKeys<"marketing">;
+    companyKey: ParseKeys<"marketing">;
     days: number;
     value: number;
   }[];
@@ -45,95 +49,128 @@ const FAKE_DATA: Record<Preset, DemoData> = {
     pipelineValue: 480_000,
     pipelineDeltaPct: 8.4,
     leaderboard: [
-      { name: "Eva Novotná", value: 220_000 },
-      { name: "Jakub Veselý", value: 145_000 },
-      { name: "Tereza Horáková", value: 90_000 },
+      { nameKey: "reports.people.eva", value: 220_000 },
+      { nameKey: "reports.people.jakub", value: 145_000 },
+      { nameKey: "reports.people.tereza", value: 90_000 },
     ],
     lostReasons: [
-      { reason: "Cena", count: 3 },
-      { reason: "Konkurence", count: 2 },
-      { reason: "Časování", count: 1 },
+      { reasonKey: "reports.reasons.price", count: 3 },
+      { reasonKey: "reports.reasons.competition", count: 2 },
+      { reasonKey: "reports.reasons.timing", count: 1 },
     ],
     staleDeals: [
-      { name: "Modernizace skladu", company: "ALK Logistics", days: 32, value: 180_000 },
-      { name: "Roční licence", company: "Brno IT", days: 28, value: 96_000 },
+      {
+        nameKey: "reports.dealNames.warehouse",
+        companyKey: "reports.companies.alk",
+        days: 32,
+        value: 180_000,
+      },
+      {
+        nameKey: "reports.dealNames.annualLicense",
+        companyKey: "reports.companies.brnoIt",
+        days: 28,
+        value: 96_000,
+      },
     ],
   },
   last_30_days: {
     pipelineValue: 1_245_000,
     pipelineDeltaPct: 27.0,
     leaderboard: [
-      { name: "Eva Novotná", value: 612_000 },
-      { name: "Jakub Veselý", value: 388_000 },
-      { name: "Tereza Horáková", value: 245_000 },
+      { nameKey: "reports.people.eva", value: 612_000 },
+      { nameKey: "reports.people.jakub", value: 388_000 },
+      { nameKey: "reports.people.tereza", value: 245_000 },
     ],
     lostReasons: [
-      { reason: "Cena", count: 11 },
-      { reason: "Konkurence", count: 7 },
-      { reason: "Časování", count: 4 },
-      { reason: "Bez rozpočtu", count: 3 },
+      { reasonKey: "reports.reasons.price", count: 11 },
+      { reasonKey: "reports.reasons.competition", count: 7 },
+      { reasonKey: "reports.reasons.timing", count: 4 },
+      { reasonKey: "reports.reasons.noBudget", count: 3 },
     ],
     staleDeals: [
-      { name: "Modernizace skladu", company: "ALK Logistics", days: 67, value: 180_000 },
-      { name: "Roční licence", company: "Brno IT", days: 54, value: 96_000 },
-      { name: "Cloud audit", company: "Praha Studios", days: 43, value: 240_000 },
+      {
+        nameKey: "reports.dealNames.warehouse",
+        companyKey: "reports.companies.alk",
+        days: 67,
+        value: 180_000,
+      },
+      {
+        nameKey: "reports.dealNames.annualLicense",
+        companyKey: "reports.companies.brnoIt",
+        days: 54,
+        value: 96_000,
+      },
+      {
+        nameKey: "reports.dealNames.cloudAudit",
+        companyKey: "reports.companies.prahaStudios",
+        days: 43,
+        value: 240_000,
+      },
     ],
   },
   this_quarter: {
     pipelineValue: 3_120_000,
     pipelineDeltaPct: 18.6,
     leaderboard: [
-      { name: "Eva Novotná", value: 1_420_000 },
-      { name: "Jakub Veselý", value: 980_000 },
-      { name: "Tereza Horáková", value: 720_000 },
+      { nameKey: "reports.people.eva", value: 1_420_000 },
+      { nameKey: "reports.people.jakub", value: 980_000 },
+      { nameKey: "reports.people.tereza", value: 720_000 },
     ],
     lostReasons: [
-      { reason: "Cena", count: 24 },
-      { reason: "Konkurence", count: 15 },
-      { reason: "Časování", count: 11 },
-      { reason: "Bez rozpočtu", count: 8 },
-      { reason: "Špatný produkt", count: 4 },
+      { reasonKey: "reports.reasons.price", count: 24 },
+      { reasonKey: "reports.reasons.competition", count: 15 },
+      { reasonKey: "reports.reasons.timing", count: 11 },
+      { reasonKey: "reports.reasons.noBudget", count: 8 },
+      { reasonKey: "reports.reasons.wrongProduct", count: 4 },
     ],
     staleDeals: [
-      { name: "Modernizace skladu", company: "ALK Logistics", days: 92, value: 180_000 },
-      { name: "Roční licence", company: "Brno IT", days: 78, value: 96_000 },
-      { name: "Cloud audit", company: "Praha Studios", days: 64, value: 240_000 },
-      { name: "Refresh hardwaru", company: "Plzeň Tech", days: 51, value: 320_000 },
+      {
+        nameKey: "reports.dealNames.warehouse",
+        companyKey: "reports.companies.alk",
+        days: 92,
+        value: 180_000,
+      },
+      {
+        nameKey: "reports.dealNames.annualLicense",
+        companyKey: "reports.companies.brnoIt",
+        days: 78,
+        value: 96_000,
+      },
+      {
+        nameKey: "reports.dealNames.cloudAudit",
+        companyKey: "reports.companies.prahaStudios",
+        days: 64,
+        value: 240_000,
+      },
+      {
+        nameKey: "reports.dealNames.hardwareRefresh",
+        companyKey: "reports.companies.plzenTech",
+        days: 51,
+        value: 320_000,
+      },
     ],
   },
 };
 
-const CZK_FORMATTER = new Intl.NumberFormat("cs-CZ", {
-  style: "currency",
-  currency: "CZK",
-  maximumFractionDigits: 0,
-});
-
-const NUMBER_FORMATTER = new Intl.NumberFormat("cs-CZ", {
-  maximumFractionDigits: 0,
-});
-
 export function ReportsDemoSection() {
+  const { t } = useTranslation("marketing");
   const [preset, setPreset] = useState<Preset>("last_30_days");
 
   return (
     <section className="bg-surface">
       <div className="mx-auto max-w-[1200px] px-4 py-16 md:px-8 md:py-24">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">Reporty</p>
-          <h2 className="mt-2 text-3xl font-bold md:text-4xl">
-            Sledujte přesně to, co potřebujete
-          </h2>
-          <p className="mt-4 text-base text-text-secondary md:text-lg">
-            Přizpůsobte si dashboard. Vyberte z 12 widgetů, vytvořte si vlastní rozložení, sdílejte
-            výsledky CSV exportem.
+          <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
+            {t("reports.eyebrow")}
           </p>
+          <h2 className="mt-2 text-3xl font-bold md:text-4xl">{t("reports.title")}</h2>
+          <p className="mt-4 text-base text-text-secondary md:text-lg">{t("reports.subtitle")}</p>
         </div>
 
         <div className="mt-8 flex justify-center">
           <div
             role="tablist"
-            aria-label="Vybrat období v ukázce"
+            aria-label={t("reports.periodTablistAria")}
             className="inline-flex flex-wrap gap-1 overflow-x-auto rounded-md border border-border bg-surface-overlay p-1"
           >
             {PRESETS.map((p) => (
@@ -150,7 +187,7 @@ export function ReportsDemoSection() {
                     : "text-text-secondary hover:text-text-primary",
                 )}
               >
-                {PRESET_LABEL[p]}
+                {t(PRESET_LABEL_KEY[p])}
               </button>
             ))}
           </div>
@@ -158,14 +195,18 @@ export function ReportsDemoSection() {
 
         <div className="mx-auto mt-10 max-w-[1100px]">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <DemoTile label="Hodnota pipeline" data={FAKE_DATA[preset]} variant="pipeline" />
-            <DemoTile label="Žebříček obchodníků" data={FAKE_DATA[preset]} variant="leaderboard" />
+            <DemoTile label={t("reports.tilePipeline")} data={FAKE_DATA[preset]} variant="pipeline" />
             <DemoTile
-              label="Důvody prohraných obchodů"
+              label={t("reports.tileLeaderboard")}
+              data={FAKE_DATA[preset]}
+              variant="leaderboard"
+            />
+            <DemoTile
+              label={t("reports.tileLostReasons")}
               data={FAKE_DATA[preset]}
               variant="lost_reasons"
             />
-            <DemoTile label="Stagnující obchody" data={FAKE_DATA[preset]} variant="stale_deals" />
+            <DemoTile label={t("reports.tileStale")} data={FAKE_DATA[preset]} variant="stale_deals" />
           </div>
         </div>
       </div>
@@ -194,21 +235,26 @@ function DemoTile({ label, data, variant }: DemoTileProps) {
 }
 
 function PipelineBody({ data }: { data: DemoData }) {
+  const { t } = useTranslation("marketing");
+  const locale = useLocale();
   const animated = useCountUp(data.pipelineValue);
   return (
     <div>
       <p className="text-3xl font-semibold tabular-nums text-text-primary">
-        {CZK_FORMATTER.format(animated)}
+        {formatMoney(animated, "CZK", locale)}
       </p>
       <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-success">
-        <TrendingUp size={12} strokeWidth={2} aria-hidden />+{data.pipelineDeltaPct.toFixed(1)} %
-        <span className="font-normal text-text-tertiary">oproti předchozímu období</span>
+        <TrendingUp size={12} strokeWidth={2} aria-hidden />+
+        {formatPercent(data.pipelineDeltaPct, locale, 1)}
+        <span className="font-normal text-text-tertiary">{t("reports.vsPrevPeriod")}</span>
       </p>
     </div>
   );
 }
 
 function LeaderboardBody({ data }: { data: DemoData }) {
+  const { t } = useTranslation("marketing");
+  const locale = useLocale();
   const max = data.leaderboard[0]?.value ?? 1;
   return (
     <ol className="space-y-2">
@@ -216,10 +262,10 @@ function LeaderboardBody({ data }: { data: DemoData }) {
         const pct = Math.max(8, Math.round((row.value / max) * 100));
         const isLeader = i === 0;
         return (
-          <li key={row.name} className="flex items-center gap-3 text-xs">
+          <li key={row.nameKey} className="flex items-center gap-3 text-xs">
             {isLeader ? (
               <span
-                aria-label="Vedoucí"
+                aria-label={t("reports.leaderAria")}
                 className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-accent text-text-on-brand-accent"
               >
                 <Crown size={10} strokeWidth={2} aria-hidden />
@@ -229,9 +275,9 @@ function LeaderboardBody({ data }: { data: DemoData }) {
             )}
             <div className="flex-1">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="font-medium text-text-primary">{row.name}</span>
+                <span className="font-medium text-text-primary">{t(row.nameKey)}</span>
                 <span className="tabular-nums text-text-secondary">
-                  {CZK_FORMATTER.format(row.value)}
+                  {formatMoney(row.value, "CZK", locale)}
                 </span>
               </div>
               <div className="mt-1 h-1.5 rounded-full bg-surface">
@@ -252,15 +298,16 @@ function LeaderboardBody({ data }: { data: DemoData }) {
 }
 
 function LostReasonsBody({ data }: { data: DemoData }) {
+  const { t } = useTranslation("marketing");
   const max = data.lostReasons[0]?.count ?? 1;
   return (
     <ul className="space-y-2">
       {data.lostReasons.map((row) => {
         const pct = Math.max(10, Math.round((row.count / max) * 100));
         return (
-          <li key={row.reason} className="text-xs">
+          <li key={row.reasonKey} className="text-xs">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-text-secondary">{row.reason}</span>
+              <span className="text-text-secondary">{t(row.reasonKey)}</span>
               <span className="tabular-nums text-text-tertiary">{row.count}×</span>
             </div>
             <div className="mt-1 h-1.5 rounded-full bg-surface">
@@ -277,24 +324,26 @@ function LostReasonsBody({ data }: { data: DemoData }) {
 }
 
 function StaleDealsBody({ data }: { data: DemoData }) {
+  const { t } = useTranslation("marketing");
+  const locale = useLocale();
   return (
     <table className="w-full text-xs">
       <thead>
         <tr className="text-left text-[10px] uppercase tracking-wider text-text-tertiary">
-          <th className="py-1.5 font-medium">Obchod</th>
-          <th className="py-1.5 text-right font-medium">Hodnota</th>
-          <th className="py-1.5 text-right font-medium">Dní</th>
+          <th className="py-1.5 font-medium">{t("reports.colDeal")}</th>
+          <th className="py-1.5 text-right font-medium">{t("reports.colValue")}</th>
+          <th className="py-1.5 text-right font-medium">{t("reports.colDays")}</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-border-subtle">
         {data.staleDeals.map((row) => (
-          <tr key={row.name}>
+          <tr key={row.nameKey}>
             <td className="py-1.5 text-text-primary">
-              <div className="font-medium">{row.name}</div>
-              <div className="text-text-tertiary">{row.company}</div>
+              <div className="font-medium">{t(row.nameKey)}</div>
+              <div className="text-text-tertiary">{t(row.companyKey)}</div>
             </td>
             <td className="py-1.5 text-right tabular-nums text-text-secondary">
-              {NUMBER_FORMATTER.format(row.value)} Kč
+              {formatMoney(row.value, "CZK", locale)}
             </td>
             <td
               className={cn(

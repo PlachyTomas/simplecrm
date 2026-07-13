@@ -1,0 +1,25 @@
+{
+  "syncBadge": {
+    "synced": "Google",
+    "errorTitle": "Zápis do Google kalendáře selhal.",
+    "errorLabel": "Google sync selhal"
+  },
+  "dayEventsList": {
+    "editAria": "Upravit událost {{title}}",
+    "deleteAria": "Smazat událost {{title}}"
+  },
+  "calendarPage": {
+    "title": "Kalendář",
+    "today": "Dnes",
+    "prevMonth": "Předchozí měsíc",
+    "nextMonth": "Další měsíc",
+    "loading": "Načítání…",
+    "loadError": "Události se nepodařilo načíst — nejde o prázdný kalendář. Zkuste to prosím znovu.",
+    "noEventsDay": "Žádné události. Naplánovat je můžete z detailu obchodu.",
+    "noEventsMonth": "V tomto měsíci nejsou žádné události. Naplánovat je můžete z detailu obchodu.",
+    "moreEvents": "+{{count}} další",
+    "deleteConfirm": "Smazat událost \"{{title}}\"?",
+    "deleteSuccess": "Událost smazána.",
+    "deleteError": "Událost se nepodařilo smazat."
+  }
+}

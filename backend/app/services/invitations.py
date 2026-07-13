@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.core.config import get_settings
+from app.core.i18n import language_for_locale
 from app.core.security import (
     INVITE_TOKEN_TTL_SECONDS,
     InviteTokenExpiredError,
@@ -32,7 +33,7 @@ from app.core.security import (
     verify_invite_token,
 )
 from app.db.models import Invitation, Subscription, Team, User, UserRole
-from app.services.email import Email, send_email
+from app.services.email import Email, render_email, send_email
 from app.services.google_oauth import GoogleProfile
 
 
@@ -112,16 +113,8 @@ def build_invite_link(token: str) -> str:
     return f"{root}/invite/{token}"
 
 
-def _build_invite_email(*, to: str, organization_name: str, link: str) -> Email:
-    subject = f"SimpleCRM: pozvánka do {organization_name}"
-    body = (
-        f"Ahoj,\n\n"
-        f"byli jste pozváni do organizace {organization_name} v aplikaci SimpleCRM.\n"
-        f"Pozvánku přijměte kliknutím na následující odkaz:\n\n"
-        f"{link}\n\n"
-        "Odkaz vyprší za 7 dní.\n"
-    )
-    return Email(to=to, subject=subject, body=body)
+def _build_invite_email(*, to: str, organization_name: str, link: str, lang: str = "cs") -> Email:
+    return render_email("invitation", lang, to=to, organization_name=organization_name, link=link)
 
 
 async def create_invitation(
@@ -222,9 +215,13 @@ async def create_invitation(
 
     token = sign_invite_token(jti)
     org_name = invitation.organization.name if invitation.organization else "SimpleCRM"
+    org_locale = invitation.organization.locale if invitation.organization else None
     await send_email(
         _build_invite_email(
-            to=normalized_email, organization_name=org_name, link=build_invite_link(token)
+            to=normalized_email,
+            organization_name=org_name,
+            link=build_invite_link(token),
+            lang=language_for_locale(org_locale),
         )
     )
 

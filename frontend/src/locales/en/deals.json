@@ -1,0 +1,269 @@
+{
+  "dealCount_one": "{{count}} deal",
+  "dealCount_other": "{{count}} deals",
+
+  "pipelinePage": {
+    "loading": "Loading pipeline…",
+    "loadError": "Failed to load the pipeline.",
+    "noFilterMatches": "No deals match the filter.",
+    "wonWindow": {
+      "all": "All",
+      "days_one": "{{count}} day",
+      "days_other": "{{count}} days"
+    },
+    "toolbar": {
+      "addDeal": "Add deal",
+      "searchLabel": "Search",
+      "searchPlaceholder": "Deal name…",
+      "wonWindowLabel": "Won in",
+      "ownerLabel": "Owner",
+      "ownerAll": "Everyone",
+      "ownerMine": "My deals",
+      "salespeopleGroup": "Salespeople",
+      "visibilityLabel": "Show",
+      "visibilityAll": "Everything in my scope",
+      "visibilityMine": "Only my deals",
+      "clearFilter": "Clear filter"
+    },
+    "emptyState": {
+      "title": "Add your first deal",
+      "body": "Track deals across pipeline stages. Drag cards between columns as they progress.",
+      "cta": "+ Add deal"
+    },
+    "card": {
+      "createdLabel": "Created {{date}}",
+      "createdAriaSuffix": "created {{date}}",
+      "paid": "Paid",
+      "winTooltip": "Mark as won",
+      "winAriaLabel": "Mark deal {{name}} as won",
+      "loseTooltip": "Mark as lost",
+      "loseAriaLabel": "Mark deal {{name}} as lost"
+    },
+    "mobileCard": {
+      "won": "Won",
+      "lost": "Lost",
+      "moveAriaLabel": "Move deal to another stage"
+    },
+    "mobileBoard": {
+      "tablistAriaLabel": "Pipeline stages"
+    },
+    "stageColumn": {
+      "ariaLabel": "Stage {{name}}",
+      "addDealAriaLabel": "Add deal to stage {{name}}",
+      "empty": "No deals yet."
+    },
+    "trash": {
+      "ariaLabel": "Delete deal",
+      "dropHere": "Drop to delete",
+      "dragHere": "Drag here to delete"
+    },
+    "deleteDialog": {
+      "title": "Delete deal?",
+      "bodyPrefix": "Permanently deletes deal",
+      "bodySuffix": "This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete",
+      "deleting": "Deleting…"
+    },
+    "winToast": {
+      "withValue": "🎉 Congratulations! Deal {{name}} worth {{value}} closed.",
+      "withoutValue": "🎉 Congratulations! Deal {{name}} closed.",
+      "dismissAriaLabel": "Close notification"
+    },
+    "toast": {
+      "paymentSaveError": "Failed to save the payment status.",
+      "lostSuccess": "Deal {{name}} marked as lost.",
+      "lostError": "Failed to mark the deal as lost.",
+      "deleteSuccess": "Deal {{name}} deleted.",
+      "deleteError": "Failed to delete the deal."
+    }
+  },
+
+  "dealsList": {
+    "pageTitle": "Deals",
+    "loadError": "Failed to load deals.",
+    "loading": "Loading deals…",
+    "emptyTitle": "No deals yet",
+    "emptyBody": "You create deals in Pipeline. Here you'll see them all in a list — with company, value, stage, and owner.",
+    "emptyCta": "Go to Pipeline",
+    "totalPrefix": "Total",
+    "columns": {
+      "name": "Name",
+      "company": "Company",
+      "value": "Value",
+      "stage": "Stage",
+      "owner": "Owner",
+      "closed": "Closed"
+    }
+  },
+
+  "addDealModal": {
+    "title": "Add deal",
+    "subtitle": "Name the deal and assign it to a company and pipeline stage. You can fill in details any time later.",
+    "nameLabel": "Deal name",
+    "namePlaceholder": "Optional — filled in from the company name",
+    "companyLabel": "Company",
+    "companySearchPlaceholder": "Start typing a company name…",
+    "noCompanyMatch": "No company matches the search.",
+    "createCompanyButton": "Create company “{{name}}”",
+    "newCompanyLabel": "New company",
+    "hide": "Hide",
+    "icoLabel": "Company ID (IČO)",
+    "icoHintEmpty": "Enter the Company ID (8 digits) — we'll fill it in from ARES automatically.",
+    "icoHintLoading": "Searching ARES…",
+    "icoHintSuccess": "Details filled in from ARES.",
+    "icoRetry": "Try again",
+    "icoNotFound": "Company ID {{ico}} was not found in ARES. Check the entry or continue manually.",
+    "icoTooMany": "Too many searches. Wait a moment and try again.",
+    "icoBadFormat": "The Company ID isn't in the right format. Enter 8 digits.",
+    "icoAresDown": "ARES is currently unavailable. Try again or fill it in manually.",
+    "icoGenericError": "The search failed. Please try again.",
+    "companyNameLabel": "Company name",
+    "companyNamePlaceholder": "Filled in from ARES, or enter it manually",
+    "newCompanyHint": "We'll save the company together with the deal; you can fill in more details later from the company detail.",
+    "valueLabel": "Value",
+    "expectedCloseLabel": "Expected close",
+    "contactSectionLabel": "Contact person (optional)",
+    "contactFirstNameAria": "Contact person's first name",
+    "firstNamePlaceholder": "First name",
+    "contactLastNameAria": "Contact person's last name",
+    "lastNamePlaceholder": "Last name",
+    "contactEmailAria": "Contact person's email",
+    "emailPlaceholder": "Email",
+    "contactPhoneAria": "Contact person's phone",
+    "phonePlaceholder": "Phone",
+    "pickExistingContact": "Pick from existing contacts",
+    "contactHint": "Fill in both first and last name — we'll save the person as a company contact.",
+    "noContactOption": "— no contact —",
+    "addNewPerson": "Add new person",
+    "ownerLabel": "Owner",
+    "noOwnerOption": "No owner",
+    "stageLabel": "Stage",
+    "createError": "Failed to save the deal. Check the details and try again.",
+    "missingSummaryPrefix": "To save, fill in:",
+    "missingCompany": "company",
+    "missingStage": "stage",
+    "companyDuplicate": "A company with this Company ID already exists in your organization. Pick it from the list.",
+    "companySaveError": "Failed to save the company. Try again.",
+    "contactSaveError": "Failed to save the contact person — we'll save the deal without it.",
+    "defaultDealName": "New deal",
+    "toastSaved": "Deal saved.",
+    "companyCreatedDealFailed": "The company was created, but the deal couldn't be saved. Try adding it from the company detail.",
+    "saveError": "Failed to save the deal. Try again.",
+    "cancel": "Cancel",
+    "saving": "Saving…",
+    "submit": "Save deal"
+  },
+
+  "markLostDialog": {
+    "title": "Mark as lost",
+    "bodyPrefix": "Deal",
+    "bodySuffix": "Choose the main reason so we can build a report of lost deals.",
+    "reasonLegend": "Reason",
+    "reasons": {
+      "price": "Price",
+      "competition": "Competition",
+      "badTiming": "Bad timing",
+      "budget": "Budget",
+      "noAgreement": "No agreement reached",
+      "other": "Other"
+    },
+    "customLabel": "Custom reason",
+    "cancel": "Cancel",
+    "saving": "Saving…",
+    "submit": "Save"
+  },
+
+  "dealDetail": {
+    "loading": "Loading…",
+    "loadError": "Failed to load the deal.",
+    "won": "Won",
+    "lost": "Lost",
+    "open": "Open",
+    "reopen": "Reopen",
+    "edit": "Edit",
+    "sendEmail": "Send email",
+    "deleteAriaLabel": "Delete deal",
+    "closeAriaLabel": "Close",
+    "confirmReopen": "Reopen this deal? The close date and reason will be removed.",
+    "confirmDelete": "Delete deal \"{{name}}\"? This action cannot be undone.",
+    "goToCompany": "Go to company",
+    "noOwner": "No owner",
+    "noPrimaryContact": "No primary contact",
+    "probabilityPlaceholder": "per stage",
+    "saving": "Saving…",
+    "saveChanges": "Save changes",
+    "cancel": "Cancel",
+    "fields": {
+      "status": "Status",
+      "name": "Name",
+      "value": "Value",
+      "company": "Company",
+      "owner": "Owner",
+      "stage": "Stage",
+      "primaryContact": "Primary contact",
+      "expectedClose": "Expected close",
+      "probability": "Probability",
+      "created": "Created",
+      "closed": "Closed"
+    },
+    "toast": {
+      "saved": "Deal saved.",
+      "saveError": "Failed to save the deal.",
+      "reopened": "Deal reopened.",
+      "reopenError": "Failed to reopen the deal.",
+      "deleted": "Deal deleted.",
+      "deleteError": "Failed to delete the deal.",
+      "winError": "Failed to mark the deal as won.",
+      "loseError": "Failed to mark the deal as lost."
+    }
+  },
+
+  "dealDetailDialog": {
+    "ariaLabel": "Deal detail"
+  },
+
+  "eventsSection": {
+    "title": "Events",
+    "subtitle": "Meetings and appointments for this deal — optionally in your Google Calendar too.",
+    "scheduleButton": "Schedule event",
+    "loading": "Loading…",
+    "empty": "No events yet.",
+    "googleSyncErrorTooltip": "Writing to Google Calendar failed — saving the event will retry it.",
+    "googleSyncFailed": "Google sync failed",
+    "editAriaLabel": "Edit event {{title}}",
+    "deleteAriaLabel": "Delete event {{title}}",
+    "confirmDelete": "Delete event \"{{title}}\"?",
+    "toastDeleted": "Event deleted.",
+    "toastDeleteError": "Failed to delete the event."
+  },
+
+  "eventFormModal": {
+    "titleCreate": "Schedule event",
+    "titleEdit": "Edit event",
+    "dealLabel": "Deal:",
+    "defaultTitle": "Meeting — {{dealName}}",
+    "nameLabel": "Name",
+    "dateLabel": "Date",
+    "fromLabel": "From",
+    "toLabel": "To",
+    "locationLabel": "Location (optional)",
+    "descriptionLabel": "Description (optional)",
+    "addToGoogle": "Add to Google Calendar",
+    "connectCalendarLink": "connect your calendar in Settings first",
+    "errorRequired": "Fill in the name, date, and times.",
+    "errorEndBeforeStart": "The end must be after the start.",
+    "cancel": "Cancel",
+    "saving": "Saving…",
+    "submitEdit": "Save changes",
+    "submitCreate": "Create event",
+    "toast": {
+      "created": "Event created.",
+      "createdError": "Event created, but the Google Calendar sync failed.",
+      "updated": "Event saved.",
+      "updatedError": "Event saved, but the Google Calendar sync failed.",
+      "createError": "Failed to create the event.",
+      "updateError": "Failed to save the event."
+    }
+  }
+}

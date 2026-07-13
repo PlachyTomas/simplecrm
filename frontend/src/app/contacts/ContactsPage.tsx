@@ -1,5 +1,6 @@
 import { Plus, Search, Users } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { AddContactModal } from "@/app/contacts/AddContactModal";
@@ -60,7 +61,8 @@ function ContactRow({
 }
 
 export function ContactsPage() {
-  usePageTitle("Kontakty");
+  const { t } = useTranslation("contacts");
+  usePageTitle(t("contactsPage.pageTitle"));
   const { contactId } = useParams<{ contactId: string }>();
   const navigate = useNavigate();
   const [modalOpen, setModalOpen] = useState(false);
@@ -98,7 +100,7 @@ export function ContactsPage() {
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col md:flex-row">
       <section
-        aria-label="Seznam kontaktů"
+        aria-label={t("contactsPage.listAriaLabel")}
         className={cn(
           "flex flex-col border-border-subtle md:w-80 md:border-r",
           detailVisibleOnMobile && "hidden md:flex",
@@ -106,18 +108,18 @@ export function ContactsPage() {
       >
         <div className="space-y-3 border-b border-border-subtle px-4 py-3">
           <div className="flex items-center justify-between gap-2">
-            <h1 className="text-lg font-semibold">Kontakty</h1>
+            <h1 className="text-lg font-semibold">{t("contactsPage.pageTitle")}</h1>
             <button
               type="button"
               onClick={() => setModalOpen(true)}
               className="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
             >
-              <Plus size={14} strokeWidth={1.75} aria-hidden /> Přidat kontakt
+              <Plus size={14} strokeWidth={1.75} aria-hidden /> {t("contactsPage.addButton")}
             </button>
           </div>
           {allItems.length > 0 ? (
             <label className="relative block">
-              <span className="sr-only">Hledat kontakt</span>
+              <span className="sr-only">{t("contactsPage.searchLabel")}</span>
               <Search
                 size={14}
                 strokeWidth={1.75}
@@ -128,7 +130,7 @@ export function ContactsPage() {
                 type="search"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Jméno, e-mail, telefon…"
+                placeholder={t("contactsPage.searchPlaceholder")}
                 className="h-9 w-full rounded-md border border-border bg-surface-overlay pl-8 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
               />
             </label>
@@ -137,19 +139,19 @@ export function ContactsPage() {
 
         {isError ? (
           <div className="px-4 py-6 text-sm text-danger" role="alert">
-            Kontakty se nepodařilo načíst.
+            {t("contactsPage.loadError")}
           </div>
         ) : isPending ? (
           <div className="px-4 py-6 text-sm text-text-tertiary" role="status">
-            Načítání…
+            {t("contactsPage.loading")}
           </div>
         ) : allItems.length === 0 ? (
           <EmptyState
             icon={Users}
-            title="Přidejte první kontakt"
-            body="Kontakty patří k firmám. Po přidání je uvidíte v levém panelu i na detailu firmy."
+            title={t("contactsPage.emptyState.title")}
+            body={t("contactsPage.emptyState.body")}
             primary={{
-              label: "+ Přidat kontakt",
+              label: t("contactsPage.emptyState.cta"),
               onClick: () => setModalOpen(true),
             }}
           />
@@ -157,10 +159,10 @@ export function ContactsPage() {
           <EmptyState
             icon={Users}
             tone="filtered"
-            title="Žádný výsledek pro vybrané filtry."
-            body="Zkuste upravit hledaný výraz."
+            title={t("contactsPage.emptyFiltered.title")}
+            body={t("contactsPage.emptyFiltered.body")}
             primary={{
-              label: "Vymazat filtry",
+              label: t("contactsPage.emptyFiltered.cta"),
               onClick: () => setSearchInput(""),
             }}
           />
@@ -179,7 +181,7 @@ export function ContactsPage() {
       </section>
 
       <section
-        aria-label="Detail kontaktu"
+        aria-label={t("contactsPage.detailAriaLabel")}
         className={cn(
           "min-w-0 flex-1 overflow-y-auto",
           showSplitOnDesktop ? "md:block" : "",

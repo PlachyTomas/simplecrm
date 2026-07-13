@@ -10,9 +10,10 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 
 import { useAuth } from "@/auth/useAuth";
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 
 export interface PaymentInitOut {
   redirect_url: string;
@@ -152,4 +153,50 @@ export function isSeatUpgradePaymentRequired(
   if (typeof err !== "object" || err === null) return false;
   const e = err as { status?: number; body?: { detail?: { code?: string } } };
   return e.status === 402 && e.body?.detail?.code === "seat_upgrade_payment_required";
+}
+
+// Structured error codes the /payments/* endpoints raise via
+// `HTTPException(detail={"code": "…"})` — see backend/app/api/v1/payments.py.
+// Each has a matching `errors.<code>` key in locales/{cs,en}/billing.json;
+// any other code (or none at all) falls back to `errors.generic`.
+const BILLING_ERROR_CODES = [
+  "gateway_unavailable",
+  "too_many_attempts",
+  "gateway_declined",
+  "already_active",
+  "payment_in_progress",
+  "billing_details_required",
+  "not_active",
+  "not_an_upgrade",
+  "no_payment_method",
+] as const;
+type BillingErrorCode = (typeof BILLING_ERROR_CODES)[number];
+
+function isBillingErrorCode(code: unknown): code is BillingErrorCode {
+  return typeof code === "string" && (BILLING_ERROR_CODES as readonly string[]).includes(code);
+}
+
+/**
+ * Pulls the structured `{code}` out of a payments-endpoint error, if
+ * present. Returns `undefined` for non-`ApiError`s, non-JSON error
+ * bodies (e.g. a plain-text 5xx), or bodies without a recognized code —
+ * `billingErrorMessage` maps all of those to the generic fallback.
+ */
+export function billingErrorCode(err: unknown): string | undefined {
+  if (!(err instanceof ApiError)) return undefined;
+  const body = err.body as { detail?: { code?: unknown } } | null | undefined;
+  const code = body?.detail?.code;
+  return typeof code === "string" ? code : undefined;
+}
+
+/**
+ * Central cs/en mapping for the /payments/* structured error codes.
+ * Unknown or missing codes resolve to `errors.generic` rather than
+ * leaking a raw code or blank message to the customer.
+ */
+export function billingErrorMessage(
+  code: string | null | undefined,
+  t: TFunction<"billing">,
+): string {
+  return isBillingErrorCode(code) ? t(`errors.${code}`) : t("errors.generic");
 }

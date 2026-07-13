@@ -209,3 +209,68 @@ def test_render_pdf_size_in_expected_range(plátce: bool) -> None:
     line = _make_line(invoice.id, plátce=plátce)
     pdf = InvoiceRenderer().render_pdf(invoice, [line])
     assert 18_000 < len(pdf) < 80_000
+
+
+# --------------------------------------------------------------------------- #
+# i18n — cs byte-identity guard, en output, CZK-only QR/ISDOC
+# --------------------------------------------------------------------------- #
+
+
+# SHA-256 of the cs/CZK fixture PDF captured from the *pre-i18n* renderer.
+# The i18n refactor (labels dict + `lang` var) must keep the Czech PDF
+# byte-identical — `storage.py` records `pdf_sha256` at issuance and verifies
+# it on every read, so a byte drift invalidates already-issued invoices.
+# Regenerate ONLY after a deliberate, reviewed template change.
+_CS_PDF_SHA256 = {
+    False: "7edc1096d5510225c223c665eee39297dd20cb5c812c4fb676544076b3a11eef",
+    True: "bf0281d074284d19615df192fd929f4f2e61a1a0efdfb316f7d17a5601dd14bd",
+}
+
+
+@pytest.mark.parametrize("plátce", [False, True])
+def test_render_pdf_cs_byte_identical_to_prerefactor(plátce: bool) -> None:
+    """The Czech invoice PDF must be byte-identical to the pre-i18n output,
+    both for the default (`lang` omitted) and the explicit `lang="cs"` call."""
+    invoice = _make_invoice(plátce=plátce)
+    line = _make_line(invoice.id, plátce=plátce)
+    r = InvoiceRenderer()
+    default_pdf = r.render_pdf(invoice, [line])
+    cs_pdf = r.render_pdf(invoice, [line], lang="cs")
+    assert hashlib.sha256(default_pdf).hexdigest() == _CS_PDF_SHA256[plátce]
+    assert hashlib.sha256(cs_pdf).hexdigest() == _CS_PDF_SHA256[plátce]
+
+
+def test_render_pdf_en_html_has_english_labels() -> None:
+    """`lang="en"` renders English labels and dates; no Czech leaks through."""
+    from app.services.invoicing.renderer import _render_html
+
+    invoice = _make_invoice(plátce=True)
+    line = _make_line(invoice.id, plátce=True)
+    html = _render_html(invoice, [line], lang="en")
+
+    assert 'lang="en"' in html
+    assert "Invoice" in html  # title + kind ("Invoice — tax document")
+    assert "Total due" in html
+    assert "9 May 2026" in html  # en_GB long date for issued_at 2026-05-09
+    # No Czech labels leak into the English document.
+    assert "Dodavatel" not in html
+    assert "Celkem k úhradě" not in html
+    assert "Datum vystavení" not in html
+
+
+def test_non_czk_invoice_has_no_spayd_payload_or_isdoc() -> None:
+    """QR Platba (SPAYD) and ISDOC are CZK-only artifacts; a non-CZK invoice
+    generates neither a SPAYD payload nor ISDOC XML."""
+    from app.services.invoicing.renderer import _qr_svg
+
+    invoice = _make_invoice()
+    invoice.currency = "EUR"
+    line = _make_line(invoice.id)
+
+    assert _qr_svg(invoice) is None
+    assert InvoiceRenderer().render_isdoc(invoice, [line]) == b""
+
+    # Control: a CZK invoice still produces both.
+    czk = _make_invoice()
+    assert _qr_svg(czk) is not None
+    assert InvoiceRenderer().render_isdoc(czk, [_make_line(czk.id)]) != b""

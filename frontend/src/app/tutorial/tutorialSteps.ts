@@ -8,10 +8,16 @@
  * between routes, which both simplifies the overlay and stays robust
  * to slow page mounts after auto-navigation.
  *
+ * Copy lives in the `common.tutorial.*` i18n catalog; this module stores
+ * only the catalog keys — the consuming component (`TourCard`) translates
+ * them at render time.
+ *
  * The magenta-budget rule (see SIMPLECRM_DESIGN_BRIEF.md) limits the
  * tour to a single celebratory accent — only the final step sets
  * `accent: "magenta"`. Everything else uses the default indigo.
  */
+
+import type { ParseKeys } from "i18next";
 
 import { testIds } from "@/lib/testids";
 
@@ -22,9 +28,10 @@ export interface TourStep {
   /** `data-testid` to anchor the spotlight to, or `null` for a
    *  centered card with no spotlight. */
   anchorTestId: string | null;
-  title: string;
-  /** Czech body copy in vykání. Plain string; rendered inside <p>. */
-  body: string;
+  /** i18n key into `common.tutorial.*`; rendered as the card heading. */
+  titleKey: ParseKeys<"common">;
+  /** i18n key into `common.tutorial.*`; rendered inside <p>. */
+  bodyKey: ParseKeys<"common">;
   /** Visual tone — drives the card border + the icon-circle color on
    *  the welcome / outro steps. Use `"magenta"` only on the final
    *  celebratory step. */
@@ -35,36 +42,36 @@ export const TUTORIAL_STEPS: TourStep[] = [
   {
     id: "welcome",
     anchorTestId: null,
-    title: "Vítejte v SimpleCRM",
-    body: "Provedeme Vás pěti kroky, kterými se za minutu zorientujete v aplikaci. Tour kdykoli přeskočíte a znovu spustíte přes ikonu ? v pravém horním rohu.",
+    titleKey: "tutorial.welcome.title",
+    bodyKey: "tutorial.welcome.body",
     accent: "indigo",
   },
   {
     id: "companies",
     anchorTestId: testIds.nav.companies,
-    title: "Firmy jsou základ",
-    body: "Začněte u firmy. Stačí zadat IČO — název, adresu i právní formu doplníme z registru ARES.",
+    titleKey: "tutorial.companies.title",
+    bodyKey: "tutorial.companies.body",
     accent: "indigo",
   },
   {
     id: "pipeline",
     anchorTestId: testIds.nav.pipeline,
-    title: "Obchod patří do pipeline",
-    body: 'V Pipeline najdete Kanban s vašimi obchody. Přidejte první přes „+ Přidat obchod" vpravo nahoře a přetahujte je mezi fázemi podle vývoje.',
+    titleKey: "tutorial.pipeline.title",
+    bodyKey: "tutorial.pipeline.body",
     accent: "indigo",
   },
   {
     id: "reports",
     anchorTestId: testIds.nav.reports,
-    title: "Reporty Vám napoví",
-    body: "Až budete mít data, uvidíte tady, kdo vede žebříček, jak rychle se obchody zavírají a co se neprodává. Manažerům odemkne extra widgety přepnutí role v Nastavení.",
+    titleKey: "tutorial.reports.title",
+    bodyKey: "tutorial.reports.body",
     accent: "indigo",
   },
   {
     id: "settings",
     anchorTestId: testIds.nav.settings,
-    title: "Pozvěte tým, ať to nezůstane jen u Vás",
-    body: "V Nastavení upravíte pipeline na míru, pozvete obchodníky a doplníte fakturační údaje. Hotovo, můžete jít na věc!",
+    titleKey: "tutorial.settings.title",
+    bodyKey: "tutorial.settings.body",
     accent: "magenta",
   },
 ];

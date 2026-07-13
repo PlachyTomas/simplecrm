@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from "lucide-react";
 import { type FormEvent, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   type TeamOut,
@@ -27,6 +28,7 @@ function TeamRow({
   onSave: (patch: { name: string; manager_user_id: string | null }) => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
+  const { t } = useTranslation("settings");
   const [name, setName] = useState(team.name);
   const [managerId, setManagerId] = useState(team.manager_user_id ?? "");
   const dirty = name.trim() !== team.name || managerId !== (team.manager_user_id ?? "");
@@ -46,7 +48,7 @@ function TeamRow({
           onChange={(e) => setManagerId(e.target.value)}
           className="w-full rounded-md border border-border bg-surface px-2 py-1 text-sm"
         >
-          <option value="">— bez manažera —</option>
+          <option value="">{t("teams.noManagerOption")}</option>
           {managerOptions(users).map((u) => (
             <option key={u.id} value={u.id}>
               {u.name}
@@ -67,11 +69,11 @@ function TeamRow({
             }
             className="text-accent-foreground rounded-md bg-accent px-3 py-1 text-xs font-medium hover:bg-accent-hover disabled:opacity-50"
           >
-            Uložit
+            {t("teams.saveButton")}
           </button>
           <button
             type="button"
-            aria-label={`Smazat tým ${team.name}`}
+            aria-label={t("teams.deleteAriaLabel", { name: team.name })}
             onClick={() => void onDelete()}
             className="rounded-md p-1.5 text-text-secondary hover:bg-danger-subtle hover:text-danger"
           >
@@ -84,6 +86,7 @@ function TeamRow({
 }
 
 export function TeamsSection() {
+  const { t } = useTranslation("settings");
   const teams = useOrgTeams();
   const users = useOrgUsers();
   const createTeam = useCreateTeam();
@@ -106,17 +109,17 @@ export function TeamsSection() {
       setNewName("");
       setNewManagerId("");
     } catch (err) {
-      setError(err instanceof ApiError ? String(err.body) : "Vytvoření týmu selhalo.");
+      setError(err instanceof ApiError ? String(err.body) : t("teams.createError"));
     }
   }
 
   async function handleDelete(team: TeamOut) {
-    if (!window.confirm(`Smazat tým "${team.name}"?`)) return;
+    if (!window.confirm(t("teams.deleteConfirm", { name: team.name }))) return;
     setError(null);
     try {
       await deleteTeam.mutateAsync(team.id);
     } catch (err) {
-      setError(err instanceof ApiError ? String(err.body) : "Smazání týmu selhalo.");
+      setError(err instanceof ApiError ? String(err.body) : t("teams.deleteError"));
     }
   }
 
@@ -128,23 +131,21 @@ export function TeamsSection() {
     try {
       await updateTeam.mutateAsync({ id: team.id, patch });
     } catch (err) {
-      setError(err instanceof ApiError ? String(err.body) : "Uložení týmu selhalo.");
+      setError(err instanceof ApiError ? String(err.body) : t("teams.saveError"));
     }
   }
 
   if (teams.isPending || users.isPending) {
-    return <p className="text-sm text-text-tertiary">Načítání…</p>;
+    return <p className="text-sm text-text-tertiary">{t("teams.loading")}</p>;
   }
   if (teams.isError || users.isError || !teams.data || !users.data) {
-    return <p className="text-sm text-danger">Nepodařilo se načíst týmy.</p>;
+    return <p className="text-sm text-danger">{t("teams.errorLoad")}</p>;
   }
 
   return (
     <section className="rounded-lg border border-border bg-surface p-6">
-      <h2 className="text-lg font-semibold">Týmy</h2>
-      <p className="mt-1 text-sm text-text-tertiary">
-        Týmy sdružují obchodníky pod manažera; ten vidí pipeline celého týmu.
-      </p>
+      <h2 className="text-lg font-semibold">{t("teams.title")}</h2>
+      <p className="mt-1 text-sm text-text-tertiary">{t("teams.subtitle")}</p>
 
       {error ? (
         <p
@@ -159,7 +160,7 @@ export function TeamsSection() {
         <input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="Název týmu"
+          placeholder={t("teams.namePlaceholder")}
           required
           maxLength={120}
           className="rounded-md border border-border bg-surface px-2 py-1.5 text-sm sm:col-span-5"
@@ -169,7 +170,7 @@ export function TeamsSection() {
           onChange={(e) => setNewManagerId(e.target.value)}
           className="rounded-md border border-border bg-surface px-2 py-1.5 text-sm sm:col-span-5"
         >
-          <option value="">— bez manažera —</option>
+          <option value="">{t("teams.noManagerOption")}</option>
           {managerOptions(users.data.items).map((u) => (
             <option key={u.id} value={u.id}>
               {u.name}
@@ -181,16 +182,16 @@ export function TeamsSection() {
           disabled={createTeam.isPending}
           className="text-accent-foreground inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium hover:bg-accent-hover disabled:opacity-50 sm:col-span-2"
         >
-          <Plus size={14} strokeWidth={1.75} /> Přidat
+          <Plus size={14} strokeWidth={1.75} /> {t("teams.addButton")}
         </button>
       </form>
 
       <table className="mt-4 w-full">
         <thead>
           <tr className="text-left text-xs uppercase tracking-wider text-text-tertiary">
-            <th className="py-2 font-medium">Název</th>
-            <th className="py-2 font-medium">Manažer</th>
-            <th className="py-2 text-right font-medium">Akce</th>
+            <th className="py-2 font-medium">{t("teams.table.name")}</th>
+            <th className="py-2 font-medium">{t("teams.table.manager")}</th>
+            <th className="py-2 text-right font-medium">{t("teams.table.actions")}</th>
           </tr>
         </thead>
         <tbody>

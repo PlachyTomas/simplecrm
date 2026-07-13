@@ -1,5 +1,6 @@
 import { Sparkles } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { authErrorCode, authErrorMessage, checkVerifyToken, consumeVerifyToken } from "@/auth/api";
@@ -25,7 +26,8 @@ type Phase =
  *       /verify-email/consume with the password.
  */
 export function VerifyEmailPage() {
-  usePageTitle("Ověření e-mailu");
+  const { t } = useTranslation("auth");
+  usePageTitle(t("verifyEmail.heading"));
   const [params] = useSearchParams();
   const token = params.get("token") ?? "";
   const navigate = useNavigate();
@@ -37,7 +39,7 @@ export function VerifyEmailPage() {
 
   useEffect(() => {
     if (!token) {
-      setPhase({ kind: "error", message: "Chybějící ověřovací token v odkazu." });
+      setPhase({ kind: "error", message: t("verifyEmail.errors.missingToken") });
       return;
     }
     let cancelled = false;
@@ -61,8 +63,8 @@ export function VerifyEmailPage() {
           kind: "error",
           message:
             err instanceof ApiError
-              ? "Tento odkaz je neplatný nebo již vypršel. Vyžádejte si nový e-mail."
-              : "Ověření se nepodařilo. Zkuste to prosím znovu.",
+              ? t("verifyEmail.errors.invalidOrExpired")
+              : t("verifyEmail.errors.generic"),
         });
       }
     })();
@@ -87,17 +89,14 @@ export function VerifyEmailPage() {
           email: phase.kind === "needs_password" ? phase.email : "",
         });
         // Show inline message via component-level error state
-        setLocalError(
-          authErrorMessage(err.body) ??
-            "Heslo nesplňuje požadavky (alespoň 12 znaků, písmeno + číslice).",
-        );
+        setLocalError(authErrorMessage(err.body) ?? t("shared.weakPasswordFallback"));
       } else if (err instanceof ApiError) {
         setPhase({
           kind: "error",
-          message: "Tento odkaz je neplatný nebo již vypršel. Vyžádejte si nový e-mail.",
+          message: t("verifyEmail.errors.invalidOrExpired"),
         });
       } else {
-        setLocalError("Ověření se nepodařilo. Zkuste to prosím znovu.");
+        setLocalError(t("verifyEmail.errors.generic"));
       }
     } finally {
       setSubmitting(false);
@@ -120,22 +119,24 @@ export function VerifyEmailPage() {
           <Sparkles size={24} strokeWidth={1.75} />
         </div>
         <h1 id="verify-title" className="text-2xl font-semibold">
-          Ověření e-mailu
+          {t("verifyEmail.heading")}
         </h1>
 
         {phase.kind === "checking" || phase.kind === "consuming" ? (
-          <p className="mt-4 text-sm text-text-secondary">Načítání…</p>
+          <p className="mt-4 text-sm text-text-secondary">{t("shared.loading")}</p>
         ) : null}
 
         {phase.kind === "needs_password" ? (
           <form onSubmit={handleSubmitPassword} className="mt-6 space-y-4 text-left" noValidate>
             <p className="text-sm text-text-secondary">
-              Účet pro <strong className="text-text-primary">{phase.email}</strong> nemá zatím
-              nastavené heslo. Zvolte si ho prosím nyní — od příště se budete moci přihlásit jak
-              přes Google, tak e-mailem.
+              {t("verifyEmail.needsPasswordPrefix")}{" "}
+              <strong className="text-text-primary">{phase.email}</strong>{" "}
+              {t("verifyEmail.needsPasswordSuffix")}
             </p>
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-text-secondary">Heslo</span>
+              <span className="mb-1 block text-sm font-medium text-text-secondary">
+                {t("shared.passwordLabel")}
+              </span>
               <input
                 type="password"
                 autoComplete="new-password"
@@ -146,7 +147,7 @@ export function VerifyEmailPage() {
                 className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent"
               />
               <span className="mt-1 block text-xs text-text-tertiary">
-                Alespoň 12 znaků, jedno písmeno a jedna číslice.
+                {t("shared.passwordHint")}
               </span>
             </label>
             {localError ? (
@@ -159,7 +160,7 @@ export function VerifyEmailPage() {
               disabled={submitting}
               className="inline-flex h-10 w-full items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent hover:bg-accent-hover disabled:opacity-50"
             >
-              {submitting ? "Ukládání…" : "Nastavit heslo a pokračovat"}
+              {submitting ? t("shared.saving") : t("verifyEmail.submit")}
             </button>
           </form>
         ) : null}
@@ -170,13 +171,13 @@ export function VerifyEmailPage() {
               {phase.message}
             </p>
             <Link to="/login" className="text-sm text-accent underline">
-              Zpět na přihlášení
+              {t("shared.backToLogin")}
             </Link>
           </div>
         ) : null}
 
         {phase.kind === "success" ? (
-          <p className="mt-4 text-sm text-text-secondary">Přesměrovávám…</p>
+          <p className="mt-4 text-sm text-text-secondary">{t("verifyEmail.redirecting")}</p>
         ) : null}
       </main>
     </div>

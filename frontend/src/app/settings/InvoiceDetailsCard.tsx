@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "@/auth/useAuth";
 import { OrgBillingFields } from "@/components/billing/OrgBillingFields";
@@ -17,10 +18,10 @@ import type { components } from "@/types/api.generated";
 type OrganizationOut = components["schemas"]["OrganizationOut"];
 
 /**
- * Settings → Organizace card that collects every customer-side field a
- * Czech tax invoice ("daňový doklad") requires: legal name, IČO, DIČ,
- * legal form, address, billing email. The fields + IČO→ARES autofill +
- * Firma/soukromá osoba toggle live in the shared `OrgBillingFields`, so
+ * Settings → Organization card that collects every customer-side field a
+ * Czech tax invoice requires: legal name, company ID, VAT ID, legal form,
+ * address, billing email. The fields + company-ID-to-ARES autofill +
+ * business/individual toggle live in the shared `OrgBillingFields`, so
  * Settings, the trial gate, and the change-plan modal all render one
  * identical form.
  *
@@ -30,6 +31,7 @@ type OrganizationOut = components["schemas"]["OrganizationOut"];
  * see no change.
  */
 export function InvoiceDetailsCard() {
+  const { t } = useTranslation("settings");
   const { accessToken } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
@@ -59,10 +61,10 @@ export function InvoiceDetailsCard() {
     onSuccess: (data) => {
       qc.setQueryData(["organizations", "current"], data);
       void qc.invalidateQueries({ queryKey: ["auth", "me"] });
-      toast.success("Fakturační údaje uloženy.");
+      toast.success(t("invoiceDetails.saveSuccess"));
     },
     onError: () => {
-      toast.error("Uložení se nezdařilo. Zkuste to prosím znovu.");
+      toast.error(t("invoiceDetails.saveError"));
     },
   });
 
@@ -74,7 +76,7 @@ export function InvoiceDetailsCard() {
   if (orgQuery.isPending) {
     return (
       <section className="rounded-lg border border-border bg-surface p-6 text-sm text-text-tertiary">
-        Načítání…
+        {t("invoiceDetails.loading")}
       </section>
     );
   }
@@ -84,7 +86,7 @@ export function InvoiceDetailsCard() {
         role="alert"
         className="rounded-lg border border-border bg-surface p-6 text-sm text-danger"
       >
-        Načítání fakturačních údajů se nezdařilo.
+        {t("invoiceDetails.error")}
       </section>
     );
   }
@@ -96,11 +98,8 @@ export function InvoiceDetailsCard() {
       className="rounded-lg border border-border bg-surface p-6"
     >
       <header>
-        <h2 className="text-lg font-semibold">Fakturační údaje</h2>
-        <p className="mt-1 text-sm text-text-tertiary">
-          Tyto údaje se objeví na vašich daňových dokladech. Zadejte IČO a zbytek doplníme z ARES —
-          každé pole pak můžete upravit.
-        </p>
+        <h2 className="text-lg font-semibold">{t("invoiceDetails.title")}</h2>
+        <p className="mt-1 text-sm text-text-tertiary">{t("invoiceDetails.subtitle")}</p>
       </header>
 
       <div className="mt-6">
@@ -119,7 +118,7 @@ export function InvoiceDetailsCard() {
           data-testid={testIds.billing.submit}
           className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:opacity-50"
         >
-          {saveMutation.isPending ? "Ukládám…" : "Uložit fakturační údaje"}
+          {saveMutation.isPending ? t("invoiceDetails.saving") : t("invoiceDetails.save")}
         </button>
       </div>
     </form>

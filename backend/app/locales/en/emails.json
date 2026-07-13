@@ -1,0 +1,27 @@
+{
+  "common": {
+    "fallback_name": "SimpleCRM team"
+  },
+  "verification": {
+    "subject": "SimpleCRM: verify your email"
+  },
+  "password_reset": {
+    "subject": "SimpleCRM: password reset"
+  },
+  "invitation": {
+    "subject": "SimpleCRM: invitation to {organization_name}"
+  },
+  "freed_company": {
+    "subject_one": "SimpleCRM: {count} company freed",
+    "subject_other": "SimpleCRM: {count} companies freed"
+  },
+  "subscription_pending": {
+    "subject": "SimpleCRM: {org_name} chose the {plan_display} plan"
+  },
+  "billing_info_reminder": {
+    "subject_one": "SimpleCRM: complete your billing details (trial ends in {count} day)",
+    "subject_other": "SimpleCRM: complete your billing details (trial ends in {count} days)",
+    "days_one": "{count} day",
+    "days_other": "{count} days"
+  }
+}

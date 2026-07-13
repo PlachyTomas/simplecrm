@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useAdminBillingSettings } from "@/admin/hooks";
 import { useAuth } from "@/auth/useAuth";
@@ -11,6 +12,8 @@ interface FormState {
   seller_iban: string;
   seller_ico: string;
   contact_email: string;
+  invoice_email_subject_template_en: string;
+  invoice_email_body_template_en: string;
 }
 
 const DEFAULT_FORM: FormState = {
@@ -19,9 +22,12 @@ const DEFAULT_FORM: FormState = {
   seller_iban: "",
   seller_ico: "",
   contact_email: "",
+  invoice_email_subject_template_en: "",
+  invoice_email_body_template_en: "",
 };
 
 export function AdminBillingSettings() {
+  const { t } = useTranslation("admin");
   const { accessToken } = useAuth();
   const queryClient = useQueryClient();
   const { data, isPending } = useAdminBillingSettings();
@@ -38,6 +44,8 @@ export function AdminBillingSettings() {
       seller_iban: data.seller_iban ?? "",
       seller_ico: data.seller_ico ?? "",
       contact_email: data.contact_email,
+      invoice_email_subject_template_en: data.invoice_email_subject_template_en,
+      invoice_email_body_template_en: data.invoice_email_body_template_en,
     });
   }, [data]);
 
@@ -47,8 +55,10 @@ export function AdminBillingSettings() {
         is_vat_payer: form.is_vat_payer,
         vat_rate_percent: form.vat_rate_percent,
         contact_email: form.contact_email,
+        invoice_email_subject_template_en: form.invoice_email_subject_template_en,
+        invoice_email_body_template_en: form.invoice_email_body_template_en,
       };
-      // Only send IBAN/IČO when set; backend types them as nullable so
+      // Only send IBAN/company ID when set; backend types them as nullable so
       // empty strings would be coerced to "" rather than null.
       if (form.seller_iban) body.seller_iban = form.seller_iban;
       if (form.seller_ico) body.seller_ico = form.seller_ico;
@@ -69,8 +79,8 @@ export function AdminBillingSettings() {
     onError: (err) => {
       setError(
         err instanceof ApiError
-          ? "Uložení selhalo. Zkontrolujte hodnoty a zkuste to znovu."
-          : "Něco se pokazilo. Zkuste to prosím znovu.",
+          ? t("billingSettings.errorValidation")
+          : t("billingSettings.errorGeneric"),
       );
     },
   });
@@ -84,7 +94,7 @@ export function AdminBillingSettings() {
   if (isPending) {
     return (
       <section className="rounded-lg border border-border bg-surface p-6 text-sm text-text-tertiary">
-        Načítání…
+        {t("billingSettings.loading")}
       </section>
     );
   }
@@ -95,10 +105,8 @@ export function AdminBillingSettings() {
       className="max-w-2xl space-y-6 rounded-lg border border-border bg-surface p-6"
     >
       <header>
-        <h2 className="text-lg font-semibold">Fakturační nastavení</h2>
-        <p className="mt-1 text-sm text-text-tertiary">
-          Tato nastavení ovlivňují všechny ceny v aplikaci a faktury, které posíláme zákazníkům.
-        </p>
+        <h2 className="text-lg font-semibold">{t("billingSettings.title")}</h2>
+        <p className="mt-1 text-sm text-text-tertiary">{t("billingSettings.subtitle")}</p>
       </header>
 
       <label className="flex items-start gap-3 text-sm">
@@ -109,16 +117,15 @@ export function AdminBillingSettings() {
           className="mt-0.5 h-4 w-4"
         />
         <span>
-          <span className="font-medium text-text-primary">Jsem plátce DPH</span>
+          <span className="font-medium text-text-primary">{t("billingSettings.isVatPayer")}</span>
           <span className="mt-1 block text-text-tertiary">
-            Při zapnutí všechny ceny v aplikaci přepočtou s DPH a fakturační doklady obsahují DPH
-            řádek.
+            {t("billingSettings.isVatPayerHint")}
           </span>
         </span>
       </label>
 
       <label className="block text-sm font-medium">
-        Sazba DPH (%)
+        {t("billingSettings.vatRatePercent")}
         <input
           type="number"
           min={0}
@@ -131,7 +138,7 @@ export function AdminBillingSettings() {
       </label>
 
       <label className="block text-sm font-medium">
-        IBAN
+        {t("billingSettings.iban")}
         <input
           type="text"
           maxLength={34}
@@ -143,7 +150,7 @@ export function AdminBillingSettings() {
       </label>
 
       <label className="block text-sm font-medium">
-        IČO
+        {t("billingSettings.ico")}
         <input
           type="text"
           maxLength={8}
@@ -154,13 +161,41 @@ export function AdminBillingSettings() {
       </label>
 
       <label className="block text-sm font-medium">
-        Kontaktní e-mail
+        {t("billingSettings.contactEmail")}
         <input
           type="email"
           maxLength={120}
           value={form.contact_email}
           onChange={(e) => setForm((s) => ({ ...s, contact_email: e.target.value }))}
           className="mt-1 block h-10 w-full rounded-md border border-border bg-bg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+        />
+      </label>
+
+      <label className="block text-sm font-medium">
+        {t("billingSettings.invoiceEmailSubjectTemplateEn")}
+        <input
+          type="text"
+          maxLength={200}
+          value={form.invoice_email_subject_template_en}
+          onChange={(e) =>
+            setForm((s) => ({ ...s, invoice_email_subject_template_en: e.target.value }))
+          }
+          className="mt-1 block h-10 w-full rounded-md border border-border bg-bg px-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+        />
+        <span className="mt-1 block text-xs font-normal text-text-tertiary">
+          {t("billingSettings.invoiceEmailSubjectTemplateEnHint")}
+        </span>
+      </label>
+
+      <label className="block text-sm font-medium">
+        {t("billingSettings.invoiceEmailBodyTemplateEn")}
+        <textarea
+          value={form.invoice_email_body_template_en}
+          onChange={(e) =>
+            setForm((s) => ({ ...s, invoice_email_body_template_en: e.target.value }))
+          }
+          rows={10}
+          className="mt-1 block w-full rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-accent"
         />
       </label>
 
@@ -179,11 +214,11 @@ export function AdminBillingSettings() {
           disabled={mutation.isPending}
           className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent hover:bg-accent-hover disabled:opacity-50"
         >
-          {mutation.isPending ? "Ukládáme…" : "Uložit"}
+          {mutation.isPending ? t("billingSettings.saving") : t("billingSettings.save")}
         </button>
         {savedFlash ? (
           <span className="text-sm text-success" role="status">
-            Uloženo.
+            {t("billingSettings.saved")}
           </span>
         ) : null}
       </div>

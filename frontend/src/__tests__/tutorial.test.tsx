@@ -10,7 +10,7 @@ describe("tutorialSteps data", () => {
   it("starts with an unanchored welcome step", () => {
     const first = TUTORIAL_STEPS[0]!;
     expect(first.anchorTestId).toBeNull();
-    expect(first.title.toLowerCase()).toContain("vítejte");
+    expect(first.titleKey).toBe("tutorial.welcome.title");
   });
 
   it("uses magenta exactly once — on the final step", () => {
@@ -19,14 +19,14 @@ describe("tutorialSteps data", () => {
     expect(magentaSteps[0]).toBe(TUTORIAL_STEPS[TUTORIAL_STEPS.length - 1]);
   });
 
-  it("each step has Czech copy and a stable id", () => {
+  it("each step has a title/body catalog key and a stable id", () => {
     const ids = new Set<string>();
     for (const step of TUTORIAL_STEPS) {
       expect(step.id).toMatch(/^[a-z][a-z0-9-]*$/);
       expect(ids.has(step.id)).toBe(false);
       ids.add(step.id);
-      expect(step.title.length).toBeGreaterThan(0);
-      expect(step.body.length).toBeGreaterThan(20);
+      expect(step.titleKey).toMatch(/^tutorial\./);
+      expect(step.bodyKey).toMatch(/^tutorial\./);
     }
   });
 

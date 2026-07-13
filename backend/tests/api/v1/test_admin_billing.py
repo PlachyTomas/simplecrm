@@ -23,6 +23,26 @@ from app.db.models import (
 )
 from app.db.session import AsyncSessionLocal
 
+# Mirrors the model/migration server_default for the en invoice-email
+# templates (i18n Task 7) — used to reset the singleton row after a test
+# edits it, so other tests in this suite stay order-independent.
+_DEFAULT_SUBJECT_TEMPLATE_EN = "Invoice {{ number }} — SimpleCRM, due {{ due_date }}"
+_DEFAULT_BODY_TEMPLATE_EN = (
+    "Hello {{ customer_name }},\n\n"
+    "we are sending you invoice **No. {{ number }}** for the period "
+    "{{ period_start }} – {{ period_end }}.\n\n"
+    "**Total due:** {{ total_display }}\n"
+    "**Due date:** {{ due_date }}\n\n"
+    "Please send payment by bank transfer:\n\n"
+    "- IBAN: {{ issuer_iban }}\n"
+    "- Variable symbol: {{ variable_symbol }}\n\n"
+    "The easiest way to pay is by scanning the QR code found "
+    "directly on the invoice.\n\n"
+    "You'll find the invoice PDF attached. To view it in the app, "
+    "sign in at simplecrm.cz.\n\n"
+    "Best regards,\nSimpleCRM\n"
+)
+
 
 @pytest.fixture
 async def owned_emails() -> AsyncIterator[list[str]]:
@@ -32,9 +52,12 @@ async def owned_emails() -> AsyncIterator[list[str]]:
         if tracked:
             await session.execute(delete(User).where(User.email.in_(tracked)))
             await session.execute(delete(Organization).where(Organization.name == "Admin Test Org"))
-            # Reset is_vat_payer back to default in case a test mutated it.
+            # Reset fields a test may have mutated back to their defaults —
+            # BillingSettings is a shared singleton across the whole suite.
             settings = (await session.execute(select(BillingSettings))).scalar_one()
             settings.is_vat_payer = False
+            settings.invoice_email_subject_template_en = _DEFAULT_SUBJECT_TEMPLATE_EN
+            settings.invoice_email_body_template_en = _DEFAULT_BODY_TEMPLATE_EN
             await session.commit()
 
 
@@ -312,6 +335,42 @@ async def test_billing_settings_exposes_issuer_snapshot_fields(
     # core Jinja variables we'll later interpolate.
     assert body["invoice_email_subject_template"].startswith("Faktura č.")
     assert "Variabilní symbol" in body["invoice_email_body_template"]
+    # English counterparts (i18n Task 7) round-trip too, with their own
+    # faithful-translation server_default.
+    assert body["invoice_email_subject_template_en"].startswith("Invoice ")
+    assert "Variable symbol" in body["invoice_email_body_template_en"]
+
+
+async def test_put_billing_settings_persists_en_template_fields(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """The two `_en` template fields are exposed on PUT alongside the cs
+    ones, and the next GET returns the edited value unchanged."""
+    _org, admin = await _seed_org_with_super_admin(db_session, owned_emails)
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    response = await client.put(
+        "/api/v1/admin/billing-settings",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "invoice_email_subject_template_en": "Invoice {{ number }} is ready",
+            "invoice_email_body_template_en": "Hi {{ customer_name }}, thanks!",
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["invoice_email_subject_template_en"] == "Invoice {{ number }} is ready"
+    assert body["invoice_email_body_template_en"] == "Hi {{ customer_name }}, thanks!"
+    # cs templates untouched by this PUT.
+    assert body["invoice_email_subject_template"].startswith("Faktura č.")
+
+    get_response = await client.get(
+        "/api/v1/admin/billing-settings",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert get_response.status_code == 200
+    get_body = get_response.json()
+    assert get_body["invoice_email_subject_template_en"] == "Invoice {{ number }} is ready"
+    assert get_body["invoice_email_body_template_en"] == "Hi {{ customer_name }}, thanks!"
 
 
 async def test_put_billing_settings_persists_issuer_fields(

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Bar,
   BarChart,
@@ -17,7 +18,7 @@ export interface BarRow {
   label: string;
   /** Numeric value the bar represents. */
   value: number;
-  /** Already-formatted text for the value (Kč 12 000, 35 %, etc.). */
+  /** Already-formatted text for the value (formatted currency, 35 %, etc.). */
   display: string;
   /** Optional rank shown left of the label (1., 2., …). */
   rank?: number;
@@ -52,8 +53,10 @@ export function BarChartWidget({
   rows,
   highlightIndex,
   ariaLabel,
-  emptyMessage = "Žádná data v tomto období.",
+  emptyMessage,
 }: BarChartWidgetProps) {
+  const { t } = useTranslation("reports");
+  const resolvedEmptyMessage = emptyMessage ?? t("barChart.defaultEmptyMessage");
   const data = useMemo(
     () =>
       rows.map((r, i) => ({
@@ -68,7 +71,7 @@ export function BarChartWidget({
   if (rows.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-center text-xs text-text-tertiary">
-        {emptyMessage}
+        {resolvedEmptyMessage}
       </div>
     );
   }
@@ -89,8 +92,8 @@ export function BarChartWidget({
         <caption>{ariaLabel}</caption>
         <thead>
           <tr>
-            <th scope="col">Položka</th>
-            <th scope="col">Hodnota</th>
+            <th scope="col">{t("barChart.columnItem")}</th>
+            <th scope="col">{t("barChart.columnValue")}</th>
           </tr>
         </thead>
         <tbody>

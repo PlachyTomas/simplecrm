@@ -1,6 +1,9 @@
+import type { ParseKeys } from "i18next";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
-import { formatCzkMinor } from "@/components/billing/format";
+import { formatDate, formatMoneyMinor } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 
 import { CreditNoteModal } from "@/admin/CreditNoteModal";
 import {
@@ -11,18 +14,18 @@ import {
   useVoidInvoice,
 } from "@/admin/useAdminInvoices";
 
-const EVENT_LABEL: Record<string, string> = {
-  allocated: "Přiděleno číslo",
-  issued: "Vystaveno",
-  pdf_stored: "PDF uloženo",
-  pdf_verified: "PDF ověřeno",
-  sent: "Odesláno",
-  send_failed: "Odeslání selhalo",
-  paid: "Označeno jako zaplaceno",
-  voided: "Stornováno",
-  credit_note_created: "Vystaven dobropis",
-  export_run: "Spuštěn export",
-  integrity_failure: "Selhání integrity",
+const EVENT_LABEL_KEY: Record<string, ParseKeys<"admin">> = {
+  allocated: "invoiceDetail.auditLog.event.allocated",
+  issued: "invoiceDetail.auditLog.event.issued",
+  pdf_stored: "invoiceDetail.auditLog.event.pdf_stored",
+  pdf_verified: "invoiceDetail.auditLog.event.pdf_verified",
+  sent: "invoiceDetail.auditLog.event.sent",
+  send_failed: "invoiceDetail.auditLog.event.send_failed",
+  paid: "invoiceDetail.auditLog.event.paid",
+  voided: "invoiceDetail.auditLog.event.voided",
+  credit_note_created: "invoiceDetail.auditLog.event.credit_note_created",
+  export_run: "invoiceDetail.auditLog.event.export_run",
+  integrity_failure: "invoiceDetail.auditLog.event.integrity_failure",
 };
 
 interface InvoiceDetailDrawerProps {
@@ -31,6 +34,8 @@ interface InvoiceDetailDrawerProps {
 }
 
 export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetailDrawerProps) {
+  const { t } = useTranslation("admin");
+  const locale = useLocale();
   const detailQuery = useAdminInvoiceDetail(invoiceId);
   const markPaid = useMarkInvoicePaid();
   const voidInvoice = useVoidInvoice();
@@ -43,14 +48,14 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
   if (detailQuery.isPending) {
     return (
       <section className="rounded-lg border border-border bg-surface p-5 text-sm text-text-tertiary">
-        Načítání faktury…
+        {t("invoiceDetail.loading")}
       </section>
     );
   }
   if (!detailQuery.data) {
     return (
       <section className="rounded-lg border border-border bg-surface p-5 text-sm text-danger">
-        Detail faktury se nepodařilo načíst.
+        {t("invoiceDetail.loadError")}
       </section>
     );
   }
@@ -62,14 +67,14 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
     markPaid.mutate(
       { invoiceId, body: { paid_at: null } },
       {
-        onError: (err) => setActionError(extractMessage(err) ?? "Označení selhalo."),
+        onError: (err) => setActionError(extractMessage(err) ?? t("invoiceDetail.actions.markPaidError")),
       },
     );
   }
 
   function handleVoid() {
     if (voidReason.trim().length < 3) {
-      setActionError("Důvod storna je povinný (min. 3 znaky).");
+      setActionError(t("invoiceDetail.actions.voidReasonRequired"));
       return;
     }
     setActionError(null);
@@ -77,7 +82,7 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
       { invoiceId, body: { reason: voidReason.trim() } },
       {
         onSuccess: () => setVoidReason(""),
-        onError: (err) => setActionError(extractMessage(err) ?? "Storno selhalo."),
+        onError: (err) => setActionError(extractMessage(err) ?? t("invoiceDetail.actions.voidError")),
       },
     );
   }
@@ -87,7 +92,7 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
     sendInvoice.mutate(
       { invoiceId, body: { override_to: null } },
       {
-        onError: (err) => setActionError(extractMessage(err) ?? "Odeslání selhalo."),
+        onError: (err) => setActionError(extractMessage(err) ?? t("invoiceDetail.actions.sendError")),
       },
     );
   }
@@ -105,30 +110,32 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
       </header>
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-        <dt className="text-text-tertiary">Vystaveno</dt>
-        <dd>{formatLocalDate(inv.issued_at)}</dd>
-        <dt className="text-text-tertiary">DUZP</dt>
-        <dd>{formatLocalDate(inv.taxable_supply_date)}</dd>
-        <dt className="text-text-tertiary">Splatnost</dt>
-        <dd>{formatLocalDate(inv.due_at)}</dd>
-        <dt className="text-text-tertiary">Variabilní symbol</dt>
+        <dt className="text-text-tertiary">{t("invoiceDetail.labels.issuedAt")}</dt>
+        <dd>{formatDate(inv.issued_at, locale, { dateStyle: "short" })}</dd>
+        <dt className="text-text-tertiary">{t("invoiceDetail.labels.taxableSupplyDate")}</dt>
+        <dd>{formatDate(inv.taxable_supply_date, locale, { dateStyle: "short" })}</dd>
+        <dt className="text-text-tertiary">{t("invoiceDetail.labels.dueAt")}</dt>
+        <dd>{formatDate(inv.due_at, locale, { dateStyle: "short" })}</dd>
+        <dt className="text-text-tertiary">{t("invoiceDetail.labels.variableSymbol")}</dt>
         <dd className="tabular-nums">{inv.variable_symbol}</dd>
-        <dt className="text-text-tertiary">Celkem</dt>
-        <dd className="font-medium tabular-nums">{formatCzkMinor(inv.total_minor)}</dd>
-        <dt className="text-text-tertiary">Email</dt>
+        <dt className="text-text-tertiary">{t("invoiceDetail.labels.total")}</dt>
+        <dd className="font-medium tabular-nums">{formatMoneyMinor(inv.total_minor, "CZK", locale)}</dd>
+        <dt className="text-text-tertiary">{t("invoiceDetail.labels.email")}</dt>
         <dd>{inv.customer_email ?? "—"}</dd>
       </dl>
 
       {inv.lines.length > 0 ? (
         <div>
-          <h4 className="mb-1 text-sm font-medium text-text-secondary">Položky</h4>
+          <h4 className="mb-1 text-sm font-medium text-text-secondary">
+            {t("invoiceDetail.lineItems.title")}
+          </h4>
           <table className="w-full text-xs">
             <thead className="text-text-tertiary">
               <tr className="border-b border-border">
-                <th className="py-1 text-left">Popis</th>
-                <th className="py-1 text-right">Množství</th>
-                <th className="py-1 text-right">Cena</th>
-                <th className="py-1 text-right">Celkem</th>
+                <th className="py-1 text-left">{t("invoiceDetail.lineItems.description")}</th>
+                <th className="py-1 text-right">{t("invoiceDetail.lineItems.quantity")}</th>
+                <th className="py-1 text-right">{t("invoiceDetail.lineItems.price")}</th>
+                <th className="py-1 text-right">{t("invoiceDetail.lineItems.total")}</th>
               </tr>
             </thead>
             <tbody>
@@ -139,10 +146,10 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
                     {line.quantity} {line.unit_label ?? ""}
                   </td>
                   <td className="py-1 text-right tabular-nums">
-                    {formatCzkMinor(line.unit_price_minor)}
+                    {formatMoneyMinor(line.unit_price_minor, "CZK", locale)}
                   </td>
                   <td className="py-1 text-right tabular-nums">
-                    {formatCzkMinor(line.line_total_minor)}
+                    {formatMoneyMinor(line.line_total_minor, "CZK", locale)}
                   </td>
                 </tr>
               ))}
@@ -152,7 +159,7 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
       ) : null}
 
       <div className="space-y-2 rounded-md border border-border bg-bg p-3">
-        <h4 className="text-sm font-medium text-text-secondary">Akce</h4>
+        <h4 className="text-sm font-medium text-text-secondary">{t("invoiceDetail.actions.title")}</h4>
         {actionError ? (
           <p
             role="alert"
@@ -168,7 +175,7 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
             disabled={inv.status === "paid" || inv.status === "voided" || markPaid.isPending}
             className="hover:bg-bg-elevated rounded-md border border-border bg-surface px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Označit jako zaplaceno
+            {t("invoiceDetail.actions.markPaid")}
           </button>
           <button
             type="button"
@@ -176,7 +183,7 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
             disabled={inv.status === "draft" || sendInvoice.isPending}
             className="hover:bg-bg-elevated rounded-md border border-border bg-surface px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Odeslat
+            {t("invoiceDetail.actions.send")}
           </button>
         </div>
         {inv.status !== "voided" ? (
@@ -184,7 +191,7 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
             <input
               value={voidReason}
               onChange={(e) => setVoidReason(e.target.value)}
-              placeholder="Důvod storna…"
+              placeholder={t("invoiceDetail.actions.voidPlaceholder")}
               className="min-w-48 flex-1 rounded-md border border-border bg-bg px-2 py-1 text-xs focus:border-accent focus:outline-none"
             />
             <button
@@ -193,7 +200,7 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
               disabled={voidInvoice.isPending}
               className="rounded-md border border-danger/40 bg-bg px-3 py-1.5 text-xs text-danger hover:bg-danger-subtle disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Stornovat
+              {t("invoiceDetail.actions.void")}
             </button>
           </div>
         ) : null}
@@ -203,7 +210,7 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
             onClick={() => setCreditOpen(true)}
             className="hover:bg-bg-elevated self-start rounded-md border border-border bg-surface px-3 py-1.5 text-xs"
           >
-            Vystavit dobropis
+            {t("invoiceDetail.actions.issueCreditNote")}
           </button>
         ) : null}
       </div>
@@ -224,76 +231,73 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
   );
 }
 
+const INVOICE_STATUS_PILL: Record<string, { labelKey: ParseKeys<"admin">; className: string }> = {
+  draft: { labelKey: "invoiceDetail.status.draft", className: "bg-bg-elevated text-text-secondary" },
+  issued: { labelKey: "invoiceDetail.status.issued", className: "bg-info-subtle text-info" },
+  paid: { labelKey: "invoiceDetail.status.paid", className: "bg-success-subtle text-success" },
+  overdue: { labelKey: "invoiceDetail.status.overdue", className: "bg-danger-subtle text-danger" },
+  voided: {
+    labelKey: "invoiceDetail.status.voided",
+    className: "bg-bg-elevated text-text-tertiary line-through",
+  },
+};
+
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; className: string }> = {
-    draft: { label: "Koncept", className: "bg-bg-elevated text-text-secondary" },
-    issued: { label: "Vystavena", className: "bg-info-subtle text-info" },
-    paid: { label: "Zaplacena", className: "bg-success-subtle text-success" },
-    overdue: { label: "Po splatnosti", className: "bg-danger-subtle text-danger" },
-    voided: {
-      label: "Stornována",
-      className: "bg-bg-elevated text-text-tertiary line-through",
-    },
-  };
-  const pill = map[status] ?? { label: status, className: "bg-bg-elevated text-text-secondary" };
+  const { t } = useTranslation("admin");
+  const pill = INVOICE_STATUS_PILL[status];
+  const label = pill ? t(pill.labelKey) : status;
+  const className = pill?.className ?? "bg-bg-elevated text-text-secondary";
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${pill.className}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${className}`}
     >
-      {pill.label}
+      {label}
     </span>
   );
 }
 
 function AuditLogTimeline({ entries }: { entries: AdminInvoiceAuditEntry[] }) {
+  const { t } = useTranslation("admin");
+  const locale = useLocale();
   if (entries.length === 0) {
     return (
       <div>
-        <h4 className="mb-1 text-sm font-medium text-text-secondary">Audit log</h4>
-        <p className="text-xs text-text-tertiary">Bez záznamů.</p>
+        <h4 className="mb-1 text-sm font-medium text-text-secondary">
+          {t("invoiceDetail.auditLog.title")}
+        </h4>
+        <p className="text-xs text-text-tertiary">{t("invoiceDetail.auditLog.empty")}</p>
       </div>
     );
   }
   return (
     <div>
-      <h4 className="mb-2 text-sm font-medium text-text-secondary">Audit log</h4>
+      <h4 className="mb-2 text-sm font-medium text-text-secondary">
+        {t("invoiceDetail.auditLog.title")}
+      </h4>
       <ol className="space-y-2">
-        {entries.map((entry) => (
-          <li key={entry.id} className="rounded-md border border-border bg-bg px-3 py-2 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-text-primary">
-                {EVENT_LABEL[entry.event] ?? entry.event}
-              </span>
-              <span className="text-text-tertiary">{formatLocalDateTime(entry.created_at)}</span>
-            </div>
-            {Object.keys(entry.payload).length > 0 ? (
-              <pre className="mt-1 overflow-x-auto whitespace-pre-wrap text-text-tertiary">
-                {JSON.stringify(entry.payload, null, 2)}
-              </pre>
-            ) : null}
-          </li>
-        ))}
+        {entries.map((entry) => {
+          const eventKey = EVENT_LABEL_KEY[entry.event];
+          return (
+            <li key={entry.id} className="rounded-md border border-border bg-bg px-3 py-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-text-primary">
+                  {eventKey ? t(eventKey) : entry.event}
+                </span>
+                <span className="text-text-tertiary">
+                  {formatDate(entry.created_at, locale, { dateStyle: "short", timeStyle: "short" })}
+                </span>
+              </div>
+              {Object.keys(entry.payload).length > 0 ? (
+                <pre className="mt-1 overflow-x-auto whitespace-pre-wrap text-text-tertiary">
+                  {JSON.stringify(entry.payload, null, 2)}
+                </pre>
+              ) : null}
+            </li>
+          );
+        })}
       </ol>
     </div>
   );
-}
-
-function formatLocalDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("cs-CZ", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
-function formatLocalDateTime(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("cs-CZ", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function extractMessage(err: unknown): string | null {

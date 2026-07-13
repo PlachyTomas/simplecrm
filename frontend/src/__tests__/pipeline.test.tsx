@@ -138,7 +138,7 @@ describe("Pipeline Kanban", () => {
 
     const firstColumn = screen.getByRole("region", { name: /Fáze Nový lead/ });
     expect(within(firstColumn).getByText(/2 obchody/)).toBeInTheDocument();
-    expect(within(firstColumn).getByText(/350,00/)).toBeInTheDocument();
+    expect(within(firstColumn).getByText(/350\s?Kč/)).toBeInTheDocument();
     expect(within(firstColumn).getByText(/První obchod/)).toBeInTheDocument();
     expect(within(firstColumn).getByText(/Druhý obchod/)).toBeInTheDocument();
 

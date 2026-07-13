@@ -1,0 +1,238 @@
+{
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close"
+  },
+  "shell": {
+    "skipToContent": "Skip to content",
+    "adminLink": "Admin"
+  },
+  "trial": {
+    "remaining_one": "{{count}} day left",
+    "remaining_other": "{{count}} days left",
+    "untilPrefix": "Trial until",
+    "choosePlanCta": "Choose a plan →",
+    "endsIn_one": "Trial ends in {{count}} day",
+    "endsIn_other": "Trial ends in {{count}} days",
+    "expiresOn": "expires {{date}}",
+    "upgradeCta": "Upgrade to Full",
+    "dismissAriaLabel": "Dismiss notice"
+  },
+  "companyCombobox": {
+    "placeholder": "Start typing a company name…",
+    "noResults": "No company matches your search."
+  },
+  "orgBillingFields": {
+    "kindBusiness": "Business",
+    "kindIndividual": "Individual",
+    "icoLabel": "Company ID (IČO)",
+    "icoHintSaved": "Saved company ID — you can edit the fields below, or enter a different ID to look it up in ARES.",
+    "icoHintEmpty": "Enter your company ID (8 digits) — we'll fill in the rest from ARES.",
+    "icoHintTyping": "Keep typing — we'll search once you've entered 8 digits.",
+    "icoHintLoading": "Searching ARES…",
+    "icoHintSuccess": "Details filled in from ARES — feel free to edit them.",
+    "icoRetryCta": "Try again",
+    "billingNameLabel": "Invoice name",
+    "billingNameHint": "If left blank, we'll invoice “{{orgName}}”.",
+    "dicLabel": "VAT ID (DIČ)",
+    "legalFormLabel": "Legal form",
+    "individualNameLabel": "Full name",
+    "streetLabel": "Street",
+    "cityLabel": "City",
+    "zipLabel": "ZIP code",
+    "billingEmailLabel": "Billing email",
+    "billingEmailHint": "We'll send tax documents to this address. If left blank, we'll use your login email.",
+    "errors": {
+      "notFound": "Company ID {{ico}} was not found in ARES. Check the number or fill in the fields manually.",
+      "tooMany": "Too many searches. Wait a moment and try again.",
+      "badFormat": "The company ID isn't in the right format. Enter 8 digits.",
+      "unavailable": "ARES is currently unavailable. Try again or fill in the fields manually.",
+      "generic": "The search failed. Please try again."
+    }
+  },
+  "recurringPaymentConsent": {
+    "heading": "Recurring payments (Card-on-File)",
+    "chargeBullet": "We'll regularly charge your card the plan price × your number of user seats ({{period}}).",
+    "durationBullet": "Payments continue until you cancel them.",
+    "receiptBullet": "We'll email you a tax document after every charge.",
+    "priceChangeBullet": "We'll notify you of any price change at least 30 days in advance.",
+    "cancelBulletPrefix": "Cancel recurring payments in Settings → Subscription or by emailing support — see",
+    "cancelLinkText": "Subscription & payments",
+    "consentPrefix": "I agree to recurring payments under the terms above and to",
+    "termsLinkText": "Art. 6 of the Terms of Service",
+    "period": {
+      "annual": "annually",
+      "monthly": "monthly",
+      "unspecified": "for the selected period"
+    }
+  },
+  "priceDisplay": {
+    "suffixMonthly": "/user/month",
+    "suffixAnnual": "/user/year",
+    "exVat": "excl. VAT",
+    "inclVatParen": "({{amount}} incl. VAT)",
+    "notVatPayer": "Not VAT registered"
+  },
+  "taxInvoices": {
+    "fileName": "Invoice-{{number}}.pdf"
+  },
+  "activities": {
+    "types": {
+      "note": "Note",
+      "stage_change": "Stage change",
+      "owner_change": "Owner change",
+      "deal_won": "Deal won",
+      "deal_lost": "Deal lost",
+      "company_freed": "Company released from pool",
+      "ownership_reassigned": "Ownership reassigned",
+      "subscription_change": "Subscription change",
+      "email_sent": "Email sent",
+      "deal_created": "Deal created",
+      "deal_updated": "Deal updated",
+      "company_updated": "Company updated",
+      "event_created": "Event added"
+    },
+    "fields": {
+      "name": "name",
+      "value": "value",
+      "currency": "currency",
+      "stage_id": "stage",
+      "owner_user_id": "owner",
+      "primary_contact_id": "primary contact",
+      "expected_close_date": "expected close date",
+      "probability_override": "probability",
+      "lost_reason": "loss reason",
+      "company_id": "company",
+      "phone": "phone",
+      "email": "email",
+      "website": "website",
+      "note": "note",
+      "main_contact_id": "primary contact",
+      "address_street": "street",
+      "address_city": "city",
+      "address_zip": "ZIP code",
+      "industry": "industry",
+      "legal_form": "legal form",
+      "dic": "VAT ID (DIČ)",
+      "owner": "owner"
+    },
+    "changeFields": {
+      "name": "Name",
+      "value": "Value",
+      "expected_close_date": "Expected close date",
+      "probability_override": "Probability",
+      "owner_user_id": "Owner",
+      "stage_id": "Stage",
+      "primary_contact_id": "Primary contact",
+      "currency": "Currency",
+      "ico": "Company ID (IČO)",
+      "dic": "VAT ID (DIČ)",
+      "email": "Email",
+      "phone": "Phone",
+      "website": "Website",
+      "note": "Note",
+      "industry": "Industry",
+      "legal_form": "Legal form",
+      "address_street": "Street",
+      "address_city": "City",
+      "address_zip": "ZIP code",
+      "main_contact_id": "Primary contact"
+    },
+    "stageChangeFromTo": "Stage: {{from}} → {{to}}",
+    "stageChangeTo": "Stage: {{to}}",
+    "dealPrefix": "Deal “{{dealName}}”",
+    "showAll": "Show all ({{count}})",
+    "hide": "Hide"
+  },
+  "nav": {
+    "overview": "Overview",
+    "pipeline": "Pipeline",
+    "companies": "Companies",
+    "contacts": "Contacts",
+    "deals": "Deals",
+    "calendar": "Calendar",
+    "reports": "Reports",
+    "settings": "Settings",
+    "feedback": "Feedback",
+    "more": "More",
+    "logout": "Log out",
+    "groupSales": "Sales",
+    "mobileAriaLabel": "Bottom navigation",
+    "desktopAriaLabel": "Main navigation"
+  },
+  "tutorial": {
+    "welcome": {
+      "title": "Welcome to SimpleCRM",
+      "body": "We'll walk you through five steps to get oriented in a minute. You can skip the tour anytime and restart it via the ? icon in the top-right corner."
+    },
+    "companies": {
+      "title": "Companies are the foundation",
+      "body": "Start with a company. Just enter the Company ID (IČO) — we'll fill in the name, address, and legal form from the ARES registry."
+    },
+    "pipeline": {
+      "title": "A deal belongs in the pipeline",
+      "body": "The Pipeline shows a Kanban board of your deals. Add your first one via \"+ Add deal\" in the top right, and drag deals between stages as they progress."
+    },
+    "reports": {
+      "title": "Reports will guide you",
+      "body": "Once you have data, you'll see who's leading the leaderboard, how fast deals close, and what isn't selling. Switching your role in Settings unlocks extra widgets for managers."
+    },
+    "settings": {
+      "title": "Invite your team so it's not just you",
+      "body": "In Settings you can customize the pipeline, invite salespeople, and fill in your billing details. Done — you're ready to go!"
+    },
+    "stepCounter": "Step {{current}} / {{total}}",
+    "closeAriaLabel": "Close tour",
+    "back": "Back",
+    "skip": "Skip",
+    "next": "Next",
+    "done": "Done",
+    "replayAriaLabel": "Restart tour"
+  },
+  "feedback": {
+    "pageTitle": "Feedback",
+    "intro": "Something not working, or something missing? Write to us — we read every message.",
+    "kindLegend": "What would you like to report?",
+    "kinds": {
+      "bug": {
+        "label": "Report a bug",
+        "description": "Something isn't working as it should."
+      },
+      "improvement": {
+        "label": "Suggest an improvement",
+        "description": "An idea that would make work easier."
+      }
+    },
+    "captionLabel": "Brief description",
+    "captionPlaceholder": "E.g. Clicking the arrow makes the kanban card disappear.",
+    "bodyLabel": "Details",
+    "bodyPlaceholder": "Describe what you were doing, what you expected, and what happened instead.",
+    "attachmentsLegend": "Screenshots (optional)",
+    "attachmentsHint": "Up to {{max}} files, PNG/JPEG/WebP, max. 5 MB each.",
+    "addScreenshot": "Add screenshot",
+    "removeFileAriaLabel": "Remove {{name}}",
+    "supportEmailPrefix": "Your message will go to",
+    "supportEmailSuffix": "and we'll reply to your email.",
+    "submit": "Send feedback",
+    "submitting": "Sending…",
+    "toastSuccess": "Message sent. Thank you!",
+    "errors": {
+      "tooManyFiles": "You can attach at most {{max}} files at once.",
+      "unsupportedType": "File \"{{name}}\" isn't supported (PNG, JPEG, WebP).",
+      "fileTooLarge": "File \"{{name}}\" exceeds 5 MB.",
+      "totalTooLarge": "Total attachment size exceeds 15 MB.",
+      "submitFailedGeneric": "Submission failed.",
+      "submitFailedRetry": "Submission failed. Please try again."
+    }
+  },
+  "theme": {
+    "groupAriaLabel": "Appearance theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "toast": {
+    "dismissAriaLabel": "Dismiss notification"
+  }
+}

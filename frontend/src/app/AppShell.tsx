@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { Settings } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { MobileTabBar } from "@/app/MobileTabBar";
 import { Sidebar } from "@/app/Sidebar";
@@ -11,12 +12,16 @@ import { useCurrentUser } from "@/auth/useCurrentUser";
 import { Logo } from "@/components/Logo";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
 import { apiFetch } from "@/lib/api";
-import { csNoun } from "@/lib/i18n/nouns";
+import { useLocale } from "@/lib/i18n/useLocale";
+import { useSyncUserLanguage } from "@/lib/i18n/useSyncUserLanguage";
 import { queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 
 export function AppShell() {
+  const { t } = useTranslation("common");
   const { data: user } = useCurrentUser();
+  useSyncUserLanguage();
+  const locale = useLocale();
   const { data: subscription } = useCurrentSubscription();
   const { accessToken, clearAuth } = useAuth();
   const location = useLocation();
@@ -43,7 +48,6 @@ export function AppShell() {
 
   if (!user || !user.organization) return null;
 
-  const locale = user.organization.locale;
   const trialEndsAt = new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(
     new Date(user.organization.trial_ends_at),
   );
@@ -73,7 +77,7 @@ export function AppShell() {
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-text-on-accent focus:shadow-lg"
       >
-        Přeskočit na obsah
+        {t("shell.skipToContent")}
       </a>
       <Sidebar onLogout={() => logout.mutate()} />
 
@@ -105,10 +109,9 @@ export function AppShell() {
                   >
                     <span>
                       <span className="hidden sm:inline">
-                        Zkušební doba do <time>{trialEndsAt}</time> ·{" "}
+                        {t("trial.untilPrefix")} <time>{trialEndsAt}</time> ·{" "}
                       </span>
-                      {daysRemaining} {csNoun(daysRemaining, "den")}{" "}
-                      {daysRemaining >= 2 && daysRemaining <= 4 ? "zbývají" : "zbývá"}
+                      {t("trial.remaining", { count: daysRemaining })}
                     </span>
                     {showUpgradeCta ? (
                       <Link
@@ -117,7 +120,7 @@ export function AppShell() {
                           daysRemaining <= 3 ? "font-semibold" : "font-medium"
                         }`}
                       >
-                        Vybrat plán →
+                        {t("trial.choosePlanCta")}
                       </Link>
                     ) : null}
                   </p>
@@ -130,8 +133,8 @@ export function AppShell() {
               {user.is_super_admin ? (
                 <Link
                   to="/admin"
-                  aria-label="Admin"
-                  title="Admin"
+                  aria-label={t("shell.adminLink")}
+                  title={t("shell.adminLink")}
                   data-testid="admin-gear"
                   className="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary"
                 >

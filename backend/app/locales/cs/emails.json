@@ -1,0 +1,30 @@
+{
+  "common": {
+    "fallback_name": "tým SimpleCRM"
+  },
+  "verification": {
+    "subject": "SimpleCRM: ověřte svůj e-mail"
+  },
+  "password_reset": {
+    "subject": "SimpleCRM: obnovení hesla"
+  },
+  "invitation": {
+    "subject": "SimpleCRM: pozvánka do {organization_name}"
+  },
+  "freed_company": {
+    "subject_one": "SimpleCRM: {count} firma uvolněna",
+    "subject_few": "SimpleCRM: {count} firmy uvolněny",
+    "subject_other": "SimpleCRM: {count} firem uvolněno"
+  },
+  "subscription_pending": {
+    "subject": "SimpleCRM: {org_name} si vybral plán {plan_display}"
+  },
+  "billing_info_reminder": {
+    "subject_one": "SimpleCRM: doplňte fakturační údaje (zkušebka končí za {count} den)",
+    "subject_few": "SimpleCRM: doplňte fakturační údaje (zkušebka končí za {count} dny)",
+    "subject_other": "SimpleCRM: doplňte fakturační údaje (zkušebka končí za {count} dní)",
+    "days_one": "{count} den",
+    "days_few": "{count} dny",
+    "days_other": "{count} dní"
+  }
+}

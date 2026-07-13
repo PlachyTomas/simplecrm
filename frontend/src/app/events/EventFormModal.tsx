@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { type CalendarEventOut, useCreateEvent, useUpdateEvent } from "@/app/events/useEvents";
@@ -50,6 +51,7 @@ interface EventFormModalProps {
 }
 
 export function EventFormModal({ open, onClose, dealId, dealName, event }: EventFormModalProps) {
+  const { t } = useTranslation("deals");
   const dialogRef = useModalDialog<HTMLDivElement>(onClose, open);
   const toast = useToast();
   const { data: gcal } = useGoogleCalendarStatus();
@@ -83,7 +85,7 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
       setAddToGoogle(event.google_sync_status !== "not_synced" && googleAvailable);
     } else {
       const slot = defaultStart();
-      setTitle(dealName ? `Schůzka — ${dealName}` : "");
+      setTitle(dealName ? t("eventFormModal.defaultTitle", { dealName }) : "");
       setDate(slot.date);
       setStartTime(slot.start);
       setEndTime(slot.end);
@@ -92,18 +94,30 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
       setAddToGoogle(googleAvailable);
     }
     // googleAvailable intentionally re-applies when the status loads while
-    // the modal is open (first paint may race the status query).
+    // the modal is open (first paint may race the status query). `t` stays
+    // OUT of the deps: its identity changes on a language switch (e.g. the
+    // server sync adopting another device's choice mid-edit), and re-running
+    // the reset then would wipe the user's in-progress form.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, event, dealName, googleAvailable]);
 
   if (!open) return null;
 
   const pending = createEvent.isPending || updateEvent.isPending;
 
-  function notifySaved(saved: CalendarEventOut, verb: string) {
+  function notifySaved(saved: CalendarEventOut, mode: "created" | "updated") {
+    const key =
+      saved.google_sync_status === "error"
+        ? mode === "created"
+          ? "eventFormModal.toast.createdError"
+          : "eventFormModal.toast.updatedError"
+        : mode === "created"
+          ? "eventFormModal.toast.created"
+          : "eventFormModal.toast.updated";
     if (saved.google_sync_status === "error") {
-      toast.error(`Událost ${verb}, ale zápis do Google kalendáře selhal.`);
+      toast.error(t(key));
     } else {
-      toast.success(`Událost ${verb}.`);
+      toast.success(t(key));
     }
     onClose();
   }
@@ -114,11 +128,11 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
     const starts = new Date(`${date}T${startTime}`);
     const ends = new Date(`${date}T${endTime}`);
     if (!title.trim() || Number.isNaN(starts.getTime()) || Number.isNaN(ends.getTime())) {
-      setError("Vyplňte název, datum a časy.");
+      setError(t("eventFormModal.errorRequired"));
       return;
     }
     if (ends <= starts) {
-      setError("Konec musí být po začátku.");
+      setError(t("eventFormModal.errorEndBeforeStart"));
       return;
     }
 
@@ -136,8 +150,8 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
           },
         },
         {
-          onSuccess: (saved) => notifySaved(saved, "uložena"),
-          onError: () => toast.error("Událost se nepodařilo uložit."),
+          onSuccess: (saved) => notifySaved(saved, "updated"),
+          onError: () => toast.error(t("eventFormModal.toast.updateError")),
         },
       );
     } else if (dealId) {
@@ -152,8 +166,8 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
           add_to_google: addToGoogle,
         },
         {
-          onSuccess: (saved) => notifySaved(saved, "vytvořena"),
-          onError: () => toast.error("Událost se nepodařilo vytvořit."),
+          onSuccess: (saved) => notifySaved(saved, "created"),
+          onError: () => toast.error(t("eventFormModal.toast.createError")),
         },
       );
     }
@@ -179,10 +193,10 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
         className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg"
       >
         <h2 id="event-form-title" className="text-xl font-semibold">
-          {editing ? "Upravit událost" : "Naplánovat událost"}
+          {editing ? t("eventFormModal.titleEdit") : t("eventFormModal.titleCreate")}
         </h2>
         <p className="mt-1 text-sm text-text-tertiary">
-          Obchod:{" "}
+          {t("eventFormModal.dealLabel")}{" "}
           {event ? (
             <Link
               to={`/app/deals/${event.deal_id}`}
@@ -197,7 +211,7 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
 
         <div className="mt-4 space-y-3">
           <label className="block text-sm">
-            <span className="mb-1 block text-text-secondary">Název</span>
+            <span className="mb-1 block text-text-secondary">{t("eventFormModal.nameLabel")}</span>
             <input
               type="text"
               value={title}
@@ -210,7 +224,9 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
 
           <div className="grid grid-cols-3 gap-2">
             <label className="block text-sm">
-              <span className="mb-1 block text-text-secondary">Datum</span>
+              <span className="mb-1 block text-text-secondary">
+                {t("eventFormModal.dateLabel")}
+              </span>
               <input
                 type="date"
                 value={date}
@@ -220,7 +236,9 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1 block text-text-secondary">Od</span>
+              <span className="mb-1 block text-text-secondary">
+                {t("eventFormModal.fromLabel")}
+              </span>
               <input
                 type="time"
                 value={startTime}
@@ -230,7 +248,7 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1 block text-text-secondary">Do</span>
+              <span className="mb-1 block text-text-secondary">{t("eventFormModal.toLabel")}</span>
               <input
                 type="time"
                 value={endTime}
@@ -242,7 +260,9 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
           </div>
 
           <label className="block text-sm">
-            <span className="mb-1 block text-text-secondary">Místo (volitelné)</span>
+            <span className="mb-1 block text-text-secondary">
+              {t("eventFormModal.locationLabel")}
+            </span>
             <input
               type="text"
               value={location}
@@ -253,7 +273,9 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
           </label>
 
           <label className="block text-sm">
-            <span className="mb-1 block text-text-secondary">Popis (volitelné)</span>
+            <span className="mb-1 block text-text-secondary">
+              {t("eventFormModal.descriptionLabel")}
+            </span>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -271,7 +293,7 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
               className="mt-0.5"
             />
             <span className={googleAvailable ? "text-text-secondary" : "text-text-tertiary"}>
-              Přidat do Google kalendáře
+              {t("eventFormModal.addToGoogle")}
               {!googleAvailable ? (
                 <>
                   {" — "}
@@ -279,7 +301,7 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
                     to="/app/settings?tab=integrations"
                     className="underline hover:text-text-primary"
                   >
-                    nejprve propojte kalendář v Nastavení
+                    {t("eventFormModal.connectCalendarLink")}
                   </Link>
                 </>
               ) : null}
@@ -299,14 +321,18 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
             onClick={onClose}
             className="inline-flex h-10 items-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary hover:bg-surface-elevated hover:text-text-primary"
           >
-            Zrušit
+            {t("eventFormModal.cancel")}
           </button>
           <button
             type="submit"
             disabled={pending}
             className="inline-flex h-10 items-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {pending ? "Ukládám…" : editing ? "Uložit změny" : "Vytvořit událost"}
+            {pending
+              ? t("eventFormModal.saving")
+              : editing
+                ? t("eventFormModal.submitEdit")
+                : t("eventFormModal.submitCreate")}
           </button>
         </div>
       </form>

@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import { useModalDialog } from "@/lib/useModalDialog";
 
 import { DealDetail } from "./DealDetail";
@@ -14,6 +16,7 @@ interface DealDetailDialogProps {
  * viewport.
  */
 export function DealDetailDialog({ dealId, onClose }: DealDetailDialogProps) {
+  const { t } = useTranslation("deals");
   const dialogRef = useModalDialog<HTMLDivElement>(onClose, true);
   return (
     <div
@@ -21,7 +24,7 @@ export function DealDetailDialog({ dealId, onClose }: DealDetailDialogProps) {
       tabIndex={-1}
       role="dialog"
       aria-modal="true"
-      aria-label="Detail obchodu"
+      aria-label={t("dealDetailDialog.ariaLabel")}
       className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 py-6 backdrop-blur-sm sm:py-10"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();

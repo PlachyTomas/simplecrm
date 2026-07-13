@@ -12,6 +12,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, Trash2, UserPlus, Users } from "lucide-react";
 import { type FormEvent, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { useOrgTeams, useOrgUsers } from "@/app/settings/useUsersTeams";
@@ -68,6 +69,7 @@ function useRevokeInvitation() {
 }
 
 export function InviteTeammatesCard() {
+  const { t } = useTranslation("dashboard");
   const { data: user } = useCurrentUser();
   const subscription = useCurrentSubscription();
   const users = useOrgUsers();
@@ -104,13 +106,11 @@ export function InviteTeammatesCard() {
     setError(null);
     const trimmed = email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setError("Zadejte platnou e-mailovou adresu.");
+      setError(t("inviteTeammatesCard.invalidEmail"));
       return;
     }
     if (remainingSeats <= 0) {
-      setError(
-        "Nemáte volné místo. Zrušte čekající pozvánku, nebo navyšte počet v Nastavení → Organizace.",
-      );
+      setError(t("inviteTeammatesCard.noSeatsAvailable"));
       return;
     }
     try {
@@ -121,32 +121,29 @@ export function InviteTeammatesCard() {
         can_invite: false,
       });
       setEmail("");
-      toast.success(`Pozvánka pro ${trimmed} připravena.`);
+      toast.success(t("inviteTeammatesCard.invitationReady", { email: trimmed }));
     } catch (err) {
       if (err instanceof ApiError) {
         const detail = (err.body as { detail?: unknown })?.detail;
         if (typeof detail === "string") setError(detail);
         else if (detail && typeof detail === "object" && "detail" in detail)
           setError(String((detail as { detail: unknown }).detail));
-        else setError("Vytvoření pozvánky se nezdařilo.");
+        else setError(t("inviteTeammatesCard.createFailed"));
       } else {
-        setError(err instanceof Error ? err.message : "Vytvoření pozvánky se nezdařilo.");
+        setError(err instanceof Error ? err.message : t("inviteTeammatesCard.createFailed"));
       }
     }
   }
 
   async function onRevoke(inv: InvitationOut) {
-    if (!window.confirm(`Zrušit pozvánku pro ${inv.email}?`)) return;
+    if (!window.confirm(t("inviteTeammatesCard.revokeConfirm", { email: inv.email }))) return;
     try {
       await revoke.mutateAsync(inv.id);
-      toast.success("Pozvánka zrušena.");
+      toast.success(t("inviteTeammatesCard.revokeSuccess"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Zrušení pozvánky selhalo.");
+      toast.error(err instanceof Error ? err.message : t("inviteTeammatesCard.revokeFailed"));
     }
   }
-
-  const noun = (n: number) =>
-    n === 1 ? "obchodník" : n >= 2 && n <= 4 ? "obchodníci" : "obchodníků";
 
   return (
     <section
@@ -163,33 +160,37 @@ export function InviteTeammatesCard() {
           </div>
           <div>
             <h2 id="invite-teammates-title" className="text-lg font-semibold">
-              Pozvěte svůj tým
+              {t("inviteTeammatesCard.title")}
             </h2>
             <p className="mt-1 text-sm text-text-secondary">
-              Vaše organizace má {seatCount} {noun(seatCount)}. Pozvánky jste rozeslali{" "}
-              {activeMembers + pendingInvites.length} z {seatCount} — zbývá {remainingSeats}.
+              {t("inviteTeammatesCard.orgSeatCount", { count: seatCount })}{" "}
+              {t("inviteTeammatesCard.inviteesSentPhrase", {
+                sent: activeMembers + pendingInvites.length,
+                total: seatCount,
+                remaining: remainingSeats,
+              })}
             </p>
           </div>
         </div>
         <span className="rounded-full bg-surface-overlay px-3 py-1 text-xs font-semibold tabular-nums text-text-secondary">
-          {activeMembers} / {seatCount} aktivních
+          {t("inviteTeammatesCard.activeOfSeats", { active: activeMembers, seats: seatCount })}
         </span>
       </header>
 
       <form
         onSubmit={onSubmit}
         className="mt-5 flex flex-col gap-2 sm:flex-row"
-        aria-label="Pozvat dalšího obchodníka"
+        aria-label={t("inviteTeammatesCard.formAriaLabel")}
       >
         <label className="flex-1">
-          <span className="sr-only">E-mail kolegy</span>
+          <span className="sr-only">{t("inviteTeammatesCard.emailSrLabel")}</span>
           <input
             type="email"
             required
             autoComplete="off"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="kolega@firma.cz"
+            placeholder={t("inviteTeammatesCard.emailPlaceholder")}
             className="block h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
           />
         </label>
@@ -199,7 +200,9 @@ export function InviteTeammatesCard() {
           className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           <UserPlus size={16} strokeWidth={1.75} aria-hidden />
-          {create.isPending ? "Odesílám…" : "Vytvořit pozvánku"}
+          {create.isPending
+            ? t("inviteTeammatesCard.submitting")
+            : t("inviteTeammatesCard.submit")}
         </button>
       </form>
       {error ? (
@@ -211,7 +214,7 @@ export function InviteTeammatesCard() {
       {pendingInvites.length > 0 ? (
         <div className="mt-5">
           <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
-            Čekající pozvánky
+            {t("inviteTeammatesCard.pendingInvitesTitle")}
           </p>
           <ul className="mt-2 space-y-2">
             {pendingInvites.map((inv) => (
@@ -222,9 +225,9 @@ export function InviteTeammatesCard() {
       ) : null}
 
       <p className="mt-5 text-xs text-text-tertiary">
-        Potřebujete víc nastavení (role, tým, právo zvát)?{" "}
+        {t("inviteTeammatesCard.settingsPromptPrefix")}{" "}
         <Link to="/app/settings" className="underline hover:text-text-secondary">
-          Přejít do Nastavení
+          {t("inviteTeammatesCard.settingsPromptLink")}
         </Link>
         .
       </p>
@@ -242,6 +245,7 @@ function PendingInviteRow({
   // `invite_url` comes straight off the listing response — backend
   // re-signs the invite's token_jti on each GET, so the link is stable
   // and copy-able even after a page reload.
+  const { t } = useTranslation("dashboard");
   const link = invitation.invite_url;
   const [copied, setCopied] = useState(false);
 
@@ -251,7 +255,7 @@ function PendingInviteRow({
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1_500);
     } catch {
-      window.prompt("Zkopírujte odkaz na pozvánku:", link);
+      window.prompt(t("inviteTeammatesCard.copyPrompt"), link);
     }
   }
 
@@ -265,22 +269,23 @@ function PendingInviteRow({
         type="button"
         onClick={() => void copy()}
         className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-surface px-2.5 text-xs font-medium text-text-secondary transition-colors duration-fast hover:text-text-primary"
-        aria-label={`Zkopírovat odkaz pozvánky pro ${invitation.email}`}
+        aria-label={t("inviteTeammatesCard.copyLinkAria", { email: invitation.email })}
       >
         {copied ? (
           <>
-            <Check size={12} strokeWidth={2} className="text-success" /> Zkopírováno
+            <Check size={12} strokeWidth={2} className="text-success" />{" "}
+            {t("inviteTeammatesCard.copied")}
           </>
         ) : (
           <>
-            <Copy size={12} strokeWidth={1.75} /> Kopírovat odkaz
+            <Copy size={12} strokeWidth={1.75} /> {t("inviteTeammatesCard.copyLink")}
           </>
         )}
       </button>
       <button
         type="button"
         onClick={onRevoke}
-        aria-label={`Zrušit pozvánku pro ${invitation.email}`}
+        aria-label={t("inviteTeammatesCard.revokeAria", { email: invitation.email })}
         className="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-tertiary transition-colors duration-fast hover:bg-danger-subtle hover:text-danger"
       >
         <Trash2 size={14} strokeWidth={1.75} />

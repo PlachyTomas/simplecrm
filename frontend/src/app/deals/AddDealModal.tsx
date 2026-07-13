@@ -1,5 +1,7 @@
 import { Building2, Handshake, Plus, RefreshCcw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 
 import { useCompanies } from "@/app/companies/useCompanies";
 import { useCreateCompany } from "@/app/companies/useCreateCompany";
@@ -79,20 +81,20 @@ const EMPTY_NEW_CONTACT: NewContactDraft = {
   phone: "",
 };
 
-function describeLookupError(error: unknown, ico: string): string {
+function describeLookupError(error: unknown, ico: string, t: TFunction<"deals">): string {
   if (error instanceof ApiError) {
     if (error.status === 404) {
-      return `IČO ${ico} nebylo v ARES nalezeno. Zkontrolujte zadání nebo pokračujte ručně.`;
+      return t("addDealModal.icoNotFound", { ico });
     }
     if (error.status === 429) {
-      return "Příliš mnoho vyhledávání. Počkejte chvíli a zkuste to znovu.";
+      return t("addDealModal.icoTooMany");
     }
     if (error.status === 400) {
-      return "IČO není ve správném formátu. Zadejte 8 číslic.";
+      return t("addDealModal.icoBadFormat");
     }
-    return "ARES je momentálně nedostupný. Zkuste to znovu nebo vyplňte ručně.";
+    return t("addDealModal.icoAresDown");
   }
-  return "Vyhledání selhalo. Zkuste to prosím znovu.";
+  return t("addDealModal.icoGenericError");
 }
 
 function buildEmptyForm(
@@ -119,6 +121,7 @@ export function AddDealModal({
   initialStageId,
   lockedCompany,
 }: AddDealModalProps) {
+  const { t } = useTranslation("deals");
   const lockedCompanyId = lockedCompany?.id;
   const dialogRef = useModalDialog<HTMLDivElement>(onClose, open);
   const { data: currentUser } = useCurrentUser();
@@ -133,7 +136,7 @@ export function AddDealModal({
     buildEmptyForm(initialStageId, stages, lockedCompanyId),
   );
   // Inline "create new firma" sub-form. The salesperson opens it from
-  // the search miss state — same IČO + ARES autofill as AddCompanyModal,
+  // the search miss state — same company ID + ARES autofill as AddCompanyModal,
   // but inlined so a deal can be created in a single submit.
   const [showNewCompany, setShowNewCompany] = useState(false);
   const [newCompany, setNewCompany] = useState<NewCompanyDraft>(EMPTY_NEW_COMPANY);
@@ -166,7 +169,7 @@ export function AddDealModal({
 
   // ARES autofill for the inline new-firma path. Mirrors the logic in
   // AddCompanyModal: debounce, only fire on exactly 8 digits, clear the
-  // auto-filled fields when the user edits IČO away from the last hit.
+  // auto-filled fields when the user edits the company ID away from the last hit.
   const debouncedNewIco = useDebouncedValue(newCompany.ico, 250);
   const newIcoQuery = /^\d{8}$/.test(debouncedNewIco) ? debouncedNewIco : "";
   const newCompanyLookup = useLookupRegistry({
@@ -207,7 +210,7 @@ export function AddDealModal({
   const companies = companiesPage?.items ?? [];
   const orgUsers = useMemo(() => (usersPage?.items ?? []).filter((u) => u.is_active), [usersPage]);
   // Once a Firma is picked, fetch that company's contacts for the optional
-  // "Hlavní kontakt" picker. Skipped while companyId is empty.
+  // primary-contact picker. Skipped while companyId is empty.
   const { data: contactsPage } = useContacts({
     companyId: form.companyId || undefined,
     limit: 100,
@@ -229,8 +232,8 @@ export function AddDealModal({
   // name defaults to the company name when left blank.
   const canSubmit = hasCompany && hasStage;
   const missingLabels: string[] = [];
-  if (!hasCompany) missingLabels.push("firma");
-  if (!hasStage) missingLabels.push("fáze");
+  if (!hasCompany) missingLabels.push(t("addDealModal.missingCompany"));
+  if (!hasStage) missingLabels.push(t("addDealModal.missingStage"));
 
   // Show the new-contact fields when there's no existing contact to pick:
   // a brand-new company, an existing company with no contacts yet, or when
@@ -269,9 +272,9 @@ export function AddDealModal({
         companyId = createdCompany.id;
       } catch (err) {
         if (err instanceof ApiError && err.status === 409) {
-          toast.error("Firma s tímto IČO už ve vaší organizaci existuje. Vyberte ji ze seznamu.");
+          toast.error(t("addDealModal.companyDuplicate"));
         } else {
-          toast.error("Firmu se nepodařilo uložit. Zkuste to znovu.");
+          toast.error(t("addDealModal.companySaveError"));
         }
         return;
       }
@@ -292,13 +295,13 @@ export function AddDealModal({
         });
         primaryContactId = createdContact.id;
       } catch {
-        toast.error("Kontaktní osobu se nepodařilo uložit — obchod uložíme bez ní.");
+        toast.error(t("addDealModal.contactSaveError"));
       }
     }
 
     // Deal name defaults to the company name so a lead can be logged without
     // inventing a title.
-    const effectiveName = form.name.trim() || resolvedCompanyName || "Nový obchod";
+    const effectiveName = form.name.trim() || resolvedCompanyName || t("addDealModal.defaultDealName");
 
     try {
       const created = await createDeal.mutateAsync({
@@ -312,22 +315,20 @@ export function AddDealModal({
         primary_contact_id: primaryContactId,
         probability_override: null,
       });
-      toast.success("Obchod uložen.");
+      toast.success(t("addDealModal.toastSaved"));
       onCreated?.(created.id);
       onClose();
     } catch {
       if (newCompanyReady) {
-        toast.error(
-          "Firma byla vytvořena, ale obchod uložit nešel. Zkuste ho přidat z detailu firmy.",
-        );
+        toast.error(t("addDealModal.companyCreatedDealFailed"));
       } else {
-        toast.error("Obchod se nepodařilo uložit. Zkuste to znovu.");
+        toast.error(t("addDealModal.saveError"));
       }
     }
   };
 
   const newIcoLookupErrorMessage = newCompanyLookup.isError
-    ? describeLookupError(newCompanyLookup.error, debouncedNewIco)
+    ? describeLookupError(newCompanyLookup.error, debouncedNewIco, t)
     : null;
   const newIcoLength = newCompany.ico.replace(/\D/g, "").length;
   const newIcoLookupState: "empty" | "typing" | "loading" | "success" | "not_found" | "error" =
@@ -366,29 +367,30 @@ export function AddDealModal({
           <Handshake size={20} strokeWidth={1.75} />
         </div>
         <h1 id="add-deal-title" className="text-2xl font-semibold">
-          Přidat obchod
+          {t("addDealModal.title")}
         </h1>
-        <p className="mt-2 text-sm text-text-secondary">
-          Pojmenujte obchod a přiřaďte ho k firmě a fázi pipeline. Detaily můžete doplnit kdykoliv
-          později.
-        </p>
+        <p className="mt-2 text-sm text-text-secondary">{t("addDealModal.subtitle")}</p>
 
         <div className="mt-6 space-y-5">
           <label className="block">
-            <span className="text-xs font-medium text-text-secondary">Název obchodu</span>
+            <span className="text-xs font-medium text-text-secondary">
+              {t("addDealModal.nameLabel")}
+            </span>
             <input
               type="text"
               data-testid={testIds.deals.addModal.nameInput}
               value={form.name}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
               className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
-              placeholder="Volitelné — doplní se podle názvu firmy"
+              placeholder={t("addDealModal.namePlaceholder")}
             />
           </label>
 
           {lockedCompany ? (
             <div>
-              <span className="text-xs font-medium text-text-secondary">Firma</span>
+              <span className="text-xs font-medium text-text-secondary">
+                {t("addDealModal.companyLabel")}
+              </span>
               <div className="mt-2 flex h-10 items-center rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary">
                 {lockedCompany.name}
               </div>
@@ -396,7 +398,7 @@ export function AddDealModal({
           ) : (
             <label className="block">
               <span className="text-xs font-medium text-text-secondary">
-                Firma <span className="text-danger">*</span>
+                {t("addDealModal.companyLabel")} <span className="text-danger">*</span>
               </span>
               <input
                 type="text"
@@ -407,7 +409,7 @@ export function AddDealModal({
                   setCompanySearch(e.target.value);
                   setForm((prev) => ({ ...prev, companyId: "" }));
                 }}
-                placeholder="Začněte psát název firmy…"
+                placeholder={t("addDealModal.companySearchPlaceholder")}
                 className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
                 autoComplete="off"
               />
@@ -438,19 +440,20 @@ export function AddDealModal({
               ) : null}
               {companySearch && !form.companyId && companies.length === 0 ? (
                 <div className="mt-2 flex items-center justify-between gap-2 text-xs text-text-tertiary">
-                  <span>Žádná firma neodpovídá hledání.</span>
+                  <span>{t("addDealModal.noCompanyMatch")}</span>
                   {!showNewCompany ? (
                     <button
                       type="button"
                       onClick={() => {
                         setShowNewCompany(true);
-                        // Carry the typed name across so it isn't lost; IČO is
-                        // optional enrichment from there.
+                        // Carry the typed name across so it isn't lost; the company
+                        // ID is optional enrichment from there.
                         setNewCompany({ ...EMPTY_NEW_COMPANY, name: companySearch.trim() });
                       }}
                       className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover"
                     >
-                      <Plus size={12} strokeWidth={1.75} /> Vytvořit firmu „{companySearch.trim()}"
+                      <Plus size={12} strokeWidth={1.75} />{" "}
+                      {t("addDealModal.createCompanyButton", { name: companySearch.trim() })}
                     </button>
                   ) : null}
                 </div>
@@ -462,7 +465,7 @@ export function AddDealModal({
             <div className="rounded-md border border-border-subtle bg-surface-overlay p-3">
               <div className="mb-3 flex items-center justify-between">
                 <span className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-text-tertiary">
-                  <Building2 size={12} strokeWidth={1.75} /> Nová firma
+                  <Building2 size={12} strokeWidth={1.75} /> {t("addDealModal.newCompanyLabel")}
                 </span>
                 <button
                   type="button"
@@ -473,12 +476,14 @@ export function AddDealModal({
                   }}
                   className="text-xs text-text-secondary hover:text-text-primary"
                 >
-                  Skrýt
+                  {t("addDealModal.hide")}
                 </button>
               </div>
               <label className="block">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-text-secondary">IČO</span>
+                  <span className="text-xs font-medium text-text-secondary">
+                    {t("addDealModal.icoLabel")}
+                  </span>
                   {newIcoLookupState === "typing" || newIcoLookupState === "loading" ? (
                     <span className="font-mono text-xs tabular-nums text-text-tertiary">
                       {newIcoLength} / 8
@@ -501,16 +506,16 @@ export function AddDealModal({
                 />
                 {newIcoLookupState === "empty" ? (
                   <p className="mt-2 text-xs text-text-tertiary">
-                    Zadejte IČO (8 číslic) — automaticky doplníme z ARES.
+                    {t("addDealModal.icoHintEmpty")}
                   </p>
                 ) : null}
                 {newIcoLookupState === "loading" ? (
                   <p className="mt-2 text-xs text-text-tertiary" role="status">
-                    Hledám v ARES…
+                    {t("addDealModal.icoHintLoading")}
                   </p>
                 ) : null}
                 {newIcoLookupState === "success" ? (
-                  <p className="mt-2 text-xs text-success">Údaje doplněny z ARES.</p>
+                  <p className="mt-2 text-xs text-success">{t("addDealModal.icoHintSuccess")}</p>
                 ) : null}
                 {newIcoLookupState === "not_found" && newIcoLookupErrorMessage ? (
                   <p className="mt-2 text-xs text-warning" role="alert">
@@ -529,32 +534,33 @@ export function AddDealModal({
                       }}
                       className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:text-accent-hover"
                     >
-                      <RefreshCcw size={12} strokeWidth={1.75} /> Zkusit znovu
+                      <RefreshCcw size={12} strokeWidth={1.75} /> {t("addDealModal.icoRetry")}
                     </button>
                   </div>
                 ) : null}
               </label>
               <label className="mt-3 block">
-                <span className="text-xs font-medium text-text-secondary">Název firmy</span>
+                <span className="text-xs font-medium text-text-secondary">
+                  {t("addDealModal.companyNameLabel")}
+                </span>
                 <input
                   type="text"
                   autoComplete="organization"
                   value={newCompany.name}
                   onChange={(e) => setNewCompany((prev) => ({ ...prev, name: e.target.value }))}
                   className="mt-2 block h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
-                  placeholder="Doplní se z ARES, nebo zadejte ručně"
+                  placeholder={t("addDealModal.companyNamePlaceholder")}
                 />
               </label>
-              <p className="mt-2 text-xs text-text-tertiary">
-                Firmu uložíme společně s obchodem; další detaily můžete doplnit později z detailu
-                firmy.
-              </p>
+              <p className="mt-2 text-xs text-text-tertiary">{t("addDealModal.newCompanyHint")}</p>
             </div>
           ) : null}
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="text-xs font-medium text-text-secondary">Hodnota</span>
+              <span className="text-xs font-medium text-text-secondary">
+                {t("addDealModal.valueLabel")}
+              </span>
               <input
                 type="text"
                 inputMode="decimal"
@@ -565,10 +571,11 @@ export function AddDealModal({
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-text-secondary">Očekávané uzavření</span>
+              <span className="text-xs font-medium text-text-secondary">
+                {t("addDealModal.expectedCloseLabel")}
+              </span>
               <input
                 type="date"
-                lang="cs-CZ"
                 value={form.expectedCloseDate}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, expectedCloseDate: e.target.value }))
@@ -581,55 +588,55 @@ export function AddDealModal({
           {hasCompany ? (
             <div className="space-y-2">
               <span className="text-xs font-medium text-text-secondary">
-                Kontaktní osoba (volitelné)
+                {t("addDealModal.contactSectionLabel")}
               </span>
               {useNewContactFields ? (
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <input
                       type="text"
-                      aria-label="Jméno kontaktní osoby"
+                      aria-label={t("addDealModal.contactFirstNameAria")}
                       autoComplete="given-name"
                       value={newContact.firstName}
                       onChange={(e) =>
                         setNewContact((prev) => ({ ...prev, firstName: e.target.value }))
                       }
-                      placeholder="Jméno"
+                      placeholder={t("addDealModal.firstNamePlaceholder")}
                       className="block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
                     />
                     <input
                       type="text"
-                      aria-label="Příjmení kontaktní osoby"
+                      aria-label={t("addDealModal.contactLastNameAria")}
                       autoComplete="family-name"
                       value={newContact.lastName}
                       onChange={(e) =>
                         setNewContact((prev) => ({ ...prev, lastName: e.target.value }))
                       }
-                      placeholder="Příjmení"
+                      placeholder={t("addDealModal.lastNamePlaceholder")}
                       className="block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <input
                       type="email"
-                      aria-label="E-mail kontaktní osoby"
+                      aria-label={t("addDealModal.contactEmailAria")}
                       autoComplete="email"
                       value={newContact.email}
                       onChange={(e) =>
                         setNewContact((prev) => ({ ...prev, email: e.target.value }))
                       }
-                      placeholder="E-mail"
+                      placeholder={t("addDealModal.emailPlaceholder")}
                       className="block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
                     />
                     <input
                       type="tel"
-                      aria-label="Telefon kontaktní osoby"
+                      aria-label={t("addDealModal.contactPhoneAria")}
                       autoComplete="tel"
                       value={newContact.phone}
                       onChange={(e) =>
                         setNewContact((prev) => ({ ...prev, phone: e.target.value }))
                       }
-                      placeholder="Telefon"
+                      placeholder={t("addDealModal.phonePlaceholder")}
                       className="block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
                     />
                   </div>
@@ -642,12 +649,10 @@ export function AddDealModal({
                       }}
                       className="text-xs font-medium text-accent hover:text-accent-hover"
                     >
-                      Vybrat z existujících kontaktů
+                      {t("addDealModal.pickExistingContact")}
                     </button>
                   ) : (
-                    <p className="text-xs text-text-tertiary">
-                      Vyplňte jméno i příjmení — uložíme osobu jako kontakt firmy.
-                    </p>
+                    <p className="text-xs text-text-tertiary">{t("addDealModal.contactHint")}</p>
                   )}
                 </>
               ) : (
@@ -659,7 +664,7 @@ export function AddDealModal({
                     }
                     className="block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
                   >
-                    <option value="">— bez kontaktu —</option>
+                    <option value="">{t("addDealModal.noContactOption")}</option>
                     {companyContacts.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.first_name} {c.last_name}
@@ -675,7 +680,7 @@ export function AddDealModal({
                     }}
                     className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:text-accent-hover"
                   >
-                    <Plus size={12} strokeWidth={1.75} /> Přidat novou osobu
+                    <Plus size={12} strokeWidth={1.75} /> {t("addDealModal.addNewPerson")}
                   </button>
                 </>
               )}
@@ -684,13 +689,15 @@ export function AddDealModal({
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="text-xs font-medium text-text-secondary">Vlastník</span>
+              <span className="text-xs font-medium text-text-secondary">
+                {t("addDealModal.ownerLabel")}
+              </span>
               <select
                 value={form.ownerId}
                 onChange={(e) => setForm((prev) => ({ ...prev, ownerId: e.target.value }))}
                 className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
               >
-                <option value="">Bez vlastníka</option>
+                <option value="">{t("addDealModal.noOwnerOption")}</option>
                 {orgUsers.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.name}
@@ -700,7 +707,7 @@ export function AddDealModal({
             </label>
             <label className="block">
               <span className="text-xs font-medium text-text-secondary">
-                Fáze <span className="text-danger">*</span>
+                {t("addDealModal.stageLabel")} <span className="text-danger">*</span>
               </span>
               <select
                 value={form.stageId}
@@ -724,7 +731,7 @@ export function AddDealModal({
             className="mt-4 rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger"
             role="alert"
           >
-            Obchod se nepodařilo uložit. Zkontrolujte údaje a zkuste to znovu.
+            {t("addDealModal.createError")}
           </p>
         ) : null}
 
@@ -735,7 +742,8 @@ export function AddDealModal({
             className="mt-4 text-xs text-text-tertiary"
             role="status"
           >
-            Pro uložení vyplňte: <span className="text-danger">{missingLabels.join(", ")}</span>.
+            {t("addDealModal.missingSummaryPrefix")}{" "}
+            <span className="text-danger">{missingLabels.join(", ")}</span>.
           </p>
         ) : null}
 
@@ -746,7 +754,7 @@ export function AddDealModal({
             data-testid={testIds.deals.addModal.cancel}
             className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
           >
-            Zrušit
+            {t("addDealModal.cancel")}
           </button>
           <button
             type="submit"
@@ -755,7 +763,7 @@ export function AddDealModal({
             data-testid={testIds.deals.addModal.submit}
             className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {createDeal.isPending ? "Ukládám…" : "Uložit obchod"}
+            {createDeal.isPending ? t("addDealModal.saving") : t("addDealModal.submit")}
           </button>
         </div>
       </form>

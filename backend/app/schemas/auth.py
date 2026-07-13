@@ -31,6 +31,9 @@ class CurrentUser(BaseModel):
     avatar_url: str | None = None
     role: UserRole
     can_invite: bool
+    # Per-user UI language ("cs"/"en"); the frontend syncs i18next to this on
+    # load. Defaults to "cs" for rows created before the column existed.
+    language: str = "cs"
     # Drives the super-admin gear icon in the user menu and the route guard
     # on /admin. Exposed on /auth/me so the frontend doesn't need a probe
     # request to figure out who can see the admin surface.

@@ -1,0 +1,53 @@
+{
+  "contactsPage": {
+    "pageTitle": "Contacts",
+    "listAriaLabel": "Contact list",
+    "detailAriaLabel": "Contact detail",
+    "addButton": "Add contact",
+    "searchLabel": "Search contacts",
+    "searchPlaceholder": "Name, email, phone…",
+    "loading": "Loading…",
+    "loadError": "Failed to load contacts.",
+    "emptyState": {
+      "title": "Add your first contact",
+      "body": "Contacts belong to companies. Once added, you'll see them in the left panel and on the company's detail page.",
+      "cta": "+ Add contact"
+    },
+    "emptyFiltered": {
+      "title": "No results for the selected filters.",
+      "body": "Try adjusting your search.",
+      "cta": "Clear filters"
+    }
+  },
+
+  "addContactModal": {
+    "title": "Add contact",
+    "subtitle": "Enter a name and any additional contact details.",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "companyLabel": "Company",
+    "companyHint": "Contacts belong to a company — you'll see them on its detail page.",
+    "positionOptional": "Position (optional)",
+    "emailOptional": "Email (optional)",
+    "phoneOptional": "Phone (optional)",
+    "saveError": "Failed to save the contact. Check the details and try again.",
+    "cancel": "Cancel",
+    "save": "Save contact",
+    "saving": "Saving…"
+  },
+
+  "contactDetail": {
+    "selectPrompt": "Select a contact from the list.",
+    "loading": "Loading…",
+    "loadError": "Failed to load the contact.",
+    "companySectionTitle": "Company",
+    "noCompany": "This contact doesn't have an assigned company yet.",
+    "assignCompanyCta": "+ Assign company",
+    "assignCompanyError": "Failed to assign the company to the contact.",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "noContactInfo": "No email or phone number has been added for this contact yet.",
+    "noteTitle": "Note"
+  }
+}

@@ -8,12 +8,18 @@
  * REPORTS_TASK §4 widget #9 / `ui-design.md` §5.7.
  */
 
-import { formatMoney, formatNumber, formatPercent } from "@/app/reports/dashboard/format";
+import { useTranslation } from "react-i18next";
+
 import { WidgetError, WidgetFrame, WidgetSkeleton } from "@/app/reports/dashboard/WidgetFrame";
-import { type GlobalFilters, type WidgetEntry, WIDGET_LABEL } from "@/app/reports/dashboard/types";
+import {
+  type GlobalFilters,
+  type WidgetEntry,
+  WIDGET_LABEL_KEY,
+} from "@/app/reports/dashboard/types";
 import { useWidgetQuery } from "@/app/reports/dashboard/useWidgetQuery";
 import { BarChartWidget, type BarRow } from "@/app/reports/dashboard/widgets/BarChartWidget";
-import { useCurrentUser } from "@/auth/useCurrentUser";
+import { formatMoney, formatNumber, formatPercent } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import type { components } from "@/types/api.generated";
 
 type ApiSchemas = components["schemas"];
@@ -36,16 +42,12 @@ function narrowConfig<T extends Config["type"]>(
   return config as Extract<Config, { type: T }>;
 }
 
-function useOrgLocale(): string {
-  const { data } = useCurrentUser();
-  return data?.organization?.locale ?? "cs-CZ";
-}
-
 // ---------- lost_reasons_breakdown ----------
 
 export function LostReasonsBreakdownWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "lost_reasons_breakdown");
-  const locale = useOrgLocale();
+  const { t } = useTranslation("reports");
+  const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["LostReasonsBreakdownResponse"]>({
     type: "lost_reasons_breakdown",
     endpoint: "lost-reasons-breakdown",
@@ -65,7 +67,7 @@ export function LostReasonsBreakdownWidget(props: BaseWidgetProps) {
 
   return (
     <WidgetFrame
-      label={WIDGET_LABEL.lost_reasons_breakdown}
+      label={t(WIDGET_LABEL_KEY.lost_reasons_breakdown)}
       isEditMode={props.isEditMode}
       onRemove={props.onRemove}
     >
@@ -76,8 +78,8 @@ export function LostReasonsBreakdownWidget(props: BaseWidgetProps) {
       ) : (
         <BarChartWidget
           rows={rows}
-          ariaLabel="Důvody prohraných obchodů"
-          emptyMessage="V tomto období nebyly ztracené obchody s vyplněným důvodem."
+          ariaLabel={t("chart.lostReasonsAriaLabel")}
+          emptyMessage={t("chart.lostReasonsEmpty")}
         />
       )}
     </WidgetFrame>
@@ -88,7 +90,8 @@ export function LostReasonsBreakdownWidget(props: BaseWidgetProps) {
 
 export function SalesLeaderboardWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "sales_leaderboard");
-  const locale = useOrgLocale();
+  const { t } = useTranslation("reports");
+  const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["SalesLeaderboardResponse"]>({
     type: "sales_leaderboard",
     endpoint: "sales-leaderboard",
@@ -110,7 +113,7 @@ export function SalesLeaderboardWidget(props: BaseWidgetProps) {
 
   return (
     <WidgetFrame
-      label={WIDGET_LABEL.sales_leaderboard}
+      label={t(WIDGET_LABEL_KEY.sales_leaderboard)}
       isEditMode={props.isEditMode}
       onRemove={props.onRemove}
     >
@@ -122,8 +125,8 @@ export function SalesLeaderboardWidget(props: BaseWidgetProps) {
         <BarChartWidget
           rows={rows}
           highlightIndex={highlightIndex}
-          ariaLabel="Žebříček obchodníků"
-          emptyMessage="V tomto období žádný obchodník nedosáhl měřitelných výsledků."
+          ariaLabel={t("chart.leaderboardAriaLabel")}
+          emptyMessage={t("chart.leaderboardEmpty")}
         />
       )}
     </WidgetFrame>
@@ -142,7 +145,7 @@ function formatLeaderboardValue(
     case "won_value":
       return formatMoney(n, currency, locale);
     case "win_rate":
-      return formatPercent(n, 1);
+      return formatPercent(n, locale, 1);
     case "won_count":
     case "deals_added":
     default:
@@ -154,7 +157,8 @@ function formatLeaderboardValue(
 
 export function RepActivityWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "rep_activity");
-  const locale = useOrgLocale();
+  const { t } = useTranslation("reports");
+  const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["RepActivityResponse"]>({
     type: "rep_activity",
     endpoint: "rep-activity",
@@ -172,7 +176,7 @@ export function RepActivityWidget(props: BaseWidgetProps) {
 
   return (
     <WidgetFrame
-      label={WIDGET_LABEL.rep_activity}
+      label={t(WIDGET_LABEL_KEY.rep_activity)}
       isEditMode={props.isEditMode}
       onRemove={props.onRemove}
     >
@@ -183,8 +187,8 @@ export function RepActivityWidget(props: BaseWidgetProps) {
       ) : (
         <BarChartWidget
           rows={rows}
-          ariaLabel="Aktivita obchodníků"
-          emptyMessage="V tomto období nikdo nepřidal nový obchod."
+          ariaLabel={t("chart.repActivityAriaLabel")}
+          emptyMessage={t("chart.repActivityEmpty")}
         />
       )}
     </WidgetFrame>

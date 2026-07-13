@@ -1,20 +1,23 @@
 /**
- * Date-range presets for the global filter bar — Czech labels paired
- * with the resolved (from, to) ISO date pair the widget endpoints
- * expect. The `custom` preset opens a date picker (built later).
+ * Date-range presets for the global filter bar — catalog keys
+ * (`presets.*` in the `reports` namespace) paired with the resolved
+ * (from, to) ISO date pair the widget endpoints expect. The `custom`
+ * preset opens a date picker (built later).
  */
+
+import type { ParseKeys } from "i18next";
 
 import type { DateRangeFilter } from "@/app/reports/dashboard/types";
 
 export type RangePreset = NonNullable<DateRangeFilter["preset"]>;
 
-export const PRESET_LABEL: Record<RangePreset, string> = {
-  last_7_days: "Posledních 7 dní",
-  last_30_days: "Posledních 30 dní",
-  this_quarter: "Tento kvartál",
-  this_year: "Letošní rok",
-  last_12_months: "Posledních 12 měsíců",
-  custom: "Vlastní",
+export const PRESET_LABEL_KEY: Record<RangePreset, ParseKeys<"reports">> = {
+  last_7_days: "presets.last_7_days",
+  last_30_days: "presets.last_30_days",
+  this_quarter: "presets.this_quarter",
+  this_year: "presets.this_year",
+  last_12_months: "presets.last_12_months",
+  custom: "presets.custom",
 };
 
 export const VISIBLE_PRESETS: RangePreset[] = [

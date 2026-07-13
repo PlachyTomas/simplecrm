@@ -1,5 +1,7 @@
 import { RefreshCcw, Search } from "lucide-react";
 import { useEffect, useRef } from "react";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 
 import { useLookupRegistry } from "@/app/companies/useLookupRegistry";
 import { ApiError } from "@/lib/api";
@@ -8,35 +10,36 @@ import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 import type { BillingFormState, BillingKind } from "./orgBillingForm";
 
-function describeLookupError(error: unknown, ico: string): string {
+function describeLookupError(t: TFunction<"common">, error: unknown, ico: string): string {
   if (error instanceof ApiError) {
     if (error.status === 404) {
-      return `IČO ${ico} nebylo v ARES nalezeno. Zkontrolujte zadání nebo vyplňte ručně.`;
+      return t("orgBillingFields.errors.notFound", { ico });
     }
     if (error.status === 429) {
-      return "Příliš mnoho vyhledávání. Počkejte chvíli a zkuste to znovu.";
+      return t("orgBillingFields.errors.tooMany");
     }
     if (error.status === 400) {
-      return "IČO není ve správném formátu. Zadejte 8 číslic.";
+      return t("orgBillingFields.errors.badFormat");
     }
-    return "ARES je momentálně nedostupný. Zkuste to znovu nebo vyplňte ručně.";
+    return t("orgBillingFields.errors.unavailable");
   }
-  return "Vyhledání selhalo. Zkuste to prosím znovu.";
+  return t("orgBillingFields.errors.generic");
 }
 
 /**
  * Shared, fully-controlled billing form used by every surface that collects
  * a customer's tax-invoice details (settings, onboarding, checkout). The
- * markup + IČO→ARES autofill is ported from `InvoiceDetailsCard`, but the
- * field values live entirely in the `value` prop and every edit flows out
- * through `onChange` — there is no internal field state.
+ * markup + company-ID-to-ARES autofill is ported from `InvoiceDetailsCard`,
+ * but the field values live entirely in the `value` prop and every edit
+ * flows out through `onChange` — there is no internal field state.
  *
- * "Firma" (business) collects IČO / DIČ / legal form; "Soukromá osoba"
- * (individual) drops those and keeps only a name + address. Both modes
- * share the address block and billing e-mail.
+ * Business mode collects the company ID / VAT ID / legal form; individual
+ * mode drops those and keeps only a name + address. Both modes share the
+ * address block and billing e-mail.
  *
- * Pass `savedIco` = the org's stored IČO so hydration doesn't re-trigger
- * ARES; only user-typed changes (IČO that differs from `savedIco`) do.
+ * Pass `savedIco` = the org's stored company ID so hydration doesn't
+ * re-trigger ARES; only user-typed changes (an ID that differs from
+ * `savedIco`) do.
  */
 export function OrgBillingFields({
   value,
@@ -49,18 +52,19 @@ export function OrgBillingFields({
   orgName: string;
   savedIco?: string;
 }) {
-  // The IČO whose ARES result already populated the form. Seeded from
-  // `savedIco` so a hydrated server IČO is treated as "already filled"
-  // and does not auto-fire ARES on mount, preventing clobber of any
-  // custom invoice name. Read in the effect's condition so the loop
+  const { t } = useTranslation("common");
+  // The company ID whose ARES result already populated the form. Seeded
+  // from `savedIco` so a hydrated server ID is treated as "already
+  // filled" and does not auto-fire ARES on mount, preventing clobber of
+  // any custom invoice name. Read in the effect's condition so the loop
   // can't re-fire even if `onChange`/`value` identity churns.
   const lastFilledIcoRef = useRef<string>(savedIco ?? "");
 
   const debouncedIco = useDebouncedValue(value.ico, 250);
   const icoQuery = /^\d{8}$/.test(debouncedIco) ? debouncedIco : "";
-  // Only fire for a *new* 8-digit IČO the user just typed — one that
-  // differs from both the server's saved value and the last ARES-filled
-  // value. This mirrors the guard in InvoiceDetailsCard.
+  // Only fire for a *new* 8-digit company ID the user just typed — one
+  // that differs from both the server's saved value and the last
+  // ARES-filled value. This mirrors the guard in InvoiceDetailsCard.
   const icoChanged =
     !!icoQuery && icoQuery !== (savedIco ?? "") && icoQuery !== lastFilledIcoRef.current;
 
@@ -96,14 +100,14 @@ export function OrgBillingFields({
 
   function onIcoChange(next: string) {
     // Strip non-digits so paste of "270 824 40" or "CZ27082440" still
-    // resolves to a clean 8-digit IČO.
+    // resolves to a clean 8-digit company ID.
     onChange({ ...value, ico: next.replace(/\D/g, "").slice(0, 8) });
   }
 
   const isBusiness = value.kind === "business";
 
   const lookupErrorMessage = lookup.isError
-    ? describeLookupError(lookup.error, debouncedIco)
+    ? describeLookupError(t, lookup.error, debouncedIco)
     : null;
   const icoLength = value.ico.replace(/\D/g, "").length;
   const lookupState: "idle" | "typing" | "loading" | "success" | "not_found" | "error" = !icoChanged
@@ -138,7 +142,7 @@ export function OrgBillingFields({
               : "text-text-secondary hover:text-text-primary"
           }`}
         >
-          Firma
+          {t("orgBillingFields.kindBusiness")}
         </button>
         <button
           type="button"
@@ -151,7 +155,7 @@ export function OrgBillingFields({
               : "text-text-secondary hover:text-text-primary"
           }`}
         >
-          Soukromá osoba
+          {t("orgBillingFields.kindIndividual")}
         </button>
       </div>
 
@@ -159,7 +163,9 @@ export function OrgBillingFields({
         <>
           <label className="block">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-text-secondary">IČO</span>
+              <span className="text-xs font-medium text-text-secondary">
+                {t("orgBillingFields.icoLabel")}
+              </span>
               {lookupState === "typing" || lookupState === "loading" ? (
                 <span className="font-mono text-xs tabular-nums text-text-tertiary">
                   {icoLength} / 8
@@ -178,29 +184,27 @@ export function OrgBillingFields({
             />
             {lookupState === "idle" && value.ico ? (
               <p className="mt-2 text-xs text-text-tertiary">
-                Uložené IČO — pole níže můžete upravit, nebo zadejte jiné IČO pro načtení z ARES.
+                {t("orgBillingFields.icoHintSaved")}
               </p>
             ) : null}
             {lookupState === "idle" && !value.ico ? (
               <p className="mt-2 inline-flex items-center gap-1 text-xs text-text-tertiary">
                 <Search size={12} strokeWidth={1.75} aria-hidden />
-                Zadejte IČO (8 číslic) — automaticky doplníme z ARES.
+                {t("orgBillingFields.icoHintEmpty")}
               </p>
             ) : null}
             {lookupState === "typing" ? (
               <p className="mt-2 text-xs text-text-tertiary">
-                Pokračujte ve psaní — po 8 číslicích spustíme vyhledávání.
+                {t("orgBillingFields.icoHintTyping")}
               </p>
             ) : null}
             {lookupState === "loading" ? (
               <p role="status" className="mt-2 text-xs text-text-tertiary">
-                Hledám v ARES…
+                {t("orgBillingFields.icoHintLoading")}
               </p>
             ) : null}
             {lookupState === "success" ? (
-              <p className="mt-2 text-xs text-success">
-                Údaje doplněny z ARES — můžete je upravit.
-              </p>
+              <p className="mt-2 text-xs text-success">{t("orgBillingFields.icoHintSuccess")}</p>
             ) : null}
             {lookupState === "not_found" && lookupErrorMessage ? (
               <p role="alert" className="mt-2 text-xs text-warning">
@@ -217,14 +221,16 @@ export function OrgBillingFields({
                   onClick={() => void lookup.refetch()}
                   className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:text-accent-hover"
                 >
-                  <RefreshCcw size={12} strokeWidth={1.75} /> Zkusit znovu
+                  <RefreshCcw size={12} strokeWidth={1.75} /> {t("orgBillingFields.icoRetryCta")}
                 </button>
               </div>
             ) : null}
           </label>
 
           <label className="block">
-            <span className="text-xs font-medium text-text-secondary">Název pro fakturu</span>
+            <span className="text-xs font-medium text-text-secondary">
+              {t("orgBillingFields.billingNameLabel")}
+            </span>
             <input
               type="text"
               autoComplete="organization"
@@ -235,13 +241,15 @@ export function OrgBillingFields({
               className={inputClass}
             />
             <span className="mt-2 block text-xs text-text-tertiary">
-              Pokud necháte prázdné, fakturujeme na &bdquo;{orgName}&ldquo;.
+              {t("orgBillingFields.billingNameHint", { orgName })}
             </span>
           </label>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="text-xs font-medium text-text-secondary">DIČ</span>
+              <span className="text-xs font-medium text-text-secondary">
+                {t("orgBillingFields.dicLabel")}
+              </span>
               <input
                 type="text"
                 autoComplete="off"
@@ -251,7 +259,9 @@ export function OrgBillingFields({
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-text-secondary">Právní forma</span>
+              <span className="text-xs font-medium text-text-secondary">
+                {t("orgBillingFields.legalFormLabel")}
+              </span>
               <input
                 type="text"
                 value={value.legal_form}
@@ -263,7 +273,9 @@ export function OrgBillingFields({
         </>
       ) : (
         <label className="block">
-          <span className="text-xs font-medium text-text-secondary">Jméno a příjmení</span>
+          <span className="text-xs font-medium text-text-secondary">
+            {t("orgBillingFields.individualNameLabel")}
+          </span>
           <input
             type="text"
             autoComplete="name"
@@ -278,7 +290,9 @@ export function OrgBillingFields({
 
       {/* Address block (both modes) */}
       <label className="block">
-        <span className="text-xs font-medium text-text-secondary">Ulice</span>
+        <span className="text-xs font-medium text-text-secondary">
+          {t("orgBillingFields.streetLabel")}
+        </span>
         <input
           type="text"
           autoComplete="street-address"
@@ -291,7 +305,9 @@ export function OrgBillingFields({
 
       <div className="grid grid-cols-[2fr_1fr] gap-3">
         <label className="block">
-          <span className="text-xs font-medium text-text-secondary">Město</span>
+          <span className="text-xs font-medium text-text-secondary">
+            {t("orgBillingFields.cityLabel")}
+          </span>
           <input
             type="text"
             autoComplete="address-level2"
@@ -302,7 +318,9 @@ export function OrgBillingFields({
           />
         </label>
         <label className="block">
-          <span className="text-xs font-medium text-text-secondary">PSČ</span>
+          <span className="text-xs font-medium text-text-secondary">
+            {t("orgBillingFields.zipLabel")}
+          </span>
           <input
             type="text"
             inputMode="numeric"
@@ -316,7 +334,9 @@ export function OrgBillingFields({
       </div>
 
       <label className="block">
-        <span className="text-xs font-medium text-text-secondary">Fakturační e-mail</span>
+        <span className="text-xs font-medium text-text-secondary">
+          {t("orgBillingFields.billingEmailLabel")}
+        </span>
         <input
           type="email"
           autoComplete="email"
@@ -326,8 +346,7 @@ export function OrgBillingFields({
           className={inputClass}
         />
         <span className="mt-2 block text-xs text-text-tertiary">
-          Na tuto adresu budeme posílat daňové doklady. Pokud necháte prázdné, použijeme váš
-          přihlašovací e-mail.
+          {t("orgBillingFields.billingEmailHint")}
         </span>
       </label>
     </div>

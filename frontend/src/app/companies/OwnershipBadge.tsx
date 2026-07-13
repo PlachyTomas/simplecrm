@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import { cn } from "@/lib/utils";
 
 interface OwnershipBadgeProps {
@@ -16,6 +18,7 @@ interface OwnershipBadgeProps {
  *   danger  (red)    — < 7 days
  */
 export function OwnershipBadge({ ownershipExpiresAt, ownerUserId, compact }: OwnershipBadgeProps) {
+  const { t } = useTranslation("companies");
   if (!ownerUserId) return null;
   const now = Date.now();
   const expiresMs = new Date(ownershipExpiresAt).getTime();
@@ -24,12 +27,10 @@ export function OwnershipBadge({ ownershipExpiresAt, ownerUserId, compact }: Own
   if (daysRemaining > 30) return null;
 
   const isCritical = daysRemaining <= 7;
-  const label = (() => {
-    if (daysRemaining <= 0) return "K uvolnění";
-    if (daysRemaining === 1) return "1 den";
-    if (daysRemaining < 5) return `${daysRemaining} dny`;
-    return `${daysRemaining} dní`;
-  })();
+  const label =
+    daysRemaining <= 0
+      ? t("ownershipBadge.releasing")
+      : t("ownershipBadge.daysRemaining", { count: daysRemaining });
 
   return (
     <span
@@ -37,9 +38,9 @@ export function OwnershipBadge({ ownershipExpiresAt, ownerUserId, compact }: Own
         "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
         isCritical ? "bg-danger-subtle text-danger" : "bg-warning-subtle text-warning",
       )}
-      title={`Zbývá ${daysRemaining} dní do automatického uvolnění`}
+      title={t("ownershipBadge.expiresTitle", { count: daysRemaining })}
     >
-      {compact ? label : `Uvolní se za ${label}`}
+      {compact ? label : `${t("ownershipBadge.releasesInPrefix")} ${label}`}
     </span>
   );
 }

@@ -1,3 +1,4 @@
+import type { ParseKeys, TFunction } from "i18next";
 import {
   createColumnHelper,
   flexRender,
@@ -6,8 +7,11 @@ import {
 } from "@tanstack/react-table";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { ADMIN_PAGE_SIZE, type AdminOrgRow, useAdminOrgList } from "@/admin/hooks";
+import { formatDate, formatRelativeDays } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { cn } from "@/lib/utils";
 
@@ -16,39 +20,43 @@ interface OrgListProps {
   onSelect: (orgId: string, userCount: number) => void;
 }
 
-const dateFmt = new Intl.DateTimeFormat("cs-CZ", { dateStyle: "short" });
-const relFmt = new Intl.RelativeTimeFormat("cs-CZ", { numeric: "auto" });
+const ORG_STATUS_KEY: Record<AdminOrgRow["status"], ParseKeys<"admin">> = {
+  trialing: "orgList.status.trialing",
+  pending_activation: "orgList.status.pendingActivation",
+  active: "orgList.status.active",
+  past_due: "orgList.status.pastDue",
+  canceled: "orgList.status.canceled",
+};
 
-function formatRelativeDays(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const ms = new Date(iso).getTime() - Date.now();
-  const days = Math.round(ms / (24 * 3600 * 1000));
-  if (Math.abs(days) >= 1) return relFmt.format(days, "day");
-  const hours = Math.round(ms / (3600 * 1000));
-  return relFmt.format(hours, "hour");
-}
-
-function statusPillSpec(row: AdminOrgRow): { label: string; className: string } {
+function statusPillSpec(
+  row: AdminOrgRow,
+  t: TFunction<"admin">,
+): { label: string; className: string } {
   if (row.is_comp) {
-    return { label: "Komplementární", className: "bg-info-subtle text-info" };
+    return { label: t("orgList.status.complementary"), className: "bg-info-subtle text-info" };
   }
   switch (row.status) {
     case "trialing":
-      return { label: "Zkušební verze", className: "bg-info-subtle text-info" };
+      return { label: t(ORG_STATUS_KEY.trialing), className: "bg-info-subtle text-info" };
     case "pending_activation":
-      return { label: "Čeká na platbu", className: "bg-warning-subtle text-warning" };
+      return {
+        label: t(ORG_STATUS_KEY.pending_activation),
+        className: "bg-warning-subtle text-warning",
+      };
     case "active":
-      return { label: "Aktivní", className: "bg-success-subtle text-success" };
+      return { label: t(ORG_STATUS_KEY.active), className: "bg-success-subtle text-success" };
     case "past_due":
-      return { label: "Po splatnosti", className: "bg-warning-subtle text-warning" };
+      return { label: t(ORG_STATUS_KEY.past_due), className: "bg-warning-subtle text-warning" };
     case "canceled":
-      return { label: "Zrušeno", className: "bg-danger-subtle text-danger" };
+      return { label: t(ORG_STATUS_KEY.canceled), className: "bg-danger-subtle text-danger" };
     default:
       return { label: row.status, className: "bg-surface-overlay text-text-tertiary" };
   }
 }
 
 export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
+  const { t } = useTranslation("admin");
+  const locale = useLocale();
   const [searchInput, setSearchInput] = useState("");
   const [page, setPage] = useState(0);
   const debouncedSearch = useDebouncedValue(searchInput, 300);
@@ -64,18 +72,18 @@ export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
     const helper = createColumnHelper<AdminOrgRow>();
     return [
       helper.accessor("name", {
-        header: "Název",
+        header: t("orgList.columns.name"),
         cell: (info) => <span className="font-medium text-text-primary">{info.getValue()}</span>,
       }),
       helper.accessor("plan_display", {
-        header: "Plán",
+        header: t("orgList.columns.plan"),
         cell: (info) => <span className="text-text-secondary">{info.getValue()}</span>,
       }),
       helper.display({
         id: "status",
-        header: "Stav",
+        header: t("orgList.columns.status"),
         cell: ({ row }) => {
-          const spec = statusPillSpec(row.original);
+          const spec = statusPillSpec(row.original, t);
           return (
             <span
               className={cn(
@@ -89,27 +97,29 @@ export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
         },
       }),
       helper.accessor("user_count", {
-        header: "Uživatelé",
+        header: t("orgList.columns.userCount"),
         cell: (info) => <span className="tabular-nums text-text-secondary">{info.getValue()}</span>,
       }),
       helper.display({
         id: "ends_at",
-        header: "Končí",
+        header: t("orgList.columns.endsAt"),
         cell: ({ row }) => {
           const iso = row.original.current_period_ends_at ?? row.original.trial_ends_at;
           return (
-            <span className="text-text-secondary">{iso ? dateFmt.format(new Date(iso)) : "—"}</span>
+            <span className="text-text-secondary">
+              {iso ? formatDate(iso, locale, { dateStyle: "short" }) : "—"}
+            </span>
           );
         },
       }),
       helper.accessor("last_activity_at", {
-        header: "Poslední aktivita",
+        header: t("orgList.columns.lastActivity"),
         cell: (info) => (
-          <span className="text-text-tertiary">{formatRelativeDays(info.getValue())}</span>
+          <span className="text-text-tertiary">{formatRelativeDays(info.getValue(), locale)}</span>
         ),
       }),
     ];
-  }, []);
+  }, [locale, t]);
 
   const table = useReactTable({
     data: items,
@@ -139,24 +149,21 @@ export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
               setSearchInput(e.target.value);
               setPage(0);
             }}
-            placeholder="Hledat organizaci…"
+            placeholder={t("orgList.searchPlaceholder")}
             className="block h-10 w-full rounded-md border border-border bg-bg pl-9 pr-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
           />
         </div>
-        <span className="text-xs text-text-tertiary">
-          {total}{" "}
-          {total === 1 ? "organizace" : total >= 2 && total <= 4 ? "organizace" : "organizací"}
-        </span>
+        <span className="text-xs text-text-tertiary">{t("orgList.count", { count: total })}</span>
       </div>
 
       {isPending ? (
-        <div className="p-6 text-sm text-text-tertiary">Načítání…</div>
+        <div className="p-6 text-sm text-text-tertiary">{t("orgList.loading")}</div>
       ) : isError || data === null ? (
         <div className="p-6 text-sm text-danger" role="alert">
-          Načítání seznamu se nezdařilo.
+          {t("orgList.loadError")}
         </div>
       ) : items.length === 0 ? (
-        <div className="p-6 text-sm text-text-tertiary">Žádné organizace nevyhovují filtru.</div>
+        <div className="p-6 text-sm text-text-tertiary">{t("orgList.empty")}</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -198,7 +205,11 @@ export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
 
       <div className="flex items-center justify-between gap-3 border-t border-border-subtle p-3 text-xs text-text-tertiary">
         <span>
-          {total > 0 ? `${offset + 1}–${end} z ${total}` : isFetching ? "Načítání…" : "0 z 0"}
+          {total > 0
+            ? t("orgList.pageRange", { from: offset + 1, to: end, total })
+            : isFetching
+              ? t("orgList.loading")
+              : t("orgList.noResults")}
         </span>
         <div className="flex items-center gap-1">
           <button
@@ -206,7 +217,7 @@ export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={!hasPrev}
             className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-text-secondary hover:bg-surface-overlay disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label="Předchozí strana"
+            aria-label={t("orgList.prevPage")}
           >
             <ChevronLeft size={16} strokeWidth={1.75} />
           </button>
@@ -215,7 +226,7 @@ export function OrgList({ selectedOrgId, onSelect }: OrgListProps) {
             onClick={() => setPage((p) => p + 1)}
             disabled={!hasNext}
             className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-text-secondary hover:bg-surface-overlay disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label="Další strana"
+            aria-label={t("orgList.nextPage")}
           >
             <ChevronRight size={16} strokeWidth={1.75} />
           </button>

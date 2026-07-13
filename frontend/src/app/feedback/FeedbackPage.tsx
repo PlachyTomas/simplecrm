@@ -9,9 +9,11 @@
  * network so the user gets fast feedback.
  */
 
+import type { ParseKeys } from "i18next";
 import { useMutation } from "@tanstack/react-query";
 import { Bug, Check, Lightbulb, Paperclip, Send, X } from "lucide-react";
 import { type FormEvent, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "@/auth/useAuth";
 import { ApiError, apiFetch } from "@/lib/api";
@@ -30,28 +32,29 @@ const MAX_BYTES_TOTAL = 15 * 1024 * 1024;
 
 interface KindOption {
   value: FeedbackKind;
-  label: string;
-  description: string;
+  labelKey: ParseKeys<"common">;
+  descriptionKey: ParseKeys<"common">;
   icon: typeof Bug;
 }
 
 const KIND_OPTIONS: KindOption[] = [
   {
     value: "bug",
-    label: "Nahlásit chybu",
-    description: "Něco nefunguje, jak má.",
+    labelKey: "feedback.kinds.bug.label",
+    descriptionKey: "feedback.kinds.bug.description",
     icon: Bug,
   },
   {
     value: "improvement",
-    label: "Návrh na vylepšení",
-    description: "Nápad, co by usnadnilo práci.",
+    labelKey: "feedback.kinds.improvement.label",
+    descriptionKey: "feedback.kinds.improvement.description",
     icon: Lightbulb,
   },
 ];
 
 export function FeedbackPage() {
-  usePageTitle("Zpětná vazba");
+  const { t } = useTranslation("common");
+  usePageTitle(t("feedback.pageTitle"));
   const { accessToken } = useAuth();
   const toast = useToast();
 
@@ -75,22 +78,22 @@ export function FeedbackPage() {
     const next: File[] = [...files];
     for (const file of Array.from(incoming)) {
       if (next.length >= MAX_ATTACHMENTS) {
-        setAttachmentError(`Najednou lze přiložit nejvýše ${MAX_ATTACHMENTS} souborů.`);
+        setAttachmentError(t("feedback.errors.tooManyFiles", { max: MAX_ATTACHMENTS }));
         break;
       }
       if (!ALLOWED_TYPES.has(file.type)) {
-        setAttachmentError(`Soubor „${file.name}" není podporovaný (PNG, JPEG, WebP).`);
+        setAttachmentError(t("feedback.errors.unsupportedType", { name: file.name }));
         continue;
       }
       if (file.size > MAX_BYTES_PER_FILE) {
-        setAttachmentError(`Soubor „${file.name}" přesahuje 5 MB.`);
+        setAttachmentError(t("feedback.errors.fileTooLarge", { name: file.name }));
         continue;
       }
       next.push(file);
     }
     const total = next.reduce((sum, f) => sum + f.size, 0);
     if (total > MAX_BYTES_TOTAL) {
-      setAttachmentError("Souhrnná velikost příloh přesahuje 15 MB.");
+      setAttachmentError(t("feedback.errors.totalTooLarge"));
       return;
     }
     setFiles(next);
@@ -115,7 +118,7 @@ export function FeedbackPage() {
 
     try {
       await mutation.mutateAsync(formData);
-      toast.success("Zpráva odeslána. Děkujeme!");
+      toast.success(t("feedback.toastSuccess"));
       setCaption("");
       setBody("");
       setFiles([]);
@@ -123,10 +126,10 @@ export function FeedbackPage() {
     } catch (err) {
       if (err instanceof ApiError) {
         const detail = (err.body as { detail?: unknown })?.detail;
-        const message = typeof detail === "string" ? detail : "Odeslání se nezdařilo.";
+        const message = typeof detail === "string" ? detail : t("feedback.errors.submitFailedGeneric");
         toast.error(message);
       } else {
-        toast.error("Odeslání se nezdařilo. Zkuste to prosím znovu.");
+        toast.error(t("feedback.errors.submitFailedRetry"));
       }
     }
   }
@@ -134,10 +137,8 @@ export function FeedbackPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 md:px-8 md:py-8">
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold">Zpětná vazba</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Něco nefunguje, nebo vám něco chybí? Napište nám — čteme každou zprávu.
-        </p>
+        <h1 className="text-2xl font-semibold">{t("feedback.pageTitle")}</h1>
+        <p className="mt-1 text-sm text-text-secondary">{t("feedback.intro")}</p>
       </header>
 
       <form
@@ -146,10 +147,10 @@ export function FeedbackPage() {
       >
         <fieldset>
           <legend className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
-            Co chcete nahlásit?
+            {t("feedback.kindLegend")}
           </legend>
           <div role="radiogroup" className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {KIND_OPTIONS.map(({ value, label, description, icon: Icon }) => {
+            {KIND_OPTIONS.map(({ value, labelKey, descriptionKey, icon: Icon }) => {
               const selected = kind === value;
               return (
                 <label
@@ -176,8 +177,8 @@ export function FeedbackPage() {
                     className={selected ? "text-accent" : "text-text-secondary"}
                   />
                   <div>
-                    <p className="text-sm font-medium text-text-primary">{label}</p>
-                    <p className="mt-0.5 text-xs text-text-tertiary">{description}</p>
+                    <p className="text-sm font-medium text-text-primary">{t(labelKey)}</p>
+                    <p className="mt-0.5 text-xs text-text-tertiary">{t(descriptionKey)}</p>
                   </div>
                 </label>
               );
@@ -187,7 +188,7 @@ export function FeedbackPage() {
 
         <label className="block">
           <span className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
-            Stručný popis
+            {t("feedback.captionLabel")}
           </span>
           <input
             type="text"
@@ -195,14 +196,14 @@ export function FeedbackPage() {
             maxLength={200}
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
-            placeholder="Např. Po kliknutí na šipku karta v kanbanu zmizí."
+            placeholder={t("feedback.captionPlaceholder")}
             className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
           />
         </label>
 
         <label className="block">
           <span className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
-            Detail
+            {t("feedback.bodyLabel")}
           </span>
           <textarea
             required
@@ -210,22 +211,22 @@ export function FeedbackPage() {
             maxLength={10_000}
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            placeholder="Popište, co jste dělali, co jste čekali a co se místo toho stalo."
+            placeholder={t("feedback.bodyPlaceholder")}
             className="mt-2 block w-full rounded-md border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
           />
         </label>
 
         <fieldset>
           <legend className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
-            Snímky obrazovky (volitelné)
+            {t("feedback.attachmentsLegend")}
           </legend>
           <p className="mt-1 text-xs text-text-tertiary">
-            Až {MAX_ATTACHMENTS} souborů, PNG/JPEG/WebP, max. 5 MB každý.
+            {t("feedback.attachmentsHint", { max: MAX_ATTACHMENTS })}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-border bg-surface-overlay px-3 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary">
               <Paperclip size={14} strokeWidth={1.75} aria-hidden />
-              Přidat snímek
+              {t("feedback.addScreenshot")}
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
@@ -263,7 +264,7 @@ export function FeedbackPage() {
                   <button
                     type="button"
                     onClick={() => removeFile(index)}
-                    aria-label={`Odebrat ${file.name}`}
+                    aria-label={t("feedback.removeFileAriaLabel", { name: file.name })}
                     className="inline-flex h-6 w-6 items-center justify-center rounded text-text-tertiary transition-colors duration-fast hover:bg-danger-subtle hover:text-danger"
                   >
                     <X size={14} strokeWidth={1.75} />
@@ -284,9 +285,9 @@ export function FeedbackPage() {
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle pt-5">
           <p className="text-xs text-text-tertiary">
-            Zpráva půjde na{" "}
-            <code className="font-mono text-text-secondary">podpora@simplecrm.cz</code> a odpovíme
-            vám na váš e-mail.
+            {t("feedback.supportEmailPrefix")}{" "}
+            <code className="font-mono text-text-secondary">podpora@simplecrm.cz</code>{" "}
+            {t("feedback.supportEmailSuffix")}
           </p>
           <button
             type="submit"
@@ -298,7 +299,7 @@ export function FeedbackPage() {
             ) : (
               <Send size={16} strokeWidth={1.75} aria-hidden />
             )}
-            {mutation.isPending ? "Odesílám…" : "Odeslat zpětnou vazbu"}
+            {mutation.isPending ? t("feedback.submitting") : t("feedback.submit")}
           </button>
         </div>
       </form>

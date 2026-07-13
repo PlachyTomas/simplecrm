@@ -1,5 +1,7 @@
+import type { TFunction } from "i18next";
 import { Paperclip, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { type SentEmailOut, useSendEmail } from "@/app/emails/useEmails";
 import { useModalDialog } from "@/lib/useModalDialog";
@@ -40,13 +42,13 @@ const ALLOWED_ATTACHMENT_TYPES = new Set([
 ]);
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
-/** Czech validation message for an attachment, or `null` when it's allowed. */
-function attachmentError(file: File): string | null {
+/** Validation message for an attachment, or `null` when it's allowed. */
+function attachmentError(file: File, t: TFunction<"emails">): string | null {
   if (file.size > MAX_ATTACHMENT_BYTES) {
-    return `Soubor „${file.name}" je větší než 10 MB.`;
+    return t("compose.attachmentTooLarge", { filename: file.name });
   }
   if (!ALLOWED_ATTACHMENT_TYPES.has(file.type)) {
-    return `Soubor „${file.name}" má nepodporovaný typ. Povolené: PDF, obrázky, Word, Excel, text.`;
+    return t("compose.attachmentUnsupportedType", { filename: file.name });
   }
   return null;
 }
@@ -62,6 +64,7 @@ function ChipsInput({
   onChange: (next: string[]) => void;
   placeholder?: string;
 }) {
+  const { t } = useTranslation("emails");
   const [draft, setDraft] = useState("");
   const commit = (raw: string) => {
     const parts = splitAddresses(raw);
@@ -79,7 +82,7 @@ function ChipsInput({
             {addr}
             <button
               type="button"
-              aria-label={`Odebrat ${addr}`}
+              aria-label={t("compose.removeRecipient", { address: addr })}
               onClick={() => onChange(value.filter((_, j) => j !== i))}
               className="text-text-tertiary hover:text-danger"
             >
@@ -122,6 +125,7 @@ export function EmailComposeModal({
   defaultTo,
   replyTo,
 }: EmailComposeModalProps) {
+  const { t } = useTranslation("emails");
   const dialogRef = useModalDialog<HTMLDivElement>(onClose, open);
   const send = useSendEmail();
   const toast = useToast();
@@ -145,7 +149,7 @@ export function EmailComposeModal({
 
   if (!open) return null;
 
-  const hasInvalidAttachment = files.some((f) => attachmentError(f) !== null);
+  const hasInvalidAttachment = files.some((f) => attachmentError(f, t) !== null);
   const canSend =
     to.length > 0 && subject.trim().length > 0 && !hasInvalidAttachment && !send.isPending;
 
@@ -165,13 +169,15 @@ export function EmailComposeModal({
         attachments: files,
       });
       if (result.status === "sent") {
-        toast.success("E-mail odeslán.");
+        toast.success(t("compose.sentToast"));
         onClose();
       } else {
-        toast.error(`E-mail se nepodařilo odeslat: ${result.error ?? "neznámá chyba"}`);
+        toast.error(
+          t("compose.sendErrorToast", { error: result.error ?? t("compose.unknownError") }),
+        );
       }
     } catch {
-      toast.error("E-mail se nepodařilo odeslat.");
+      toast.error(t("compose.sendErrorToastGeneric"));
     }
   }
 
@@ -190,12 +196,12 @@ export function EmailComposeModal({
       <div className="my-auto w-full max-w-xl rounded-lg border border-border bg-surface p-6 shadow-lg">
         <div className="mb-4 flex items-start justify-between">
           <h2 id="email-compose-title" className="text-lg font-semibold">
-            {replyTo ? "Odpovědět" : "Nový e-mail"}
+            {replyTo ? t("compose.titleReply") : t("compose.titleNew")}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Zavřít"
+            aria-label={t("compose.close")}
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-tertiary hover:bg-surface-overlay hover:text-text-primary"
           >
             <X size={18} strokeWidth={1.75} aria-hidden />
@@ -203,16 +209,28 @@ export function EmailComposeModal({
         </div>
 
         <div className="space-y-3">
-          <ChipsInput label="Komu" value={to} onChange={setTo} placeholder="adresa@firma.cz" />
-          <ChipsInput label="Kopie (CC)" value={cc} onChange={setCc} placeholder="volitelné" />
           <ChipsInput
-            label="Skrytá kopie (BCC)"
+            label={t("compose.toLabel")}
+            value={to}
+            onChange={setTo}
+            placeholder={t("compose.toPlaceholder")}
+          />
+          <ChipsInput
+            label={t("compose.ccLabel")}
+            value={cc}
+            onChange={setCc}
+            placeholder={t("compose.optionalPlaceholder")}
+          />
+          <ChipsInput
+            label={t("compose.bccLabel")}
             value={bcc}
             onChange={setBcc}
-            placeholder="volitelné"
+            placeholder={t("compose.optionalPlaceholder")}
           />
           <label className="block">
-            <span className="text-xs font-medium text-text-secondary">Předmět</span>
+            <span className="text-xs font-medium text-text-secondary">
+              {t("compose.subjectLabel")}
+            </span>
             <input
               type="text"
               value={subject}
@@ -222,7 +240,9 @@ export function EmailComposeModal({
             />
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-text-secondary">Zpráva</span>
+            <span className="text-xs font-medium text-text-secondary">
+              {t("compose.bodyLabel")}
+            </span>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -234,7 +254,7 @@ export function EmailComposeModal({
           <div>
             <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-text-secondary hover:text-text-primary">
               <Paperclip size={14} strokeWidth={1.75} aria-hidden />
-              Přidat přílohu
+              {t("compose.addAttachment")}
               <input
                 type="file"
                 multiple
@@ -249,7 +269,7 @@ export function EmailComposeModal({
             {files.length ? (
               <ul className="mt-2 space-y-1">
                 {files.map((f, i) => {
-                  const error = attachmentError(f);
+                  const error = attachmentError(f, t);
                   return (
                     <li
                       key={`${f.name}-${i}`}
@@ -259,7 +279,7 @@ export function EmailComposeModal({
                         <span className="truncate">{f.name}</span>
                         <button
                           type="button"
-                          aria-label={`Odebrat ${f.name}`}
+                          aria-label={t("compose.removeFile", { filename: f.name })}
                           onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
                           className="text-text-tertiary hover:text-danger"
                         >
@@ -285,7 +305,7 @@ export function EmailComposeModal({
             onClick={onClose}
             className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary hover:bg-surface-elevated hover:text-text-primary"
           >
-            Zrušit
+            {t("compose.cancel")}
           </button>
           <button
             type="button"
@@ -296,7 +316,7 @@ export function EmailComposeModal({
               !canSend && "cursor-not-allowed opacity-60",
             )}
           >
-            {send.isPending ? "Odesílám…" : "Odeslat"}
+            {send.isPending ? t("compose.sending") : t("compose.send")}
           </button>
         </div>
       </div>

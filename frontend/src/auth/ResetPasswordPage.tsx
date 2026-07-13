@@ -1,5 +1,6 @@
 import { Sparkles } from "lucide-react";
 import { type FormEvent, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { authErrorCode, authErrorMessage, confirmPasswordReset } from "@/auth/api";
@@ -9,7 +10,8 @@ import { ThemeToggle } from "@/lib/ThemeToggle";
 import { usePageTitle } from "@/lib/usePageTitle";
 
 export function ResetPasswordPage() {
-  usePageTitle("Nastavení nového hesla");
+  const { t } = useTranslation("auth");
+  usePageTitle(t("resetPassword.heading"));
   const [params] = useSearchParams();
   const token = params.get("token") ?? "";
   const navigate = useNavigate();
@@ -24,7 +26,7 @@ export function ResetPasswordPage() {
     e.preventDefault();
     setErrorMessage(null);
     if (password !== confirm) {
-      setErrorMessage("Hesla se neshodují.");
+      setErrorMessage(t("resetPassword.errors.mismatch"));
       return;
     }
     if (!token) {
@@ -42,15 +44,12 @@ export function ResetPasswordPage() {
         if (code === "token_invalid") {
           setTokenInvalid(true);
         } else if (code === "weak_password") {
-          setErrorMessage(
-            authErrorMessage(err.body) ??
-              "Heslo nesplňuje požadavky (alespoň 12 znaků, písmeno + číslice).",
-          );
+          setErrorMessage(authErrorMessage(err.body) ?? t("shared.weakPasswordFallback"));
         } else {
-          setErrorMessage("Nastavení hesla se nezdařilo. Zkuste to prosím znovu.");
+          setErrorMessage(t("resetPassword.errors.generic"));
         }
       } else {
-        setErrorMessage("Nastavení hesla se nezdařilo.");
+        setErrorMessage(t("resetPassword.errors.genericNoResponse"));
       }
     } finally {
       setSubmitting(false);
@@ -73,22 +72,24 @@ export function ResetPasswordPage() {
           <Sparkles size={24} strokeWidth={1.75} />
         </div>
         <h1 id="reset-title" className="text-2xl font-semibold">
-          Nastavení nového hesla
+          {t("resetPassword.heading")}
         </h1>
 
         {tokenInvalid ? (
           <div className="mt-4 space-y-3">
             <p role="alert" className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger">
-              Tento odkaz pro obnovení hesla je neplatný nebo již vypršel.
+              {t("resetPassword.tokenInvalid")}
             </p>
             <Link to="/forgot-password" className="text-sm text-accent underline">
-              Vyžádat si nový odkaz
+              {t("resetPassword.requestNewLink")}
             </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-left" noValidate>
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-text-secondary">Nové heslo</span>
+              <span className="mb-1 block text-sm font-medium text-text-secondary">
+                {t("resetPassword.newPasswordLabel")}
+              </span>
               <input
                 type="password"
                 autoComplete="new-password"
@@ -99,12 +100,12 @@ export function ResetPasswordPage() {
                 className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent"
               />
               <span className="mt-1 block text-xs text-text-tertiary">
-                Alespoň 12 znaků, jedno písmeno a jedna číslice.
+                {t("shared.passwordHint")}
               </span>
             </label>
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-text-secondary">
-                Heslo znovu
+                {t("resetPassword.confirmPasswordLabel")}
               </span>
               <input
                 type="password"
@@ -125,7 +126,7 @@ export function ResetPasswordPage() {
               disabled={submitting}
               className="inline-flex h-10 w-full items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent hover:bg-accent-hover disabled:opacity-50"
             >
-              {submitting ? "Ukládání…" : "Nastavit nové heslo"}
+              {submitting ? t("shared.saving") : t("resetPassword.submit")}
             </button>
           </form>
         )}

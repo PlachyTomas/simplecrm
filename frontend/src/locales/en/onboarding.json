@@ -1,0 +1,89 @@
+{
+  "invite": {
+    "pageTitle": "Organization invitation",
+    "loading": "Loading invitation…",
+    "heading": "Invitation to {{orgName}}",
+    "invitedAsPrefix": "You've been invited as",
+    "toTeamPrefix": "to the team",
+    "sentToPrefix": "The invitation was sent to",
+    "nameLabel": "Your name",
+    "passwordLabel": "Password",
+    "passwordHint": "At least 12 characters, one letter and one digit.",
+    "submitting": "Sending…",
+    "submit": "Accept invitation",
+    "or": "or",
+    "googleCta": "Accept with Google",
+    "invalidHeading": "Invitation isn't valid",
+    "invalidHint": "If you think this is a mistake, ask your administrator for a new link.",
+    "notFoundMessage": "The invitation doesn't exist or is invalid.",
+    "loadFailedMessage": "Couldn't load the invitation.",
+    "roles": {
+      "admin": "administrator",
+      "manager": "manager",
+      "salesperson": "salesperson"
+    },
+    "errors": {
+      "invitation_email_mismatch": "The invitation was issued for a different email than the one you logged in with.",
+      "invitation_expired": "This invitation has expired. Ask your administrator for a new one.",
+      "invitation_consumed": "This invitation has already been used.",
+      "invitation_not_found": "The invitation wasn't found.",
+      "user_already_in_organization": "This email already belongs to another organization. Use a different account, or leave your current organization first.",
+      "weak_password": "Password doesn't meet the requirements (at least 12 characters, a letter + a digit).",
+      "generic": "Accepting the invitation failed. Please try again.",
+      "genericNoResponse": "Accepting the invitation failed."
+    }
+  },
+  "createOrg": {
+    "pageTitle": "Create organization",
+    "heading": "Create your organization",
+    "signOut": "Sign out",
+    "stepsAriaLabel": "Organization creation steps",
+    "steps": {
+      "org": "Organization",
+      "users": "Users",
+      "plan": "Plan"
+    },
+    "back": "Back",
+    "next": "Continue",
+    "submitting": "Creating…",
+    "submit": "Create organization",
+    "inviteHint": "Invited by colleagues? Use the link that came in your email instead of creating a new organization.",
+    "planMonthly": "Monthly",
+    "planAnnual": "Annual",
+    "annualBadge": "Save 16%",
+    "perMonth": "month",
+    "perYear": "year",
+    "seatsPhrase_one": "With {{count}} salesperson",
+    "seatsPhrase_other": "With {{count}} salespeople",
+    "errors": {
+      "nameRequired": "Enter the organization name.",
+      "seatRange": "Number of users must be between 1 and 500.",
+      "generic": "Creation failed."
+    },
+    "nameStep": {
+      "intro": "Start with a name. Company details can be filled in anytime later.",
+      "label": "Organization name",
+      "placeholder": "Acme Inc."
+    },
+    "seatsStep": {
+      "intro": "How many salespeople will use SimpleCRM? You can change this anytime later in Settings.",
+      "label": "Number of salespeople",
+      "hint": "This value acts as the invite limit and drives the resulting billing.",
+      "billingWouldTotal": "billing would total",
+      "hint2": "We bill only after the 30-day trial ends. You'll choose the price in the next step."
+    },
+    "planStep": {
+      "trialHeading": "Free 30-day trial.",
+      "dueDatePrefix": "Before the trial ends we'll send you an invoice due on the day the trial ends (",
+      "dueDateSuffix": "). You can pay by card or bank transfer.",
+      "statusPrefix": "You'll find the payment status and further documents anytime in",
+      "statusLocation": "Settings → Subscription",
+      "ariaLabel": "Plan for the paid period"
+    },
+    "planCard": {
+      "weInvoice": "we bill",
+      "savingsPrefix": "You'll save",
+      "savingsSuffix": "compared to the monthly plan."
+    }
+  }
+}

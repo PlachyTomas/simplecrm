@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { AddCompanyModal } from "@/app/companies/AddCompanyModal";
@@ -38,7 +39,6 @@ import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings"
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
-import { csNoun } from "@/lib/i18n/nouns";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
@@ -47,10 +47,6 @@ const PAGE_SIZE = 25;
 
 const FILTER_SELECT_CLASS =
   "h-9 max-w-[12rem] truncate rounded-md border border-border bg-surface-overlay px-2 text-xs font-medium text-text-secondary focus:border-accent focus:outline-none";
-
-function pluralizeCompanies(n: number): string {
-  return `${n} ${csNoun(n, "firma")}`;
-}
 
 // Sortable React Table column ids → backend sort keys. The list is
 // authoritative: any column not in this map renders without a sort
@@ -80,7 +76,8 @@ function readStoredViewMode(): ViewMode {
 }
 
 export function CompaniesListPage() {
-  usePageTitle("Firmy");
+  const { t } = useTranslation("companies");
+  usePageTitle(t("companiesList.pageTitle"));
   const [modalOpen, setModalOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [smtpPromptOpen, setSmtpPromptOpen] = useState(false);
@@ -89,7 +86,7 @@ export function CompaniesListPage() {
   // query string; `searchInput` stays local for responsive typing and is
   // reflected into the URL once debounced.
   const [searchParams, setSearchParams] = useSearchParams();
-  // Vlastník dropdown value: "all" (Vše) | "unowned" (Nezabrané) | a user id.
+  // Owner filter value: "all" | "unowned" | a user id.
   const ownerFilter = searchParams.get("owner") ?? "all";
   const industry = searchParams.get("industry") ?? "";
   const city = searchParams.get("city") ?? "";
@@ -211,7 +208,7 @@ export function CompaniesListPage() {
     const helper = createColumnHelper<CompanyOut>();
     return [
       helper.accessor("name", {
-        header: "Název",
+        header: t("companiesList.columns.name"),
         cell: (info) => {
           const row = info.row.original;
           return (
@@ -227,19 +224,21 @@ export function CompaniesListPage() {
         },
       }),
       helper.accessor("ico", {
-        header: "IČO",
+        header: t("companiesList.columns.ico"),
         enableSorting: false,
         cell: (info) => (
           <span className="font-mono text-text-secondary">{info.getValue() ?? "—"}</span>
         ),
       }),
       helper.accessor("owner_user_id", {
-        header: "Vlastník",
+        header: t("companiesList.columns.owner"),
         enableSorting: false,
         cell: (info) => {
           const ownerId = info.getValue();
           if (!ownerId) {
-            return <span className="text-text-tertiary">— ve sdíleném poolu</span>;
+            return (
+              <span className="text-text-tertiary">{t("companiesList.columns.ownerPool")}</span>
+            );
           }
           const owner = usersById.get(ownerId);
           if (!owner) return <span className="text-text-tertiary">—</span>;
@@ -264,7 +263,7 @@ export function CompaniesListPage() {
       }),
       helper.accessor("ownership_expires_at", {
         id: "ownership_expires_at",
-        header: "Zámek vyprší",
+        header: t("companiesList.columns.lockExpires"),
         cell: (info) => {
           const value = info.getValue();
           if (!value || !info.row.original.owner_user_id) {
@@ -279,7 +278,7 @@ export function CompaniesListPage() {
       }),
       helper.accessor("last_order_at", {
         id: "last_order_at",
-        header: "Poslední obchod",
+        header: t("companiesList.columns.lastOrder"),
         cell: (info) => {
           const value = info.getValue();
           return (
@@ -291,7 +290,7 @@ export function CompaniesListPage() {
       }),
       helper.accessor("updated_at", {
         id: "last_activity_at",
-        header: "Poslední aktivita",
+        header: t("companiesList.columns.lastActivity"),
         cell: (info) => (
           <span className="text-text-tertiary">
             {dateFmt ? dateFmt.format(new Date(info.getValue())) : info.getValue()}
@@ -299,7 +298,7 @@ export function CompaniesListPage() {
         ),
       }),
     ];
-  }, [dateFmt, usersById]);
+  }, [dateFmt, t, usersById]);
 
   // Dense Tabulka mode: classic data-grid with every relevant field
   // visible at once, including phone/email pulled from the company's
@@ -311,13 +310,13 @@ export function CompaniesListPage() {
     return [
       helper.display({
         id: "rownum",
-        header: "#",
+        header: t("companiesList.columns.rownum"),
         cell: (info) => (
           <span className="tabular-nums text-text-tertiary">{offset + info.row.index + 1}</span>
         ),
       }),
       helper.accessor("name", {
-        header: "Název",
+        header: t("companiesList.columns.name"),
         cell: (info) => {
           const row = info.row.original;
           return (
@@ -333,14 +332,14 @@ export function CompaniesListPage() {
         },
       }),
       helper.accessor("ico", {
-        header: "IČO",
+        header: t("companiesList.columns.ico"),
         enableSorting: false,
         cell: (info) => (
           <span className="font-mono text-text-secondary">{info.getValue() ?? "—"}</span>
         ),
       }),
       helper.accessor("dic", {
-        header: "DIČ",
+        header: t("companiesList.columns.dic"),
         enableSorting: false,
         cell: (info) => (
           <span className="font-mono text-text-tertiary">{info.getValue() ?? "—"}</span>
@@ -348,7 +347,7 @@ export function CompaniesListPage() {
       }),
       helper.accessor("updated_at", {
         id: "last_activity_at",
-        header: "Posl. akt.",
+        header: t("companiesList.columns.lastActivityShort"),
         cell: (info) => (
           <span className="tabular-nums text-text-tertiary">
             {shortDateFmt ? shortDateFmt.format(new Date(info.getValue())) : info.getValue()}
@@ -356,17 +355,17 @@ export function CompaniesListPage() {
         ),
       }),
       helper.accessor("address_street", {
-        header: "Sídlo Ulice",
+        header: t("companiesList.columns.street"),
         enableSorting: false,
         cell: (info) => <span className="text-text-secondary">{info.getValue() ?? "—"}</span>,
       }),
       helper.accessor("address_city", {
-        header: "Sídlo Město",
+        header: t("companiesList.columns.city"),
         enableSorting: false,
         cell: (info) => <span className="text-text-secondary">{info.getValue() ?? "—"}</span>,
       }),
       helper.accessor("address_zip", {
-        header: "Sídlo PSČ",
+        header: t("companiesList.columns.zip"),
         enableSorting: false,
         cell: (info) => (
           <span className="font-mono text-text-tertiary">{info.getValue() ?? "—"}</span>
@@ -374,7 +373,7 @@ export function CompaniesListPage() {
       }),
       helper.display({
         id: "phone",
-        header: "Telefon",
+        header: t("companiesList.columns.phone"),
         cell: (info) => {
           // Prefer the company-level phone (added 2026-05-20) and fall
           // back to the main contact's number so existing rows that only
@@ -395,7 +394,7 @@ export function CompaniesListPage() {
       }),
       helper.display({
         id: "email",
-        header: "Email",
+        header: t("companiesList.columns.email"),
         cell: (info) => {
           const email = info.row.original.email ?? info.row.original.main_contact?.email;
           return email ? (
@@ -412,23 +411,29 @@ export function CompaniesListPage() {
         },
       }),
       helper.accessor("industry", {
-        header: "Obor",
+        header: t("companiesList.columns.industry"),
         enableSorting: false,
         cell: (info) => <span className="text-text-secondary">{info.getValue() ?? "—"}</span>,
       }),
       helper.accessor("owner_user_id", {
-        header: "Vlastník",
+        header: t("companiesList.columns.owner"),
         enableSorting: false,
         cell: (info) => {
           const ownerId = info.getValue();
-          if (!ownerId) return <span className="text-text-tertiary">— pool</span>;
+          if (!ownerId) {
+            return (
+              <span className="text-text-tertiary">
+                {t("companiesList.columns.ownerPoolShort")}
+              </span>
+            );
+          }
           const owner = usersById.get(ownerId);
           return <span className="text-text-secondary">{owner?.name ?? "—"}</span>;
         },
       }),
       helper.accessor("ownership_expires_at", {
         id: "ownership_expires_at",
-        header: "Zámek vyprší",
+        header: t("companiesList.columns.lockExpires"),
         cell: (info) => {
           const value = info.getValue();
           if (!value || !info.row.original.owner_user_id) {
@@ -443,7 +448,7 @@ export function CompaniesListPage() {
       }),
       helper.accessor("last_order_at", {
         id: "last_order_at",
-        header: "Posl. obchod",
+        header: t("companiesList.columns.lastOrderShort"),
         cell: (info) => {
           const value = info.getValue();
           return (
@@ -454,7 +459,7 @@ export function CompaniesListPage() {
         },
       }),
       helper.accessor("website", {
-        header: "Web",
+        header: t("companiesList.columns.website"),
         enableSorting: false,
         cell: (info) => {
           const url = info.getValue();
@@ -473,12 +478,12 @@ export function CompaniesListPage() {
         },
       }),
       helper.accessor("legal_form", {
-        header: "Pr. forma",
+        header: t("companiesList.columns.legalForm"),
         enableSorting: false,
         cell: (info) => <span className="text-text-tertiary">{info.getValue() ?? "—"}</span>,
       }),
     ];
-  }, [page, shortDateFmt, usersById]);
+  }, [page, shortDateFmt, t, usersById]);
 
   const table = useReactTable({
     data: companies?.items ?? [],
@@ -507,37 +512,37 @@ export function CompaniesListPage() {
     <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Firmy</h1>
-          <p className="mt-1 text-sm text-text-tertiary">{pluralizeCompanies(total)}</p>
+          <h1 className="text-2xl font-semibold">{t("companiesList.pageTitle")}</h1>
+          <p className="mt-1 text-sm text-text-tertiary">{t("companyCount", { count: total })}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link
             to="/app/email-campaigns"
             className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface-overlay px-3 text-sm font-medium text-text-secondary transition-colors duration-fast hover:text-text-primary"
-            title="Historie hromadných e-mailů"
+            title={t("companiesList.historyLinkTitle")}
           >
-            <History size={16} strokeWidth={1.75} /> Historie
+            <History size={16} strokeWidth={1.75} /> {t("companiesList.historyLinkLabel")}
           </Link>
           <button
             type="button"
             onClick={onBulkClick}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:text-text-primary"
           >
-            <Mail size={16} strokeWidth={1.75} /> Hromadný e-mail
+            <Mail size={16} strokeWidth={1.75} /> {t("companiesList.bulkEmailButton")}
           </button>
           <button
             type="button"
             onClick={() => setModalOpen(true)}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
           >
-            <Plus size={16} strokeWidth={1.75} /> Přidat firmu
+            <Plus size={16} strokeWidth={1.75} /> {t("companiesList.addButton")}
           </button>
         </div>
       </div>
 
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <label className="relative block md:max-w-md md:flex-1">
-          <span className="sr-only">Hledat firmu</span>
+          <span className="sr-only">{t("companiesList.searchLabel")}</span>
           <Search
             size={16}
             strokeWidth={1.75}
@@ -548,32 +553,32 @@ export function CompaniesListPage() {
             type="search"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Hledat podle názvu nebo IČO…"
+            placeholder={t("companiesList.searchPlaceholder")}
             className="h-10 w-full rounded-md border border-border bg-surface-overlay pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
           />
         </label>
         <div className="flex flex-wrap items-center gap-2">
           <select
-            aria-label="Filtr podle vlastníka"
+            aria-label={t("companiesList.ownerFilterLabel")}
             value={ownerFilter}
             onChange={(e) => patchParams({ owner: e.target.value })}
             className={FILTER_SELECT_CLASS}
           >
-            <option value="all">Vlastník: vše</option>
+            <option value="all">{t("companiesList.ownerAll")}</option>
             {(filterOptions?.owner_user_ids ?? []).map((id) => (
               <option key={id} value={id}>
                 {usersById.get(id)?.name ?? "—"}
               </option>
             ))}
-            <option value="unowned">Nezabrané</option>
+            <option value="unowned">{t("companiesList.unowned")}</option>
           </select>
           <select
-            aria-label="Filtr podle oboru"
+            aria-label={t("companiesList.industryFilterLabel")}
             value={industry}
             onChange={(e) => patchParams({ industry: e.target.value })}
             className={FILTER_SELECT_CLASS}
           >
-            <option value="">Obor: vše</option>
+            <option value="">{t("companiesList.industryAll")}</option>
             {(filterOptions?.industries ?? []).map((i) => (
               <option key={i} value={i}>
                 {i}
@@ -581,12 +586,12 @@ export function CompaniesListPage() {
             ))}
           </select>
           <select
-            aria-label="Filtr podle sídla"
+            aria-label={t("companiesList.cityFilterLabel")}
             value={city}
             onChange={(e) => patchParams({ city: e.target.value })}
             className={FILTER_SELECT_CLASS}
           >
-            <option value="">Sídlo: vše</option>
+            <option value="">{t("companiesList.cityAll")}</option>
             {(filterOptions?.cities ?? []).map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -599,21 +604,21 @@ export function CompaniesListPage() {
               onClick={clearFilters}
               className="inline-flex h-9 items-center gap-1 rounded-md px-2 text-xs font-medium text-text-secondary hover:text-text-primary"
             >
-              <X size={14} strokeWidth={1.75} aria-hidden /> Vymazat filtry
+              <X size={14} strokeWidth={1.75} aria-hidden /> {t("companiesList.clearFilters")}
             </button>
           ) : null}
         </div>
         <div
           role="radiogroup"
-          aria-label="Režim zobrazení"
+          aria-label={t("companiesList.viewModeGroupLabel")}
           className="hidden gap-1 rounded-md border border-border bg-surface-overlay p-1 md:inline-flex"
         >
           <button
             type="button"
             role="radio"
             aria-checked={viewMode === "cards"}
-            aria-label="Karty"
-            title="Karty"
+            aria-label={t("companiesList.viewCards")}
+            title={t("companiesList.viewCards")}
             onClick={() => setViewMode("cards")}
             className={cn(
               "inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors duration-fast",
@@ -622,14 +627,14 @@ export function CompaniesListPage() {
                 : "text-text-secondary hover:text-text-primary",
             )}
           >
-            <LayoutGrid size={14} strokeWidth={1.75} aria-hidden /> Karty
+            <LayoutGrid size={14} strokeWidth={1.75} aria-hidden /> {t("companiesList.viewCards")}
           </button>
           <button
             type="button"
             role="radio"
             aria-checked={viewMode === "table"}
-            aria-label="Tabulka"
-            title="Tabulka"
+            aria-label={t("companiesList.viewTable")}
+            title={t("companiesList.viewTable")}
             onClick={() => setViewMode("table")}
             className={cn(
               "inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors duration-fast",
@@ -638,7 +643,7 @@ export function CompaniesListPage() {
                 : "text-text-secondary hover:text-text-primary",
             )}
           >
-            <Table2 size={14} strokeWidth={1.75} aria-hidden /> Tabulka
+            <Table2 size={14} strokeWidth={1.75} aria-hidden /> {t("companiesList.viewTable")}
           </button>
         </div>
       </div>
@@ -648,7 +653,7 @@ export function CompaniesListPage() {
           className="rounded-md border border-danger-subtle bg-danger-subtle px-4 py-3 text-sm text-danger"
           role="alert"
         >
-          Firmy se nepodařilo načíst. Zkuste to prosím znovu.
+          {t("companiesList.loadError")}
         </div>
       ) : total === 0 && !isPending && !isFetching ? (
         <div className="rounded-lg border border-border bg-surface">
@@ -656,20 +661,20 @@ export function CompaniesListPage() {
             <EmptyState
               icon={Building2}
               tone="filtered"
-              title="Žádný výsledek pro vybrané filtry."
-              body="Zkuste upravit hledaný výraz nebo zrušte filtr."
+              title={t("companiesList.emptyFilteredTitle")}
+              body={t("companiesList.emptyFilteredBody")}
               primary={{
-                label: "Vymazat filtry",
+                label: t("companiesList.clearFilters"),
                 onClick: clearFilters,
               }}
             />
           ) : (
             <EmptyState
               icon={Building2}
-              title="Přidejte první firmu"
-              body="Stačí zadat IČO a zbytek doplníme z ARES."
+              title={t("companiesList.emptyTitle")}
+              body={t("companiesList.emptyBody")}
               primary={{
-                label: "+ Přidat firmu",
+                label: t("companiesList.emptyCta"),
                 onClick: () => setModalOpen(true),
               }}
             />
@@ -699,7 +704,7 @@ export function CompaniesListPage() {
                       />
                     </div>
                     <p className="text-xs text-text-tertiary">
-                      <span className="font-mono">{company.ico ?? "bez IČO"}</span>
+                      <span className="font-mono">{company.ico ?? t("companiesList.noIco")}</span>
                       {company.address_city ? (
                         <>
                           <span> · </span>
@@ -801,15 +806,15 @@ export function CompaniesListPage() {
           {pageCount > 1 ? (
             <div className="flex items-center justify-between border-t border-border-subtle px-4 py-3 text-sm text-text-tertiary">
               <span className="tabular-nums">
-                {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} z {total}{" "}
-                {csNoun(total, "firma")}
+                {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)}{" "}
+                {t("companiesList.paginationOf")} {t("companyCount", { count: total })}
               </span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={page === 0}
-                  aria-label="Předchozí stránka"
+                  aria-label={t("companiesList.prevPage")}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-surface-overlay text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <ChevronLeft size={16} strokeWidth={1.75} />
@@ -818,7 +823,7 @@ export function CompaniesListPage() {
                   type="button"
                   onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
                   disabled={page >= pageCount - 1}
-                  aria-label="Další stránka"
+                  aria-label={t("companiesList.nextPage")}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-surface-overlay text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <ChevronRight size={16} strokeWidth={1.75} />
@@ -850,25 +855,22 @@ export function CompaniesListPage() {
         >
           <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-xl">
             <h2 id="smtp-prompt-title" className="text-base font-semibold text-text-primary">
-              Nejdřív nastavte odesílání e-mailů
+              {t("companiesList.smtpPromptTitle")}
             </h2>
-            <p className="mt-2 text-sm text-text-secondary">
-              Hromadné e-maily se odesílají z vaší vlastní schránky. Nastavte a ověřte své SMTP
-              připojení v nastavení integrací.
-            </p>
+            <p className="mt-2 text-sm text-text-secondary">{t("companiesList.smtpPromptBody")}</p>
             <div className="mt-5 flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setSmtpPromptOpen(false)}
                 className="h-9 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary hover:text-text-primary"
               >
-                Zavřít
+                {t("companiesList.smtpPromptClose")}
               </button>
               <Link
                 to="/app/settings?tab=integrations"
                 className="inline-flex h-9 items-center rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent hover:opacity-90"
               >
-                Nastavit SMTP
+                {t("companiesList.smtpPromptCta")}
               </Link>
             </div>
           </div>

@@ -30,5 +30,5 @@ Gotchas that WILL bite otherwise:
 
 ## Conventions
 
-- All UI copy is Czech with vykání; money/dates via `Intl` with the org locale — details in the ui-design skill.
+- All UI copy lives in i18n catalogs (`frontend/src/locales`, `backend/app/locales`); cs (vykání) is the reference language, en the first translation. New strings must land in both and pass `pnpm i18n:check`. Money/dates via `@/lib/format` with the locale from `useLocale()` (follows the active UI language) — details in the ui-design skill.
 - Postgres native enums: adding values needs `ALTER TYPE ... ADD VALUE` in Alembic, run outside a transaction block.

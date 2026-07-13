@@ -118,6 +118,53 @@ class BillingSettings(Base):
         ),
     )
 
+    # English counterparts of the two templates above, rendered by
+    # InvoiceMailer when the customer org's locale resolves to "en"
+    # (`language_for_locale(org.locale)`). Same `{{ }}` vars as the cs
+    # templates; kept as separate NOT NULL columns (not a lang-keyed JSON
+    # blob) so the super-admin edit form stays two plain textareas per
+    # language, mirroring the cs columns above.
+    invoice_email_subject_template_en: Mapped[str] = mapped_column(
+        String(200),
+        nullable=False,
+        default="Invoice {{ number }} — SimpleCRM, due {{ due_date }}",
+        server_default=("Invoice {{ number }} — SimpleCRM, due {{ due_date }}"),
+    )
+    invoice_email_body_template_en: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default=(
+            "Hello {{ customer_name }},\n\n"
+            "we are sending you invoice **No. {{ number }}** for the period "
+            "{{ period_start }} – {{ period_end }}.\n\n"
+            "**Total due:** {{ total_display }}\n"
+            "**Due date:** {{ due_date }}\n\n"
+            "Please send payment by bank transfer:\n\n"
+            "- IBAN: {{ issuer_iban }}\n"
+            "- Variable symbol: {{ variable_symbol }}\n\n"
+            "The easiest way to pay is by scanning the QR code found "
+            "directly on the invoice.\n\n"
+            "You'll find the invoice PDF attached. To view it in the app, "
+            "sign in at simplecrm.cz.\n\n"
+            "Best regards,\nSimpleCRM\n"
+        ),
+        server_default=(
+            "Hello {{ customer_name }},\n\n"
+            "we are sending you invoice **No. {{ number }}** for the period "
+            "{{ period_start }} – {{ period_end }}.\n\n"
+            "**Total due:** {{ total_display }}\n"
+            "**Due date:** {{ due_date }}\n\n"
+            "Please send payment by bank transfer:\n\n"
+            "- IBAN: {{ issuer_iban }}\n"
+            "- Variable symbol: {{ variable_symbol }}\n\n"
+            "The easiest way to pay is by scanning the QR code found "
+            "directly on the invoice.\n\n"
+            "You'll find the invoice PDF attached. To view it in the app, "
+            "sign in at simplecrm.cz.\n\n"
+            "Best regards,\nSimpleCRM\n"
+        ),
+    )
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

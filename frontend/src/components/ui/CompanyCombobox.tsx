@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useCompanies } from "@/app/companies/useCompanies";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
@@ -21,9 +22,11 @@ export function CompanyCombobox({
   initialDisplayName,
   required = false,
   disabled = false,
-  placeholder = "Začněte psát název firmy…",
+  placeholder,
   inputId,
 }: CompanyComboboxProps) {
+  const { t } = useTranslation("common");
+  const resolvedPlaceholder = placeholder ?? t("companyCombobox.placeholder");
   const [search, setSearch] = useState(initialDisplayName ?? "");
   const debouncedSearch = useDebouncedValue(search, 250);
   const { data: companiesPage } = useCompanies({ limit: 25, search: debouncedSearch });
@@ -44,7 +47,7 @@ export function CompanyCombobox({
           setSearch(e.target.value);
           if (value) onChange("", undefined);
         }}
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         autoComplete="off"
         disabled={disabled}
         required={required && !value}
@@ -72,7 +75,7 @@ export function CompanyCombobox({
         </ul>
       ) : null}
       {search && !value && companies.length === 0 ? (
-        <p className="mt-2 text-xs text-text-tertiary">Žádná firma neodpovídá hledání.</p>
+        <p className="mt-2 text-xs text-text-tertiary">{t("companyCombobox.noResults")}</p>
       ) : null}
     </div>
   );

@@ -206,6 +206,10 @@ class BillingSettingsOut(BaseModel):
     default_payment_term_days: int
     invoice_email_subject_template: str
     invoice_email_body_template: str
+    # English counterparts, rendered by InvoiceMailer for orgs whose locale
+    # resolves to "en".
+    invoice_email_subject_template_en: str
+    invoice_email_body_template_en: str
 
     updated_at: datetime
 
@@ -228,6 +232,8 @@ class BillingSettingsUpdate(BaseModel):
     default_payment_term_days: int | None = Field(default=None, ge=0, le=365)
     invoice_email_subject_template: str | None = Field(default=None, max_length=200)
     invoice_email_body_template: str | None = None
+    invoice_email_subject_template_en: str | None = Field(default=None, max_length=200)
+    invoice_email_body_template_en: str | None = None
 
 
 # ---------------------------------------------------------------------------

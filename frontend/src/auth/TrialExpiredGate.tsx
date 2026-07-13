@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "@/auth/useAuth";
-import { formatCzkMinor } from "@/components/billing/format";
 import { OrgBillingFields } from "@/components/billing/OrgBillingFields";
 import {
   billingFormFromOrg,
@@ -18,6 +18,8 @@ import { RecurringPaymentConsent } from "@/components/billing/RecurringPaymentCo
 import { useInitialPaymentInit } from "@/components/billing/usePayments";
 import { usePublicPlans } from "@/components/billing/usePublicPlans";
 import { ApiError, apiFetch, type TrialExpiredPayload } from "@/lib/api";
+import { formatMoneyMinor } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/usePageTitle";
 import type { components } from "@/types/api.generated";
@@ -30,15 +32,10 @@ interface TrialExpiredGateProps {
   onExport?: () => void;
 }
 
-function userCountPhrase(n: number): string {
-  // Instrumental case for "with N users". For N=1 the singular instrumental
-  // is "uživatelem"; for ≥2 the plural instrumental is "uživateli".
-  if (n === 1) return "S Vaším 1 uživatelem";
-  return `S Vašimi ${n} uživateli`;
-}
-
 export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
-  usePageTitle("Zkušební doba skončila");
+  const { t } = useTranslation("auth");
+  const locale = useLocale();
+  usePageTitle(t("trialExpiredGate.pageTitle"));
   const { accessToken } = useAuth();
   const summary = useBillingSummary();
   const plans = usePublicPlans();
@@ -54,7 +51,7 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
 
   // Backend requires complete billing details before initial-payment-init.
   // Fetch the org to prefill the form (and seed `savedIco` so hydrating a
-  // saved IČO doesn't re-trigger ARES), then keep local form state in sync.
+  // saved company ID doesn't re-trigger ARES), then keep local form state in sync.
   const orgQuery = useQuery<components["schemas"]["OrganizationOut"]>({
     queryKey: ["organizations", "current"],
     enabled: !!accessToken,
@@ -78,11 +75,11 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
   async function onSubmitChoosePlan() {
     if (!selected || !accessToken) return;
     if (!recurringConsent) {
-      setError("Pro pokračování je nutné potvrdit souhlas s opakovanými platbami.");
+      setError(t("trialExpiredGate.errors.consentRequired"));
       return;
     }
     if (!isBillingFormValid(billing)) {
-      setError("Vyplňte prosím fakturační údaje.");
+      setError(t("trialExpiredGate.errors.billingRequired"));
       return;
     }
     setError(null);
@@ -97,7 +94,7 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
       });
     } catch {
       setSaving(false);
-      setError("Uložení fakturačních údajů se nezdařilo. Zkuste to prosím znovu.");
+      setError(t("trialExpiredGate.errors.billingSaveFailed"));
       return;
     }
     setSaving(false);
@@ -111,7 +108,7 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
           window.location.assign(init.redirect_url);
         },
         onError: () => {
-          setError("Platební brána není dostupná, zkuste to prosím za chvíli.");
+          setError(t("trialExpiredGate.errors.gatewayUnavailable"));
         },
       },
     );
@@ -141,21 +138,21 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
             <>
               <header className="text-center">
                 <h1 id="trial-expired-title" className="text-2xl font-semibold text-text-primary">
-                  Vaše zkušební doba skončila.
+                  {t("trialExpiredGate.heading")}
                 </h1>
                 <p className="mt-2 text-sm text-text-secondary">
-                  Pokračujte výběrem plánu. Vaše data zůstávají v bezpečí.
+                  {t("trialExpiredGate.subheading")}
                 </p>
               </header>
 
               <div
                 role="radiogroup"
-                aria-label="Vyberte plán"
+                aria-label={t("trialExpiredGate.planPickerAriaLabel")}
                 className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2"
               >
                 <PlanRadioCard
                   code="monthly"
-                  title="Měsíční"
+                  title={t("trialExpiredGate.planMonthly")}
                   priceMinor={monthlyPlan?.price_per_user_minor ?? null}
                   priceInterval="monthly"
                   selected={selected === "monthly"}
@@ -164,21 +161,23 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
                 />
                 <PlanRadioCard
                   code="annual"
-                  title="Roční"
+                  title={t("trialExpiredGate.planAnnual")}
                   priceMinor={annualPlan?.price_per_user_minor ?? null}
                   priceInterval="annual"
                   selected={selected === "annual"}
                   disabled={submitting}
                   onSelect={() => setSelected("annual")}
-                  badge="Ušetříte 16 %"
+                  badge={t("trialExpiredGate.annualBadge")}
                   caption={
                     summary.data && summary.data.savings_minor != null ? (
                       <p className="text-sm text-text-secondary">
-                        {userCountPhrase(summary.data.user_count)} ušetříte{" "}
+                        {t("trialExpiredGate.annualSavingsPrefix", {
+                          count: summary.data.user_count,
+                        })}{" "}
                         <span className="font-semibold text-text-primary">
-                          {formatCzkMinor(summary.data.savings_minor)}
+                          {formatMoneyMinor(summary.data.savings_minor, "CZK", locale)}
                         </span>{" "}
-                        ročně.
+                        {t("trialExpiredGate.annualSavingsSuffix")}
                       </p>
                     ) : null
                   }
@@ -198,10 +197,11 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
               </div>
 
               <div className="mt-6">
-                <h2 className="text-sm font-semibold text-text-primary">Fakturační údaje</h2>
+                <h2 className="text-sm font-semibold text-text-primary">
+                  {t("trialExpiredGate.billingHeading")}
+                </h2>
                 <p className="mt-1 text-xs text-text-secondary">
-                  Tyto údaje použijeme na daňový doklad. Vyplnění je povinné pro pokračování k
-                  platbě.
+                  {t("trialExpiredGate.billingHint")}
                 </p>
                 <div className="mt-4">
                   <OrgBillingFields
@@ -218,7 +218,7 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
                 onClick={openContactModal}
                 className="mt-6 inline-flex w-full items-center justify-center text-sm text-text-secondary underline-offset-4 hover:text-text-primary hover:underline"
               >
-                Potřebujete víc? Domluvte se na enterprise balíčku.
+                {t("trialExpiredGate.enterpriseCta")}
               </button>
 
               {error ? (
@@ -239,7 +239,7 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
                   }
                   className="inline-flex h-11 items-center justify-center rounded-md bg-accent px-6 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {submitting ? "Přesměrování…" : "Pokračovat na platbu"}
+                  {submitting ? t("trialExpiredGate.submitting") : t("trialExpiredGate.submit")}
                 </button>
                 <button
                   type="button"
@@ -247,12 +247,12 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
                   disabled={submitting || !onExport}
                   className="inline-flex h-11 items-center justify-center rounded-md bg-transparent px-6 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Exportovat data
+                  {t("trialExpiredGate.exportData")}
                 </button>
               </div>
 
               <p className="mt-6 text-center text-xs text-text-tertiary">
-                Máte otázky? Napište nám na{" "}
+                {t("trialExpiredGate.contactPrefix")}{" "}
                 <a className="text-accent hover:text-accent-hover" href={`mailto:${SUPPORT_EMAIL}`}>
                   {SUPPORT_EMAIL}
                 </a>
@@ -339,6 +339,7 @@ interface ConfirmationCardProps {
 }
 
 function ConfirmationCard({ onExport }: ConfirmationCardProps) {
+  const { t } = useTranslation("auth");
   // The brief calls for echoing the user's email here, but `/auth/me` is
   // exactly the gated endpoint we got 402'd from, so we can't fetch it.
   // Generic copy is good enough; F5 can revisit by adding `email` to the
@@ -346,11 +347,10 @@ function ConfirmationCard({ onExport }: ConfirmationCardProps) {
   return (
     <div className="text-center">
       <h2 className="text-2xl font-semibold text-text-primary">
-        Děkujeme. Pošleme vám platební instrukce.
+        {t("trialExpiredGate.confirmation.heading")}
       </h2>
       <p className="mt-3 text-sm text-text-secondary">
-        Na váš e-mail odešleme fakturu a platební údaje. Po připsání platby vás aktivujeme do 24
-        hodin. Mezitím můžete data exportovat.
+        {t("trialExpiredGate.confirmation.body")}
       </p>
       <button
         type="button"
@@ -358,7 +358,7 @@ function ConfirmationCard({ onExport }: ConfirmationCardProps) {
         disabled={!onExport}
         className="mt-6 inline-flex h-11 items-center justify-center rounded-md bg-transparent px-6 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
       >
-        Exportovat data
+        {t("trialExpiredGate.exportData")}
       </button>
     </div>
   );
@@ -370,21 +370,20 @@ interface EnterpriseExpiredBodyProps {
 }
 
 function EnterpriseExpiredBody({ onContact, onExport }: EnterpriseExpiredBodyProps) {
+  const { t } = useTranslation("auth");
   return (
     <div className="text-center">
       <h1 id="trial-expired-title" className="text-2xl font-semibold text-text-primary">
-        Vaše zkušební doba skončila.
+        {t("trialExpiredGate.heading")}
       </h1>
-      <p className="mt-3 text-sm text-text-secondary">
-        Vaše enterprise předplatné skončilo. Domluvte se s naším obchodním týmem na prodloužení.
-      </p>
+      <p className="mt-3 text-sm text-text-secondary">{t("trialExpiredGate.enterprise.body")}</p>
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
         <button
           type="button"
           onClick={onContact}
           className="inline-flex h-11 items-center justify-center rounded-md bg-accent px-6 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
         >
-          Kontaktovat obchod
+          {t("trialExpiredGate.enterprise.contactCta")}
         </button>
         <button
           type="button"
@@ -392,11 +391,11 @@ function EnterpriseExpiredBody({ onContact, onExport }: EnterpriseExpiredBodyPro
           disabled={!onExport}
           className="inline-flex h-11 items-center justify-center rounded-md bg-transparent px-6 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Exportovat data
+          {t("trialExpiredGate.exportData")}
         </button>
       </div>
       <p className="mt-6 text-xs text-text-tertiary">
-        Máte otázky? Napište nám na{" "}
+        {t("trialExpiredGate.contactPrefix")}{" "}
         <a className="text-accent hover:text-accent-hover" href={`mailto:${SUPPORT_EMAIL}`}>
           {SUPPORT_EMAIL}
         </a>
@@ -418,6 +417,7 @@ function ContactEnterpriseDialog({
   accessToken,
   onClose,
 }: ContactEnterpriseDialogProps) {
+  const { t } = useTranslation("auth");
   const [expectedUsers, setExpectedUsers] = useState<number>(defaultUserCount);
   const [message, setMessage] = useState<string>("");
   const [sending, setSending] = useState(false);
@@ -446,8 +446,8 @@ function ContactEnterpriseDialog({
     } catch (e2) {
       setErr(
         e2 instanceof ApiError
-          ? "Odeslání se nezdařilo. Zkuste to prosím znovu."
-          : "Něco se pokazilo. Zkontrolujte připojení a zkuste to znovu.",
+          ? t("trialExpiredGate.contactDialog.errors.generic")
+          : t("trialExpiredGate.contactDialog.errors.network"),
       );
     } finally {
       setSending(false);
@@ -474,27 +474,31 @@ function ContactEnterpriseDialog({
       <div className="w-[min(92vw,32rem)] p-6">
         {done ? (
           <>
-            <h2 className="text-lg font-semibold">Děkujeme.</h2>
-            <p className="mt-2 text-sm text-text-secondary">Ozveme se vám na e-mail do 24 hodin.</p>
+            <h2 className="text-lg font-semibold">
+              {t("trialExpiredGate.contactDialog.thanksHeading")}
+            </h2>
+            <p className="mt-2 text-sm text-text-secondary">
+              {t("trialExpiredGate.contactDialog.thanksBody")}
+            </p>
             <div className="mt-6 flex justify-end">
               <button
                 type="button"
                 onClick={handleClose}
                 className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent hover:bg-accent-hover"
               >
-                Zavřít
+                {t("trialExpiredGate.contactDialog.close")}
               </button>
             </div>
           </>
         ) : (
           <form onSubmit={(e) => void onSubmit(e)}>
-            <h2 className="text-lg font-semibold">Kontaktovat enterprise tým</h2>
+            <h2 className="text-lg font-semibold">{t("trialExpiredGate.contactDialog.heading")}</h2>
             <p className="mt-1 text-sm text-text-secondary">
-              Napište nám pár vět o vašich potřebách. Ozveme se vám obratem.
+              {t("trialExpiredGate.contactDialog.intro")}
             </p>
 
             <label className="mt-4 block text-sm font-medium text-text-primary">
-              Počet uživatelů
+              {t("trialExpiredGate.contactDialog.userCountLabel")}
               <input
                 type="number"
                 min={1}
@@ -506,7 +510,7 @@ function ContactEnterpriseDialog({
             </label>
 
             <label className="mt-4 block text-sm font-medium text-text-primary">
-              Zpráva
+              {t("trialExpiredGate.contactDialog.messageLabel")}
               <textarea
                 required
                 minLength={1}
@@ -514,7 +518,7 @@ function ContactEnterpriseDialog({
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 rows={4}
-                placeholder="Stručně popište vaše požadavky…"
+                placeholder={t("trialExpiredGate.contactDialog.messagePlaceholder")}
                 className="mt-1 block w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </label>
@@ -535,14 +539,16 @@ function ContactEnterpriseDialog({
                 disabled={sending}
                 className="inline-flex h-10 items-center justify-center rounded-md bg-transparent px-4 text-sm font-medium text-text-secondary hover:text-text-primary disabled:opacity-50"
               >
-                Zrušit
+                {t("trialExpiredGate.contactDialog.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={sending || message.trim().length === 0}
                 className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {sending ? "Odesíláme…" : "Odeslat"}
+                {sending
+                  ? t("trialExpiredGate.contactDialog.sending")
+                  : t("trialExpiredGate.contactDialog.send")}
               </button>
             </div>
           </form>

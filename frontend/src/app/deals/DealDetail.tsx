@@ -1,5 +1,6 @@
 import { Check, Mail, Pencil, RotateCcw, Trash2, X } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { useCompany } from "@/app/companies/useCompany";
@@ -16,6 +17,7 @@ import { usePipelineBoard } from "@/app/pipeline/useBoard";
 import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { useToast } from "@/lib/toast";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -50,6 +52,7 @@ interface DealDetailProps {
  * dialog rather than navigating.
  */
 export function DealDetail({ dealId, onClose }: DealDetailProps) {
+  const { t } = useTranslation("deals");
   const { data: deal, isPending, isError } = useDeal(dealId);
   const { data: user } = useCurrentUser();
   const { data: usersPage } = useOrgUsers();
@@ -87,14 +90,14 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
   const deleteDeal = useDeleteDeal(dealId);
   const toast = useToast();
 
-  const locale = user?.organization?.locale ?? "cs-CZ";
+  const locale = useLocale();
   const dateFmt = useMemo(() => new Intl.DateTimeFormat(locale, { dateStyle: "long" }), [locale]);
 
   if (isPending) {
     return (
       <div className="flex items-center justify-between p-6">
         <p className="text-sm text-text-tertiary" role="status">
-          Načítání…
+          {t("dealDetail.loading")}
         </p>
         <CloseButton onClose={onClose} />
       </div>
@@ -106,7 +109,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
       <div className="p-6">
         <div className="flex items-start justify-between gap-4">
           <p className="text-sm text-danger" role="alert">
-            Obchod se nepodařilo načíst.
+            {t("dealDetail.loadError")}
           </p>
           <CloseButton onClose={onClose} />
         </div>
@@ -157,33 +160,32 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
         probability_override: probability,
         primary_contact_id: edit.primary_contact_id || null,
       });
-      toast.success("Obchod uložen.");
+      toast.success(t("dealDetail.toast.saved"));
       setEditing(false);
       setEdit(null);
     } catch {
-      toast.error("Obchod se nepodařilo uložit.");
+      toast.error(t("dealDetail.toast.saveError"));
     }
   }
 
   async function handleReopen() {
-    if (!window.confirm("Znovu otevřít tento obchod? Datum uzavření a důvod budou odstraněny."))
-      return;
+    if (!window.confirm(t("dealDetail.confirmReopen"))) return;
     try {
       await updateDeal.mutateAsync({ lost_reason: null });
-      toast.success("Obchod znovu otevřen.");
+      toast.success(t("dealDetail.toast.reopened"));
     } catch {
-      toast.error("Obchod se nepodařilo znovu otevřít.");
+      toast.error(t("dealDetail.toast.reopenError"));
     }
   }
 
   async function handleDelete() {
-    if (!window.confirm(`Smazat obchod "${deal!.name}"? Akci nelze vrátit zpět.`)) return;
+    if (!window.confirm(t("dealDetail.confirmDelete", { name: deal!.name }))) return;
     try {
       await deleteDeal.mutateAsync();
-      toast.success("Obchod smazán.");
+      toast.success(t("dealDetail.toast.deleted"));
       onClose();
     } catch {
-      toast.error("Obchod se nepodařilo smazat.");
+      toast.error(t("dealDetail.toast.deleteError"));
     }
   }
 
@@ -215,13 +217,13 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
                 type="button"
                 onClick={() =>
                   markWon.mutate(undefined, {
-                    onError: () => toast.error("Obchod se nepodařilo označit jako vyhraný."),
+                    onError: () => toast.error(t("dealDetail.toast.winError")),
                   })
                 }
                 disabled={markWon.isPending}
                 className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-accent px-4 text-sm font-semibold text-text-on-brand-accent transition-colors duration-fast hover:bg-brand-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <Check size={16} strokeWidth={1.75} /> Vyhráno
+                <Check size={16} strokeWidth={1.75} /> {t("dealDetail.won")}
               </button>
               <button
                 type="button"
@@ -229,7 +231,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
                 disabled={markLost.isPending}
                 className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
               >
-                <X size={16} strokeWidth={1.75} /> Neúspěch
+                <X size={16} strokeWidth={1.75} /> {t("dealDetail.lost")}
               </button>
             </>
           ) : (
@@ -239,7 +241,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
               disabled={updateDeal.isPending}
               className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
             >
-              <RotateCcw size={16} strokeWidth={1.75} /> Znovu otevřít
+              <RotateCcw size={16} strokeWidth={1.75} /> {t("dealDetail.reopen")}
             </button>
           )}
           {!editing ? (
@@ -248,7 +250,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
               onClick={startEditing}
               className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
             >
-              <Pencil size={14} strokeWidth={1.75} /> Upravit
+              <Pencil size={14} strokeWidth={1.75} /> {t("dealDetail.edit")}
             </button>
           ) : null}
           <GatedMailButton
@@ -259,14 +261,14 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
             }}
             className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
           >
-            <Mail size={14} strokeWidth={1.75} /> Poslat e-mail
+            <Mail size={14} strokeWidth={1.75} /> {t("dealDetail.sendEmail")}
           </GatedMailButton>
           {user?.role === "admin" ? (
             <button
               type="button"
               onClick={handleDelete}
               disabled={deleteDeal.isPending}
-              aria-label="Smazat obchod"
+              aria-label={t("dealDetail.deleteAriaLabel")}
               className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-3 text-sm font-medium text-text-secondary transition-colors duration-fast hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger disabled:opacity-60"
             >
               <Trash2 size={14} strokeWidth={1.75} />
@@ -278,24 +280,24 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
       <div className="min-h-0 flex-1 overflow-y-auto p-6">
         <section className="rounded-lg border border-border bg-surface">
           <dl className="divide-y divide-border-subtle px-6">
-            <Field label="Stav">
+            <Field label={t("dealDetail.fields.status")}>
               {deal.closed_at ? (
                 deal.lost_reason ? (
                   <span className="inline-flex items-center rounded-full bg-danger-subtle px-3 py-1 text-xs font-medium text-danger">
-                    Neúspěch · {deal.lost_reason}
+                    {t("dealDetail.lost")} · {deal.lost_reason}
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-success-subtle px-3 py-1 text-xs font-medium text-success">
-                    <Check size={12} strokeWidth={2} aria-hidden /> Vyhráno
+                    <Check size={12} strokeWidth={2} aria-hidden /> {t("dealDetail.won")}
                   </span>
                 )
               ) : (
                 <span className="inline-flex items-center rounded-full bg-accent-subtle px-3 py-1 text-xs font-medium text-accent">
-                  Otevřeno
+                  {t("dealDetail.open")}
                 </span>
               )}
             </Field>
-            <Field label="Název">
+            <Field label={t("dealDetail.fields.name")}>
               {editing && edit ? (
                 <input
                   type="text"
@@ -307,7 +309,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
                 deal.name
               )}
             </Field>
-            <Field label="Hodnota">
+            <Field label={t("dealDetail.fields.value")}>
               {editing && edit ? (
                 <input
                   type="text"
@@ -324,23 +326,23 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
                 <span className="text-text-tertiary">—</span>
               )}
             </Field>
-            <Field label="Firma">
+            <Field label={t("dealDetail.fields.company")}>
               <Link
                 to={`/app/companies/${deal.company_id}`}
                 onClick={onClose}
                 className="text-accent hover:text-accent-hover"
               >
-                {company?.name ?? "Přejít na firmu"}
+                {company?.name ?? t("dealDetail.goToCompany")}
               </Link>
             </Field>
-            <Field label="Vlastník">
+            <Field label={t("dealDetail.fields.owner")}>
               {editing && edit ? (
                 <select
                   value={edit.owner_user_id}
                   onChange={(e) => setEdit((p) => p && { ...p, owner_user_id: e.target.value })}
                   className="block h-9 rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
                 >
-                  <option value="">Bez vlastníka</option>
+                  <option value="">{t("dealDetail.noOwner")}</option>
                   {orgUsers.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name}
@@ -351,7 +353,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
                 owner
               )}
             </Field>
-            <Field label="Fáze">
+            <Field label={t("dealDetail.fields.stage")}>
               {editing && edit ? (
                 <select
                   value={edit.stage_id}
@@ -368,7 +370,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
                 (stage?.name ?? "—")
               )}
             </Field>
-            <Field label="Hlavní kontakt">
+            <Field label={t("dealDetail.fields.primaryContact")}>
               {editing && edit ? (
                 <select
                   value={edit.primary_contact_id}
@@ -377,7 +379,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
                   }
                   className="block h-9 rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
                 >
-                  <option value="">Bez hlavního kontaktu</option>
+                  <option value="">{t("dealDetail.noPrimaryContact")}</option>
                   {companyContacts.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.first_name} {c.last_name}
@@ -396,7 +398,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
                 "—"
               )}
             </Field>
-            <Field label="Očekávané uzavření">
+            <Field label={t("dealDetail.fields.expectedClose")}>
               {editing && edit ? (
                 <input
                   type="date"
@@ -412,13 +414,13 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
                 "—"
               )}
             </Field>
-            <Field label="Pravděpodobnost">
+            <Field label={t("dealDetail.fields.probability")}>
               {editing && edit ? (
                 <input
                   type="number"
                   min={0}
                   max={100}
-                  placeholder="dle fáze"
+                  placeholder={t("dealDetail.probabilityPlaceholder")}
                   value={edit.probability_override}
                   onChange={(e) =>
                     setEdit((p) => p && { ...p, probability_override: e.target.value })
@@ -428,12 +430,16 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
               ) : deal.probability_override != null ? (
                 `${deal.probability_override} %`
               ) : (
-                "dle fáze"
+                t("dealDetail.probabilityPlaceholder")
               )}
             </Field>
-            <Field label="Vytvořeno">{dateFmt.format(new Date(deal.created_at))}</Field>
+            <Field label={t("dealDetail.fields.created")}>
+              {dateFmt.format(new Date(deal.created_at))}
+            </Field>
             {deal.closed_at ? (
-              <Field label="Uzavřeno">{dateFmt.format(new Date(deal.closed_at))}</Field>
+              <Field label={t("dealDetail.fields.closed")}>
+                {dateFmt.format(new Date(deal.closed_at))}
+              </Field>
             ) : null}
           </dl>
         </section>
@@ -446,7 +452,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
               disabled={updateDeal.isPending}
               className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent disabled:opacity-60"
             >
-              {updateDeal.isPending ? "Ukládám…" : "Uložit změny"}
+              {updateDeal.isPending ? t("dealDetail.saving") : t("dealDetail.saveChanges")}
             </button>
             <button
               type="button"
@@ -456,7 +462,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
               }}
               className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary"
             >
-              Zrušit
+              {t("dealDetail.cancel")}
             </button>
           </div>
         ) : null}
@@ -497,7 +503,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
             { lost_reason: reason },
             {
               onSuccess: () => setLostDialogOpen(false),
-              onError: () => toast.error("Obchod se nepodařilo označit jako neúspěšný."),
+              onError: () => toast.error(t("dealDetail.toast.loseError")),
             },
           );
         }}
@@ -507,11 +513,12 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
 }
 
 function CloseButton({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation("deals");
   return (
     <button
       type="button"
       onClick={onClose}
-      aria-label="Zavřít"
+      aria-label={t("dealDetail.closeAriaLabel")}
       className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-text-tertiary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary"
     >
       <X size={18} strokeWidth={1.75} aria-hidden />

@@ -1,0 +1,154 @@
+{
+  "errors": {
+    "gateway_unavailable": "Platební brána není dostupná, zkuste to prosím za chvíli.",
+    "too_many_attempts": "Příliš mnoho pokusů, zkuste to prosím za pár minut.",
+    "gateway_declined": "Platební brána odmítla transakci. Zkontrolujte uloženou kartu.",
+    "already_active": "Předplatné je již aktivní.",
+    "payment_in_progress": "Platba již probíhá. Dokončete ji, nebo to zkuste za chvíli znovu.",
+    "billing_details_required": "Před platbou je nutné vyplnit fakturační údaje.",
+    "not_active": "Předplatné zatím není aktivní. Nejprve dokončete výběr plánu a první platbu.",
+    "not_an_upgrade": "Nový počet licencí musí být vyšší než ten současný.",
+    "no_payment_method": "Nemáte uloženou platební kartu. Nejprve dokončete výběr plánu, tím se karta uloží.",
+    "generic": "Platba se nezdařila. Zkuste to prosím znovu."
+  },
+  "billingShared": {
+    "statusLoading": "Načítání…",
+    "statusComp": "Komplementární",
+    "statusEnterpriseActive": "Aktivní · Enterprise",
+    "statusTrialing": "Zkušební verze",
+    "statusPendingActivation": "Čeká na platbu",
+    "statusActive": "Aktivní",
+    "statusPastDue": "Po splatnosti",
+    "statusCanceled": "Zrušeno",
+    "planNameComp": "Komplementární",
+    "planNameEnterprise": "Vlastní balíček",
+    "planNameTrial": "Zkušební verze (30 dní)",
+    "planNameMonthly": "Měsíční",
+    "planNameAnnual": "Roční",
+    "enterpriseMailtoSubject": "SimpleCRM enterprise — dotaz"
+  },
+  "billingSection": {
+    "loading": "Načítání…",
+    "userCount_one": "{{count}} uživatel",
+    "userCount_few": "{{count}} uživatelé",
+    "userCount_other": "{{count}} uživatelů"
+  },
+  "paidThroughBlock": {
+    "headingTrial": "Zkušební doba",
+    "headingCanceled": "Předplaceno do",
+    "headingDefault": "Předplacené období",
+    "trialHint": "Po skončení zkušebky vám zašleme fakturu se splatností v den ukončení zkoušky. Po úhradě se vaše předplatné automaticky aktivuje.",
+    "activeHint": "Po skončení období se předplatné automaticky obnoví z uložené karty.",
+    "pastDueHint": "Platba se nezdařila. Prodloužení období se opakuje — případně aktualizujte kartu.",
+    "canceledHint": "Předplatné je zrušené. Po tomto datu se vaší organizaci zablokuje přístup."
+  },
+  "currentPlanCard": {
+    "heading": "Aktuální plán",
+    "pendingActivation": "Vybrali jste plán {{planName}}. Po připsání platby vás aktivujeme do 24 hodin.",
+    "compNotice": "Vaše organizace má speciální podmínky. Pro detaily kontaktujte podporu.",
+    "enterprisePricePrefix": "Vlastní balíček ·",
+    "enterprisePriceSuffix": "/ uživatel / měsíc",
+    "contactSalesCta": "Kontaktovat obchod",
+    "changePlanCta": "Změnit plán",
+    "contactSupportCta": "Kontaktujte podporu"
+  },
+  "billingDetailsCard": {
+    "heading": "Účtování",
+    "periodMonth": "měsíc",
+    "periodYear": "rok",
+    "monthlySavingsPrefix": "Pokud byste platili ročně, ušetříte",
+    "monthlySavingsSuffix": "ročně.",
+    "switchToAnnualCta": "Přejít na roční",
+    "annualSavingsPrefix": "Šetříte",
+    "annualSavingsSuffix": "oproti měsíčnímu plánu.",
+    "renewalPrefix": "Další obnova:"
+  },
+  "paymentsCard": {
+    "heading": "Platby",
+    "subtitle": "Historie platebních pokusů (ComGate). Daňové doklady najdete výše v sekci „Faktury“.",
+    "loadError": "Platby se nepodařilo načíst.",
+    "empty": "Platby budou dostupné po první platbě.",
+    "kind": {
+      "initial": "První aktivace",
+      "renewal": "Obnova",
+      "seat_upgrade": "Navýšení uživatelů"
+    },
+    "status": {
+      "paid": "Zaplaceno",
+      "pending": "Čeká",
+      "failed": "Selhalo",
+      "refunded": "Vráceno"
+    }
+  },
+  "taxInvoicesCard": {
+    "heading": "Faktury",
+    "subtitle": "Daňové doklady podle českého zákona. PDF si můžete kdykoli stáhnout pro účetnictví.",
+    "downloadError": "Stažení PDF se nezdařilo. Zkuste to znovu nebo kontaktujte podporu.",
+    "loadError": "Faktury se nepodařilo načíst.",
+    "empty": "Zatím nemáte žádné faktury. Po první platbě tu uvidíte přehled.",
+    "issuedDue": "Vystaveno {{issued}} · Splatnost {{due}}",
+    "downloadAriaLabel": "Stáhnout PDF faktury {{number}}",
+    "kind": {
+      "invoice": "Faktura",
+      "credit_note": "Dobropis",
+      "proforma": "Proforma"
+    },
+    "status": {
+      "draft": "Koncept",
+      "issued": "Vystavena",
+      "paid": "Zaplacena",
+      "overdue": "Po splatnosti",
+      "voided": "Stornována"
+    }
+  },
+  "cancelSubscriptionCard": {
+    "scheduledHeading": "Předplatné je naplánované ke zrušení",
+    "scheduledBodyWithDate": "Přístup do aplikace zachováme do {{endsAt}}. Poté pay-gate omezí činnost — data můžete kdykoli vyexportovat.",
+    "scheduledBodyDefault": "Přístup do aplikace zachováme do konce aktuálního období. Poté pay-gate omezí činnost — data můžete kdykoli vyexportovat.",
+    "reactivateError": "Obnovení se nezdařilo. Zkuste to prosím znovu.",
+    "reactivating": "Obnovuji…",
+    "reactivateCta": "Obnovit předplatné",
+    "heading": "Zrušit předplatné",
+    "bodyWithDate": "Po zrušení dále hradíme až do konce aktuálního období (do {{endsAt}}) — nikdo o přístup nepřijde okamžitě. Žádné další platby vám pak strhnuty nebudou. Data si vždy můžete vyexportovat ze sekce Reporty.",
+    "bodyWithoutDate": "Po zrušení dále hradíme až do konce aktuálního období — nikdo o přístup nepřijde okamžitě. Žádné další platby vám pak strhnuty nebudou. Data si vždy můžete vyexportovat ze sekce Reporty.",
+    "cancelCta": "Zrušit předplatné",
+    "confirmHeading": "Opravdu chcete zrušit předplatné?",
+    "reasonLabel": "Důvod (nepovinné, pomůže nám se zlepšit)",
+    "cancelError": "Zrušení se nezdařilo. Zkuste to prosím znovu.",
+    "canceling": "Rušíme…",
+    "confirmCancel": "Ano, zrušit",
+    "keepSubscription": "Ne, ponechat"
+  },
+  "choosePlanModal": {
+    "consentRequiredError": "Pro pokračování je nutné potvrdit souhlas s opakovanými platbami.",
+    "billingDetailsRequiredError": "Vyplňte prosím fakturační údaje.",
+    "billingSaveError": "Uložení fakturačních údajů se nezdařilo. Zkuste to prosím znovu.",
+    "heading": "Vyberte plán",
+    "intro": "Po výběru vás přesměrujeme na zabezpečenou platební bránu. Po úspěšné platbě se vrátíte zpět a předplatné bude okamžitě aktivní.",
+    "planRadioGroupLabel": "Plán",
+    "monthlyTitle": "Měsíční",
+    "annualTitle": "Roční",
+    "annualBadge": "Ušetříte 16 %",
+    "annualSavingsIntro_one": "S Vaším {{count}} uživatelem ušetříte",
+    "annualSavingsIntro_few": "S Vašimi {{count}} uživateli ušetříte",
+    "annualSavingsIntro_other": "S Vašimi {{count}} uživateli ušetříte",
+    "annualSavingsSuffix": "ročně.",
+    "billingDetailsHeading": "Fakturační údaje",
+    "billingDetailsHint": "Tyto údaje použijeme na daňový doklad. Vyplnění je povinné pro pokračování k platbě.",
+    "cancelCta": "Zrušit",
+    "submitting": "Přesměrování…",
+    "submitCta": "Pokračovat na platbu"
+  },
+  "billingReturnPage": {
+    "pageTitle": "Návrat z platební brány",
+    "backToBillingCta": "Zpět na fakturaci",
+    "overviewCta": "Přehled",
+    "successHeading": "Platba byla úspěšná.",
+    "successBody": "Děkujeme — vaše předplatné je aktivní. Faktura dorazila na e-mail a najdete ji v sekci Fakturace.",
+    "pendingHeading": "Zpracováváme vaši platbu.",
+    "pendingBody": "U platby kartou trvá potvrzení obvykle pár vteřin. U bankovního převodu může trvat až několik hodin, než nám banka přijetí potvrdí — předplatné se aktivuje automaticky a fakturu vám pošleme e-mailem v okamžiku, kdy se platba spáruje.",
+    "failedBody": "Žádné peníze vám nebyly strženy. Zkuste platbu znovu, nebo kontaktujte podporu pokud problém přetrvává.",
+    "unknownHeading": "Vrátili jste se z platební brány.",
+    "unknownBody": "Stav platby zatím nebyl potvrzen. Zkontrolujte sekci Fakturace, kam ihned po přijetí platby přistanou faktury."
+  }
+}

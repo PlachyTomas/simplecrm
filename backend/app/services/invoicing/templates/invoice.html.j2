@@ -3,20 +3,23 @@
 Variables provided by the renderer:
   invoice         — Invoice ORM row (snapshot fields are authoritative)
   lines           — list[InvoiceLine] sorted by `position`
-  qr_svg          — pre-rendered QR Platba SVG (string of <svg>...</svg>)
-  fmt_money       — callable: int minor -> "12 345,00 Kč" (Czech locale)
-  fmt_qty         — callable: Decimal -> "1,000" (Czech locale)
-  fmt_date        — callable: date -> "9. května 2026"
+  qr_svg          — pre-rendered QR Platba SVG, or None for non-CZK invoices
+  lang            — UI language ("cs"/"en") for the <html lang> attribute
+  labels          — dict of localized labels from the (lang, "invoice") catalog
+  fmt_money       — callable: int minor -> "12 345,00 Kč" (lang's locale)
+  fmt_qty         — callable: Decimal -> "1,000" (lang's locale)
+  fmt_date        — callable: date -> "9. května 2026" (lang's locale)
 
 The DPH-only blocks render conditional on `invoice.issuer_is_vat_payer`.
 For non-plátce invoices we explicitly emit the legally-required
-`Nejsem plátce DPH` notice in the footer.
+`Nejsem plátce DPH` notice in the footer. QR Platba is CZK-only, so the QR
+block renders only when `qr_svg` is set.
 #}
 <!doctype html>
-<html lang="cs">
+<html lang="{{ lang }}">
   <head>
     <meta charset="utf-8">
-    <title>Faktura {{ invoice.number }}</title>
+    <title>{{ labels.title }}</title>
     <style>
       @page { size: A4; margin: 18mm 16mm; }
 
@@ -187,14 +190,14 @@ For non-plátce invoices we explicitly emit the legally-required
     <header class="header">
       <h1>
         {% if invoice.issuer_is_vat_payer %}
-          {% if invoice.kind == "credit_note" %}Opravný daňový doklad
-          {% elif invoice.kind == "proforma" %}Proforma faktura
-          {% else %}Faktura — daňový doklad
+          {% if invoice.kind == "credit_note" %}{{ labels.kindVatCreditNote }}
+          {% elif invoice.kind == "proforma" %}{{ labels.kindVatProforma }}
+          {% else %}{{ labels.kindVatInvoice }}
           {% endif %}
         {% else %}
-          {% if invoice.kind == "credit_note" %}Dobropis k faktuře
-          {% elif invoice.kind == "proforma" %}Proforma faktura
-          {% else %}Faktura
+          {% if invoice.kind == "credit_note" %}{{ labels.kindCreditNote }}
+          {% elif invoice.kind == "proforma" %}{{ labels.kindProforma }}
+          {% else %}{{ labels.kindInvoice }}
           {% endif %}
         {% endif %}
       </h1>
@@ -203,20 +206,20 @@ For non-plátce invoices we explicitly emit the legally-required
 
     {% if invoice.kind == "credit_note" and invoice.related_invoice_number %}
     <p style="margin-top: 2mm; color: #555; font-size: 9pt;">
-      Vystaveno k faktuře <span class="mono">{{ invoice.related_invoice_number }}</span>
+      {{ labels.relatedNote }} <span class="mono">{{ invoice.related_invoice_number }}</span>
     </p>
     {% endif %}
 
     <section class="parties">
       <div>
-        <div class="party-label">Dodavatel</div>
+        <div class="party-label">{{ labels.supplier }}</div>
         <div class="party-name">{{ invoice.issuer_name }}</div>
         <div class="party-line">{{ invoice.issuer_address }}</div>
         <div class="party-meta">
           <div class="party-meta-row">
-            <span>IČO: <span class="mono">{{ invoice.issuer_ico }}</span></span>
+            <span>{{ labels.ico }}: <span class="mono">{{ invoice.issuer_ico }}</span></span>
             {% if invoice.issuer_dic %}
-            <span>DIČ: <span class="mono">{{ invoice.issuer_dic }}</span></span>
+            <span>{{ labels.dic }}: <span class="mono">{{ invoice.issuer_dic }}</span></span>
             {% endif %}
           </div>
           {% if invoice.issuer_register_text %}
@@ -226,16 +229,16 @@ For non-plátce invoices we explicitly emit the legally-required
       </div>
 
       <div>
-        <div class="party-label">Odběratel</div>
+        <div class="party-label">{{ labels.customer }}</div>
         <div class="party-name">{{ invoice.customer_name }}</div>
         <div class="party-line">{{ invoice.customer_address }}</div>
         <div class="party-meta">
           <div class="party-meta-row">
             {% if invoice.customer_ico %}
-            <span>IČO: <span class="mono">{{ invoice.customer_ico }}</span></span>
+            <span>{{ labels.ico }}: <span class="mono">{{ invoice.customer_ico }}</span></span>
             {% endif %}
             {% if invoice.customer_dic %}
-            <span>DIČ: <span class="mono">{{ invoice.customer_dic }}</span></span>
+            <span>{{ labels.dic }}: <span class="mono">{{ invoice.customer_dic }}</span></span>
             {% endif %}
           </div>
         </div>
@@ -244,15 +247,15 @@ For non-plátce invoices we explicitly emit the legally-required
 
     <section class="dates">
       <div>
-        <div class="label">Datum vystavení</div>
+        <div class="label">{{ labels.issueDate }}</div>
         <div class="value">{{ fmt_date(invoice.issued_at.date()) }}</div>
       </div>
       <div>
-        <div class="label">DUZP</div>
+        <div class="label">{{ labels.taxSupplyDate }}</div>
         <div class="value">{{ fmt_date(invoice.taxable_supply_date) }}</div>
       </div>
       <div>
-        <div class="label">Datum splatnosti</div>
+        <div class="label">{{ labels.dueDate }}</div>
         <div class="value">{{ fmt_date(invoice.due_at) }}</div>
       </div>
     </section>
@@ -261,13 +264,13 @@ For non-plátce invoices we explicitly emit the legally-required
       <table>
         <thead>
           <tr>
-            <th>Popis</th>
-            <th class="num">Množství</th>
-            <th class="num">Jednotková cena</th>
+            <th>{{ labels.description }}</th>
+            <th class="num">{{ labels.quantity }}</th>
+            <th class="num">{{ labels.unitPrice }}</th>
             {% if invoice.issuer_is_vat_payer %}
-            <th class="num">Sazba DPH</th>
+            <th class="num">{{ labels.vatRate }}</th>
             {% endif %}
-            <th class="num">Celkem</th>
+            <th class="num">{{ labels.total }}</th>
           </tr>
         </thead>
         <tbody>
@@ -293,16 +296,16 @@ For non-plátce invoices we explicitly emit the legally-required
         <tbody>
           {% if invoice.issuer_is_vat_payer %}
           <tr>
-            <td class="label">Základ daně</td>
+            <td class="label">{{ labels.taxBase }}</td>
             <td class="value">{{ fmt_money(invoice.subtotal_minor) }}</td>
           </tr>
           <tr>
-            <td class="label">DPH {{ fmt_qty(invoice.vat_rate_percent) }} %</td>
+            <td class="label">{{ labels.vatRow }}</td>
             <td class="value">{{ fmt_money(invoice.vat_amount_minor) }}</td>
           </tr>
           {% endif %}
           <tr class="grand">
-            <td class="label">Celkem k úhradě</td>
+            <td class="label">{{ labels.totalDue }}</td>
             <td class="value">{{ fmt_money(invoice.total_minor) }}</td>
           </tr>
         </tbody>
@@ -311,41 +314,43 @@ For non-plátce invoices we explicitly emit the legally-required
 
     <section class="payment">
       <div>
-        <div class="label" style="margin-bottom: 2mm;">Bankovní spojení</div>
+        <div class="label" style="margin-bottom: 2mm;">{{ labels.bankDetails }}</div>
         <dl>
-          <dt>IBAN</dt>
+          <dt>{{ labels.iban }}</dt>
           <dd class="mono">{{ invoice.issuer_iban }}</dd>
           {% if invoice.issuer_account_domestic %}
-          <dt>Účet</dt>
+          <dt>{{ labels.account }}</dt>
           <dd class="mono">{{ invoice.issuer_account_domestic }}</dd>
           {% endif %}
-          <dt>Variabilní symbol</dt>
+          <dt>{{ labels.variableSymbol }}</dt>
           <dd class="mono">{{ invoice.variable_symbol }}</dd>
-          <dt>Způsob platby</dt>
+          <dt>{{ labels.paymentMethod }}</dt>
           <dd>
-            {% if invoice.payment_method == "card" %}Platební karta
-            {% elif invoice.payment_method == "qr_platba" %}QR Platba
-            {% else %}Bankovní převod
+            {% if invoice.payment_method == "card" %}{{ labels.paymentCard }}
+            {% elif invoice.payment_method == "qr_platba" %}{{ labels.qrPlatba }}
+            {% else %}{{ labels.paymentBankTransfer }}
             {% endif %}
           </dd>
         </dl>
       </div>
 
+      {% if qr_svg %}
       <div class="qr">
         {{ qr_svg|safe }}
-        <div class="qr-caption">QR Platba</div>
+        <div class="qr-caption">{{ labels.qrPlatba }}</div>
       </div>
+      {% endif %}
     </section>
 
     <footer class="footer">
       {% if not invoice.issuer_is_vat_payer %}
-      <div class="non-vat-notice">Nejsem plátce DPH.</div>
+      <div class="non-vat-notice">{{ labels.nonVatNotice }}</div>
       {% endif %}
       {% if invoice.note %}
       <div style="white-space: pre-line; margin-bottom: 1.5mm;">{{ invoice.note }}</div>
       {% endif %}
       <div>
-        Děkujeme, že podnikáte se SimpleCRM.
+        {{ labels.footerThanks }}
       </div>
     </footer>
 

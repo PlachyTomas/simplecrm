@@ -1,5 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+
+import type { Language } from "@/lib/i18n/languages";
 
 import { AppShell } from "@/app/AppShell";
 import { MorePage } from "@/app/MorePage";
@@ -32,6 +34,7 @@ import { ToastProvider } from "@/lib/toast";
 import { CenikPage } from "@/marketing/CenikPage";
 import { CookieConsent } from "@/marketing/cookie-consent";
 import { LandingPage } from "@/marketing/LandingPage";
+import { MarketingLanguageLayout } from "@/marketing/MarketingLanguageLayout";
 import { CookiesPage } from "@/marketing/legal/CookiesPage";
 import { DodaciPlatebniPodminkyPage } from "@/marketing/legal/DodaciPlatebniPodminkyPage";
 import { KontaktPage } from "@/marketing/legal/KontaktPage";
@@ -43,19 +46,57 @@ import { ZpracovatelskaSmlouvaPage } from "@/marketing/legal/ZpracovatelskaSmlou
 import { NotFoundPage } from "@/marketing/NotFoundPage";
 import { ObjednavkaNavratPage } from "@/marketing/ObjednavkaNavratPage";
 import { ObjednavkaPage } from "@/marketing/ObjednavkaPage";
+import { counterpartPath, marketingRouteSegment } from "@/marketing/slugs";
 import { AcceptInvitePage } from "@/onboarding/AcceptInvitePage";
 import { CreateOrgPage } from "@/onboarding/CreateOrgPage";
 import { AdminPage } from "@/admin/AdminPage";
 import { RequireSuperAdmin } from "@/auth/RequireSuperAdmin";
 
+/**
+ * The public marketing pages, mounted relative to their language root
+ * (site root for `cs`, `/en` for `en`). Returned as a fragment of `<Route>`s
+ * so both language trees share one definition.
+ */
+function marketingRoutes(lang: Language) {
+  return (
+    <>
+      <Route index element={<LandingPage />} />
+      <Route path={marketingRouteSegment("cenik", lang)} element={<CenikPage />} />
+      <Route path={marketingRouteSegment("objednavka", lang)} element={<ObjednavkaPage />} />
+      <Route
+        path={marketingRouteSegment("objednavkaNavrat", lang)}
+        element={<ObjednavkaNavratPage />}
+      />
+      <Route path={marketingRouteSegment("kontakt", lang)} element={<KontaktPage />} />
+    </>
+  );
+}
+
+/**
+ * Unknown paths under `/en`: if the visitor used a Czech slug (e.g.
+ * `/en/cenik`) send them to its English counterpart; otherwise show the 404.
+ */
+function EnMarketingCatchAll() {
+  const { pathname } = useLocation();
+  const csEquivalent = pathname.slice("/en".length) || "/";
+  const counterpart = counterpartPath(csEquivalent);
+  if (counterpart && counterpart.startsWith("/en")) {
+    return <Navigate to={counterpart} replace />;
+  }
+  return <NotFoundPage />;
+}
+
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/cenik" element={<CenikPage />} />
-      <Route path="/objednavka" element={<ObjednavkaPage />} />
-      <Route path="/objednavka/navrat" element={<ObjednavkaNavratPage />} />
-      <Route path="/kontakt" element={<KontaktPage />} />
+      {/* Czech marketing at the site root. */}
+      <Route element={<MarketingLanguageLayout lang="cs" />}>{marketingRoutes("cs")}</Route>
+      {/* English marketing under /en. */}
+      <Route path="/en" element={<MarketingLanguageLayout lang="en" />}>
+        {marketingRoutes("en")}
+        <Route path="*" element={<EnMarketingCatchAll />} />
+      </Route>
+      {/* Legal pages — Czech only, at the root. */}
       <Route path="/obchodni-podminky" element={<ObchodniPodminkyPage />} />
       <Route path="/reklamacni-podminky" element={<ReklamacniPodminkyPage />} />
       <Route path="/dodaci-a-platebni-podminky" element={<DodaciPlatebniPodminkyPage />} />

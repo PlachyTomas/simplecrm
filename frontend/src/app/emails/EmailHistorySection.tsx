@@ -1,5 +1,6 @@
 import { Reply } from "lucide-react";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 import { type SentEmailOut, useCompanyEmails, useDealEmails } from "@/app/emails/useEmails";
 
@@ -11,10 +12,11 @@ interface EmailHistorySectionProps {
 }
 
 function StatusBadge({ email }: { email: SentEmailOut }) {
+  const { t } = useTranslation("emails");
   if (email.status === "sent") {
     return (
       <span className="inline-flex items-center rounded-full bg-success-subtle px-2 py-0.5 text-xs font-medium text-success">
-        Odesláno
+        {t("history.statusSent")}
       </span>
     );
   }
@@ -23,7 +25,7 @@ function StatusBadge({ email }: { email: SentEmailOut }) {
       title={email.error ?? undefined}
       className="inline-flex items-center rounded-full bg-danger-subtle px-2 py-0.5 text-xs font-medium text-danger"
     >
-      Chyba
+      {t("history.statusError")}
     </span>
   );
 }
@@ -34,6 +36,7 @@ export function EmailHistorySection({
   locale,
   onReply,
 }: EmailHistorySectionProps) {
+  const { t } = useTranslation("emails");
   // Exactly one of dealId/companyId is provided; the unused hook stays disabled.
   const dealEmails = useDealEmails(dealId);
   const companyEmails = useCompanyEmails(companyId);
@@ -47,11 +50,11 @@ export function EmailHistorySection({
 
   return (
     <section className="mt-6">
-      <h3 className="text-sm font-semibold text-text-primary">Odeslané e-maily</h3>
+      <h3 className="text-sm font-semibold text-text-primary">{t("history.title")}</h3>
       {query.isPending ? (
-        <p className="mt-2 text-sm text-text-tertiary">Načítání…</p>
+        <p className="mt-2 text-sm text-text-tertiary">{t("history.loading")}</p>
       ) : items.length === 0 ? (
-        <p className="mt-2 text-sm text-text-secondary">Zatím žádné odeslané e-maily.</p>
+        <p className="mt-2 text-sm text-text-secondary">{t("history.empty")}</p>
       ) : (
         <ul className="mt-3 divide-y divide-border-subtle rounded-md border border-border">
           {items.map((email) => (
@@ -70,7 +73,7 @@ export function EmailHistorySection({
                 onClick={() => onReply(email)}
                 className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-surface-overlay px-2.5 py-1 text-xs font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
               >
-                <Reply size={13} strokeWidth={1.75} aria-hidden /> Odpovědět
+                <Reply size={13} strokeWidth={1.75} aria-hidden /> {t("history.reply")}
               </button>
             </li>
           ))}

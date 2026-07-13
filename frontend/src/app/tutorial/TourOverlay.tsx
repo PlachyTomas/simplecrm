@@ -73,7 +73,7 @@ export function TourOverlay(): ReactElement | null {
     };
   }, [step, anchorTestId]);
 
-  // Esc dismisses the tour (treated as "Přeskočit", not "Hotovo").
+  // Esc dismisses the tour (treated as Skip, not Done).
   useEffect(() => {
     if (!tour.shouldShow) return;
     const onKey = (e: KeyboardEvent) => {

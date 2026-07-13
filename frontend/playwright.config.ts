@@ -16,6 +16,11 @@ export default defineConfig({
   reporter: "list",
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:5173",
+    // Pin the browser to Czech so the app's language detector resolves to cs
+    // (the reference language). Without this the test Chromium's en-US
+    // navigator.language flips the UI to English and the Czech-string
+    // assertions below fail. The suite intentionally verifies the cs default.
+    locale: "cs-CZ",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },

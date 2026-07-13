@@ -1,6 +1,10 @@
+import type { ParseKeys } from "i18next";
 import { Crown, RefreshCw, Trophy } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
+import { formatMoney } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import {
   DEMO_DEALS_INITIAL,
   DEMO_SALES,
@@ -8,12 +12,6 @@ import {
   DEMO_TEAMS,
   type DemoDeal,
 } from "@/marketing/demo-data";
-
-const moneyFmt = new Intl.NumberFormat("cs-CZ", {
-  style: "currency",
-  currency: "CZK",
-  maximumFractionDigits: 0,
-});
 
 const TEAM_BY_ID = new Map(DEMO_TEAMS.map((t) => [t.id, t]));
 const SALES_BY_ID = new Map(DEMO_SALES.map((s) => [s.id, s]));
@@ -24,8 +22,8 @@ function ownerTeamId(deal: DemoDeal): string {
   return SALES_BY_ID.get(deal.owner_id)?.team_id ?? "";
 }
 
-function ownerName(deal: DemoDeal): string {
-  return SALES_BY_ID.get(deal.owner_id)?.name ?? "—";
+function ownerNameKey(deal: DemoDeal): ParseKeys<"marketing"> | null {
+  return SALES_BY_ID.get(deal.owner_id)?.nameKey ?? null;
 }
 
 function StatTile({
@@ -73,7 +71,11 @@ function DealCard({
   onDragStart: (id: string) => void;
   draggable: boolean;
 }) {
+  const { t } = useTranslation("marketing");
+  const locale = useLocale();
   const team = TEAM_BY_ID.get(ownerTeamId(deal));
+  const ownerKey = ownerNameKey(deal);
+  const ownerName = ownerKey ? t(ownerKey) : "—";
   return (
     <div
       draggable={draggable}
@@ -87,11 +89,11 @@ function DealCard({
         (draggable ? "cursor-grab hover:border-accent-border active:cursor-grabbing" : "")
       }
     >
-      <p className="pr-1 text-xs font-medium leading-snug text-text-primary">{deal.name}</p>
-      <p className="truncate text-[11px] text-text-tertiary">{deal.company}</p>
+      <p className="pr-1 text-xs font-medium leading-snug text-text-primary">{t(deal.nameKey)}</p>
+      <p className="truncate text-[11px] text-text-tertiary">{t(deal.companyKey)}</p>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <span className="font-mono text-[11px] tabular-nums text-text-secondary">
-          {moneyFmt.format(deal.value)}
+          {formatMoney(deal.value, "CZK", locale)}
         </span>
         {team ? (
           <span
@@ -100,7 +102,7 @@ function DealCard({
               backgroundColor: `${team.color}1a`,
               color: team.color,
             }}
-            title={`${team.name} · ${ownerName(deal)}`}
+            title={`${team.name} · ${ownerName}`}
           >
             <span
               aria-hidden
@@ -115,7 +117,7 @@ function DealCard({
         <button
           type="button"
           onClick={onWin}
-          aria-label={`Označit obchod ${deal.name} jako vyhraný`}
+          aria-label={t("pipeline.markWonAria", { deal: t(deal.nameKey) })}
           className="absolute right-1.5 top-1.5 inline-flex h-5 items-center gap-1 rounded-full bg-brand-accent px-1.5 text-[10px] font-semibold text-text-on-brand-accent opacity-0 transition-opacity duration-fast hover:bg-brand-accent-hover focus:opacity-100 group-hover:opacity-100"
         >
           <Crown size={9} strokeWidth={2} aria-hidden /> Win
@@ -126,6 +128,9 @@ function DealCard({
 }
 
 export function InteractivePipeline() {
+  const { t } = useTranslation("marketing");
+  const locale = useLocale();
+  const money = (value: number) => formatMoney(value, "CZK", locale);
   const [deals, setDeals] = useState<DemoDeal[]>(DEMO_DEALS_INITIAL);
   const [teamFilter, setTeamFilter] = useState<string>(ALL_TEAMS);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -178,7 +183,7 @@ export function InteractivePipeline() {
       bucket.count += 1;
       bucket.value += deal.value;
     }
-    return DEMO_TEAMS.map((t) => ({ team: t, ...wonByTeam.get(t.id)! })).sort(
+    return DEMO_TEAMS.map((team) => ({ team, ...wonByTeam.get(team.id)! })).sort(
       (a, b) => b.value - a.value,
     );
   }, [deals]);
@@ -228,12 +233,12 @@ export function InteractivePipeline() {
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
-            Živá ukázka
+            {t("pipeline.eyebrow")}
           </p>
-          <h3 className="mt-1 text-lg font-semibold">Přesouvejte obchody — statistiky reagují</h3>
+          <h3 className="mt-1 text-lg font-semibold">{t("pipeline.title")}</h3>
           <p className="mt-1 text-sm text-text-secondary">
-            Zkuste přetáhnout kartu mezi sloupci nebo kliknout na <em>Vyhráno</em>. Žebříček týmů a
-            hodnota pipeline se přepočítají v reálném čase.
+            {t("pipeline.dragHintPre")} <em>{t("demo.stages.won")}</em>
+            {t("pipeline.dragHintPost")}
           </p>
         </div>
         <button
@@ -241,7 +246,7 @@ export function InteractivePipeline() {
           onClick={reset}
           className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface-overlay px-3 text-xs font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
         >
-          <RefreshCw size={12} strokeWidth={1.75} /> Reset
+          <RefreshCw size={12} strokeWidth={1.75} /> {t("pipeline.reset")}
         </button>
       </div>
 
@@ -256,7 +261,7 @@ export function InteractivePipeline() {
               : "border border-border-subtle bg-surface-overlay text-text-secondary hover:text-text-primary")
           }
         >
-          Všechny týmy
+          {t("pipeline.allTeams")}
         </button>
         {DEMO_TEAMS.map((team) => {
           const active = teamFilter === team.id;
@@ -285,23 +290,31 @@ export function InteractivePipeline() {
       </div>
 
       <div className="mb-5 grid grid-cols-2 gap-2 md:grid-cols-5">
-        <StatTile label="Otevřené" value={String(stats.openCount)} hint="V probíhající pipeline" />
         <StatTile
-          label="Hodnota pipeline"
-          value={moneyFmt.format(stats.openValue)}
-          hint="Otevřené obchody"
+          label={t("pipeline.statOpen")}
+          value={String(stats.openCount)}
+          hint={t("pipeline.statOpenHint")}
         />
-        <StatTile label="Vyhráno" value={String(stats.wonCount)} hint="V tomto sloupci" />
         <StatTile
-          label="Výnosy"
-          value={moneyFmt.format(stats.wonValue)}
-          hint="Součet vyhraných"
+          label={t("pipeline.statPipelineValue")}
+          value={money(stats.openValue)}
+          hint={t("pipeline.statPipelineValueHint")}
+        />
+        <StatTile
+          label={t("pipeline.statWon")}
+          value={String(stats.wonCount)}
+          hint={t("pipeline.statWonHint")}
+        />
+        <StatTile
+          label={t("pipeline.statRevenue")}
+          value={money(stats.wonValue)}
+          hint={t("pipeline.statRevenueHint")}
           highlight
         />
         <StatTile
-          label="Konverze"
+          label={t("pipeline.statConversion")}
           value={`${Math.round(stats.conversion * 100)} %`}
-          hint="Vyhrané / všechny"
+          hint={t("pipeline.statConversionHint")}
         />
       </div>
 
@@ -340,16 +353,16 @@ export function InteractivePipeline() {
                   style={{ backgroundColor: stage.color }}
                 />
                 <span className="min-w-0 truncate text-xs font-semibold text-text-primary">
-                  {stage.name}
+                  {t(stage.nameKey)}
                 </span>
                 <span className="ml-auto whitespace-nowrap font-mono text-[10px] tabular-nums text-text-tertiary">
-                  {stageDeals.length} · {moneyFmt.format(total)}
+                  {stageDeals.length} · {money(total)}
                 </span>
               </div>
               <div className="mt-2 min-h-[60px] space-y-1.5">
                 {stageDeals.length === 0 ? (
                   <p className="py-3 text-center text-[10px] text-text-tertiary">
-                    Sem přetáhněte obchod
+                    {t("pipeline.emptyStage")}
                   </p>
                 ) : (
                   stageDeals.map((deal) => (
@@ -376,8 +389,8 @@ export function InteractivePipeline() {
         <div className="rounded-md border border-border-subtle bg-surface-overlay p-4">
           <div className="mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <Trophy size={14} strokeWidth={1.75} className="text-brand-accent" />
-            <h4 className="text-sm font-semibold">Žebříček týmů</h4>
-            <span className="text-xs text-text-tertiary">podle hodnoty výhry</span>
+            <h4 className="text-sm font-semibold">{t("pipeline.teamLeaderboard")}</h4>
+            <span className="text-xs text-text-tertiary">{t("pipeline.byWinValue")}</span>
           </div>
           <ol className="space-y-2">
             {teamLeaderboard.map((row, idx) => {
@@ -387,7 +400,7 @@ export function InteractivePipeline() {
                 <li key={row.team.id} className="flex items-center gap-3">
                   {leader ? (
                     <span
-                      aria-label="Vedoucí žebříčku"
+                      aria-label={t("pipeline.leaderAria")}
                       className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-accent text-text-on-brand-accent"
                     >
                       <Crown size={11} strokeWidth={2} aria-hidden />
@@ -403,7 +416,7 @@ export function InteractivePipeline() {
                         {row.team.name}
                       </span>
                       <span className="shrink-0 font-mono text-[11px] tabular-nums text-text-secondary">
-                        {row.count} · {moneyFmt.format(row.value)}
+                        {row.count} · {money(row.value)}
                       </span>
                     </div>
                     <div className="mt-1 h-1.5 rounded-full bg-surface-elevated" aria-hidden>
@@ -425,12 +438,13 @@ export function InteractivePipeline() {
         <div className="rounded-md border border-border-subtle bg-surface-overlay p-4">
           <div className="mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <Trophy size={14} strokeWidth={1.75} className="text-brand-accent" />
-            <h4 className="text-sm font-semibold">Žebříček obchodníků</h4>
-            <span className="text-xs text-text-tertiary">podle hodnoty výhry</span>
+            <h4 className="text-sm font-semibold">{t("pipeline.salesLeaderboard")}</h4>
+            <span className="text-xs text-text-tertiary">{t("pipeline.byWinValue")}</span>
           </div>
           {salesLeaderboard.length === 0 ? (
             <p className="py-3 text-xs text-text-tertiary">
-              Zatím žádný obchodník nevyhrál obchod. Přesuňte kartu do sloupce <em>Vyhráno</em>.
+              {t("pipeline.emptySalesPre")} <em>{t("demo.stages.won")}</em>
+              {t("pipeline.emptySalesPost")}
             </p>
           ) : (
             <ol className="space-y-2">
@@ -442,7 +456,7 @@ export function InteractivePipeline() {
                   <li key={row.sales.id} className="flex items-center gap-3">
                     {leader ? (
                       <span
-                        aria-label="Vedoucí žebříčku"
+                        aria-label={t("pipeline.leaderAria")}
                         className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-accent text-text-on-brand-accent"
                       >
                         <Crown size={11} strokeWidth={2} aria-hidden />
@@ -456,7 +470,7 @@ export function InteractivePipeline() {
                       <div className="flex items-baseline justify-between gap-2">
                         <span className="flex min-w-0 items-baseline gap-1.5">
                           <span className="truncate text-xs font-medium text-text-primary">
-                            {row.sales.name}
+                            {t(row.sales.nameKey)}
                           </span>
                           {row.team ? (
                             <span className="hidden shrink-0 truncate text-[10px] text-text-tertiary sm:inline">
@@ -465,7 +479,7 @@ export function InteractivePipeline() {
                           ) : null}
                         </span>
                         <span className="shrink-0 font-mono text-[11px] tabular-nums text-text-secondary">
-                          {row.count} · {moneyFmt.format(row.value)}
+                          {row.count} · {money(row.value)}
                         </span>
                       </div>
                       <div className="mt-1 h-1.5 rounded-full bg-surface-elevated" aria-hidden>

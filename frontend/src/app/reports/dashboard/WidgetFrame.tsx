@@ -1,5 +1,6 @@
 import { GripVertical, Settings2, X } from "lucide-react";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,7 @@ export function WidgetFrame({
   children,
   className,
 }: WidgetFrameProps) {
+  const { t } = useTranslation("reports");
   return (
     <article
       className={cn(
@@ -45,7 +47,7 @@ export function WidgetFrame({
         {isEditMode ? (
           <button
             type="button"
-            aria-label="Přesunout widget"
+            aria-label={t("widgetFrame.moveWidget")}
             className="widget-drag-handle inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded text-text-tertiary hover:bg-surface-overlay active:cursor-grabbing"
           >
             <GripVertical size={14} strokeWidth={1.75} aria-hidden />
@@ -57,7 +59,7 @@ export function WidgetFrame({
           <button
             type="button"
             onClick={onConfigClick}
-            aria-label="Nastavení widgetu"
+            aria-label={t("widgetFrame.widgetSettings")}
             className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-text-tertiary hover:bg-surface-overlay hover:text-text-primary"
           >
             <Settings2 size={14} strokeWidth={1.75} aria-hidden />
@@ -67,7 +69,7 @@ export function WidgetFrame({
           <button
             type="button"
             onClick={onRemove}
-            aria-label="Odebrat widget"
+            aria-label={t("widgetFrame.removeWidget")}
             className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-text-tertiary hover:bg-danger-subtle hover:text-danger"
           >
             <X size={14} strokeWidth={1.75} aria-hidden />
@@ -81,10 +83,11 @@ export function WidgetFrame({
 
 /** Loading skeleton used by every widget while its query resolves. */
 export function WidgetSkeleton() {
+  const { t } = useTranslation("reports");
   return (
     <div
       role="status"
-      aria-label="Načítání widgetu"
+      aria-label={t("widgetFrame.loading")}
       className="flex h-full flex-col justify-center gap-3"
     >
       <div className="h-3 w-24 animate-pulse rounded bg-surface-overlay" />
@@ -96,16 +99,17 @@ export function WidgetSkeleton() {
 
 /** Inline error card. Per spec: never a toast — widget errors must not stack. */
 export function WidgetError({ onRetry }: { onRetry?: () => void }) {
+  const { t } = useTranslation("reports");
   return (
     <div className="flex h-full flex-col items-start justify-center gap-2 text-sm">
-      <p className="text-text-primary">Widget se nepodařilo načíst.</p>
+      <p className="text-text-primary">{t("widgetFrame.loadError")}</p>
       {onRetry ? (
         <button
           type="button"
           onClick={onRetry}
           className="text-xs font-medium text-accent hover:underline"
         >
-          Zkusit znovu
+          {t("widgetFrame.retry")}
         </button>
       ) : null}
     </div>

@@ -1,16 +1,22 @@
+import type { TFunction } from "i18next";
+
 import type { components } from "@/types/api.generated";
 
 export type SubscriptionOut = components["schemas"]["SubscriptionOut"];
 export type PlanCode = "monthly" | "annual";
 
 export const SUPPORT_MAILTO = "mailto:podpora@simplecrm.cz";
-export const ENTERPRISE_MAILTO =
-  "mailto:podpora@simplecrm.cz?subject=" + encodeURIComponent("SimpleCRM enterprise — dotaz");
 
-const csDate = new Intl.DateTimeFormat("cs-CZ", { dateStyle: "long" });
-export function formatCsDate(iso: string | null | undefined): string | null {
+export function enterpriseMailto(t: TFunction<"billing">): string {
+  return (
+    "mailto:podpora@simplecrm.cz?subject=" +
+    encodeURIComponent(t("billingShared.enterpriseMailtoSubject"))
+  );
+}
+
+export function formatCsDate(iso: string | null | undefined, locale: string): string | null {
   if (!iso) return null;
-  return csDate.format(new Date(iso));
+  return new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(new Date(iso));
 }
 
 interface StatusPillSpec {
@@ -18,33 +24,59 @@ interface StatusPillSpec {
   className: string;
 }
 
-export function getStatusPill(sub: SubscriptionOut | null | undefined): StatusPillSpec {
-  if (!sub) return { label: "Načítání…", className: "bg-surface-overlay text-text-tertiary" };
-  if (sub.is_comp) return { label: "Komplementární", className: "bg-info-subtle text-info" };
+export function getStatusPill(
+  sub: SubscriptionOut | null | undefined,
+  t: TFunction<"billing">,
+): StatusPillSpec {
+  if (!sub) {
+    return { label: t("billingShared.statusLoading"), className: "bg-surface-overlay text-text-tertiary" };
+  }
+  if (sub.is_comp) {
+    return { label: t("billingShared.statusComp"), className: "bg-info-subtle text-info" };
+  }
   if (sub.plan?.code === "enterprise" && sub.status === "active") {
-    return { label: "Aktivní · Enterprise", className: "bg-info-subtle text-info" };
+    return { label: t("billingShared.statusEnterpriseActive"), className: "bg-info-subtle text-info" };
   }
   switch (sub.status) {
     case "trialing":
-      return { label: "Zkušební verze", className: "bg-info-subtle text-info" };
+      return { label: t("billingShared.statusTrialing"), className: "bg-info-subtle text-info" };
     case "pending_activation":
-      return { label: "Čeká na platbu", className: "bg-warning-subtle text-warning" };
+      return {
+        label: t("billingShared.statusPendingActivation"),
+        className: "bg-warning-subtle text-warning",
+      };
     case "active":
-      return { label: "Aktivní", className: "bg-success-subtle text-success" };
+      return { label: t("billingShared.statusActive"), className: "bg-success-subtle text-success" };
     case "past_due":
-      return { label: "Po splatnosti", className: "bg-warning-subtle text-warning" };
+      return { label: t("billingShared.statusPastDue"), className: "bg-warning-subtle text-warning" };
     case "canceled":
-      return { label: "Zrušeno", className: "bg-danger-subtle text-danger" };
+      return { label: t("billingShared.statusCanceled"), className: "bg-danger-subtle text-danger" };
     default:
       return { label: sub.status, className: "bg-surface-overlay text-text-tertiary" };
   }
 }
 
-export function planDisplayName(sub: SubscriptionOut | null | undefined): string {
+export function planDisplayName(
+  sub: SubscriptionOut | null | undefined,
+  t: TFunction<"billing">,
+): string {
   if (!sub?.plan) return "—";
-  if (sub.is_comp) return "Komplementární";
-  if (sub.plan.code === "enterprise") return "Vlastní balíček";
-  return sub.plan.display_name_cs;
+  if (sub.is_comp) return t("billingShared.planNameComp");
+  // The API exposes only the Czech display name (`display_name_cs`), so the
+  // known plan codes map to catalog keys; the cs name stays as the fallback
+  // for any future code this build doesn't know yet.
+  switch (sub.plan.code) {
+    case "enterprise":
+      return t("billingShared.planNameEnterprise");
+    case "trial":
+      return t("billingShared.planNameTrial");
+    case "monthly":
+      return t("billingShared.planNameMonthly");
+    case "annual":
+      return t("billingShared.planNameAnnual");
+    default:
+      return sub.plan.display_name_cs;
+  }
 }
 
 export function planInterval(

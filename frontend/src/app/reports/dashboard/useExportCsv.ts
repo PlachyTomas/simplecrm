@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "@/auth/useAuth";
 import { API_BASE_URL } from "@/lib/api";
@@ -7,14 +8,15 @@ import { resolvePreset } from "@/app/reports/dashboard/dateRange";
 import type { DashboardConfig, GlobalFilters } from "@/app/reports/dashboard/types";
 
 /**
- * "Stáhnout CSV" hook. Posts the currently visible widget set + the
- * resolved date range to the export endpoint and triggers a browser
- * download. Uses raw fetch (not `apiFetch`) because the response is a
- * binary CSV body, not JSON, and we need the blob to hand to a
- * temporary anchor.
+ * CSV export hook, driving the "Download CSV" button. Posts the
+ * currently visible widget set + the resolved date range to the
+ * export endpoint and triggers a browser download. Uses raw fetch
+ * (not `apiFetch`) because the response is a binary CSV body, not
+ * JSON, and we need the blob to hand to a temporary anchor.
  */
 export function useExportCsv() {
   const { accessToken } = useAuth();
+  const { t } = useTranslation("reports");
 
   return useMutation({
     mutationFn: async ({
@@ -52,7 +54,7 @@ export function useExportCsv() {
       }
       const blob = await res.blob();
       const today = new Date().toISOString().slice(0, 10);
-      triggerDownload(blob, `reporty-${today}.csv`);
+      triggerDownload(blob, `${t("reportsPage.exportFilenamePrefix")}-${today}.csv`);
     },
   });
 }

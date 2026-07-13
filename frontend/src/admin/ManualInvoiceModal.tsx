@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useAdminOrgList } from "@/admin/hooks";
 import { type ManualLineDraft, useIssueManualInvoice } from "@/admin/useAdminInvoices";
-import { formatCzkMinor } from "@/components/billing/format";
+import { formatMoneyMinor } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 
 interface ManualInvoiceModalProps {
   onClose: () => void;
@@ -20,6 +22,8 @@ function newLine(): ManualLineDraft {
 }
 
 export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProps) {
+  const { t } = useTranslation("admin");
+  const locale = useLocale();
   const [orgQuery, setOrgQuery] = useState("");
   const [orgId, setOrgId] = useState<string | null>(null);
   const [orgLabel, setOrgLabel] = useState<string>("");
@@ -59,11 +63,11 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
 
   async function handleSubmit() {
     if (!orgId) {
-      setError("Vyberte zákazníka.");
+      setError(t("manualInvoiceModal.errorCustomerRequired"));
       return;
     }
     if (lines.some((line) => line.description.trim() === "")) {
-      setError("Doplňte popis u všech položek.");
+      setError(t("manualInvoiceModal.errorDescriptionRequired"));
       return;
     }
     setError(null);
@@ -78,7 +82,7 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
       },
       {
         onSuccess: (data) => onIssued(data.id),
-        onError: (err) => setError(extractMessage(err) ?? "Vystavení faktury selhalo."),
+        onError: (err) => setError(extractMessage(err) ?? t("manualInvoiceModal.errorGeneric")),
       },
     );
   }
@@ -96,11 +100,9 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
         className="max-h-full w-full max-w-3xl overflow-y-auto rounded-lg border border-border bg-surface p-6 shadow-xl"
       >
         <h2 id="manual-invoice-title" className="text-lg font-semibold">
-          Vystavit fakturu ručně
+          {t("manualInvoiceModal.title")}
         </h2>
-        <p className="mt-1 text-sm text-text-secondary">
-          Vystaví novou fakturu mimo standardní ComGate flow (refundy, comp orgs, korekce).
-        </p>
+        <p className="mt-1 text-sm text-text-secondary">{t("manualInvoiceModal.description")}</p>
 
         {error ? (
           <p
@@ -114,7 +116,7 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
         <div className="mt-5 space-y-5">
           <div>
             <label className="mb-1 block text-sm font-medium" htmlFor="org-search">
-              Zákazník
+              {t("manualInvoiceModal.customerLabel")}
             </label>
             <div className="relative">
               <input
@@ -126,13 +128,15 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
                   setOrgId(null);
                   setOrgLabel("");
                 }}
-                placeholder="Hledat organizaci…"
+                placeholder={t("manualInvoiceModal.customerSearchPlaceholder")}
                 className="w-full rounded-md border border-border bg-bg px-3 py-1.5 text-sm focus:border-accent focus:outline-none"
               />
               {!orgId && orgQuery && orgListQuery.data ? (
                 <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-border bg-surface shadow-lg">
                   {orgListQuery.data.items.length === 0 ? (
-                    <li className="px-3 py-2 text-sm text-text-tertiary">Žádné výsledky.</li>
+                    <li className="px-3 py-2 text-sm text-text-tertiary">
+                      {t("manualInvoiceModal.noResults")}
+                    </li>
                   ) : (
                     orgListQuery.data.items.map((row) => (
                       <li key={row.id}>
@@ -156,14 +160,14 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
           </div>
 
           <div>
-            <h3 className="mb-2 text-sm font-medium">Položky</h3>
+            <h3 className="mb-2 text-sm font-medium">{t("manualInvoiceModal.lineItems.title")}</h3>
             <table className="w-full text-sm">
               <thead className="text-xs text-text-tertiary">
                 <tr className="border-b border-border">
-                  <th className="py-1 text-left">Popis</th>
-                  <th className="py-1 text-right">Množství</th>
-                  <th className="py-1 text-right">Jed.</th>
-                  <th className="py-1 text-right">Cena (Kč)</th>
+                  <th className="py-1 text-left">{t("manualInvoiceModal.lineItems.description")}</th>
+                  <th className="py-1 text-right">{t("manualInvoiceModal.lineItems.quantity")}</th>
+                  <th className="py-1 text-right">{t("manualInvoiceModal.lineItems.unit")}</th>
+                  <th className="py-1 text-right">{t("manualInvoiceModal.lineItems.price")}</th>
                   <th className="py-1"></th>
                 </tr>
               </thead>
@@ -218,7 +222,7 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
                         disabled={lines.length === 1}
                         className="text-xs text-text-tertiary hover:text-danger disabled:opacity-30"
                       >
-                        Odebrat
+                        {t("manualInvoiceModal.lineItems.remove")}
                       </button>
                     </td>
                   </tr>
@@ -230,14 +234,14 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
               onClick={addLine}
               className="mt-2 text-xs text-accent hover:underline"
             >
-              + Přidat položku
+              {t("manualInvoiceModal.lineItems.add")}
             </button>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-sm font-medium" htmlFor="manual-due-at">
-                Splatnost (volitelné)
+                {t("manualInvoiceModal.dueAtLabel")}
               </label>
               <input
                 id="manual-due-at"
@@ -249,7 +253,7 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium" htmlFor="manual-note">
-                Poznámka (volitelné)
+                {t("manualInvoiceModal.noteLabel")}
               </label>
               <input
                 id="manual-note"
@@ -269,17 +273,19 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
               className="mt-0.5 h-4 w-4"
             />
             <span>
-              Propojit s předplatným zákazníka (po označení jako zaplacené prodlouží období)
+              {t("manualInvoiceModal.linkSubscription")}
               <span className="block text-xs text-text-tertiary">
-                Odškrtněte u refundů, dobropisů a jednorázových oprav.
+                {t("manualInvoiceModal.linkSubscriptionHint")}
               </span>
             </span>
           </label>
 
           <p className="rounded-md border border-border bg-bg px-3 py-2 text-sm">
-            Mezisoučet:{" "}
-            <span className="font-medium tabular-nums">{formatCzkMinor(subtotalMinor)}</span>{" "}
-            <span className="text-text-tertiary">(DPH se dopočítá podle vašeho nastavení DPH)</span>
+            {t("manualInvoiceModal.subtotalPrefix")}
+            <span className="font-medium tabular-nums">
+              {formatMoneyMinor(subtotalMinor, "CZK", locale)}
+            </span>{" "}
+            <span className="text-text-tertiary">{t("manualInvoiceModal.vatHint")}</span>
           </p>
         </div>
 
@@ -289,7 +295,7 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
             onClick={onClose}
             className="hover:bg-bg-elevated rounded-md border border-border bg-bg px-4 py-1.5 text-sm"
           >
-            Zrušit
+            {t("manualInvoiceModal.cancel")}
           </button>
           <button
             type="button"
@@ -297,7 +303,7 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
             disabled={issue.isPending}
             className="rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
           >
-            {issue.isPending ? "Vystavuji…" : "Vystavit fakturu"}
+            {issue.isPending ? t("manualInvoiceModal.submitting") : t("manualInvoiceModal.submit")}
           </button>
         </div>
       </div>

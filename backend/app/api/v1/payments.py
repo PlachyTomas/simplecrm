@@ -139,7 +139,7 @@ async def initial_payment_init(
     if sub.status == "active":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail={"code": "already_active", "detail": "Předplatné je již aktivní."},
+            detail={"code": "already_active"},
         )
     already_paid = (
         await session.execute(
@@ -153,7 +153,7 @@ async def initial_payment_init(
     if already_paid is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail={"code": "already_active", "detail": "Aktivační platba již proběhla."},
+            detail={"code": "already_active"},
         )
     # Reject a second checkout while a recent one is still pending (review R2 P1
     # residual: two tabs both completing double-captures the card). A pending
@@ -172,10 +172,7 @@ async def initial_payment_init(
     if recent_pending is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "code": "payment_in_progress",
-                "detail": "Platba již probíhá. Dokončete ji, nebo to zkuste za chvíli znovu.",
-            },
+            detail={"code": "payment_in_progress"},
         )
 
     plan = await billing._load_plan_by_code(session, payload.plan_code)
@@ -190,10 +187,7 @@ async def initial_payment_init(
     if org is None or not billing_complete(org):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={
-                "code": "billing_details_required",
-                "detail": "Před platbou je nutné vyplnit fakturační údaje.",
-            },
+            detail={"code": "billing_details_required"},
         )
 
     charge = Charge(
@@ -221,7 +215,7 @@ async def initial_payment_init(
         logger.warning("ComGate create_initial_payment failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Platební brána není dostupná, zkuste to prosím za chvíli.",
+            detail={"code": "gateway_unavailable"},
         ) from exc
 
     charge.comgate_trans_id = created.trans_id
@@ -257,7 +251,7 @@ async def demo_order(
     if not await rate_limiter.try_acquire(client_ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Příliš mnoho pokusů, zkuste to prosím za pár minut.",
+            detail={"code": "too_many_attempts"},
         )
 
     plan = await billing._load_plan_by_code(session, payload.plan_code)
@@ -285,7 +279,7 @@ async def demo_order(
         logger.warning("ComGate create_demo_payment failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Platební brána není dostupná, zkuste to prosím za chvíli.",
+            detail={"code": "gateway_unavailable"},
         ) from exc
 
     return DemoOrderOut(
@@ -400,7 +394,7 @@ async def seat_change_init(
         logger.warning("ComGate create_recurring_payment failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Platební brána odmítla transakci. Zkontrolujte uloženou kartu.",
+            detail={"code": "gateway_declined"},
         ) from exc
 
     charge.comgate_trans_id = result.trans_id

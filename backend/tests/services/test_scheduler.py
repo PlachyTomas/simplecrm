@@ -56,7 +56,7 @@ def test_build_freed_company_email_renders_singular_and_plural() -> None:
     many = build_freed_company_email(
         owner_email="a@b.cz", owner_name="Anna", company_names=["Beta", "Acme"]
     )
-    assert "2 firem" in many.subject
+    assert "2 firmy" in many.subject
     # Alphabetical order — Acme before Beta.
     assert many.body.index("Acme") < many.body.index("Beta")
 

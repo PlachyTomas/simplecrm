@@ -17,11 +17,24 @@ import smtplib
 import ssl
 from dataclasses import dataclass, field
 from email.message import EmailMessage
-from typing import Literal
+from pathlib import Path
+from typing import Any, Literal
+
+from jinja2 import Environment, FileSystemLoader
 
 from app.core.config import get_settings
+from app.core.i18n import t
 
 logger = logging.getLogger("simplecrm.email")
+
+# app/services/email.py -> app/services -> app/services/email_templates
+_EMAIL_TEMPLATES_DIR = Path(__file__).resolve().parent / "email_templates"
+
+_jinja_env = Environment(
+    loader=FileSystemLoader(_EMAIL_TEMPLATES_DIR),
+    autoescape=False,  # noqa: S701 — plain-text emails, no HTML to escape
+    keep_trailing_newline=True,
+)
 
 
 # Which Zoho send-as identity to use as `From:`. The split lets the
@@ -69,8 +82,31 @@ class Email:
     sender_role: SenderRole = "info"
 
 
+def render_email(name: str, lang: str, /, *, to: str, **ctx: Any) -> Email:
+    """Render a per-locale transactional email from its Jinja template.
+
+    `name` picks `app/services/email_templates/<lang>/<name>.txt.j2` for the
+    body (plain text; `autoescape=False`, `keep_trailing_newline=True` so the
+    template's exact trailing newline survives). The subject comes from
+    `t(lang, f"emails.{name}.subject", **ctx)` — `app/locales/<lang>/emails.json`
+    — which falls back to cs when a translation is missing and supports
+    plural-suffixed subjects (e.g. `freed_company.subject_one/_other`) when
+    `ctx` includes `count`. `ctx` is also the Jinja render context, so a
+    template variable and a `str.format` subject placeholder can share a name
+    (e.g. `organization_name`) without any extra plumbing.
+
+    `name` and `lang` are positional-only so a template's own `name` context
+    var (e.g. the recipient's first name, used by several templates) can be
+    passed as a `name=` keyword without colliding with the template-selector
+    argument.
+    """
+    subject = t(lang, f"emails.{name}.subject", **ctx)
+    body = _jinja_env.get_template(f"{lang}/{name}.txt.j2").render(**ctx)
+    return Email(to=to, subject=subject, body=body)
+
+
 def build_freed_company_email(
-    *, owner_email: str, owner_name: str, company_names: list[str]
+    *, owner_email: str, owner_name: str, company_names: list[str], lang: str = "cs"
 ) -> Email:
     """Compose the "your companies were freed" digest for one owner.
 
@@ -80,23 +116,22 @@ def build_freed_company_email(
     if not company_names:
         raise ValueError("company_names must not be empty")
     joined = "\n".join(f"• {n}" for n in sorted(company_names))
-    subject = (
-        f"SimpleCRM: {len(company_names)} firma uvolněna"
-        if len(company_names) == 1
-        else f"SimpleCRM: {len(company_names)} firem uvolněno"
+    return render_email(
+        "freed_company",
+        lang,
+        to=owner_email,
+        name=owner_name,
+        companies=joined,
+        count=len(company_names),
     )
-    body = (
-        f"Ahoj {owner_name},\n\n"
-        "tyto firmy byly uvolněny zpět do sdíleného poolu, protože u nich "
-        "posledních 90 dní neproběhla žádná objednávka:\n\n"
-        f"{joined}\n\n"
-        "Kdykoli je můžeš znovu převzít v aplikaci SimpleCRM.\n"
-    )
-    return Email(to=owner_email, subject=subject, body=body)
 
 
 def build_subscription_pending_email(
-    *, org_name: str, plan_display: str, founder_email: str = "podpora@simplecrm.cz"
+    *,
+    org_name: str,
+    plan_display: str,
+    founder_email: str = "podpora@simplecrm.cz",
+    lang: str = "cs",
 ) -> Email:
     """Founder-facing notification: an org just chose a plan.
 
@@ -105,25 +140,23 @@ def build_subscription_pending_email(
     transfer payment when it lands and activate the subscription via the
     super-admin UI.
     """
-    subject = f"SimpleCRM: {org_name} si vybral plán {plan_display}"
-    body = (
-        f"Dobrý den,\n\n"
-        f"organizace {org_name} si vybrala plán {plan_display} a čeká "
-        "na aktivaci po obdržení platby.\n\n"
-        "Po připsání platby aktivujte předplatné v super-admin "
-        "rozhraní (/admin → detail organizace → Aktivovat předplatné).\n\n"
-        "Detaily najdete v audit logu organizace.\n"
+    return render_email(
+        "subscription_pending",
+        lang,
+        to=founder_email,
+        org_name=org_name,
+        plan_display=plan_display,
     )
-    return Email(to=founder_email, subject=subject, body=body)
 
 
 def build_billing_info_reminder_email(
     *,
     recipient: str,
-    name: str,
+    name: str | None,
     org_name: str,
     days_remaining: int,
     settings_link: str,
+    lang: str = "cs",
 ) -> Email:
     """Reminder email for an org admin: trial ends soon and the
     Fakturační údaje are still missing.
@@ -131,54 +164,37 @@ def build_billing_info_reminder_email(
     Sent by `run_billing_info_reminder_sweep` once per org, ~1 week
     before `trial_ends_at`. Without IČO + address on file the first
     invoice would render with an empty customer block, so we nudge
-    the admin to fix it before the trial cliff.
+    the admin to fix it before the trial cliff. A missing `name` falls
+    back to a per-language team greeting.
     """
-    subject = f"SimpleCRM: doplňte fakturační údaje (zkušebka končí za {days_remaining} dní)"
-    body = (
-        f"Ahoj {name},\n\n"
-        f"zkušební verze organizace {org_name} končí za {days_remaining} dní. "
-        "Pro vystavení první faktury potřebujeme mít na souboru vaše "
-        "fakturační údaje (IČO a sídlo). Doplňte je prosím v nastavení:\n\n"
-        f"{settings_link}\n\n"
-        "Bez vyplněných údajů by faktura nebyla platným daňovým dokladem.\n"
+    return render_email(
+        "billing_info_reminder",
+        lang,
+        to=recipient,
+        name=name or t(lang, "emails.common.fallback_name"),
+        org_name=org_name,
+        count=days_remaining,
+        days_phrase=t(lang, "emails.billing_info_reminder.days", count=days_remaining),
+        settings_link=settings_link,
     )
-    return Email(to=recipient, subject=subject, body=body)
 
 
-def build_verification_email(*, recipient: str, name: str, link: str) -> Email:
+def build_verification_email(*, recipient: str, name: str, link: str, lang: str = "cs") -> Email:
     """Compose the verify-your-email message for a new (or linking) user.
 
     Sent from the email-auth signup and resend flows. Link points at the
     frontend's `/verify-email?token=...` page; valid 24 h.
     """
-    subject = "SimpleCRM: ověřte svůj e-mail"
-    body = (
-        f"Ahoj {name},\n\n"
-        "vítejte v SimpleCRM. Pro dokončení registrace prosím potvrďte "
-        "svou e-mailovou adresu kliknutím na následující odkaz:\n\n"
-        f"{link}\n\n"
-        "Odkaz je platný 24 hodin. Pokud jste registraci nezahájili, "
-        "tento e-mail prosím ignorujte.\n"
-    )
-    return Email(to=recipient, subject=subject, body=body)
+    return render_email("verification", lang, to=recipient, name=name, link=link)
 
 
-def build_password_reset_email(*, recipient: str, name: str, link: str) -> Email:
+def build_password_reset_email(*, recipient: str, name: str, link: str, lang: str = "cs") -> Email:
     """Compose the reset-your-password message.
 
     Sent from the email-auth password-reset flow. Link points at the
     frontend's `/reset-password?token=...` page; valid 1 h.
     """
-    subject = "SimpleCRM: obnovení hesla"
-    body = (
-        f"Ahoj {name},\n\n"
-        "obdrželi jsme žádost o obnovení hesla pro váš účet. Nové heslo "
-        "můžete nastavit kliknutím na následující odkaz:\n\n"
-        f"{link}\n\n"
-        "Odkaz je platný 1 hodinu. Pokud jste o reset nežádali, tento "
-        "e-mail prosím ignorujte — vaše heslo zůstane beze změny.\n"
-    )
-    return Email(to=recipient, subject=subject, body=body)
+    return render_email("password_reset", lang, to=recipient, name=name, link=link)
 
 
 def _build_mime(message: Email, *, sender: str) -> EmailMessage:
