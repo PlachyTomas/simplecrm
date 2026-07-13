@@ -1,17 +1,19 @@
 import { X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
 import { COOKIE_CONSENT_REOPEN_EVENT } from "@/marketing/cookie-consent-controls";
 
 /**
- * Cookie consent banner — § 89 odst. 3 zák. č. 127/2005 Sb. opt-in, with
- * ÚOOÚ-compliant equivalence between "Přijmout vše" and "Odmítnout vše".
+ * Cookie consent banner — Section 89(3) of Act No. 127/2005 Coll. opt-in,
+ * with regulator-compliant equivalence between "accept all" and "reject
+ * all".
  *
  * Current site loads no third-party trackers, so the consent value is
  * stored purely for compliance and to drive future analytics opt-in. The
- * footer "Nastavení cookies" button calls `openCookieSettings()` to reopen
+ * footer cookie-settings button calls `openCookieSettings()` to reopen
  * the dialog after a decision was made.
  */
 
@@ -50,6 +52,7 @@ function saveConsent(value: StoredConsent): void {
 }
 
 export function CookieConsent() {
+  const { t } = useTranslation("marketing");
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"banner" | "settings">("banner");
   const [analytics, setAnalytics] = useState(false);
@@ -118,11 +121,11 @@ export function CookieConsent() {
       <div className="mx-auto max-w-[1100px] rounded-lg border border-border bg-surface p-4 shadow-lg sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <h2 id="cookie-consent-title" className="text-base font-semibold text-text-primary">
-            {view === "banner" ? "Cookies na simplecrm.cz" : "Nastavení cookies"}
+            {view === "banner" ? t("cookie.bannerTitle") : t("cookie.settingsTitle")}
           </h2>
           <button
             type="button"
-            aria-label="Zavřít"
+            aria-label={t("cookie.close")}
             onClick={() => setOpen(false)}
             className="text-text-tertiary hover:text-text-primary"
           >
@@ -161,26 +164,25 @@ interface BannerViewProps {
 }
 
 function BannerView({ onAcceptAll, onRejectAll, onOpenSettings }: BannerViewProps) {
+  const { t } = useTranslation("marketing");
   return (
     <>
       <p className="mt-2 text-sm text-text-secondary">
-        Tento web používá cookies. Nezbytné cookies používáme pro správné fungování webu. S vaším
-        souhlasem budeme používat i analytické a preferenční cookies pro zlepšování naší služby.
-        Podrobné nastavení můžete kdykoli změnit. Více informací v{" "}
+        {t("cookie.bannerTextPre")}{" "}
         <Link to="/cookies" className="underline">
-          Zásadách používání cookies
+          {t("cookie.cookiesPolicyLink")}
         </Link>
         .
       </p>
       <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <ConsentButton onClick={onAcceptAll} variant="primary">
-          Přijmout vše
+          {t("cookie.acceptAll")}
         </ConsentButton>
         <ConsentButton onClick={onRejectAll} variant="primary">
-          Odmítnout vše
+          {t("cookie.rejectAll")}
         </ConsentButton>
         <ConsentButton onClick={onOpenSettings} variant="ghost">
-          Nastavení
+          {t("cookie.settings")}
         </ConsentButton>
       </div>
     </>
@@ -200,47 +202,45 @@ interface SettingsViewProps {
 }
 
 function SettingsView(props: SettingsViewProps) {
+  const { t } = useTranslation("marketing");
   return (
     <>
-      <p className="mt-2 text-sm text-text-secondary">
-        Vyberte si, které kategorie cookies chcete povolit. Tlačítka „Přijmout vše" a „Odmítnout
-        vše" jsou rovnocenná.
-      </p>
+      <p className="mt-2 text-sm text-text-secondary">{t("cookie.settingsIntro")}</p>
       <div className="mt-4 space-y-3">
         <Category
-          title="Nezbytné"
-          description="Bez těchto cookies web nefunguje (přihlášení, záznam vaší volby cookies). Zákonný základ — § 89 odst. 3 zák. č. 127/2005 Sb."
+          title={t("cookie.catEssentialTitle")}
+          description={t("cookie.catEssentialDesc")}
           checked={true}
           disabled={true}
         />
         <Category
-          title="Analytické"
-          description="Měření návštěvnosti pro zlepšování služby. Bez vašeho souhlasu žádný analytický nástroj nespouštíme."
+          title={t("cookie.catAnalyticsTitle")}
+          description={t("cookie.catAnalyticsDesc")}
           checked={props.analytics}
           onChange={props.setAnalytics}
         />
         <Category
-          title="Preferenční"
-          description="Zapamatování si vašich preferencí (např. zvolené téma)."
+          title={t("cookie.catPreferencesTitle")}
+          description={t("cookie.catPreferencesDesc")}
           checked={props.preferences}
           onChange={props.setPreferences}
         />
         <Category
-          title="Marketingové"
-          description="V současné době nepoužíváme."
+          title={t("cookie.catMarketingTitle")}
+          description={t("cookie.catMarketingDesc")}
           checked={props.marketing}
           onChange={props.setMarketing}
         />
       </div>
       <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <ConsentButton onClick={props.onAcceptAll} variant="primary">
-          Přijmout vše
+          {t("cookie.acceptAll")}
         </ConsentButton>
         <ConsentButton onClick={props.onRejectAll} variant="primary">
-          Odmítnout vše
+          {t("cookie.rejectAll")}
         </ConsentButton>
         <ConsentButton onClick={props.onSave} variant="ghost">
-          Uložit volbu
+          {t("cookie.save")}
         </ConsentButton>
       </div>
     </>
@@ -290,8 +290,9 @@ function ConsentButton({ onClick, variant, children }: ConsentButtonProps) {
       type="button"
       onClick={onClick}
       className={cn(
-        // ÚOOÚ: Accept All / Reject All MUST be visually equivalent — same
-        // size, padding, and contrast. Only "Nastavení" is rendered ghost.
+        // Regulator rule: Accept All / Reject All MUST be visually equivalent
+        // — same size, padding, and contrast. Only the Settings action is
+        // rendered ghost.
         "inline-flex h-10 items-center justify-center rounded-md px-5 text-sm font-medium transition-colors duration-fast",
         variant === "primary"
           ? "bg-accent text-text-on-accent hover:bg-accent-hover"

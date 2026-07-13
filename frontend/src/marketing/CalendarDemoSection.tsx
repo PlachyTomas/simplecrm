@@ -4,22 +4,24 @@
  * Fully fake data, no API calls. The grid reuses the production month-math
  * (`app/calendar/calendarMath`) so it renders the *current* month and never
  * looks stale. Two small interactions, mirroring the real app:
- *   - click a day with a chip → its events show in the detail panel
- *   - tick "Přidat do Google kalendáře" → the first event gains the
+ *   - click a day with a chip -> its events show in the detail panel
+ *   - tick the "add to Google Calendar" box -> the first event gains the
  *     Google badge, exactly like the real event form does
  */
 
+import type { ParseKeys } from "i18next";
 import { CalendarDays, CalendarPlus, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { monthGrid, type CalendarDay } from "@/app/calendar/calendarMath";
+import { formatDate } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { cn } from "@/lib/utils";
-
-const WEEKDAYS = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"];
 
 interface DemoEvent {
   id: string;
-  title: string;
+  titleKey: ParseKeys<"marketing">;
   deal: string;
   time: string;
   /** Offset in grid cells from today — keeps the demo inside the visible grid. */
@@ -31,7 +33,7 @@ const DEMO_EVENTS: DemoEvent[] = [
   // The first event's `synced` is driven by the checkbox, not this flag.
   {
     id: "e1",
-    title: "Schůzka — Roční licence",
+    titleKey: "demo.calendar.event1Title",
     deal: "Brno IT",
     time: "10:00",
     offset: 1,
@@ -39,7 +41,7 @@ const DEMO_EVENTS: DemoEvent[] = [
   },
   {
     id: "e2",
-    title: "Demo produktu",
+    titleKey: "demo.calendar.event2Title",
     deal: "Praha Studios",
     time: "13:30",
     offset: 3,
@@ -47,7 +49,7 @@ const DEMO_EVENTS: DemoEvent[] = [
   },
   {
     id: "e3",
-    title: "Telefonát — nabídka",
+    titleKey: "demo.calendar.event3Title",
     deal: "Ostrava Steel",
     time: "9:00",
     offset: 7,
@@ -64,7 +66,11 @@ function GoogleBadge() {
 }
 
 export function CalendarDemoSection() {
+  const { t } = useTranslation("marketing");
+  const locale = useLocale();
   const [addToGoogle, setAddToGoogle] = useState(true);
+
+  const weekdays = t("demo.calendar.weekdays", { returnObjects: true }) as string[];
 
   const today = useMemo(() => new Date(), []);
   const days = useMemo(() => monthGrid(today.getFullYear(), today.getMonth(), today), [today]);
@@ -92,13 +98,8 @@ export function CalendarDemoSection() {
   const activeKey = selectedKey ?? firstEventDay;
   const selectedEvents = eventsByDay.get(activeKey) ?? [];
 
-  const monthLabel = new Intl.DateTimeFormat("cs-CZ", {
-    month: "long",
-    year: "numeric",
-  }).format(today);
-  const dayLabel = new Intl.DateTimeFormat("cs-CZ", { dateStyle: "full" }).format(
-    new Date(`${activeKey}T12:00`),
-  );
+  const monthLabel = formatDate(today, locale, { month: "long", year: "numeric" });
+  const dayLabel = formatDate(new Date(`${activeKey}T12:00`), locale, { dateStyle: "full" });
 
   const isSynced = (event: DemoEvent) => (event.id === "e1" ? addToGoogle : event.synced);
 
@@ -133,7 +134,7 @@ export function CalendarDemoSection() {
               "bg-accent-subtle text-accent",
             )}
           >
-            {event.title}
+            {t(event.titleKey)}
           </span>
         ))}
       </button>
@@ -144,15 +145,10 @@ export function CalendarDemoSection() {
     <section id="kalendar-demo" className="mx-auto max-w-[1200px] px-4 py-16 md:px-8 md:py-24">
       <div className="mx-auto max-w-2xl text-center">
         <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
-          Kalendář + Google Calendar
+          {t("demo.calendar.eyebrow")}
         </p>
-        <h2 className="mt-2 text-3xl font-bold md:text-4xl">
-          Schůzky k obchodům. Na jednom místě.
-        </h2>
-        <p className="mt-4 text-base text-text-secondary">
-          Naplánujte schůzku přímo z obchodu a sledujte ji v zabudovaném kalendáři. Když chcete,
-          jedním zaškrtnutím se zapíše i do vašeho Google kalendáře.
-        </p>
+        <h2 className="mt-2 text-3xl font-bold md:text-4xl">{t("demo.calendar.title")}</h2>
+        <p className="mt-4 text-base text-text-secondary">{t("demo.calendar.subtitle")}</p>
       </div>
 
       <div className="mx-auto mt-10 grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-5">
@@ -164,27 +160,36 @@ export function CalendarDemoSection() {
           >
             <CalendarPlus size={20} strokeWidth={1.75} />
           </div>
-          <p className="text-sm font-semibold text-text-primary">Naplánovat událost</p>
+          <p className="text-sm font-semibold text-text-primary">{t("demo.calendar.formTitle")}</p>
           <p className="mt-0.5 text-xs text-text-tertiary">
-            Obchod: <span className="font-medium text-text-secondary">Roční licence — Brno IT</span>
+            {t("demo.calendar.formDealLabel")}{" "}
+            <span className="font-medium text-text-secondary">
+              {t("demo.calendar.formDealValue")}
+            </span>
           </p>
 
           <div className="mt-4 space-y-3">
             <div>
-              <p className="text-xs font-medium text-text-secondary">Název</p>
+              <p className="text-xs font-medium text-text-secondary">
+                {t("demo.calendar.formNameLabel")}
+              </p>
               <p className="mt-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary">
-                Schůzka — Roční licence
+                {t("demo.calendar.event1Title")}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <p className="text-xs font-medium text-text-secondary">Od</p>
+                <p className="text-xs font-medium text-text-secondary">
+                  {t("demo.calendar.fromLabel")}
+                </p>
                 <p className="mt-1 rounded-md border border-border bg-surface px-3 py-2 font-mono text-sm text-text-primary">
                   10:00
                 </p>
               </div>
               <div>
-                <p className="text-xs font-medium text-text-secondary">Do</p>
+                <p className="text-xs font-medium text-text-secondary">
+                  {t("demo.calendar.toLabel")}
+                </p>
                 <p className="mt-1 rounded-md border border-border bg-surface px-3 py-2 font-mono text-sm text-text-primary">
                   11:00
                 </p>
@@ -197,7 +202,7 @@ export function CalendarDemoSection() {
                 onChange={(e) => setAddToGoogle(e.target.checked)}
                 className="mt-0.5"
               />
-              <span className="text-text-secondary">Přidat do Google kalendáře</span>
+              <span className="text-text-secondary">{t("demo.calendar.addToGoogle")}</span>
             </label>
           </div>
 
@@ -206,9 +211,7 @@ export function CalendarDemoSection() {
             aria-live="polite"
           >
             <RefreshCw size={12} strokeWidth={1.75} aria-hidden />
-            {addToGoogle
-              ? "Událost se zapíše i do vašeho Google kalendáře."
-              : "Událost zůstane jen v SimpleCRM."}
+            {addToGoogle ? t("demo.calendar.syncOn") : t("demo.calendar.syncOff")}
           </p>
         </div>
 
@@ -219,7 +222,7 @@ export function CalendarDemoSection() {
             {monthLabel}
           </p>
           <div className="mt-3 grid grid-cols-7 gap-1">
-            {WEEKDAYS.map((label) => (
+            {weekdays.map((label) => (
               <div
                 key={label}
                 className="px-1 py-0.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-tertiary"
@@ -233,9 +236,7 @@ export function CalendarDemoSection() {
           <div className="mt-4 border-t border-border-subtle pt-3">
             <p className="text-xs font-medium text-text-secondary">{dayLabel}</p>
             {selectedEvents.length === 0 ? (
-              <p className="mt-2 text-sm text-text-tertiary">
-                Žádné události — klikněte na den s naplánovanou schůzkou.
-              </p>
+              <p className="mt-2 text-sm text-text-tertiary">{t("demo.calendar.empty")}</p>
             ) : (
               <ul className="mt-1 divide-y divide-border-subtle">
                 {selectedEvents.map((event) => (
@@ -243,7 +244,9 @@ export function CalendarDemoSection() {
                     <span className="font-mono text-sm tabular-nums text-text-tertiary">
                       {event.time}
                     </span>
-                    <span className="text-sm font-medium text-text-primary">{event.title}</span>
+                    <span className="text-sm font-medium text-text-primary">
+                      {t(event.titleKey)}
+                    </span>
                     <span className="text-sm text-text-tertiary">· {event.deal}</span>
                     {isSynced(event) ? <GoogleBadge /> : null}
                   </li>

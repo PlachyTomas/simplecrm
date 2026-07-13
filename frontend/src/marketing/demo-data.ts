@@ -1,18 +1,24 @@
+import type { ParseKeys } from "i18next";
+
 /**
  * Seed dataset for the landing-page interactive Pipeline demo.
  *
  * This is a self-contained, frontend-only fixture. It is intentionally NOT
  * fetched from the backend — the demo lives behind no auth and resets to
- * this initial state on every page load. Three teams × two salespeople ×
+ * this initial state on every page load. Three teams x two salespeople x
  * a mix of stages keeps the team-vs-team comparison meaningful when the
  * visitor drags deals around.
+ *
+ * Display strings (stage/deal/company/person names) live in the `marketing`
+ * catalog under `demo.*` and are resolved at render time; this module stores
+ * only the catalog keys.
  */
 
 export interface DemoStage {
   id: string;
-  name: string;
+  nameKey: ParseKeys<"marketing">;
   color: string;
-  /** Identifies the won column for the "Vyhráno" quick-win button + stats. */
+  /** Identifies the won column for the win quick-action button + stats. */
   type: "open" | "won";
 }
 
@@ -24,24 +30,24 @@ export interface DemoTeam {
 
 export interface DemoSalesperson {
   id: string;
-  name: string;
+  nameKey: ParseKeys<"marketing">;
   team_id: string;
 }
 
 export interface DemoDeal {
   id: string;
-  name: string;
-  company: string;
+  nameKey: ParseKeys<"marketing">;
+  companyKey: ParseKeys<"marketing">;
   value: number; // CZK
   stage_id: string;
   owner_id: string;
 }
 
 export const DEMO_STAGES: DemoStage[] = [
-  { id: "stg-new", name: "Nový lead", color: "#3D5AFE", type: "open" },
-  { id: "stg-contact", name: "Osloveno", color: "#5470FF", type: "open" },
-  { id: "stg-negotiation", name: "Jednání", color: "#10B981", type: "open" },
-  { id: "stg-won", name: "Vyhráno", color: "#EC4899", type: "won" },
+  { id: "stg-new", nameKey: "demo.stages.new", color: "#3D5AFE", type: "open" },
+  { id: "stg-contact", nameKey: "demo.stages.contacted", color: "#5470FF", type: "open" },
+  { id: "stg-negotiation", nameKey: "demo.stages.negotiation", color: "#10B981", type: "open" },
+  { id: "stg-won", nameKey: "demo.stages.won", color: "#EC4899", type: "won" },
 ];
 
 export const DEMO_TEAMS: DemoTeam[] = [
@@ -51,85 +57,85 @@ export const DEMO_TEAMS: DemoTeam[] = [
 ];
 
 export const DEMO_SALES: DemoSalesperson[] = [
-  { id: "u-1", name: "Petra Nováková", team_id: "team-praha" },
-  { id: "u-2", name: "Jakub Černý", team_id: "team-praha" },
-  { id: "u-3", name: "Lucie Dvořáková", team_id: "team-brno" },
-  { id: "u-4", name: "Tomáš Procházka", team_id: "team-brno" },
-  { id: "u-5", name: "Martin Kováč", team_id: "team-bratislava" },
-  { id: "u-6", name: "Eva Horváthová", team_id: "team-bratislava" },
+  { id: "u-1", nameKey: "demo.sales.u1", team_id: "team-praha" },
+  { id: "u-2", nameKey: "demo.sales.u2", team_id: "team-praha" },
+  { id: "u-3", nameKey: "demo.sales.u3", team_id: "team-brno" },
+  { id: "u-4", nameKey: "demo.sales.u4", team_id: "team-brno" },
+  { id: "u-5", nameKey: "demo.sales.u5", team_id: "team-bratislava" },
+  { id: "u-6", nameKey: "demo.sales.u6", team_id: "team-bratislava" },
 ];
 
 // Tuned so the team-leaderboard's default ranking is Praha > Brno >
 // Bratislava. The sort is by total won-deal value descending (see
 // InteractivePipeline.tsx). Won totals:
-//   Praha (u-2):       168 000 Kč
-//   Brno  (u-3):        95 000 Kč
-//   Bratislava (u-6):   80 000 Kč
+//   Praha (u-2):       168 000 CZK
+//   Brno  (u-3):        95 000 CZK
+//   Bratislava (u-6):   80 000 CZK
 export const DEMO_DEALS_INITIAL: DemoDeal[] = [
-  // Nový lead
+  // New lead
   {
     id: "d-1",
-    name: "Audit pipeline",
-    company: "Alza.cz",
+    nameKey: "demo.deals.d1",
+    companyKey: "demo.companies.alza",
     value: 42_500,
     stage_id: "stg-new",
     owner_id: "u-1",
   },
   {
     id: "d-2",
-    name: "Onboarding tým",
-    company: "Rohlík",
+    nameKey: "demo.deals.d2",
+    companyKey: "demo.companies.rohlik",
     value: 28_000,
     stage_id: "stg-new",
     owner_id: "u-3",
   },
-  // Osloveno
+  // Contacted
   {
     id: "d-3",
-    name: "Konzultace",
-    company: "Notino",
+    nameKey: "demo.deals.d3",
+    companyKey: "demo.companies.notino",
     value: 60_000,
     stage_id: "stg-contact",
     owner_id: "u-2",
   },
   {
     id: "d-4",
-    name: "Demo CRM",
-    company: "Lidl ČR",
+    nameKey: "demo.deals.d4",
+    companyKey: "demo.companies.lidl",
     value: 95_000,
     stage_id: "stg-contact",
     owner_id: "u-4",
   },
-  // Jednání
+  // Negotiation
   {
     id: "d-5",
-    name: "Integrace ERP",
-    company: "Asseco",
+    nameKey: "demo.deals.d5",
+    companyKey: "demo.companies.asseco",
     value: 210_000,
     stage_id: "stg-negotiation",
     owner_id: "u-2",
   },
-  // Vyhráno — totals tuned for Praha > Brno > Bratislava ranking.
+  // Won — totals tuned for Praha > Brno > Bratislava ranking.
   {
     id: "d-6",
-    name: "Roční podpora Heureka",
-    company: "Heureka.cz",
+    nameKey: "demo.deals.d6",
+    companyKey: "demo.companies.heureka",
     value: 168_000,
     stage_id: "stg-won",
     owner_id: "u-2",
   },
   {
     id: "d-7",
-    name: "Audit Brno",
-    company: "Albert ČR",
+    nameKey: "demo.deals.d7",
+    companyKey: "demo.companies.albert",
     value: 95_000,
     stage_id: "stg-won",
     owner_id: "u-3",
   },
   {
     id: "d-8",
-    name: "Konzultace SK",
-    company: "Tatra banka",
+    nameKey: "demo.deals.d8",
+    companyKey: "demo.companies.tatra",
     value: 80_000,
     stage_id: "stg-won",
     owner_id: "u-6",

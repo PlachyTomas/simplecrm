@@ -1,24 +1,15 @@
+import type { ParseKeys } from "i18next";
 import { Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { PriceDisplay } from "@/components/billing/PriceDisplay";
+import { formatMoney } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
+import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 import { useCenikData } from "@/marketing/cenikData";
 import { Footer, Nav } from "@/marketing/LandingPage";
-
-const ENTERPRISE_MAILTO =
-  "mailto:podpora@simplecrm.cz" +
-  "?subject=" +
-  encodeURIComponent("SimpleCRM enterprise poptávka") +
-  "&body=" +
-  encodeURIComponent(
-    "Dobrý den,\n\n" +
-      "rád/a bych s vámi probral/a enterprise nabídku SimpleCRM.\n\n" +
-      "Počet uživatelů (přibližně):\n" +
-      "Společnost (název, IČO):\n" +
-      "Telefon:\n\n" +
-      "Děkuji,\n",
-  );
 
 interface PlanCardProps {
   eyebrow: string;
@@ -45,6 +36,7 @@ function PlanCard({
   price,
   caption,
 }: PlanCardProps) {
+  const { t } = useTranslation("marketing");
   const ctaClass = highlighted
     ? "mt-8 inline-flex h-11 w-full items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
     : "mt-8 inline-flex h-11 w-full items-center justify-center rounded-md border border-border bg-surface-overlay px-5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-elevated";
@@ -58,9 +50,9 @@ function PlanCard({
       {highlighted ? (
         <span
           className="absolute -top-3 right-4 rounded-full bg-brand-accent px-3 py-1 text-xs font-semibold text-text-on-brand-accent"
-          aria-label="Doporučujeme — ušetříte 16 procent"
+          aria-label={t("cenik.recommendAria")}
         >
-          Doporučujeme · Ušetříte 16 %
+          {t("cenik.recommendBadge")}
         </span>
       ) : null}
       <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">{eyebrow}</p>
@@ -103,52 +95,60 @@ function PlanCard({
   );
 }
 
-const MONTHLY_BULLETS = ["Bez závazků", "Zrušení kdykoliv", "Plná funkcionalita"] as const;
+const MONTHLY_BULLET_KEYS = [
+  "cenik.monthlyBullet1",
+  "cenik.monthlyBullet2",
+  "cenik.monthlyBullet3",
+] as const satisfies readonly ParseKeys<"marketing">[];
 
-const ANNUAL_BULLETS = [
-  "Vše z měsíčního plánu",
-  "Účtováno jednou ročně",
-  "Bez závazků po skončení období",
-] as const;
+const ANNUAL_BULLET_KEYS = [
+  "cenik.annualBullet1",
+  "cenik.annualBullet2",
+  "cenik.annualBullet3",
+] as const satisfies readonly ParseKeys<"marketing">[];
 
-const ENTERPRISE_BULLETS = [
-  "25+ uživatelů",
-  "Vlastní cena a podmínky",
-  "Dedikovaná podpora",
-  "Jednání o SLA",
-] as const;
+const ENTERPRISE_BULLET_KEYS = [
+  "cenik.enterpriseBullet1",
+  "cenik.enterpriseBullet2",
+  "cenik.enterpriseBullet3",
+  "cenik.enterpriseBullet4",
+] as const satisfies readonly ParseKeys<"marketing">[];
 
 function PricingHeader() {
+  const { t } = useTranslation("marketing");
   return (
     <header className="mx-auto max-w-2xl text-center">
-      <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">Ceník</p>
-      <h1 className="mt-2 text-4xl font-bold leading-tight md:text-5xl">
-        Cena za to, co nabízíme.
-      </h1>
-      <p className="mt-4 text-base text-text-secondary md:text-lg">
-        Stejná cena bez ohledu na velikost týmu. Bez závazků, bez zbytečností. Vyzkoušejte 30 dní
-        zdarma a rozhodněte se pak.
+      <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
+        {t("cenik.eyebrow")}
       </p>
+      <h1 className="mt-2 text-4xl font-bold leading-tight md:text-5xl">{t("cenik.title")}</h1>
+      <p className="mt-4 text-base text-text-secondary md:text-lg">{t("cenik.subtitle")}</p>
     </header>
   );
 }
 
 function HelperSection({ isVatPayer }: { isVatPayer: boolean }) {
+  const { t } = useTranslation("marketing");
   return (
     <section className="mx-auto mt-12 max-w-2xl space-y-2 text-center text-sm text-text-secondary">
-      <p>
-        {isVatPayer
-          ? "Ceny bez DPH; konečné ceny zobrazujeme s 21% DPH."
-          : "Všechny ceny jsou bez DPH."}
-      </p>
-      <p>Zkušební doba je 30 dní. Žádná kreditní karta při registraci.</p>
+      <p>{isVatPayer ? t("cenik.helperVat") : t("cenik.helperNoVat")}</p>
+      <p>{t("cenik.helperTrial")}</p>
     </section>
   );
 }
 
 export function CenikPage() {
+  const { t } = useTranslation("marketing");
+  const locale = useLocale();
+  usePageTitle(t("meta.pricingTitle"));
   const { settings } = useCenikData();
   const isVatPayer = settings?.is_vat_payer ?? false;
+
+  const enterpriseMailto =
+    "mailto:podpora@simplecrm.cz?subject=" +
+    encodeURIComponent(t("cenik.mailSubject")) +
+    "&body=" +
+    encodeURIComponent(t("cenik.mailBody"));
 
   return (
     <div className="min-h-screen bg-bg text-text-primary">
@@ -159,41 +159,41 @@ export function CenikPage() {
 
           <div className="mx-auto mt-12 grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
             <PlanCard
-              eyebrow="Měsíčně"
-              title="Měsíční"
+              eyebrow={t("cenik.monthlyEyebrow")}
+              title={t("cenik.monthlyTitle")}
               price={<PriceDisplay baseMinor={9900} interval="monthly" size="xl" hideVatLine />}
-              bullets={MONTHLY_BULLETS}
-              cta={{ label: "Vyzkoušet 30 dní zdarma", href: "/login" }}
-              secondaryCta={{ label: "Objednat", href: "/objednavka?plan=monthly" }}
+              bullets={MONTHLY_BULLET_KEYS.map((k) => t(k))}
+              cta={{ label: t("cenik.tryFree"), href: "/login" }}
+              secondaryCta={{ label: t("cenik.order"), href: "/objednavka?plan=monthly" }}
             />
 
             <PlanCard
-              eyebrow="Ročně"
-              title="Roční"
+              eyebrow={t("cenik.annualEyebrow")}
+              title={t("cenik.annualTitle")}
               highlighted
               price={<PriceDisplay baseMinor={99600} interval="annual" size="xl" hideVatLine />}
               caption={
                 <p className="text-sm font-medium text-success">
-                  Ušetříte 192 Kč na uživatele · téměř 2 měsíce zdarma
+                  {t("cenik.savingsCaption", { amount: formatMoney(192, "CZK", locale) })}
                 </p>
               }
-              bullets={ANNUAL_BULLETS}
-              cta={{ label: "Vyzkoušet 30 dní zdarma", href: "/login" }}
-              secondaryCta={{ label: "Objednat", href: "/objednavka?plan=annual" }}
+              bullets={ANNUAL_BULLET_KEYS.map((k) => t(k))}
+              cta={{ label: t("cenik.tryFree"), href: "/login" }}
+              secondaryCta={{ label: t("cenik.order"), href: "/objednavka?plan=annual" }}
             />
 
             <PlanCard
-              eyebrow="Pro velké týmy"
-              title="Enterprise"
+              eyebrow={t("cenik.enterpriseEyebrow")}
+              title={t("cenik.enterpriseTitle")}
               price={
                 <p className="text-5xl font-bold tracking-tight text-text-primary">
-                  Vlastní balíček
+                  {t("cenik.enterprisePrice")}
                 </p>
               }
-              bullets={ENTERPRISE_BULLETS}
+              bullets={ENTERPRISE_BULLET_KEYS.map((k) => t(k))}
               cta={{
-                label: "Domluvte se s námi",
-                href: ENTERPRISE_MAILTO,
+                label: t("cenik.enterpriseCta"),
+                href: enterpriseMailto,
                 isExternal: true,
               }}
             />

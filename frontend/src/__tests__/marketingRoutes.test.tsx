@@ -83,10 +83,9 @@ describe("marketing routing", () => {
 
   it("renders /en/pricing with the English resolved language", async () => {
     renderAt("/en/pricing");
-    // Content is still Czech until Task 21; the pricing page must render and
-    // the running language must flip to English.
+    // The pricing page renders in English and the running language flips.
     expect(
-      await screen.findByRole("heading", { level: 1, name: /Cena za to, co nabízíme/i }),
+      await screen.findByRole("heading", { level: 1, name: /Priced for what we offer/i }),
     ).toBeInTheDocument();
     await waitFor(() => expect(i18n.resolvedLanguage).toBe("en"));
   });
@@ -95,7 +94,7 @@ describe("marketing routing", () => {
     renderAt("/en/cenik");
     // If the redirect fired we land on CenikPage (its heading), not the 404.
     expect(
-      await screen.findByRole("heading", { level: 1, name: /Cena za to, co nabízíme/i }),
+      await screen.findByRole("heading", { level: 1, name: /Priced for what we offer/i }),
     ).toBeInTheDocument();
     await waitFor(() => expect(i18n.resolvedLanguage).toBe("en"));
   });
@@ -103,7 +102,7 @@ describe("marketing routing", () => {
   it("serves an English 404 for unknown /en paths", async () => {
     renderAt("/en/does-not-exist");
     expect(
-      await screen.findByRole("heading", { level: 1, name: /Stránka nenalezena/i }),
+      await screen.findByRole("heading", { level: 1, name: /Page not found/i }),
     ).toBeInTheDocument();
   });
 

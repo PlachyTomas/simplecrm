@@ -1,3 +1,4 @@
+import type { ParseKeys } from "i18next";
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Loader2, Lock, Minus, Plus, ShoppingCart } from "lucide-react";
@@ -7,6 +8,7 @@ import { billingErrorCode, billingErrorMessage } from "@/components/billing/useP
 import { usePublicPlans } from "@/components/billing/usePublicPlans";
 import { apiFetch } from "@/lib/api";
 import { formatMoneyMinor } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 import { Footer, Nav } from "@/marketing/LandingPage";
@@ -16,20 +18,20 @@ type PlanCode = "monthly" | "annual";
 type DemoOrderOut = components["schemas"]["DemoOrderOut"];
 
 /** Fallback unit prices (minor units / user) when the public-plans read
- *  is unavailable — must mirror the seeded plans (Ceník shows the same). */
+ *  is unavailable — must mirror the seeded plans (Cenik shows the same). */
 const FALLBACK_PRICE_MINOR: Record<PlanCode, number> = {
   monthly: 9900,
   annual: 99600,
 };
 
-const PLAN_LABEL: Record<PlanCode, string> = {
-  monthly: "Měsíční",
-  annual: "Roční",
+const PLAN_LABEL_KEY: Record<PlanCode, ParseKeys<"marketing">> = {
+  monthly: "order.planMonthly",
+  annual: "order.planAnnual",
 };
 
-const PLAN_PERIOD: Record<PlanCode, string> = {
-  monthly: "měsíc",
-  annual: "rok",
+const PLAN_PERIOD_KEY: Record<PlanCode, ParseKeys<"marketing">> = {
+  monthly: "order.periodMonth",
+  annual: "order.periodYear",
 };
 
 const MAX_SEATS = 25;
@@ -45,8 +47,10 @@ function isPlanCode(value: string | null): value is PlanCode {
  * so prominently. Real customers start with the free trial instead.
  */
 export function ObjednavkaPage() {
-  usePageTitle("Objednávka");
-  const { t } = useTranslation("billing");
+  const { t } = useTranslation("marketing");
+  const { t: tBilling } = useTranslation("billing");
+  const locale = useLocale();
+  usePageTitle(t("meta.orderTitle"));
   const [searchParams] = useSearchParams();
   const initialPlan = searchParams.get("plan");
 
@@ -78,7 +82,7 @@ export function ObjednavkaPage() {
       window.location.assign(result.redirect_url);
     } catch (err) {
       setSubmitting(false);
-      setError(billingErrorMessage(billingErrorCode(err), t));
+      setError(billingErrorMessage(billingErrorCode(err), tBilling));
     }
   }
 
@@ -88,26 +92,22 @@ export function ObjednavkaPage() {
       <main className="mx-auto max-w-2xl px-4 pb-16 pt-12 md:px-8">
         <header className="text-center">
           <p className="text-sm font-medium uppercase tracking-wider text-text-tertiary">
-            Objednávka
+            {t("order.eyebrow")}
           </p>
-          <h1 className="mt-2 text-3xl font-bold leading-tight md:text-4xl">
-            Objednávka předplatného SimpleCRM
-          </h1>
-          <p className="mt-3 text-sm text-text-secondary md:text-base">
-            Vyzkoušejte si průchod objednávkou a platební bránou Comgate.
-          </p>
+          <h1 className="mt-2 text-3xl font-bold leading-tight md:text-4xl">{t("order.title")}</h1>
+          <p className="mt-3 text-sm text-text-secondary md:text-base">{t("order.subtitle")}</p>
         </header>
 
         <div
           className="mt-6 rounded-lg border border-border bg-surface-overlay px-4 py-3 text-sm text-text-secondary"
           role="note"
         >
-          <span className="font-semibold text-text-primary">Testovací objednávka:</span> platba
-          proběhne v testovacím režimu platební brány a{" "}
-          <span className="font-semibold text-text-primary">nebude nikdy účtována</span>. Chcete-li
-          SimpleCRM používat naostro, začněte{" "}
+          <span className="font-semibold text-text-primary">{t("order.testNoticeLabel")}</span>{" "}
+          {t("order.testNoticeMid1")}{" "}
+          <span className="font-semibold text-text-primary">{t("order.testNoticeBold")}</span>
+          {t("order.testNoticeMid2")}{" "}
           <Link to="/signup" className="underline hover:text-text-primary">
-            30denní zkušební verzí zdarma
+            {t("order.testNoticeTrialLink")}
           </Link>
           .
         </div>
@@ -115,11 +115,13 @@ export function ObjednavkaPage() {
         <form onSubmit={submit} className="mt-8 space-y-6">
           <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
             <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-text-tertiary">
-              <ShoppingCart size={16} strokeWidth={1.75} aria-hidden /> Vaše objednávka
+              <ShoppingCart size={16} strokeWidth={1.75} aria-hidden /> {t("order.yourOrder")}
             </h2>
 
             <fieldset className="mt-4">
-              <legend className="text-sm font-medium text-text-primary">Plán</legend>
+              <legend className="text-sm font-medium text-text-primary">
+                {t("order.planLegend")}
+              </legend>
               <div className="mt-2 grid grid-cols-2 gap-3">
                 {(["monthly", "annual"] as const).map((code) => (
                   <label
@@ -140,16 +142,16 @@ export function ObjednavkaPage() {
                       className="sr-only"
                     />
                     <span className="text-sm font-semibold text-text-primary">
-                      {PLAN_LABEL[code]}
+                      {t(PLAN_LABEL_KEY[code])}
                     </span>
                     <span className="mt-1 text-xs text-text-secondary">
                       {formatMoneyMinor(
                         plans?.find((p) => p.code === code)?.price_per_user_minor ??
                           FALLBACK_PRICE_MINOR[code],
                         "CZK",
-                        "cs-CZ",
+                        locale,
                       )}{" "}
-                      / uživatel / {PLAN_PERIOD[code]}
+                      {t("order.perUserPer", { period: t(PLAN_PERIOD_KEY[code]) })}
                     </span>
                   </label>
                 ))}
@@ -158,12 +160,12 @@ export function ObjednavkaPage() {
 
             <div className="mt-5">
               <label htmlFor="seats" className="text-sm font-medium text-text-primary">
-                Počet uživatelů
+                {t("order.seatsLabel")}
               </label>
               <div className="mt-2 inline-flex items-center rounded-md border border-border">
                 <button
                   type="button"
-                  aria-label="Ubrat uživatele"
+                  aria-label={t("order.decrSeat")}
                   onClick={() => setSeats((s) => Math.max(1, s - 1))}
                   disabled={seats <= 1}
                   className="flex h-10 w-10 items-center justify-center text-text-secondary transition-colors duration-fast hover:text-text-primary disabled:opacity-40"
@@ -185,7 +187,7 @@ export function ObjednavkaPage() {
                 />
                 <button
                   type="button"
-                  aria-label="Přidat uživatele"
+                  aria-label={t("order.incrSeat")}
                   onClick={() => setSeats((s) => Math.min(MAX_SEATS, s + 1))}
                   disabled={seats >= MAX_SEATS}
                   className="flex h-10 w-10 items-center justify-center text-text-secondary transition-colors duration-fast hover:text-text-primary disabled:opacity-40"
@@ -197,7 +199,7 @@ export function ObjednavkaPage() {
 
             <div className="mt-5">
               <label htmlFor="email" className="text-sm font-medium text-text-primary">
-                Kontaktní e-mail
+                {t("order.emailLabel")}
               </label>
               <input
                 id="email"
@@ -214,17 +216,17 @@ export function ObjednavkaPage() {
             <dl className="mt-6 space-y-2 border-t border-border-subtle pt-4 text-sm">
               <div className="flex items-center justify-between text-text-secondary">
                 <dt>
-                  SimpleCRM — plán {PLAN_LABEL[plan]} · {seats}{" "}
-                  {seats === 1 ? "uživatel" : seats <= 4 ? "uživatelé" : "uživatelů"} ×{" "}
-                  {formatMoneyMinor(unitMinor, "CZK", "cs-CZ")}
+                  {t("order.summaryLine", { plan: t(PLAN_LABEL_KEY[plan]) })} · {seats}{" "}
+                  {t("order.seatsUnit", { count: seats })} ×{" "}
+                  {formatMoneyMinor(unitMinor, "CZK", locale)}
                 </dt>
-                <dd>{formatMoneyMinor(totalMinor, "CZK", "cs-CZ")}</dd>
+                <dd>{formatMoneyMinor(totalMinor, "CZK", locale)}</dd>
               </div>
               <div className="flex items-center justify-between text-base font-semibold text-text-primary">
-                <dt>Celkem za {PLAN_PERIOD[plan]}</dt>
-                <dd data-testid="order-total">{formatMoneyMinor(totalMinor, "CZK", "cs-CZ")}</dd>
+                <dt>{t("order.totalFor", { period: t(PLAN_PERIOD_KEY[plan]) })}</dt>
+                <dd data-testid="order-total">{formatMoneyMinor(totalMinor, "CZK", locale)}</dd>
               </div>
-              <p className="text-xs text-text-tertiary">Nejsme plátci DPH. Cena je konečná.</p>
+              <p className="text-xs text-text-tertiary">{t("order.vatNote")}</p>
             </dl>
           </section>
 
@@ -242,31 +244,30 @@ export function ObjednavkaPage() {
             {submitting ? (
               <>
                 <Loader2 size={16} strokeWidth={1.75} className="animate-spin" aria-hidden />
-                Přesměrováváme na platební bránu…
+                {t("order.redirecting")}
               </>
             ) : (
               <>
                 <Lock size={16} strokeWidth={1.75} aria-hidden />
-                Zaplatit {formatMoneyMinor(totalMinor, "CZK", "cs-CZ")}
+                {t("order.pay", { amount: formatMoneyMinor(totalMinor, "CZK", locale) })}
               </>
             )}
           </button>
 
           <p className="text-center text-xs leading-relaxed text-text-tertiary">
-            Odesláním objednávky souhlasíte s{" "}
+            {t("order.consentPre")}{" "}
             <Link to="/obchodni-podminky" className="underline hover:text-text-primary">
-              Obchodními podmínkami
+              {t("order.termsLink")}
             </Link>
             ,{" "}
             <Link to="/reklamacni-podminky" className="underline hover:text-text-primary">
-              Reklamačními podmínkami
+              {t("order.complaintsLink")}
             </Link>{" "}
-            a{" "}
+            {t("order.consentAnd")}{" "}
             <Link to="/dodaci-a-platebni-podminky" className="underline hover:text-text-primary">
-              Dodacími a platebními podmínkami
+              {t("order.deliveryLink")}
             </Link>
-            . Bezpečnou online platbu zajišťuje brána Comgate (Visa, Mastercard, Apple Pay, Google
-            Pay, bankovní převod).
+            {t("order.consentPost")}
           </p>
         </form>
       </main>
