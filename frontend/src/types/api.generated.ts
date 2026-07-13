@@ -1735,6 +1735,40 @@ export interface paths {
         patch: operations["patch_my_language_api_v1_users_me_language_patch"];
         trace?: never;
     };
+    "/api/v1/users/me/home-dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Home Dashboard
+         * @description Return the user's persisted layout, or the role-aware default.
+         *
+         *     Empty `{}` (column-default for new rows) means "first visit — give
+         *     them the role-aware starter set." We don't persist on first read; the
+         *     frontend PUTs once the user makes a modification. `user.organization`
+         *     is eager-loaded by `get_current_user` (joinedload), so no extra query.
+         */
+        get: operations["get_home_dashboard_api_v1_users_me_home_dashboard_get"];
+        /**
+         * Put Home Dashboard
+         * @description Validate and persist the user's layout. Returns the round-tripped value.
+         */
+        put: operations["put_home_dashboard_api_v1_users_me_home_dashboard_put"];
+        post?: never;
+        /**
+         * Delete Home Dashboard
+         * @description Reset the user's layout to the default. The empty `{}` triggers the
+         *     GET endpoint's role-aware default-layout fallback on the next read.
+         */
+        delete: operations["delete_home_dashboard_api_v1_users_me_home_dashboard_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/smtp": {
         parameters: {
             query?: never;
@@ -2775,6 +2809,46 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActionNewActivityConfig */
+        ActionNewActivityConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "action_new_activity";
+        };
+        /** ActionNewCompanyConfig */
+        ActionNewCompanyConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "action_new_company";
+        };
+        /** ActionNewContactConfig */
+        ActionNewContactConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "action_new_contact";
+        };
+        /** ActionNewDealConfig */
+        ActionNewDealConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "action_new_deal";
+        };
         /** ActivateSubscriptionIn */
         ActivateSubscriptionIn: {
             /**
@@ -3322,6 +3396,8 @@ export interface components {
          * @description Mean Deal.value over a scoped subset of deals.
          */
         AvgDealSizeConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -3859,6 +3935,8 @@ export interface components {
          * @description Companies whose `ownership_expires_at` is within `threshold` days.
          */
         CompaniesAtRiskConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -4436,6 +4514,8 @@ export interface components {
          * @description Count + total value of deals closed-won in the date range.
          */
         DealsWonConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -4600,6 +4680,40 @@ export interface components {
         HealthResponse: {
             /** Status */
             status: string;
+        };
+        /**
+         * HomeDashboardConfig
+         * @description The full persisted shape of `User.home_dashboard_config`.
+         *
+         *     Empty `{}` is valid input — the API treats it as "use the role-aware
+         *     default layout" and returns the defaults instead.
+         */
+        HomeDashboardConfig: {
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+            /** Widgets */
+            widgets?: components["schemas"]["HomeWidgetEntry"][];
+            /** Mobileorder */
+            mobileOrder?: string[];
+        };
+        /**
+         * HomeWidgetEntry
+         * @description One widget on the home dashboard.
+         *
+         *     `id` is a client-generated ULID for user-saved layouts and a stable
+         *     `default_<type>` placeholder for the server-computed default. We only
+         *     require a non-empty string ≤64 chars — the client is the sole writer.
+         */
+        HomeWidgetEntry: {
+            /** Id */
+            id: string;
+            position: components["schemas"]["WidgetPosition"];
+            /** Config */
+            config: components["schemas"]["PipelineValueConfig"] | components["schemas"]["NewCompaniesConfig"] | components["schemas"]["DealsWonConfig"] | components["schemas"]["WinRateConfig"] | components["schemas"]["AvgDealSizeConfig"] | components["schemas"]["SalesCycleLengthConfig"] | components["schemas"]["LeadToDealConversionConfig"] | components["schemas"]["LostReasonsBreakdownConfig"] | components["schemas"]["SalesLeaderboardConfig"] | components["schemas"]["RepActivityConfig"] | components["schemas"]["StaleDealsConfig"] | components["schemas"]["CompaniesAtRiskConfig"] | components["schemas"]["KpiOpenDealsConfig"] | components["schemas"]["KpiPipelineValueConfig"] | components["schemas"]["KpiWonMonthConfig"] | components["schemas"]["KpiRevenueMonthConfig"] | components["schemas"]["ActionNewDealConfig"] | components["schemas"]["ActionNewCompanyConfig"] | components["schemas"]["ActionNewContactConfig"] | components["schemas"]["ActionNewActivityConfig"] | components["schemas"]["InviteTeammatesConfig"] | components["schemas"]["VelocityConfig"];
         };
         /**
          * ImpersonateOut
@@ -4783,6 +4897,46 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** InviteTeammatesConfig */
+        InviteTeammatesConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "invite_teammates";
+        };
+        /** KpiOpenDealsConfig */
+        KpiOpenDealsConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "kpi_open_deals";
+        };
+        /** KpiPipelineValueConfig */
+        KpiPipelineValueConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "kpi_pipeline_value";
+        };
+        /** KpiRevenueMonthConfig */
+        KpiRevenueMonthConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "kpi_revenue_month";
+        };
         /**
          * KpiSummary
          * @description Reports snapshot for the caller (and their visibility scope).
@@ -4798,6 +4952,16 @@ export interface components {
             won_this_month_count: number;
             /** Won This Month Value */
             won_this_month_value: string;
+        };
+        /** KpiWonMonthConfig */
+        KpiWonMonthConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "kpi_won_month";
         };
         /** LanguageUpdate */
         LanguageUpdate: {
@@ -4820,6 +4984,8 @@ export interface components {
          * @description % of companies created in the range that got at least one deal.
          */
         LeadToDealConversionConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -4925,6 +5091,8 @@ export interface components {
          * @description Horizontal bar chart of lost-deal reasons. Long tail collapses to Ostatní.
          */
         LostReasonsBreakdownConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -4995,6 +5163,8 @@ export interface components {
          * @description Count of `Company` rows created in the date range.
          */
         NewCompaniesConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -5338,6 +5508,8 @@ export interface components {
          * @description Sum of open `Deal.value` in the date range. Optional grouping.
          */
         PipelineValueConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -5502,6 +5674,8 @@ export interface components {
          * @description Pipeline-starvation early-warning: new deals added per rep.
          */
         RepActivityConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -5554,6 +5728,8 @@ export interface components {
          *     skew badly when one big-ticket deal sits at the long tail.
          */
         SalesCycleLengthConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -5585,6 +5761,8 @@ export interface components {
          * @description Bar chart of reps ranked by a configurable metric.
          */
         SalesLeaderboardConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -5902,6 +6080,8 @@ export interface components {
          * @description Open deals whose stage hasn't moved for at least `threshold` days.
          */
         StaleDealsConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -6438,6 +6618,16 @@ export interface components {
             /** Deal Count */
             deal_count: number;
         };
+        /** VelocityConfig */
+        VelocityConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "velocity";
+        };
         /** VerifyConsumeRequest */
         VerifyConsumeRequest: {
             /** Token */
@@ -6476,6 +6666,8 @@ export interface components {
          * @description won_count / (won_count + lost_count) × 100. No tunable knobs.
          */
         WinRateConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -9883,6 +10075,81 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    get_home_dashboard_api_v1_users_me_home_dashboard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    put_home_dashboard_api_v1_users_me_home_dashboard_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HomeDashboardConfig"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_home_dashboard_api_v1_users_me_home_dashboard_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
