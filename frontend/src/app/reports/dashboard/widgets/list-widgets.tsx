@@ -32,6 +32,8 @@ interface BaseWidgetProps {
   globalFilters: GlobalFilters;
   isEditMode: boolean;
   onRemove: () => void;
+  /** Optional per-widget settings gear (home dashboard's date preset). */
+  onConfigClick?: () => void;
 }
 
 function narrowConfig<T extends Config["type"]>(
@@ -112,6 +114,7 @@ export function StaleDealsWidget(props: BaseWidgetProps) {
       label={t(WIDGET_LABEL_KEY.stale_deals)}
       isEditMode={props.isEditMode}
       onRemove={props.onRemove}
+      onConfigClick={props.onConfigClick}
     >
       {q.isPending ? (
         <WidgetSkeleton />
@@ -191,6 +194,7 @@ export function CompaniesAtRiskWidget(props: BaseWidgetProps) {
       label={t(WIDGET_LABEL_KEY.companies_at_risk)}
       isEditMode={props.isEditMode}
       onRemove={props.onRemove}
+      onConfigClick={props.onConfigClick}
     >
       {q.isPending ? (
         <WidgetSkeleton />

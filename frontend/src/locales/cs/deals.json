@@ -255,7 +255,15 @@
     "addToGoogle": "Přidat do Google kalendáře",
     "connectCalendarLink": "nejprve propojte kalendář v Nastavení",
     "errorRequired": "Vyplňte název, datum a časy.",
+    "errorDealRequired": "Vyberte obchod, ke kterému událost patří.",
     "errorEndBeforeStart": "Konec musí být po začátku.",
+    "dealPicker": {
+      "label": "Obchod",
+      "placeholder": "Hledejte podle názvu obchodu nebo firmy…",
+      "loading": "Načítání obchodů…",
+      "noMatch": "Žádný obchod neodpovídá hledání.",
+      "loadError": "Obchody se nepodařilo načíst."
+    },
     "cancel": "Zrušit",
     "saving": "Ukládám…",
     "submitEdit": "Uložit změny",

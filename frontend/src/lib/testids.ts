@@ -66,6 +66,23 @@ export const testIds = {
   reports: {
     addWidget: "reports-add-widget",
   },
+  dashboard: {
+    editLayout: "dashboard-edit-layout",
+    addWidget: "dashboard-add-widget",
+    quickAction: (type: string) => `dashboard-quick-action-${type}`,
+    widgetRemove: (id: string) => `dashboard-widget-remove-${id}`,
+    widgetConfig: {
+      open: (id: string) => `dashboard-widget-config-open-${id}`,
+      popover: "dashboard-widget-config-popover",
+      preset: (preset: string) => `dashboard-widget-config-preset-${preset}`,
+    },
+  },
+  events: {
+    dealPicker: {
+      input: "event-form-deal-picker-input",
+      option: (id: string) => `event-form-deal-picker-option-${id}`,
+    },
+  },
   widgets: {
     picker: {
       modal: "widget-picker-modal",

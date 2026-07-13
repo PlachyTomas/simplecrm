@@ -3,11 +3,11 @@
     "title": "Overview",
     "userFallback": "user",
     "loadingSummary": "Loading overview…",
-    "summaryLoadError": "Failed to load the KPI overview.",
+    "summaryLoadError": "Failed to load the overview.",
     "welcome": "Welcome back, {{name}}",
     "summaryFor": "Quick overview for {{month}}.",
     "summaryForFallback": "this month",
-    "kpiSectionAriaLabel": "Key metrics",
+    "widgetsAriaLabel": "Overview widgets",
     "openDeals": "Open deals",
     "openDealsHint": "In active pipeline",
     "pipelineValue": "Pipeline value",
@@ -17,15 +17,48 @@
     "revenueThisMonth": "Revenue this month",
     "revenueThisMonthHint": "Sum of won deals"
   },
+  "dashboardEmpty": {
+    "title": "Empty overview",
+    "message": "Add the widgets you want to keep an eye on."
+  },
+  "widgetGroups": {
+    "quickActions": "Quick actions",
+    "overview": "Overview"
+  },
+  "widgetLabels": {
+    "kpi_open_deals": "Open deals",
+    "kpi_pipeline_value": "Pipeline value",
+    "kpi_won_month": "Won this month",
+    "kpi_revenue_month": "Revenue this month",
+    "action_new_deal": "New deal",
+    "action_new_company": "New company",
+    "action_new_contact": "New contact",
+    "action_new_activity": "New event",
+    "invite_teammates": "Invite your team",
+    "velocity": "Average deal duration"
+  },
+  "widgetDescriptions": {
+    "kpi_open_deals": "Number of deals in the active pipeline.",
+    "kpi_pipeline_value": "Total value of open deals.",
+    "kpi_won_month": "Number of deals closed this month.",
+    "kpi_revenue_month": "Total value of deals won this month.",
+    "action_new_deal": "Quickly create a new deal.",
+    "action_new_company": "Quickly add a new company.",
+    "action_new_contact": "Quickly add a new contact person.",
+    "action_new_activity": "Quickly schedule a meeting or event.",
+    "invite_teammates": "Invitations for colleagues while you have free seats.",
+    "velocity": "Average days a deal spends in each stage."
+  },
+  "widgetConfig": {
+    "title": "Widget settings",
+    "dateRangeLabel": "Date range"
+  },
+  "widgetUnavailable": {
+    "title": "Not available.",
+    "short": "Not available"
+  },
   "managerWidgets": {
-    "sectionAriaLabel": "Manager overview",
-    "leaderboardTitle": "Leaderboard (30 days)",
-    "loading": "Loading…",
-    "loadError": "Failed to load.",
-    "noWonDeals": "No deals won in the last 30 days.",
-    "leaderboardLeaderAria": "Leaderboard leader",
-    "velocityTitle": "Average deal duration (30 days)",
-    "noClosedDeals": "No deal was closed in the last 30 days.",
+    "noClosedDeals": "No deal was closed in the selected period.",
     "avgDurationDays": "{{days}} days"
   },
   "inviteTeammatesCard": {

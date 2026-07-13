@@ -3,11 +3,11 @@
     "title": "Přehled",
     "userFallback": "uživateli",
     "loadingSummary": "Načítání přehledu…",
-    "summaryLoadError": "Přehled KPI se nepodařilo načíst.",
+    "summaryLoadError": "Přehled se nepodařilo načíst.",
     "welcome": "Vítejte zpět, {{name}}",
     "summaryFor": "Rychlý přehled za {{month}}.",
     "summaryForFallback": "tento měsíc",
-    "kpiSectionAriaLabel": "Klíčové ukazatele",
+    "widgetsAriaLabel": "Widgety přehledu",
     "openDeals": "Otevřené obchody",
     "openDealsHint": "V probíhající pipeline",
     "pipelineValue": "Hodnota pipeline",
@@ -17,15 +17,48 @@
     "revenueThisMonth": "Výnosy tento měsíc",
     "revenueThisMonthHint": "Součet vyhraných obchodů"
   },
+  "dashboardEmpty": {
+    "title": "Prázdný přehled",
+    "message": "Přidejte si widgety, které chcete sledovat."
+  },
+  "widgetGroups": {
+    "quickActions": "Rychlé akce",
+    "overview": "Přehled"
+  },
+  "widgetLabels": {
+    "kpi_open_deals": "Otevřené obchody",
+    "kpi_pipeline_value": "Hodnota pipeline",
+    "kpi_won_month": "Vyhráno tento měsíc",
+    "kpi_revenue_month": "Výnosy tento měsíc",
+    "action_new_deal": "Nový obchod",
+    "action_new_company": "Nová firma",
+    "action_new_contact": "Nový kontakt",
+    "action_new_activity": "Nová událost",
+    "invite_teammates": "Pozvěte svůj tým",
+    "velocity": "Průměrné trvání obchodu"
+  },
+  "widgetDescriptions": {
+    "kpi_open_deals": "Počet obchodů v probíhající pipeline.",
+    "kpi_pipeline_value": "Součet hodnoty otevřených obchodů.",
+    "kpi_won_month": "Počet obchodů uzavřených tento měsíc.",
+    "kpi_revenue_month": "Součet hodnoty vyhraných obchodů za tento měsíc.",
+    "action_new_deal": "Rychle založíte nový obchod.",
+    "action_new_company": "Rychle přidáte novou firmu.",
+    "action_new_contact": "Rychle přidáte novou kontaktní osobu.",
+    "action_new_activity": "Rychle naplánujete schůzku či událost.",
+    "invite_teammates": "Pozvánky pro kolegy, dokud máte volná místa.",
+    "velocity": "Průměrný počet dní obchodu v jednotlivých fázích."
+  },
+  "widgetConfig": {
+    "title": "Nastavení widgetu",
+    "dateRangeLabel": "Časové období"
+  },
+  "widgetUnavailable": {
+    "title": "Není dostupné.",
+    "short": "Není dostupné"
+  },
   "managerWidgets": {
-    "sectionAriaLabel": "Manažerský přehled",
-    "leaderboardTitle": "Leaderboard (30 dní)",
-    "loading": "Načítání…",
-    "loadError": "Nelze načíst.",
-    "noWonDeals": "Žádné vyhrané obchody za posledních 30 dní.",
-    "leaderboardLeaderAria": "Vedoucí leaderboardu",
-    "velocityTitle": "Průměrné trvání obchodu (30 dní)",
-    "noClosedDeals": "Za posledních 30 dní nebyl uzavřen žádný obchod.",
+    "noClosedDeals": "Ve zvoleném období nebyl uzavřen žádný obchod.",
     "avgDurationDays": "{{days}} dní"
   },
   "inviteTeammatesCard": {

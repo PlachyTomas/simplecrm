@@ -253,7 +253,15 @@
     "addToGoogle": "Add to Google Calendar",
     "connectCalendarLink": "connect your calendar in Settings first",
     "errorRequired": "Fill in the name, date, and times.",
+    "errorDealRequired": "Pick the deal this event belongs to.",
     "errorEndBeforeStart": "The end must be after the start.",
+    "dealPicker": {
+      "label": "Deal",
+      "placeholder": "Search by deal or company name…",
+      "loading": "Loading deals…",
+      "noMatch": "No deal matches your search.",
+      "loadError": "Failed to load deals."
+    },
     "cancel": "Cancel",
     "saving": "Saving…",
     "submitEdit": "Save changes",

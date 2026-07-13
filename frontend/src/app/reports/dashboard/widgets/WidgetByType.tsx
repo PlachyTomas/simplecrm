@@ -35,6 +35,8 @@ interface Props {
   globalFilters: GlobalFilters;
   isEditMode: boolean;
   onRemove: () => void;
+  /** Optional per-widget settings gear (home dashboard's date preset). */
+  onConfigClick?: () => void;
 }
 
 export function WidgetByType(props: Props) {
