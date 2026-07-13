@@ -1,0 +1,29 @@
+{
+  "widgetFrame": {
+    "moveWidget": "Move widget",
+    "widgetSettings": "Widget settings",
+    "removeWidget": "Remove widget",
+    "loading": "Loading widget",
+    "loadError": "Failed to load the widget.",
+    "retry": "Retry"
+  },
+  "picker": {
+    "title": "Add widget",
+    "close": "Close",
+    "added": "Added",
+    "empty": "No more widgets to add."
+  },
+  "mobileList": {
+    "dragHandle": "Drag widget",
+    "moveUp": "Move up",
+    "moveDown": "Move down"
+  },
+  "editor": {
+    "editLayout": "Edit layout",
+    "addWidget": "Add widget",
+    "resetLayout": "Reset to default",
+    "resetConfirm": "Reset to the default layout? Your changes will be lost.",
+    "cancel": "Cancel",
+    "save": "Save"
+  }
+}

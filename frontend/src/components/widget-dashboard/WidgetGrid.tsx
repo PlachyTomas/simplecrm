@@ -4,7 +4,7 @@
 // top-level node_modules and our `widget-grid.css` repaints the handle
 // visuals anyway.
 import "react-grid-layout/css/styles.css";
-import "@/app/reports/dashboard/widget-grid.css";
+import "./widget-grid.css";
 
 import { useCallback, useMemo } from "react";
 import {
@@ -17,17 +17,34 @@ import {
 
 import { useMediaQuery } from "@/lib/useMediaQuery";
 
-import type { DashboardConfig, WidgetEntry } from "@/app/reports/dashboard/types";
-
 const COLS = { lg: 12, md: 6, sm: 1 };
 const BREAKPOINTS = { lg: 1024, md: 768, sm: 0 };
 const ROW_HEIGHT = 64;
 
-interface WidgetGridProps {
-  config: DashboardConfig;
+/**
+ * Structural shape the grid needs from every widget: a stable id and a
+ * 2D position. Kept local (not imported from the Reports domain types)
+ * so both dashboards — Reports and Home — can drive the same grid with
+ * their own richer entry types. Callers pass their full entry type as
+ * the generic `W`; `renderWidget`/`onLayoutChange` see it unchanged.
+ */
+export interface WidgetGridPosition {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface WidgetGridItem {
+  id: string;
+  position: WidgetGridPosition;
+}
+
+interface WidgetGridProps<W extends WidgetGridItem> {
+  widgets: W[];
   isEditMode: boolean;
-  onLayoutChange: (next: WidgetEntry[]) => void;
-  renderWidget: (entry: WidgetEntry) => React.ReactNode;
+  onLayoutChange: (next: W[]) => void;
+  renderWidget: (entry: W) => React.ReactNode;
 }
 
 /**
@@ -49,12 +66,14 @@ interface WidgetGridProps {
  * widget header — so clicking inside a widget body never starts a
  * drag.
  */
-export function WidgetGrid({ config, isEditMode, onLayoutChange, renderWidget }: WidgetGridProps) {
+export function WidgetGrid<W extends WidgetGridItem>({
+  widgets,
+  isEditMode,
+  onLayoutChange,
+  renderWidget,
+}: WidgetGridProps<W>) {
   const isMobile = useMediaQuery("(max-width: 767px)");
   const { width, containerRef } = useContainerWidth();
-  // `widgets` is optional in the generated DashboardConfig — treat absence as
-  // an empty dashboard so we don't have to null-check at every callsite.
-  const widgets: WidgetEntry[] = useMemo(() => config.widgets ?? [], [config.widgets]);
 
   const layouts = useMemo<ResponsiveLayouts<"lg" | "md">>(() => {
     const lg: LayoutItem[] = widgets.map((w) => ({
@@ -83,10 +102,7 @@ export function WidgetGrid({ config, isEditMode, onLayoutChange, renderWidget }:
       const next = widgets.map((w) => {
         const l = byId.get(w.id);
         if (!l) return w;
-        return {
-          ...w,
-          position: { x: l.x, y: l.y, w: l.w, h: l.h },
-        };
+        return { ...w, position: { x: l.x, y: l.y, w: l.w, h: l.h } } as W;
       });
       onLayoutChange(next);
     },

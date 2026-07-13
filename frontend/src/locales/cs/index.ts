@@ -12,6 +12,7 @@ import marketing from "./marketing.json";
 import onboarding from "./onboarding.json";
 import reports from "./reports.json";
 import settings from "./settings.json";
+import widgets from "./widgets.json";
 
 export const cs = {
   admin,
@@ -28,4 +29,5 @@ export const cs = {
   onboarding,
   reports,
   settings,
+  widgets,
 } as const;

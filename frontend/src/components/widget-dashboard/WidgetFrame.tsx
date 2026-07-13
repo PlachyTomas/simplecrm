@@ -18,7 +18,8 @@ interface WidgetFrameProps {
 }
 
 /**
- * Shared shell for every Reports widget. Header carries the label, an
+ * Shared shell for every widget-dashboard widget (Reports and Home).
+ * Header carries the label, an
  * optional gear button for the per-widget config sheet (only when
  * `onConfigClick` is provided), and — in edit mode — a drag handle on
  * the left and an X on the right. The drag handle gets the
@@ -34,7 +35,7 @@ export function WidgetFrame({
   children,
   className,
 }: WidgetFrameProps) {
-  const { t } = useTranslation("reports");
+  const { t } = useTranslation("widgets");
   return (
     <article
       className={cn(
@@ -83,7 +84,7 @@ export function WidgetFrame({
 
 /** Loading skeleton used by every widget while its query resolves. */
 export function WidgetSkeleton() {
-  const { t } = useTranslation("reports");
+  const { t } = useTranslation("widgets");
   return (
     <div
       role="status"
@@ -99,7 +100,7 @@ export function WidgetSkeleton() {
 
 /** Inline error card. Per spec: never a toast — widget errors must not stack. */
 export function WidgetError({ onRetry }: { onRetry?: () => void }) {
-  const { t } = useTranslation("reports");
+  const { t } = useTranslation("widgets");
   return (
     <div className="flex h-full flex-col items-start justify-center gap-2 text-sm">
       <p className="text-text-primary">{t("widgetFrame.loadError")}</p>

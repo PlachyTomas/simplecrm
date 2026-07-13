@@ -10,7 +10,7 @@
 
 import { useTranslation } from "react-i18next";
 
-import { WidgetError, WidgetFrame, WidgetSkeleton } from "@/app/reports/dashboard/WidgetFrame";
+import { WidgetError, WidgetFrame, WidgetSkeleton } from "@/components/widget-dashboard/WidgetFrame";
 import {
   type GlobalFilters,
   type WidgetEntry,

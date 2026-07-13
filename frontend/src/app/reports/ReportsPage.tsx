@@ -1,15 +1,23 @@
-import { Download, Pencil, RotateCcw, Save, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Download, Pencil, Plus, RotateCcw, Save, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate } from "react-router-dom";
 
 import { GlobalFilterBar } from "@/app/reports/dashboard/GlobalFilterBar";
-import { WidgetSkeleton } from "@/app/reports/dashboard/WidgetFrame";
-import { WidgetGrid } from "@/app/reports/dashboard/WidgetGrid";
 import {
+  WIDGET_DESCRIPTION_KEY,
+  WIDGET_ICONS,
+  REPORTS_ANALYTICS_TYPES,
+  REPORTS_KPI_TYPES,
+  defaultWidgetSize,
+  nextRowY,
+} from "@/app/reports/dashboard/reportsWidgetCatalog";
+import {
+  WIDGET_LABEL_KEY,
   type DashboardConfig,
   type GlobalFilters,
   type WidgetEntry,
+  type WidgetType,
 } from "@/app/reports/dashboard/types";
 import {
   useDashboardConfig,
@@ -19,8 +27,17 @@ import {
 import { useExportCsv } from "@/app/reports/dashboard/useExportCsv";
 import { WidgetByType } from "@/app/reports/dashboard/widgets/WidgetByType";
 import { useCurrentUser } from "@/auth/useCurrentUser";
-import { usePageTitle } from "@/lib/usePageTitle";
+import { WidgetSkeleton } from "@/components/widget-dashboard/WidgetFrame";
+import { WidgetGrid } from "@/components/widget-dashboard/WidgetGrid";
+import {
+  WidgetPicker,
+  type WidgetPickerGroup,
+} from "@/components/widget-dashboard/WidgetPicker";
+import { useDashboardEditor } from "@/components/widget-dashboard/useDashboardEditor";
+import { makeWidgetId } from "@/components/widget-dashboard/widgetId";
+import { testIds } from "@/lib/testids";
 import { cn } from "@/lib/utils";
+import { usePageTitle } from "@/lib/usePageTitle";
 
 function defaultFilters(): GlobalFilters {
   return {
@@ -35,51 +52,45 @@ function defaultFilters(): GlobalFilters {
  * land back on the main dashboard — their per-user KPIs already live
  * there.
  *
- * Edit mode is local state. The on-screen `config` is the working
- * copy; clicking Save PUTs it to the backend, Cancel reverts to
- * the last loaded value, and Reset to default calls DELETE.
+ * Edit mode is local draft state (see `useDashboardEditor`). The
+ * on-screen `working` config is the working copy; Save PUTs it to the
+ * backend, Cancel/Escape reverts to the last loaded value, and Reset
+ * calls DELETE.
  */
 export function ReportsPage() {
   const { t } = useTranslation("reports");
+  const { t: tw } = useTranslation("widgets");
   usePageTitle(t("reportsPage.title"));
   const { data: me, isPending: meLoading } = useCurrentUser();
   const config = useDashboardConfig();
   const save = useSaveDashboardConfig();
   const reset = useResetDashboardConfig();
   const exportCsv = useExportCsv();
+  const [pickerOpen, setPickerOpen] = useState(false);
 
-  const [editMode, setEditMode] = useState(false);
-  const [draft, setDraft] = useState<DashboardConfig | null>(null);
+  const editor = useDashboardEditor<DashboardConfig>({
+    loaded: config.data,
+    onSave: (draft) => save.mutateAsync(draft),
+    onReset: () => reset.mutateAsync(),
+    confirmReset: () => window.confirm(tw("editor.resetConfirm")),
+  });
+  const { isEditMode, working, setDraft } = editor;
 
-  // The working copy is whatever's currently displayed: in view mode
-  // the server config; in edit mode the in-memory draft (so unsaved
-  // moves don't blow away when the query refetches).
-  const working = editMode ? draft : (config.data ?? null);
-
-  // Initialize the draft once when entering edit mode.
-  useEffect(() => {
-    if (editMode && config.data && !draft) {
-      setDraft(config.data);
-    }
-    if (!editMode && draft) {
-      setDraft(null);
-    }
-  }, [editMode, config.data, draft]);
-
-  // Escape exits edit mode without saving — keyboard parity with the
-  // Cancel button. react-grid-layout's drag is mouse-only, so this
-  // is the only keyboard escape hatch we promise.
-  useEffect(() => {
-    if (!editMode) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setDraft(null);
-        setEditMode(false);
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [editMode]);
+  const pickerGroups = useMemo<WidgetPickerGroup[]>(() => {
+    const make = (type: WidgetType) => ({
+      type,
+      label: t(WIDGET_LABEL_KEY[type]),
+      description: t(WIDGET_DESCRIPTION_KEY[type]),
+      icon: WIDGET_ICONS[type],
+      // Analytics widgets are freely duplicable — none lock in the picker.
+      unique: false,
+      added: false,
+    });
+    return [
+      { title: t("widgetPicker.groupKpi"), items: REPORTS_KPI_TYPES.map(make) },
+      { title: t("widgetPicker.groupAnalytics"), items: REPORTS_ANALYTICS_TYPES.map(make) },
+    ];
+  }, [t]);
 
   if (meLoading) {
     return (
@@ -97,7 +108,7 @@ export function ReportsPage() {
 
   function handleFiltersChange(next: GlobalFilters) {
     if (!working) return;
-    if (editMode) {
+    if (isEditMode) {
       setDraft({ ...working, globalFilters: next });
     } else {
       // View-mode filter changes are persisted immediately so a
@@ -120,23 +131,18 @@ export function ReportsPage() {
     });
   }
 
-  async function handleSave() {
-    if (!draft) return;
-    await save.mutateAsync(draft);
-    setEditMode(false);
-  }
-
-  function handleCancel() {
-    setDraft(null);
-    setEditMode(false);
-  }
-
-  async function handleReset() {
-    const ok = window.confirm(t("reportsPage.resetConfirm"));
-    if (!ok) return;
-    await reset.mutateAsync();
-    setEditMode(false);
-    setDraft(null);
+  function handleAddWidget(type: string) {
+    if (!working) return;
+    const widgetType = type as WidgetType;
+    const { w, h } = defaultWidgetSize(widgetType);
+    const widgets = working.widgets ?? [];
+    const y = nextRowY(widgets.map((entry) => entry.position));
+    const entry: WidgetEntry = {
+      id: makeWidgetId(),
+      position: { x: 0, y, w, h },
+      config: { type: widgetType } as WidgetEntry["config"],
+    };
+    setDraft({ ...working, widgets: [...widgets, entry] });
   }
 
   return (
@@ -147,30 +153,38 @@ export function ReportsPage() {
           <p className="mt-1 text-sm text-text-tertiary">{t("reportsPage.subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {editMode ? (
+          {isEditMode ? (
             <>
               <button
                 type="button"
-                onClick={handleReset}
+                onClick={() => setPickerOpen(true)}
+                data-testid={testIds.reports.addWidget}
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium text-text-secondary hover:border-accent hover:text-accent"
+              >
+                <Plus size={14} strokeWidth={1.75} aria-hidden /> {tw("editor.addWidget")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void editor.reset()}
                 disabled={reset.isPending}
                 className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium text-text-secondary hover:border-accent hover:text-accent disabled:opacity-50"
               >
-                <RotateCcw size={14} strokeWidth={1.75} aria-hidden /> {t("reportsPage.resetLayout")}
+                <RotateCcw size={14} strokeWidth={1.75} aria-hidden /> {tw("editor.resetLayout")}
               </button>
               <button
                 type="button"
-                onClick={handleCancel}
+                onClick={editor.cancel}
                 className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium text-text-secondary hover:border-accent hover:text-accent"
               >
-                <X size={14} strokeWidth={1.75} aria-hidden /> {t("reportsPage.cancel")}
+                <X size={14} strokeWidth={1.75} aria-hidden /> {tw("editor.cancel")}
               </button>
               <button
                 type="button"
-                onClick={handleSave}
+                onClick={() => void editor.save()}
                 disabled={save.isPending}
                 className="hover:bg-accent-strong inline-flex h-9 items-center gap-1.5 rounded-md border border-accent bg-accent px-3 text-sm font-medium text-text-on-accent disabled:opacity-50"
               >
-                <Save size={14} strokeWidth={1.75} aria-hidden /> {t("reportsPage.save")}
+                <Save size={14} strokeWidth={1.75} aria-hidden /> {tw("editor.save")}
               </button>
             </>
           ) : (
@@ -192,10 +206,10 @@ export function ReportsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setEditMode(true)}
+                onClick={editor.enterEdit}
                 className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium text-text-secondary hover:border-accent hover:text-accent"
               >
-                <Pencil size={14} strokeWidth={1.75} aria-hidden /> {t("reportsPage.editLayout")}
+                <Pencil size={14} strokeWidth={1.75} aria-hidden /> {tw("editor.editLayout")}
               </button>
             </>
           )}
@@ -210,23 +224,30 @@ export function ReportsPage() {
         ) : !working ? (
           <DashboardSkeleton />
         ) : (working.widgets ?? []).length === 0 ? (
-          <EmptyDashboard onEdit={() => setEditMode(true)} />
+          <EmptyDashboard onEdit={editor.enterEdit} />
         ) : (
           <WidgetGrid
-            config={working}
-            isEditMode={editMode}
+            widgets={working.widgets ?? []}
+            isEditMode={isEditMode}
             onLayoutChange={handleLayoutChange}
             renderWidget={(entry) => (
               <WidgetByType
                 entry={entry}
                 globalFilters={filters}
-                isEditMode={editMode}
+                isEditMode={isEditMode}
                 onRemove={() => handleRemoveWidget(entry.id)}
               />
             )}
           />
         )}
       </div>
+
+      <WidgetPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        groups={pickerGroups}
+        onAdd={handleAddWidget}
+      />
     </div>
   );
 }
@@ -245,6 +266,7 @@ function DashboardSkeleton() {
 
 function EmptyDashboard({ onEdit }: { onEdit: () => void }) {
   const { t } = useTranslation("reports");
+  const { t: tw } = useTranslation("widgets");
   return (
     <div className="rounded-lg border border-dashed border-border bg-surface p-12 text-center">
       <h2 className="text-lg font-semibold">{t("reportsPage.emptyTitle")}</h2>
@@ -254,7 +276,7 @@ function EmptyDashboard({ onEdit }: { onEdit: () => void }) {
         onClick={onEdit}
         className="hover:bg-accent-strong mt-4 inline-flex h-9 items-center gap-1.5 rounded-md border border-accent bg-accent px-3 text-sm font-medium text-text-on-accent"
       >
-        <Pencil size={14} strokeWidth={1.75} aria-hidden /> {t("reportsPage.editLayout")}
+        <Pencil size={14} strokeWidth={1.75} aria-hidden /> {tw("editor.editLayout")}
       </button>
     </div>
   );

@@ -1,0 +1,29 @@
+{
+  "widgetFrame": {
+    "moveWidget": "Přesunout widget",
+    "widgetSettings": "Nastavení widgetu",
+    "removeWidget": "Odebrat widget",
+    "loading": "Načítání widgetu",
+    "loadError": "Widget se nepodařilo načíst.",
+    "retry": "Zkusit znovu"
+  },
+  "picker": {
+    "title": "Přidat widget",
+    "close": "Zavřít",
+    "added": "Přidáno",
+    "empty": "Žádné další widgety k přidání."
+  },
+  "mobileList": {
+    "dragHandle": "Přetáhnout widget",
+    "moveUp": "Posunout nahoru",
+    "moveDown": "Posunout dolů"
+  },
+  "editor": {
+    "editLayout": "Upravit rozložení",
+    "addWidget": "Přidat widget",
+    "resetLayout": "Obnovit výchozí",
+    "resetConfirm": "Opravdu chcete obnovit výchozí rozložení? Vaše úpravy budou ztraceny.",
+    "cancel": "Zrušit",
+    "save": "Uložit"
+  }
+}

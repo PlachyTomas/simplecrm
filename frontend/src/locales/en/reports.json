@@ -2,13 +2,8 @@
   "reportsPage": {
     "title": "Reports",
     "subtitle": "Custom widget layout — team and individual results.",
-    "resetLayout": "Reset to default",
-    "cancel": "Cancel",
-    "save": "Save",
     "downloading": "Downloading…",
     "downloadCsv": "Download CSV",
-    "editLayout": "Edit layout",
-    "resetConfirm": "Reset to the default layout? Your changes will be lost.",
     "emptyTitle": "No widgets",
     "emptyMessage": "Add your first widget — track exactly what you need.",
     "exportFilenamePrefix": "reports"
@@ -45,13 +40,23 @@
     "stale_deals": "Stale deals",
     "companies_at_risk": "Companies at risk"
   },
-  "widgetFrame": {
-    "moveWidget": "Move widget",
-    "widgetSettings": "Widget settings",
-    "removeWidget": "Remove widget",
-    "loading": "Loading widget",
-    "loadError": "Failed to load the widget.",
-    "retry": "Retry"
+  "widgetDescriptions": {
+    "pipeline_value": "Total value of open deals.",
+    "new_companies": "Count of newly added companies.",
+    "deals_won": "Count and value of deals won.",
+    "win_rate": "Share of closed deals that were won.",
+    "avg_deal_size": "Average deal value.",
+    "sales_cycle_length": "Average time to close a deal.",
+    "lead_to_deal_conversion": "Share of new companies that converted to a deal.",
+    "lost_reasons_breakdown": "Breakdown of lost deals by reason.",
+    "sales_leaderboard": "Ranking of salespeople by results.",
+    "rep_activity": "New deals created per salesperson.",
+    "stale_deals": "Deals with no movement for a while.",
+    "companies_at_risk": "Companies with ownership ending soon."
+  },
+  "widgetPicker": {
+    "groupKpi": "Metrics",
+    "groupAnalytics": "Charts & lists"
   },
   "barChart": {
     "defaultEmptyMessage": "No data for this period.",

@@ -19,7 +19,7 @@ import {
   WidgetError,
   WidgetFrame,
   WidgetSkeleton,
-} from "@/app/reports/dashboard/WidgetFrame";
+} from "@/components/widget-dashboard/WidgetFrame";
 import {
   type GlobalFilters,
   type WidgetEntry,

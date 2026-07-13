@@ -2,13 +2,8 @@
   "reportsPage": {
     "title": "Reporty",
     "subtitle": "Vlastní rozložení widgetů — výsledky týmu i jednotlivců.",
-    "resetLayout": "Obnovit výchozí",
-    "cancel": "Zrušit",
-    "save": "Uložit",
     "downloading": "Stahování…",
     "downloadCsv": "Stáhnout CSV",
-    "editLayout": "Upravit rozložení",
-    "resetConfirm": "Opravdu chcete obnovit výchozí rozložení? Vaše úpravy budou ztraceny.",
     "emptyTitle": "Žádné widgety",
     "emptyMessage": "Přidejte si první widget — sledujte přesně to, co potřebujete.",
     "exportFilenamePrefix": "reporty"
@@ -45,13 +40,23 @@
     "stale_deals": "Stagnující obchody",
     "companies_at_risk": "Firmy ohrožené uvolněním"
   },
-  "widgetFrame": {
-    "moveWidget": "Přesunout widget",
-    "widgetSettings": "Nastavení widgetu",
-    "removeWidget": "Odebrat widget",
-    "loading": "Načítání widgetu",
-    "loadError": "Widget se nepodařilo načíst.",
-    "retry": "Zkusit znovu"
+  "widgetDescriptions": {
+    "pipeline_value": "Součet hodnoty otevřených obchodů.",
+    "new_companies": "Počet nově přidaných firem.",
+    "deals_won": "Počet a hodnota vyhraných obchodů.",
+    "win_rate": "Podíl vyhraných z uzavřených obchodů.",
+    "avg_deal_size": "Průměrná hodnota obchodu.",
+    "sales_cycle_length": "Průměrná doba do uzavření obchodu.",
+    "lead_to_deal_conversion": "Podíl nových firem, které získaly obchod.",
+    "lost_reasons_breakdown": "Rozpad prohraných obchodů podle důvodu.",
+    "sales_leaderboard": "Žebříček obchodníků podle výsledků.",
+    "rep_activity": "Počet nových obchodů podle obchodníka.",
+    "stale_deals": "Obchody bez pohybu delší dobu.",
+    "companies_at_risk": "Firmy s blížícím se koncem vlastnictví."
+  },
+  "widgetPicker": {
+    "groupKpi": "Ukazatele",
+    "groupAnalytics": "Grafy a seznamy"
   },
   "barChart": {
     "defaultEmptyMessage": "Žádná data v tomto období.",

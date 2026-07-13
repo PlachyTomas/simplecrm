@@ -52,6 +52,7 @@ export const testIds = {
     addModal: {
       nameInput: "deals-add-modal-name",
       companyInput: "deals-add-modal-company-search",
+      newCompanyToggle: "deals-add-modal-new-company-toggle",
       stageSelect: "deals-add-modal-stage",
       submit: "deals-add-modal-submit",
       cancel: "deals-add-modal-cancel",
@@ -61,6 +62,21 @@ export const testIds = {
   pipeline: {
     stage: (stageId: string) => `pipeline-stage-${stageId}`,
     deal: (dealId: string) => `pipeline-deal-${dealId}`,
+  },
+  reports: {
+    addWidget: "reports-add-widget",
+  },
+  widgets: {
+    picker: {
+      modal: "widget-picker-modal",
+      close: "widget-picker-close",
+      item: (type: string) => `widget-picker-item-${type}`,
+    },
+    mobileList: {
+      dragHandle: (id: string) => `widget-mobile-drag-${id}`,
+      moveUp: (id: string) => `widget-mobile-move-up-${id}`,
+      moveDown: (id: string) => `widget-mobile-move-down-${id}`,
+    },
   },
   onboarding: {
     wizard: {
