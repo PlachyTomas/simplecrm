@@ -13,13 +13,25 @@
 
 - [x] `6aae7ab` phase 2: DashboardPage rework (grid + picker + quick actions incl. EventFormModal deal picker for unbound create, per-widget date-preset popover, mobile reorder) + orchestrator cleanups (onConfigClick threaded through WidgetByType/renderers instead of the positional gear overlay; InviteTeammatesCard mt-8 dropped with the [&>section] hack). FE checks after: tsc OK, vitest 251 pass, i18n parity OK.
 
-## In flight
+- [x] Playwright verification (12 checks): 11 passed; P1 + 2 P2s fixed in `3f2344e`
+  (desktop drag/resize lost on save — container-breakpoint trap, WidgetGrid lg now 900
+  + md persists row order via unit-tested `applyLayoutToWidgets`; edit-chrome overlay →
+  reserved strip; cs win-rate paucal). Fix re-verified live: PUT body carries dragged
+  positions, reload persists, picker/added-states OK, console clean. Eva's layout reset
+  to default.
 
-- [ ] **Playwright verification agent** (opus, shared browser): desktop edit cycle, mobile 390px, quick actions, AddDealModal toggle, both themes, reports regression, console; instructed to reset eva's layout to default at the end. Screenshots in session scratchpad.
+## Deferred (small, non-blocking)
+
+- Recharts "width(-1)/height(-1)" console warning on chart mounts — pre-existing (fires
+  on /reports too); silence via minWidth/deferred mount someday.
+- MobileWidgetList long-press drag activates only for touch pointers; mouse users on
+  <768px windows use the up/down buttons. Confirm intent or add mouse activation.
+- Date-preset dialog is a centered house-pattern modal, not an anchored popover —
+  accepted as consistent with the app's modal language.
 
 ## Remaining
 
-- [ ] Fix verification findings, re-verify, final summary. Merge decision is owner's (finishing-a-development-branch).
+- [ ] Owner review + merge decision (finishing-a-development-branch).
 
 ## Known accepted trade-offs (from phase-2 agent)
 
