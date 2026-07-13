@@ -146,5 +146,95 @@
     "dealPrefix": "Obchod „{{dealName}}“",
     "showAll": "Zobrazit vše ({{count}})",
     "hide": "Skrýt"
+  },
+  "nav": {
+    "overview": "Přehled",
+    "pipeline": "Pipeline",
+    "companies": "Firmy",
+    "contacts": "Kontakty",
+    "deals": "Obchody",
+    "calendar": "Kalendář",
+    "reports": "Reporty",
+    "settings": "Nastavení",
+    "feedback": "Zpětná vazba",
+    "more": "Více",
+    "logout": "Odhlásit se",
+    "groupSales": "Prodej",
+    "mobileAriaLabel": "Spodní navigace",
+    "desktopAriaLabel": "Hlavní navigace"
+  },
+  "tutorial": {
+    "welcome": {
+      "title": "Vítejte v SimpleCRM",
+      "body": "Provedeme Vás pěti kroky, kterými se za minutu zorientujete v aplikaci. Tour kdykoli přeskočíte a znovu spustíte přes ikonu ? v pravém horním rohu."
+    },
+    "companies": {
+      "title": "Firmy jsou základ",
+      "body": "Začněte u firmy. Stačí zadat IČO — název, adresu i právní formu doplníme z registru ARES."
+    },
+    "pipeline": {
+      "title": "Obchod patří do pipeline",
+      "body": "V Pipeline najdete Kanban s vašimi obchody. Přidejte první přes „+ Přidat obchod\" vpravo nahoře a přetahujte je mezi fázemi podle vývoje."
+    },
+    "reports": {
+      "title": "Reporty Vám napoví",
+      "body": "Až budete mít data, uvidíte tady, kdo vede žebříček, jak rychle se obchody zavírají a co se neprodává. Manažerům odemkne extra widgety přepnutí role v Nastavení."
+    },
+    "settings": {
+      "title": "Pozvěte tým, ať to nezůstane jen u Vás",
+      "body": "V Nastavení upravíte pipeline na míru, pozvete obchodníky a doplníte fakturační údaje. Hotovo, můžete jít na věc!"
+    },
+    "stepCounter": "Krok {{current}} / {{total}}",
+    "closeAriaLabel": "Zavřít průvodce",
+    "back": "Zpět",
+    "skip": "Přeskočit",
+    "next": "Další",
+    "done": "Hotovo",
+    "replayAriaLabel": "Spustit průvodce znovu"
+  },
+  "feedback": {
+    "pageTitle": "Zpětná vazba",
+    "intro": "Něco nefunguje, nebo vám něco chybí? Napište nám — čteme každou zprávu.",
+    "kindLegend": "Co chcete nahlásit?",
+    "kinds": {
+      "bug": {
+        "label": "Nahlásit chybu",
+        "description": "Něco nefunguje, jak má."
+      },
+      "improvement": {
+        "label": "Návrh na vylepšení",
+        "description": "Nápad, co by usnadnilo práci."
+      }
+    },
+    "captionLabel": "Stručný popis",
+    "captionPlaceholder": "Např. Po kliknutí na šipku karta v kanbanu zmizí.",
+    "bodyLabel": "Detail",
+    "bodyPlaceholder": "Popište, co jste dělali, co jste čekali a co se místo toho stalo.",
+    "attachmentsLegend": "Snímky obrazovky (volitelné)",
+    "attachmentsHint": "Až {{max}} souborů, PNG/JPEG/WebP, max. 5 MB každý.",
+    "addScreenshot": "Přidat snímek",
+    "removeFileAriaLabel": "Odebrat {{name}}",
+    "supportEmailPrefix": "Zpráva půjde na",
+    "supportEmailSuffix": "a odpovíme vám na váš e-mail.",
+    "submit": "Odeslat zpětnou vazbu",
+    "submitting": "Odesílám…",
+    "toastSuccess": "Zpráva odeslána. Děkujeme!",
+    "errors": {
+      "tooManyFiles": "Najednou lze přiložit nejvýše {{max}} souborů.",
+      "unsupportedType": "Soubor „{{name}}\" není podporovaný (PNG, JPEG, WebP).",
+      "fileTooLarge": "Soubor „{{name}}\" přesahuje 5 MB.",
+      "totalTooLarge": "Souhrnná velikost příloh přesahuje 15 MB.",
+      "submitFailedGeneric": "Odeslání se nezdařilo.",
+      "submitFailedRetry": "Odeslání se nezdařilo. Zkuste to prosím znovu."
+    }
+  },
+  "theme": {
+    "groupAriaLabel": "Motiv vzhledu",
+    "light": "Světlý",
+    "dark": "Tmavý",
+    "system": "Systém"
+  },
+  "toast": {
+    "dismissAriaLabel": "Zavřít oznámení"
   }
 }

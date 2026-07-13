@@ -144,5 +144,95 @@
     "dealPrefix": "Deal “{{dealName}}”",
     "showAll": "Show all ({{count}})",
     "hide": "Hide"
+  },
+  "nav": {
+    "overview": "Overview",
+    "pipeline": "Pipeline",
+    "companies": "Companies",
+    "contacts": "Contacts",
+    "deals": "Deals",
+    "calendar": "Calendar",
+    "reports": "Reports",
+    "settings": "Settings",
+    "feedback": "Feedback",
+    "more": "More",
+    "logout": "Log out",
+    "groupSales": "Sales",
+    "mobileAriaLabel": "Bottom navigation",
+    "desktopAriaLabel": "Main navigation"
+  },
+  "tutorial": {
+    "welcome": {
+      "title": "Welcome to SimpleCRM",
+      "body": "We'll walk you through five steps to get oriented in a minute. You can skip the tour anytime and restart it via the ? icon in the top-right corner."
+    },
+    "companies": {
+      "title": "Companies are the foundation",
+      "body": "Start with a company. Just enter the Company ID (IČO) — we'll fill in the name, address, and legal form from the ARES registry."
+    },
+    "pipeline": {
+      "title": "A deal belongs in the pipeline",
+      "body": "The Pipeline shows a Kanban board of your deals. Add your first one via \"+ Add deal\" in the top right, and drag deals between stages as they progress."
+    },
+    "reports": {
+      "title": "Reports will guide you",
+      "body": "Once you have data, you'll see who's leading the leaderboard, how fast deals close, and what isn't selling. Switching your role in Settings unlocks extra widgets for managers."
+    },
+    "settings": {
+      "title": "Invite your team so it's not just you",
+      "body": "In Settings you can customize the pipeline, invite salespeople, and fill in your billing details. Done — you're ready to go!"
+    },
+    "stepCounter": "Step {{current}} / {{total}}",
+    "closeAriaLabel": "Close tour",
+    "back": "Back",
+    "skip": "Skip",
+    "next": "Next",
+    "done": "Done",
+    "replayAriaLabel": "Restart tour"
+  },
+  "feedback": {
+    "pageTitle": "Feedback",
+    "intro": "Something not working, or something missing? Write to us — we read every message.",
+    "kindLegend": "What would you like to report?",
+    "kinds": {
+      "bug": {
+        "label": "Report a bug",
+        "description": "Something isn't working as it should."
+      },
+      "improvement": {
+        "label": "Suggest an improvement",
+        "description": "An idea that would make work easier."
+      }
+    },
+    "captionLabel": "Brief description",
+    "captionPlaceholder": "E.g. Clicking the arrow makes the kanban card disappear.",
+    "bodyLabel": "Details",
+    "bodyPlaceholder": "Describe what you were doing, what you expected, and what happened instead.",
+    "attachmentsLegend": "Screenshots (optional)",
+    "attachmentsHint": "Up to {{max}} files, PNG/JPEG/WebP, max. 5 MB each.",
+    "addScreenshot": "Add screenshot",
+    "removeFileAriaLabel": "Remove {{name}}",
+    "supportEmailPrefix": "Your message will go to",
+    "supportEmailSuffix": "and we'll reply to your email.",
+    "submit": "Send feedback",
+    "submitting": "Sending…",
+    "toastSuccess": "Message sent. Thank you!",
+    "errors": {
+      "tooManyFiles": "You can attach at most {{max}} files at once.",
+      "unsupportedType": "File \"{{name}}\" isn't supported (PNG, JPEG, WebP).",
+      "fileTooLarge": "File \"{{name}}\" exceeds 5 MB.",
+      "totalTooLarge": "Total attachment size exceeds 15 MB.",
+      "submitFailedGeneric": "Submission failed.",
+      "submitFailedRetry": "Submission failed. Please try again."
+    }
+  },
+  "theme": {
+    "groupAriaLabel": "Appearance theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "toast": {
+    "dismissAriaLabel": "Dismiss notification"
   }
 }

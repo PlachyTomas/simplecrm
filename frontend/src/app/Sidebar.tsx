@@ -1,3 +1,4 @@
+import type { ParseKeys } from "i18next";
 import type { LucideIcon } from "lucide-react";
 import {
   Building2,
@@ -11,6 +12,7 @@ import {
   Users,
   Workflow,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link, NavLink } from "react-router-dom";
 
 import { Logo } from "@/components/Logo";
@@ -20,25 +22,25 @@ import { cn } from "@/lib/utils";
 
 interface NavItem {
   to: string;
-  label: string;
+  labelKey: ParseKeys<"common">;
   icon: LucideIcon;
   end?: boolean;
   testId?: string;
 }
 
 const PRIMARY_ITEMS: NavItem[] = [
-  { to: "/app", label: "Přehled", icon: Home, end: true, testId: testIds.nav.overview },
-  { to: "/app/pipeline", label: "Pipeline", icon: Workflow, testId: testIds.nav.pipeline },
-  { to: "/app/companies", label: "Firmy", icon: Building2, testId: testIds.nav.companies },
-  { to: "/app/contacts", label: "Kontakty", icon: Users, testId: testIds.nav.contacts },
-  { to: "/app/deals", label: "Obchody", icon: Handshake, testId: testIds.nav.deals },
-  { to: "/app/calendar", label: "Kalendář", icon: CalendarDays, testId: testIds.nav.calendar },
-  { to: "/app/reports", label: "Reporty", icon: LineChart, testId: testIds.nav.reports },
+  { to: "/app", labelKey: "nav.overview", icon: Home, end: true, testId: testIds.nav.overview },
+  { to: "/app/pipeline", labelKey: "nav.pipeline", icon: Workflow, testId: testIds.nav.pipeline },
+  { to: "/app/companies", labelKey: "nav.companies", icon: Building2, testId: testIds.nav.companies },
+  { to: "/app/contacts", labelKey: "nav.contacts", icon: Users, testId: testIds.nav.contacts },
+  { to: "/app/deals", labelKey: "nav.deals", icon: Handshake, testId: testIds.nav.deals },
+  { to: "/app/calendar", labelKey: "nav.calendar", icon: CalendarDays, testId: testIds.nav.calendar },
+  { to: "/app/reports", labelKey: "nav.reports", icon: LineChart, testId: testIds.nav.reports },
 ];
 
 const SECONDARY_ITEMS: NavItem[] = [
-  { to: "/app/settings", label: "Nastavení", icon: Settings, testId: testIds.nav.settings },
-  { to: "/app/feedback", label: "Zpětná vazba", icon: MessageSquare },
+  { to: "/app/settings", labelKey: "nav.settings", icon: Settings, testId: testIds.nav.settings },
+  { to: "/app/feedback", labelKey: "nav.feedback", icon: MessageSquare },
 ];
 
 function linkClass({ isActive }: { isActive: boolean }): string {
@@ -55,9 +57,10 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onLogout }: SidebarProps) {
+  const { t } = useTranslation("common");
   return (
     <nav
-      aria-label="Hlavní navigace"
+      aria-label={t("nav.desktopAriaLabel")}
       className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-border-subtle bg-surface px-3 py-4 md:flex"
     >
       <Link
@@ -70,7 +73,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
 
       <div className="flex-1 space-y-1">
         <p className="px-3 pb-2 text-xs font-medium uppercase tracking-wider text-text-tertiary">
-          Prodej
+          {t("nav.groupSales")}
         </p>
         {PRIMARY_ITEMS.map((item) => (
           <NavLink
@@ -81,7 +84,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
             data-testid={item.testId}
           >
             <item.icon size={18} strokeWidth={1.75} />
-            <span>{item.label}</span>
+            <span>{t(item.labelKey)}</span>
           </NavLink>
         ))}
       </div>
@@ -90,7 +93,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
         {SECONDARY_ITEMS.map((item) => (
           <NavLink key={item.to} to={item.to} className={linkClass} data-testid={item.testId}>
             <item.icon size={18} strokeWidth={1.75} />
-            <span>{item.label}</span>
+            <span>{t(item.labelKey)}</span>
           </NavLink>
         ))}
         <button
@@ -99,7 +102,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
           className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary"
         >
           <LogOut size={18} strokeWidth={1.75} />
-          <span>Odhlásit se</span>
+          <span>{t("nav.logout")}</span>
         </button>
         <div className="px-1 pt-3">
           <ThemeToggle variant="compact" className="w-full justify-between" />

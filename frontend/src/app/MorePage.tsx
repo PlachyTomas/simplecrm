@@ -1,3 +1,4 @@
+import type { ParseKeys } from "i18next";
 import type { LucideIcon } from "lucide-react";
 import {
   CalendarDays,
@@ -9,6 +10,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/auth/useAuth";
@@ -20,12 +22,13 @@ import { usePageTitle } from "@/lib/usePageTitle";
 interface Row {
   to?: string;
   onClick?: () => void;
-  label: string;
+  labelKey: ParseKeys<"common">;
   icon: LucideIcon;
 }
 
 export function MorePage() {
-  usePageTitle("Více");
+  const { t } = useTranslation("common");
+  usePageTitle(t("nav.more"));
   const isMobile = useMediaQuery("(max-width: 767px)");
   const { accessToken, clearAuth } = useAuth();
   const navigate = useNavigate();
@@ -47,39 +50,39 @@ export function MorePage() {
   }
 
   const rows: Row[] = [
-    { to: "/app/deals", label: "Obchody", icon: Handshake },
-    { to: "/app/calendar", label: "Kalendář", icon: CalendarDays },
-    { to: "/app/reports", label: "Reporty", icon: LineChart },
-    { to: "/app/settings", label: "Nastavení", icon: Settings },
-    { to: "/app/feedback", label: "Zpětná vazba", icon: MessageSquare },
-    { onClick: () => logout.mutate(), label: "Odhlásit se", icon: LogOut },
+    { to: "/app/deals", labelKey: "nav.deals", icon: Handshake },
+    { to: "/app/calendar", labelKey: "nav.calendar", icon: CalendarDays },
+    { to: "/app/reports", labelKey: "nav.reports", icon: LineChart },
+    { to: "/app/settings", labelKey: "nav.settings", icon: Settings },
+    { to: "/app/feedback", labelKey: "nav.feedback", icon: MessageSquare },
+    { onClick: () => logout.mutate(), labelKey: "nav.logout", icon: LogOut },
   ];
 
   return (
     <section className="px-4 py-6">
-      <h1 className="mb-4 text-2xl font-semibold">Více</h1>
+      <h1 className="mb-4 text-2xl font-semibold">{t("nav.more")}</h1>
       <ul className="divide-y divide-border-subtle rounded-lg border border-border bg-surface">
         {rows.map((row) =>
           row.to ? (
-            <li key={row.label}>
+            <li key={row.labelKey}>
               <Link
                 to={row.to}
                 className="flex items-center gap-3 px-4 py-4 text-sm text-text-primary transition-colors duration-fast hover:bg-surface-overlay"
               >
                 <row.icon size={18} strokeWidth={1.75} className="text-text-secondary" />
-                <span className="flex-1 font-medium">{row.label}</span>
+                <span className="flex-1 font-medium">{t(row.labelKey)}</span>
                 <ChevronRight size={16} strokeWidth={1.75} className="text-text-tertiary" />
               </Link>
             </li>
           ) : (
-            <li key={row.label}>
+            <li key={row.labelKey}>
               <button
                 type="button"
                 onClick={row.onClick}
                 className="flex w-full items-center gap-3 px-4 py-4 text-left text-sm text-text-primary transition-colors duration-fast hover:bg-surface-overlay"
               >
                 <row.icon size={18} strokeWidth={1.75} className="text-text-secondary" />
-                <span className="flex-1 font-medium">{row.label}</span>
+                <span className="flex-1 font-medium">{t(row.labelKey)}</span>
               </button>
             </li>
           ),

@@ -5,10 +5,12 @@
  */
 
 import { HelpCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { useTutorial, useTutorialIsClosed } from "@/app/tutorial/useTutorial";
 
 export function TourReplayButton() {
+  const { t } = useTranslation("common");
   const tour = useTutorial();
   const isClosed = useTutorialIsClosed();
   // While the tour is on screen, the overlay already carries the
@@ -22,8 +24,8 @@ export function TourReplayButton() {
     <button
       type="button"
       onClick={tour.replay}
-      aria-label="Spustit průvodce znovu"
-      title="Spustit průvodce znovu"
+      aria-label={t("tutorial.replayAriaLabel")}
+      title={t("tutorial.replayAriaLabel")}
       data-testid="tour-replay-button"
       className="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary"
     >
