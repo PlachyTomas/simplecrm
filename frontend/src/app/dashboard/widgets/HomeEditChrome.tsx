@@ -36,8 +36,10 @@ export function HomeEditChrome({
   if (!isEditMode) return <>{children}</>;
 
   return (
-    <div className="relative h-full rounded-lg ring-1 ring-accent">
-      <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-md border border-border bg-surface-elevated p-0.5 shadow-sm">
+    <div className="flex h-full flex-col rounded-lg ring-1 ring-accent">
+      {/* Reserved strip instead of a floating overlay so the controls can
+          never cover the card's own top-right content (KPI icon, badges). */}
+      <div className="flex shrink-0 items-center justify-end gap-1 px-1 pb-1">
         <button
           type="button"
           aria-label={t("widgetFrame.moveWidget")}
@@ -68,7 +70,7 @@ export function HomeEditChrome({
           </button>
         ) : null}
       </div>
-      <div className={cn("h-full")}>{children}</div>
+      <div className={cn("min-h-0 flex-1")}>{children}</div>
     </div>
   );
 }

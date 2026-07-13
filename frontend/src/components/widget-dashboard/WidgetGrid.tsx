@@ -18,7 +18,12 @@ import {
 import { useMediaQuery } from "@/lib/useMediaQuery";
 
 const COLS = { lg: 12, md: 6, sm: 1 };
-const BREAKPOINTS = { lg: 1024, md: 768, sm: 0 };
+// CONTAINER-width thresholds, not viewport. With the expanded sidebar
+// (~256px) + page padding, a 1280px viewport leaves a ~960px container —
+// the original lg:1024 threshold silently put common laptops on the
+// "tablet" 6-col grid, whose drags didn't persist (review P1). 900 keeps
+// 12-col + full persistence for any viewport from ~1220px up.
+const BREAKPOINTS = { lg: 900, md: 600, sm: 0 };
 const ROW_HEIGHT = 64;
 
 /**
@@ -48,10 +53,43 @@ interface WidgetGridProps<W extends WidgetGridItem> {
 }
 
 /**
+ * Map a react-grid-layout change back onto the widgets' stored 12-col
+ * positions. RGL's Responsive wrapper only refreshes the ACTIVE
+ * breakpoint's entry in `all` — the others keep the (possibly stale)
+ * prop-derived layouts — so reading `all.lg` while the user edits the
+ * 6-col md view discards their changes (review P1).
+ *
+ *  - lg (12-col): take x/y/w/h verbatim — it's the persisted model.
+ *  - md (6-col clamped view): take the row order (y) and height, keep the
+ *    stored 12-col x/w so sizes never get corrupted by the clamp.
+ *
+ * Exported for unit tests (jsdom can't render RGL — no ResizeObserver).
+ */
+export function applyLayoutToWidgets<W extends WidgetGridItem>(
+  widgets: W[],
+  current: Layout,
+  all: ResponsiveLayouts<"lg" | "md">,
+  breakpoint: "lg" | "md",
+): W[] {
+  const source = (breakpoint === "lg" ? all.lg : all.md) ?? current;
+  const byId = new Map<string, LayoutItem>(source.map((l) => [l.i, l]));
+  return widgets.map((w) => {
+    const l = byId.get(w.id);
+    if (!l) return w;
+    const position =
+      breakpoint === "lg"
+        ? { x: l.x, y: l.y, w: l.w, h: l.h }
+        : { x: w.position.x, y: l.y, w: w.position.w, h: l.h };
+    return { ...w, position };
+  });
+}
+
+/**
  * Responsive widget grid with three breakpoints per REPORTS_TASK §6.4:
  *
- *  - desktop (≥ 1024px): drag + resize, 12-col grid.
- *  - tablet (768–1023px): drag only, 6-col grid (widget widths clamp).
+ *  - desktop (container ≥ 900px): drag + resize, 12-col grid.
+ *  - tablet (container 600–899px): 6-col clamped view; drags persist as
+ *    row reordering (y/h), stored 12-col x/w stay untouched.
  *  - mobile (< 768px): bypass the library entirely, render a plain
  *    vertical stack sorted by `(y, x)`. Saves the drag-and-drop bundle
  *    cost on the smallest viewport.
@@ -95,18 +133,12 @@ export function WidgetGrid<W extends WidgetGridItem>({
 
   const handleLayoutChange = useCallback(
     (current: Layout, all: ResponsiveLayouts<"lg" | "md">) => {
-      // We only persist the desktop layout. Tablet layout is a clamped
-      // view; mobile bypasses the grid library entirely.
-      const lg = all.lg ?? current;
-      const byId = new Map<string, LayoutItem>(lg.map((l) => [l.i, l]));
-      const next = widgets.map((w) => {
-        const l = byId.get(w.id);
-        if (!l) return w;
-        return { ...w, position: { x: l.x, y: l.y, w: l.w, h: l.h } } as W;
-      });
-      onLayoutChange(next);
+      // Persist from whichever breakpoint the user actually edited —
+      // see applyLayoutToWidgets. Mobile bypasses the grid entirely.
+      const breakpoint = width >= BREAKPOINTS.lg ? "lg" : "md";
+      onLayoutChange(applyLayoutToWidgets(widgets, current, all, breakpoint));
     },
-    [widgets, onLayoutChange],
+    [widgets, onLayoutChange, width],
   );
 
   if (isMobile) {

@@ -73,7 +73,9 @@
     },
     "winRate": {
       "emptyNoClosedDeals": "V tomto období žádné uzavřené obchody.",
-      "hint": "{{won}} výher z {{total}} uzavřených"
+      "hint_one": "{{count}} výhra z {{total}} uzavřených",
+      "hint_few": "{{count}} výhry z {{total}} uzavřených",
+      "hint_other": "{{count}} výher z {{total}} uzavřených"
     },
     "avgDealSize": {
       "emptyNoWonDeals": "V tomto období žádné vyhrané obchody.",

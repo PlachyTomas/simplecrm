@@ -173,7 +173,7 @@ export function WinRateWidget(props: BaseWidgetProps) {
         <KPITile
           value={formatPercent(q.data.value, locale, 1)}
           delta={<DeltaBadge comparison={q.data.comparison} />}
-          hint={t("kpi.winRate.hint", { won: q.data.won_count, total: totalClosed })}
+          hint={t("kpi.winRate.hint", { count: q.data.won_count, total: totalClosed })}
         />
       )}
     </Frame>

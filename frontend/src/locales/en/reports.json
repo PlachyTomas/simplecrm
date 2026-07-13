@@ -73,7 +73,8 @@
     },
     "winRate": {
       "emptyNoClosedDeals": "No deals closed in this period.",
-      "hint": "{{won}} wins out of {{total}} closed"
+      "hint_one": "{{count}} win out of {{total}} closed",
+      "hint_other": "{{count}} wins out of {{total}} closed"
     },
     "avgDealSize": {
       "emptyNoWonDeals": "No deals won in this period.",
