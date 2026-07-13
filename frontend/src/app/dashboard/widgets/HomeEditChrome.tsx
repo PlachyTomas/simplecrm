@@ -36,7 +36,11 @@ export function HomeEditChrome({
   if (!isEditMode) return <>{children}</>;
 
   return (
-    <div className="flex h-full flex-col">
+    // min-h-full (not h-full): the h=1 quick-action cell is shorter than
+    // strip + button, and a fixed height left the card's bottom edge
+    // poking out below the ring. Growing with the content keeps the ring
+    // around everything; the few px of overflow land in the row gap.
+    <div className="flex min-h-full flex-col rounded-lg ring-1 ring-accent">
       {/* Reserved strip instead of a floating overlay so the controls can
           never cover the card's own top-right content (KPI icon, badges). */}
       <div className="flex shrink-0 items-center justify-end gap-1 px-1 pb-1">
@@ -70,9 +74,7 @@ export function HomeEditChrome({
           </button>
         ) : null}
       </div>
-      {/* Ring hugs the card itself, not the strip, so the accent outline
-          matches the widget's visible border. */}
-      <div className={cn("min-h-0 flex-1 rounded-lg ring-1 ring-accent")}>{children}</div>
+      <div className={cn("min-h-0 flex-1")}>{children}</div>
     </div>
   );
 }
