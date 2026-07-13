@@ -77,14 +77,12 @@ export function AcceptInvitePage() {
       if (err instanceof ApiError) {
         const code = authErrorCode(err.body);
         const key = code ? CALLBACK_ERROR_KEY[code] : undefined;
-        if (key) {
+        if (code === "weak_password") {
+          // Prefer the backend's message — it names the exact requirement
+          // (length, character classes) the password failed.
+          setFormError(authErrorMessage(err.body) ?? t("invite.errors.weak_password"));
+        } else if (key) {
           setFormError(t(key));
-        } else if (code === "weak_password") {
-          setFormError(
-            authErrorMessage(err.body) ??
-              t("invite.errors.weak_password") ??
-              t("invite.errors.weakPasswordFallback"),
-          );
         } else {
           setFormError(t("invite.errors.generic"));
         }

@@ -166,6 +166,9 @@ const BILLING_ERROR_CODES = [
   "already_active",
   "payment_in_progress",
   "billing_details_required",
+  "not_active",
+  "not_an_upgrade",
+  "no_payment_method",
 ] as const;
 type BillingErrorCode = (typeof BILLING_ERROR_CODES)[number];
 

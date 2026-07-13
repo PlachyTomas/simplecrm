@@ -69,11 +69,13 @@ def test_freed_company_email_cs_byte_identical_to_pre_refactor_singular() -> Non
     )
 
 
-def test_freed_company_email_cs_byte_identical_to_pre_refactor_plural() -> None:
+def test_freed_company_email_cs_few_plural() -> None:
+    # 2–4 companies take the Czech "few" form ("2 firmy uvolněny") — the
+    # pre-refactor genitive ("2 firem uvolněno") was only correct for 5+.
     e = build_freed_company_email(
         owner_email="a@b.cz", owner_name="Tomáš", company_names=["Acme", "Beta"]
     )
-    assert e.subject == "SimpleCRM: 2 firem uvolněno"
+    assert e.subject == "SimpleCRM: 2 firmy uvolněny"
     assert e.body == (
         "Ahoj Tomáš,\n\n"
         "tyto firmy byly uvolněny zpět do sdíleného poolu, protože u nich "
@@ -82,6 +84,15 @@ def test_freed_company_email_cs_byte_identical_to_pre_refactor_plural() -> None:
         "• Beta\n\n"
         "Kdykoli je můžeš znovu převzít v aplikaci SimpleCRM.\n"
     )
+
+
+def test_freed_company_email_cs_many_plural() -> None:
+    e = build_freed_company_email(
+        owner_email="a@b.cz",
+        owner_name="Tomáš",
+        company_names=["Acme", "Beta", "Cek", "Dyn", "Ex"],
+    )
+    assert e.subject == "SimpleCRM: 5 firem uvolněno"
 
 
 def test_subscription_pending_email_cs_byte_identical_to_pre_refactor() -> None:
@@ -114,6 +125,44 @@ def test_billing_info_reminder_email_cs_byte_identical_to_pre_refactor() -> None
         "https://example.com/app/settings\n\n"
         "Bez vyplněných údajů by faktura nebyla platným daňovým dokladem.\n"
     )
+
+
+def test_billing_info_reminder_email_cs_day_plurals() -> None:
+    # 1 → "den", 2–4 → "dny", 5+ → "dní" in both the subject and the body.
+    one = build_billing_info_reminder_email(
+        recipient="a@b.cz",
+        name="Tomáš",
+        org_name="Acme s.r.o.",
+        days_remaining=1,
+        settings_link="https://example.com/app/settings",
+    )
+    assert one.subject == "SimpleCRM: doplňte fakturační údaje (zkušebka končí za 1 den)"
+    assert "končí za 1 den." in one.body
+
+    few = build_billing_info_reminder_email(
+        recipient="a@b.cz",
+        name="Tomáš",
+        org_name="Acme s.r.o.",
+        days_remaining=2,
+        settings_link="https://example.com/app/settings",
+    )
+    assert few.subject == "SimpleCRM: doplňte fakturační údaje (zkušebka končí za 2 dny)"
+    assert "končí za 2 dny." in few.body
+
+
+def test_billing_info_reminder_email_en_day_plural_and_name_fallback() -> None:
+    e = build_billing_info_reminder_email(
+        recipient="a@b.cz",
+        name=None,
+        org_name="Acme Inc.",
+        days_remaining=1,
+        settings_link="https://example.com/app/settings",
+        lang="en",
+    )
+    assert e.subject == "SimpleCRM: complete your billing details (trial ends in 1 day)"
+    # Missing recipient name falls back per-language, never to the Czech literal.
+    assert e.body.startswith("Hi SimpleCRM team,")
+    assert "ends in 1 day." in e.body
 
 
 def test_invitation_email_cs_byte_identical_to_pre_refactor() -> None:

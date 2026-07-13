@@ -94,8 +94,12 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
       setAddToGoogle(googleAvailable);
     }
     // googleAvailable intentionally re-applies when the status loads while
-    // the modal is open (first paint may race the status query).
-  }, [open, event, dealName, googleAvailable, t]);
+    // the modal is open (first paint may race the status query). `t` stays
+    // OUT of the deps: its identity changes on a language switch (e.g. the
+    // server sync adopting another device's choice mid-edit), and re-running
+    // the reset then would wipe the user's in-progress form.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, event, dealName, googleAvailable]);
 
   if (!open) return null;
 

@@ -4,9 +4,12 @@ import { Link } from "react-router-dom";
 
 import { ThemeToggle } from "@/lib/ThemeToggle";
 import { usePageTitle } from "@/lib/usePageTitle";
+import { marketingPath } from "@/marketing/slugs";
+import { useMarketingLang } from "@/marketing/useMarketingLang";
 
 export function NotFoundPage() {
   const { t } = useTranslation("marketing");
+  const lang = useMarketingLang();
   usePageTitle(t("meta.notFoundTitle"));
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-bg px-4">
@@ -23,7 +26,7 @@ export function NotFoundPage() {
         <h1 className="text-2xl font-semibold">{t("notFound.title")}</h1>
         <p className="mt-3 text-base text-text-secondary">{t("notFound.body")}</p>
         <Link
-          to="/"
+          to={marketingPath("landing", lang)}
           className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
         >
           {t("notFound.backHome")}

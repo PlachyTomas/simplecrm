@@ -152,7 +152,7 @@ def build_subscription_pending_email(
 def build_billing_info_reminder_email(
     *,
     recipient: str,
-    name: str,
+    name: str | None,
     org_name: str,
     days_remaining: int,
     settings_link: str,
@@ -164,15 +164,17 @@ def build_billing_info_reminder_email(
     Sent by `run_billing_info_reminder_sweep` once per org, ~1 week
     before `trial_ends_at`. Without IČO + address on file the first
     invoice would render with an empty customer block, so we nudge
-    the admin to fix it before the trial cliff.
+    the admin to fix it before the trial cliff. A missing `name` falls
+    back to a per-language team greeting.
     """
     return render_email(
         "billing_info_reminder",
         lang,
         to=recipient,
-        name=name,
+        name=name or t(lang, "emails.common.fallback_name"),
         org_name=org_name,
-        days_remaining=days_remaining,
+        count=days_remaining,
+        days_phrase=t(lang, "emails.billing_info_reminder.days", count=days_remaining),
         settings_link=settings_link,
     )
 

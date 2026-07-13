@@ -26,7 +26,7 @@ import {
   WIDGET_LABEL_KEY,
 } from "@/app/reports/dashboard/types";
 import { useWidgetQuery } from "@/app/reports/dashboard/useWidgetQuery";
-import { formatMoney, formatNumber } from "@/lib/format";
+import { formatMoney, formatNumber, formatPercent } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 import type { components } from "@/types/api.generated";
 
@@ -56,23 +56,24 @@ function narrowConfig<T extends Config["type"]>(
   return config as Extract<Config, { type: T }>;
 }
 
-/** Percent formatter — no translatable unit, just a locale-invariant "%" suffix. */
-function formatPercent(value: number | null | undefined, digits = 0): string {
-  if (value === null || value === undefined) return "—";
-  return `${value.toFixed(digits)} %`;
-}
-
 /**
  * Renders an average/median day count via the `days_one/_few/_other`
  * (+ `_many` for the fractional averages this widget deals with)
- * catalog key. `value` carries the always-one-decimal display text;
- * `count` (the raw, possibly fractional number) drives i18next's
- * plural-category selection.
+ * catalog key. `value` carries the always-one-decimal display text
+ * (locale decimal separator); `count` (the raw, possibly fractional
+ * number) drives i18next's plural-category selection.
  */
-function formatDaysLabel(t: TFunction<"reports">, value: number | null | undefined): string {
+function formatDaysLabel(
+  t: TFunction<"reports">,
+  locale: string,
+  value: number | null | undefined,
+): string {
   if (value === null || value === undefined) return "—";
   const rounded = Math.round(value * 10) / 10;
-  return t("days", { count: rounded, value: rounded.toFixed(1) });
+  return t("days", {
+    count: rounded,
+    value: formatNumber(rounded, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+  });
 }
 
 // --------- pipeline_value ---------
@@ -149,6 +150,7 @@ export function DealsWonWidget(props: BaseWidgetProps) {
 export function WinRateWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "win_rate");
   const { t } = useTranslation("reports");
+  const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["WinRateResponse"]>({
     type: "win_rate",
     endpoint: "win-rate",
@@ -167,7 +169,7 @@ export function WinRateWidget(props: BaseWidgetProps) {
         <WidgetEmpty message={t("kpi.winRate.emptyNoClosedDeals")} />
       ) : (
         <KPITile
-          value={formatPercent(q.data.value, 1)}
+          value={formatPercent(q.data.value, locale, 1)}
           delta={<DeltaBadge comparison={q.data.comparison} />}
           hint={t("kpi.winRate.hint", { won: q.data.won_count, total: totalClosed })}
         />
@@ -221,6 +223,7 @@ export function AvgDealSizeWidget(props: BaseWidgetProps) {
 export function SalesCycleLengthWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "sales_cycle_length");
   const { t } = useTranslation("reports");
+  const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["SalesCycleLengthResponse"]>({
     type: "sales_cycle_length",
     endpoint: "sales-cycle-length",
@@ -238,15 +241,15 @@ export function SalesCycleLengthWidget(props: BaseWidgetProps) {
         <WidgetEmpty message={t("kpi.salesCycleLength.emptyNoClosedDeals")} />
       ) : (
         <KPITile
-          value={formatDaysLabel(t, q.data.value)}
+          value={formatDaysLabel(t, locale, q.data.value)}
           hint={
             config.metric === "median"
               ? t("kpi.salesCycleLength.hintMean", {
-                  days: formatDaysLabel(t, q.data.mean_days),
+                  days: formatDaysLabel(t, locale, q.data.mean_days),
                   count: q.data.sample_count,
                 })
               : t("kpi.salesCycleLength.hintMedian", {
-                  days: formatDaysLabel(t, q.data.median_days),
+                  days: formatDaysLabel(t, locale, q.data.median_days),
                   count: q.data.sample_count,
                 })
           }
@@ -261,6 +264,7 @@ export function SalesCycleLengthWidget(props: BaseWidgetProps) {
 export function LeadToDealConversionWidget(props: BaseWidgetProps) {
   const config = narrowConfig(props.entry.config, "lead_to_deal_conversion");
   const { t } = useTranslation("reports");
+  const locale = useLocale();
   const q = useWidgetQuery<ApiSchemas["LeadToDealConversionResponse"]>({
     type: "lead_to_deal_conversion",
     endpoint: "lead-to-deal-conversion",
@@ -277,7 +281,7 @@ export function LeadToDealConversionWidget(props: BaseWidgetProps) {
         <WidgetEmpty message={t("kpi.leadToDealConversion.emptyNoNewCompanies")} />
       ) : (
         <KPITile
-          value={formatPercent(q.data.value, 1)}
+          value={formatPercent(q.data.value, locale, 1)}
           delta={<DeltaBadge comparison={q.data.comparison} />}
           hint={t("kpi.leadToDealConversion.hint", {
             converted: q.data.converted_count,

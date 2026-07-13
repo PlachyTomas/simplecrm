@@ -30,8 +30,7 @@
       "user_already_in_organization": "This email already belongs to another organization. Use a different account, or leave your current organization first.",
       "weak_password": "Password doesn't meet the requirements (at least 12 characters, a letter + a digit).",
       "generic": "Accepting the invitation failed. Please try again.",
-      "genericNoResponse": "Accepting the invitation failed.",
-      "weakPasswordFallback": "Password is too weak."
+      "genericNoResponse": "Accepting the invitation failed."
     }
   },
   "createOrg": {

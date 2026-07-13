@@ -345,6 +345,7 @@
     "decrSeat": "Remove a user",
     "incrSeat": "Add a user",
     "emailLabel": "Contact email",
+    "emailPlaceholder": "you@email.com",
     "summaryLine": "SimpleCRM — {{plan}} plan",
     "seatsUnit_one": "user",
     "seatsUnit_other": "users",
@@ -357,7 +358,8 @@
     "complaintsLink": "Complaints Policy",
     "consentAnd": "and",
     "deliveryLink": "Delivery and Payment Terms",
-    "consentPost": ". Secure online payment is provided by the Comgate gateway (Visa, Mastercard, Apple Pay, Google Pay, bank transfer)."
+    "consentPost": ". Secure online payment is provided by the Comgate gateway (Visa, Mastercard, Apple Pay, Google Pay, bank transfer).",
+    "consentLangNote": "The linked documents are available in Czech only."
   },
   "orderReturn": {
     "paidTitle": "Test payment succeeded",
@@ -409,5 +411,32 @@
     "helperTrial": "The trial lasts 30 days. No credit card at sign-up.",
     "mailSubject": "SimpleCRM enterprise inquiry",
     "mailBody": "Hello,\n\nI'd like to discuss the SimpleCRM enterprise offer with you.\n\nNumber of users (approximately):\nCompany (name, IČO):\nPhone:\n\nThank you,\n"
+  },
+  "kontakt": {
+    "title": "Contact",
+    "lead": "We're happy to help. The SimpleCRM team replies within a few hours on business days.",
+    "operatorHeading": "Service operator",
+    "vatNote": "We are not VAT payers. Invoices are issued in accordance with the Czech Accounting Act.",
+    "contactHeading": "Get in touch",
+    "emailLabel": "Email",
+    "emailNote": "For sales questions, technical support and complaints. We usually reply within a few hours on business days.",
+    "phoneLabel": "Phone",
+    "phoneNote": "Business days 9:00–17:00 CET. Outside business hours, please use email.",
+    "addressLabel": "Mailing address",
+    "supportHeading": "Complaints and support",
+    "supportPre": "Complaints are accepted in writing only, at",
+    "supportMid": ". We resolve them within 30 days of receipt. The procedure, service-defect definitions and defective-performance rights are governed by the",
+    "supportComplaintsLink": "Complaints Policy",
+    "supportAnd": "and",
+    "supportTermsLink": "art. 10 of the Terms of Service",
+    "legalHeading": "Legal pages",
+    "legalTerms": "Terms of Service",
+    "legalComplaints": "Complaints Policy",
+    "legalDelivery": "Delivery and Payment Terms",
+    "legalPrivacy": "Privacy Policy",
+    "legalDpa": "Data Processing Agreement (DPA)",
+    "legalCookies": "Cookies",
+    "legalSubscription": "Subscription and Payments",
+    "legalLangNote": "The legal documents are available in Czech only."
   }
 }

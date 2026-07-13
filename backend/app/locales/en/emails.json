@@ -1,4 +1,7 @@
 {
+  "common": {
+    "fallback_name": "SimpleCRM team"
+  },
   "verification": {
     "subject": "SimpleCRM: verify your email"
   },
@@ -16,6 +19,9 @@
     "subject": "SimpleCRM: {org_name} chose the {plan_display} plan"
   },
   "billing_info_reminder": {
-    "subject": "SimpleCRM: complete your billing details (trial ends in {days_remaining} days)"
+    "subject_one": "SimpleCRM: complete your billing details (trial ends in {count} day)",
+    "subject_other": "SimpleCRM: complete your billing details (trial ends in {count} days)",
+    "days_one": "{count} day",
+    "days_other": "{count} days"
   }
 }

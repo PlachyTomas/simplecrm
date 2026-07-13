@@ -17,7 +17,7 @@ import { Crown, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { formatMoney } from "@/lib/format";
+import { formatMoney, formatPercent } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { cn } from "@/lib/utils";
@@ -244,7 +244,8 @@ function PipelineBody({ data }: { data: DemoData }) {
         {formatMoney(animated, "CZK", locale)}
       </p>
       <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-success">
-        <TrendingUp size={12} strokeWidth={2} aria-hidden />+{data.pipelineDeltaPct.toFixed(1)} %
+        <TrendingUp size={12} strokeWidth={2} aria-hidden />+
+        {formatPercent(data.pipelineDeltaPct, locale, 1)}
         <span className="font-normal text-text-tertiary">{t("reports.vsPrevPeriod")}</span>
       </p>
     </div>

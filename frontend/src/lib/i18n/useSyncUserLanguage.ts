@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useCurrentUser } from "@/auth/useCurrentUser";
-import { isLanguage } from "@/lib/i18n/languages";
+import { isLanguage, persistLanguagePreference } from "@/lib/i18n/languages";
 
 /**
  * One-way server → client language sync. When the account's stored language
@@ -17,6 +17,7 @@ export function useSyncUserLanguage(): void {
 
   useEffect(() => {
     if (isLanguage(serverLanguage) && serverLanguage !== i18n.resolvedLanguage) {
+      persistLanguagePreference(serverLanguage);
       void i18n.changeLanguage(serverLanguage);
     }
   }, [serverLanguage, i18n]);

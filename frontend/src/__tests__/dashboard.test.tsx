@@ -112,6 +112,7 @@ describe("Dashboard KPIs", () => {
     await waitFor(() => expect(screen.getByText(/Leaderboard \(30 dní\)/i)).toBeInTheDocument());
     expect(screen.getByText(/Anna/)).toBeInTheDocument();
     expect(screen.getByText(/Průměrné trvání/i)).toBeInTheDocument();
-    expect(screen.getByText(/7\.5 dní/)).toBeInTheDocument();
+    // Czech decimal comma — average duration must not render a dot separator.
+    expect(screen.getByText(/7,5 dní/)).toBeInTheDocument();
   });
 });

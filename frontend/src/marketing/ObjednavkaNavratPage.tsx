@@ -5,6 +5,8 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { usePageTitle } from "@/lib/usePageTitle";
 import { Footer, Nav } from "@/marketing/LandingPage";
+import { marketingPath } from "@/marketing/slugs";
+import { useMarketingLang } from "@/marketing/useMarketingLang";
 
 type ReturnStatus = "paid" | "cancelled" | "pending";
 
@@ -45,6 +47,7 @@ const CONTENT: Record<
  */
 export function ObjednavkaNavratPage() {
   const { t } = useTranslation("marketing");
+  const lang = useMarketingLang();
   usePageTitle(t("meta.orderReturnTitle"));
   const [searchParams] = useSearchParams();
   const raw = searchParams.get("status");
@@ -66,7 +69,7 @@ export function ObjednavkaNavratPage() {
             {t("orderReturn.tryFree")}
           </Link>
           <Link
-            to="/objednavka"
+            to={marketingPath("objednavka", lang)}
             className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-surface-overlay px-5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-elevated"
           >
             {status === "cancelled" ? t("orderReturn.retry") : t("orderReturn.backToOrder")}
@@ -74,7 +77,7 @@ export function ObjednavkaNavratPage() {
         </div>
         <p className="mt-6 text-xs text-text-tertiary">
           {t("orderReturn.contactNotePre")}{" "}
-          <Link to="/kontakt" className="underline hover:text-text-primary">
+          <Link to={marketingPath("kontakt", lang)} className="underline hover:text-text-primary">
             {t("orderReturn.contactLink")}
           </Link>
           .

@@ -23,6 +23,8 @@ import {
 } from "@/app/settings/import/detectFileRole";
 import { ImportMappingTable } from "@/app/settings/import/ImportMappingTable";
 import { ImportPreviewReport } from "@/app/settings/import/ImportPreviewReport";
+import { formatNumber } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import {
   type FieldDescriptor,
   type FileRole,
@@ -425,6 +427,7 @@ function FileEntryRow(props: {
   onRemove: (id: string) => void;
 }) {
   const { t } = useTranslation("settings");
+  const locale = useLocale();
   const { entry } = props;
   return (
     <li
@@ -435,7 +438,7 @@ function FileEntryRow(props: {
         <FileText size={16} strokeWidth={1.75} className="shrink-0" />
         <span className="truncate font-mono">{entry.file.name}</span>
         <span className="text-xs text-text-tertiary">
-          ({(entry.file.size / 1024).toFixed(1)} KB)
+          ({formatNumber(entry.file.size / 1024, locale, { maximumFractionDigits: 1 })} KB)
         </span>
       </span>
       <span className="text-xs text-text-tertiary">

@@ -6,6 +6,9 @@
     "already_active": "Předplatné je již aktivní.",
     "payment_in_progress": "Platba již probíhá. Dokončete ji, nebo to zkuste za chvíli znovu.",
     "billing_details_required": "Před platbou je nutné vyplnit fakturační údaje.",
+    "not_active": "Předplatné zatím není aktivní. Nejprve dokončete výběr plánu a první platbu.",
+    "not_an_upgrade": "Nový počet licencí musí být vyšší než ten současný.",
+    "no_payment_method": "Nemáte uloženou platební kartu. Nejprve dokončete výběr plánu, tím se karta uloží.",
     "generic": "Platba se nezdařila. Zkuste to prosím znovu."
   },
   "billingShared": {
@@ -19,6 +22,9 @@
     "statusCanceled": "Zrušeno",
     "planNameComp": "Komplementární",
     "planNameEnterprise": "Vlastní balíček",
+    "planNameTrial": "Zkušební verze (30 dní)",
+    "planNameMonthly": "Měsíční",
+    "planNameAnnual": "Roční",
     "enterpriseMailtoSubject": "SimpleCRM enterprise — dotaz"
   },
   "billingSection": {

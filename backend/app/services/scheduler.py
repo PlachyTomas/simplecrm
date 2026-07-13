@@ -613,7 +613,7 @@ async def run_billing_info_reminder_sweep() -> int:
                     await send_email(
                         build_billing_info_reminder_email(
                             recipient=recipient.email,
-                            name=recipient.name or "tým SimpleCRM",
+                            name=recipient.name,
                             org_name=org.name,
                             days_remaining=days_remaining,
                             settings_link=settings_link,

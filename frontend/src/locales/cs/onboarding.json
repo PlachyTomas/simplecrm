@@ -30,8 +30,7 @@
       "user_already_in_organization": "Tento e-mail už patří k jiné organizaci. Použijte jiný účet, nebo nejdřív opusťte stávající organizaci.",
       "weak_password": "Heslo nesplňuje požadavky (alespoň 12 znaků, písmeno + číslice).",
       "generic": "Přijetí pozvánky se nezdařilo. Zkuste to prosím znovu.",
-      "genericNoResponse": "Přijetí pozvánky se nezdařilo.",
-      "weakPasswordFallback": "Heslo je příliš slabé."
+      "genericNoResponse": "Přijetí pozvánky se nezdařilo."
     }
   },
   "createOrg": {

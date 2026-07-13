@@ -12,6 +12,7 @@ import { useLocale } from "@/lib/i18n/useLocale";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 import { Footer, Nav } from "@/marketing/LandingPage";
+import { useMarketingLang } from "@/marketing/useMarketingLang";
 import type { components } from "@/types/api.generated";
 
 type PlanCode = "monthly" | "annual";
@@ -50,6 +51,7 @@ export function ObjednavkaPage() {
   const { t } = useTranslation("marketing");
   const { t: tBilling } = useTranslation("billing");
   const locale = useLocale();
+  const lang = useMarketingLang();
   usePageTitle(t("meta.orderTitle"));
   const [searchParams] = useSearchParams();
   const initialPlan = searchParams.get("plan");
@@ -206,7 +208,7 @@ export function ObjednavkaPage() {
                 type="email"
                 required
                 autoComplete="email"
-                placeholder="vas@email.cz"
+                placeholder={t("order.emailPlaceholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-2 h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-text-primary outline-none transition-colors duration-fast focus:border-accent"
@@ -268,6 +270,7 @@ export function ObjednavkaPage() {
               {t("order.deliveryLink")}
             </Link>
             {t("order.consentPost")}
+            {lang !== "cs" ? <> {t("order.consentLangNote")}</> : null}
           </p>
         </form>
       </main>

@@ -345,6 +345,7 @@
     "decrSeat": "Ubrat uživatele",
     "incrSeat": "Přidat uživatele",
     "emailLabel": "Kontaktní e-mail",
+    "emailPlaceholder": "vas@email.cz",
     "summaryLine": "SimpleCRM — plán {{plan}}",
     "seatsUnit_one": "uživatel",
     "seatsUnit_few": "uživatelé",
@@ -358,7 +359,8 @@
     "complaintsLink": "Reklamačními podmínkami",
     "consentAnd": "a",
     "deliveryLink": "Dodacími a platebními podmínkami",
-    "consentPost": ". Bezpečnou online platbu zajišťuje brána Comgate (Visa, Mastercard, Apple Pay, Google Pay, bankovní převod)."
+    "consentPost": ". Bezpečnou online platbu zajišťuje brána Comgate (Visa, Mastercard, Apple Pay, Google Pay, bankovní převod).",
+    "consentLangNote": "Dokumenty jsou k dispozici pouze v češtině."
   },
   "orderReturn": {
     "paidTitle": "Testovací platba proběhla úspěšně",
@@ -410,5 +412,32 @@
     "helperTrial": "Zkušební doba je 30 dní. Žádná kreditní karta při registraci.",
     "mailSubject": "SimpleCRM enterprise poptávka",
     "mailBody": "Dobrý den,\n\nrád/a bych s vámi probral/a enterprise nabídku SimpleCRM.\n\nPočet uživatelů (přibližně):\nSpolečnost (název, IČO):\nTelefon:\n\nDěkuji,\n"
+  },
+  "kontakt": {
+    "title": "Kontakt",
+    "lead": "Rádi vám pomůžeme. Tým SimpleCRM odpovídá v pracovní dny do několika hodin.",
+    "operatorHeading": "Provozovatel služby",
+    "vatNote": "Nejsme plátci DPH. Faktury vystavujeme v souladu se zákonem o účetnictví.",
+    "contactHeading": "Spojte se s námi",
+    "emailLabel": "E-mail",
+    "emailNote": "Pro obchodní dotazy, technickou podporu i reklamace. Odpovídáme zpravidla v pracovní dny do několika hodin.",
+    "phoneLabel": "Telefon",
+    "phoneNote": "Pracovní dny 9–17 h. Mimo pracovní dobu prosím využijte e-mail.",
+    "addressLabel": "Korespondenční adresa",
+    "supportHeading": "Reklamace a podpora",
+    "supportPre": "Reklamace přijímáme výhradně písemně na",
+    "supportMid": ". Vyřízení proběhne do 30 dnů od doručení reklamace. Postup, definice vad služby a práva z vadného plnění upravují",
+    "supportComplaintsLink": "Reklamační podmínky",
+    "supportAnd": "a",
+    "supportTermsLink": "čl. 10 Obchodních podmínek",
+    "legalHeading": "Právní stránky",
+    "legalTerms": "Obchodní podmínky",
+    "legalComplaints": "Reklamační podmínky",
+    "legalDelivery": "Dodací a platební podmínky",
+    "legalPrivacy": "Ochrana osobních údajů",
+    "legalDpa": "Zpracovatelská smlouva (DPA)",
+    "legalCookies": "Cookies",
+    "legalSubscription": "Předplatné a platby",
+    "legalLangNote": "Právní dokumenty jsou k dispozici pouze v češtině."
   }
 }

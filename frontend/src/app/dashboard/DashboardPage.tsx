@@ -7,7 +7,7 @@ import { InviteTeammatesCard } from "@/app/dashboard/InviteTeammatesCard";
 import { useLeaderboard, useVelocity } from "@/app/reports/useReports";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { KpiCard } from "@/components/ui/KpiCard";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, formatNumber } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { usePageTitle } from "@/lib/usePageTitle";
 
@@ -114,7 +114,10 @@ function ManagerWidgets({ locale }: { locale: string }) {
                   {stage.avg_days_in_stage == null
                     ? "—"
                     : t("managerWidgets.avgDurationDays", {
-                        days: (Math.round(stage.avg_days_in_stage * 10) / 10).toFixed(1),
+                        days: formatNumber(Math.round(stage.avg_days_in_stage * 10) / 10, locale, {
+                          minimumFractionDigits: 1,
+                          maximumFractionDigits: 1,
+                        }),
                       })}{" "}
                   · {stage.deal_count}
                 </span>

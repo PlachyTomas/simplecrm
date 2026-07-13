@@ -6,6 +6,9 @@
     "already_active": "Your subscription is already active.",
     "payment_in_progress": "Payment is already in progress. Finish it, or try again shortly.",
     "billing_details_required": "You need to fill in your billing details before paying.",
+    "not_active": "Your subscription is not active yet. Choose a plan and complete the first payment first.",
+    "not_an_upgrade": "The new seat count must be higher than the current one.",
+    "no_payment_method": "There is no saved card on file. Choose a plan first — that stores your card.",
     "generic": "Payment failed. Please try again."
   },
   "billingShared": {
@@ -19,6 +22,9 @@
     "statusCanceled": "Canceled",
     "planNameComp": "Complimentary",
     "planNameEnterprise": "Custom plan",
+    "planNameTrial": "Trial (30 days)",
+    "planNameMonthly": "Monthly",
+    "planNameAnnual": "Annual",
     "enterpriseMailtoSubject": "SimpleCRM enterprise — inquiry"
   },
   "billingSection": {

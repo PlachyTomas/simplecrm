@@ -38,7 +38,7 @@ export function MarkLostDialog({
   pending,
   dealName,
 }: MarkLostDialogProps) {
-  const { t } = useTranslation("deals");
+  const { t, i18n } = useTranslation("deals");
   const dialogRef = useModalDialog<HTMLDivElement>(onClose, open);
   const [reason, setReason] = useState<LostReasonKey>(LOST_REASON_KEYS[0]);
   const [custom, setCustom] = useState("");
@@ -52,7 +52,11 @@ export function MarkLostDialog({
 
   if (!open) return null;
 
-  const finalReason = reason === "other" ? custom.trim() : t(LOST_REASON_LABEL_KEY[reason]);
+  // `lost_reason` is persisted as free text, so predefined reasons always
+  // store the cs reference label regardless of the marker's UI language —
+  // mixed-language values would fragment the lost-deals report.
+  const finalReason =
+    reason === "other" ? custom.trim() : i18n.getFixedT("cs", "deals")(LOST_REASON_LABEL_KEY[reason]);
 
   return (
     <div

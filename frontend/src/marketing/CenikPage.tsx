@@ -10,6 +10,8 @@ import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 import { useCenikData } from "@/marketing/cenikData";
 import { Footer, Nav } from "@/marketing/LandingPage";
+import { marketingPath } from "@/marketing/slugs";
+import { useMarketingLang } from "@/marketing/useMarketingLang";
 
 interface PlanCardProps {
   eyebrow: string;
@@ -140,6 +142,7 @@ function HelperSection({ isVatPayer }: { isVatPayer: boolean }) {
 export function CenikPage() {
   const { t } = useTranslation("marketing");
   const locale = useLocale();
+  const lang = useMarketingLang();
   usePageTitle(t("meta.pricingTitle"));
   const { settings } = useCenikData();
   const isVatPayer = settings?.is_vat_payer ?? false;
@@ -164,7 +167,10 @@ export function CenikPage() {
               price={<PriceDisplay baseMinor={9900} interval="monthly" size="xl" hideVatLine />}
               bullets={MONTHLY_BULLET_KEYS.map((k) => t(k))}
               cta={{ label: t("cenik.tryFree"), href: "/login" }}
-              secondaryCta={{ label: t("cenik.order"), href: "/objednavka?plan=monthly" }}
+              secondaryCta={{
+                label: t("cenik.order"),
+                href: `${marketingPath("objednavka", lang)}?plan=monthly`,
+              }}
             />
 
             <PlanCard
@@ -179,7 +185,10 @@ export function CenikPage() {
               }
               bullets={ANNUAL_BULLET_KEYS.map((k) => t(k))}
               cta={{ label: t("cenik.tryFree"), href: "/login" }}
-              secondaryCta={{ label: t("cenik.order"), href: "/objednavka?plan=annual" }}
+              secondaryCta={{
+                label: t("cenik.order"),
+                href: `${marketingPath("objednavka", lang)}?plan=annual`,
+              }}
             />
 
             <PlanCard

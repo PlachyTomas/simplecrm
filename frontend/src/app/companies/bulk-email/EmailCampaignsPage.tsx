@@ -10,7 +10,8 @@ import {
   useEmailCampaigns,
 } from "@/app/companies/bulk-email/useBulkEmail";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useCurrentUser } from "@/auth/useCurrentUser";
+import { formatDate } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 
@@ -30,11 +31,8 @@ export function EmailCampaignsPage() {
   const { t } = useTranslation("emails");
   usePageTitle(t("campaigns.pageTitle"));
   const { data, isPending, isError } = useEmailCampaigns();
-  const { data: user } = useCurrentUser();
   const [openId, setOpenId] = useState<string | null>(null);
-
-  const locale = user?.organization?.locale ?? "cs-CZ";
-  const fmt = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
+  const locale = useLocale();
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
@@ -72,7 +70,7 @@ export function EmailCampaignsPage() {
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-text-primary">{c.subject}</p>
-                  <p className="text-xs text-text-tertiary">{fmt.format(new Date(c.created_at))}</p>
+                  <p className="text-xs text-text-tertiary">{formatDate(c.created_at, locale, { dateStyle: "medium", timeStyle: "short" })}</p>
                 </div>
                 <CampaignCounts c={c} />
               </button>

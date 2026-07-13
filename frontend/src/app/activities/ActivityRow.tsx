@@ -11,6 +11,7 @@ import {
   fieldLabelKey,
 } from "@/app/activities/activityLabels";
 import type { ActivityOut } from "@/app/activities/useActivities";
+import { formatDate } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 
 /**
@@ -35,7 +36,7 @@ function formatDateTime(iso: string, locale: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
     ? iso
-    : new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(d);
+    : formatDate(d, locale, { dateStyle: "medium", timeStyle: "short" });
 }
 
 /** Turn a structured `ActivityDetailValue` into display text. */

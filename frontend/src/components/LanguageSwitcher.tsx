@@ -1,6 +1,11 @@
 import { useTranslation } from "react-i18next";
 
-import { LANGUAGE_LABEL, type Language, SUPPORTED_LANGUAGES } from "@/lib/i18n/languages";
+import {
+  LANGUAGE_LABEL,
+  type Language,
+  persistLanguagePreference,
+  SUPPORTED_LANGUAGES,
+} from "@/lib/i18n/languages";
 import { useUpdateLanguage } from "@/lib/i18n/useUpdateLanguage";
 import { useToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -32,6 +37,7 @@ export function LanguageSwitcher({ persistToAccount = false, className }: Langua
         onError: () => toast.error(t("appearance.languageSaveFailed")),
       });
     } else {
+      persistLanguagePreference(lang);
       void i18n.changeLanguage(lang);
     }
   }

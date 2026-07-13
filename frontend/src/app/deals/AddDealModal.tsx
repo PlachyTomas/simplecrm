@@ -576,7 +576,6 @@ export function AddDealModal({
               </span>
               <input
                 type="date"
-                lang="cs-CZ"
                 value={form.expectedCloseDate}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, expectedCloseDate: e.target.value }))

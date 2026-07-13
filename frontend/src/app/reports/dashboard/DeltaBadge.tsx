@@ -1,5 +1,7 @@
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 
+import { formatPercent } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { cn } from "@/lib/utils";
 
 import type { components } from "@/types/api.generated";
@@ -27,6 +29,7 @@ interface DeltaBadgeProps {
  * truthiness.
  */
 export function DeltaBadge({ comparison, inverted = false }: DeltaBadgeProps) {
+  const locale = useLocale();
   if (!comparison) return null;
   if (comparison.delta_pct === null || comparison.delta_pct === undefined) {
     return null;
@@ -45,7 +48,7 @@ export function DeltaBadge({ comparison, inverted = false }: DeltaBadgeProps) {
     >
       <Arrow size={12} strokeWidth={2} aria-hidden />
       {sign}
-      {comparison.delta_pct.toFixed(1)} %
+      {formatPercent(comparison.delta_pct, locale, 1)}
     </span>
   );
 }

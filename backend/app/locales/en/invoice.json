@@ -1,4 +1,5 @@
 {
+  "pdfFilenamePrefix": "invoice",
   "title": "Invoice {number}",
   "kindVatInvoice": "Invoice — tax document",
   "kindVatProforma": "Proforma invoice",

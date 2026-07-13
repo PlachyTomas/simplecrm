@@ -62,8 +62,21 @@ export function planDisplayName(
 ): string {
   if (!sub?.plan) return "—";
   if (sub.is_comp) return t("billingShared.planNameComp");
-  if (sub.plan.code === "enterprise") return t("billingShared.planNameEnterprise");
-  return sub.plan.display_name_cs;
+  // The API exposes only the Czech display name (`display_name_cs`), so the
+  // known plan codes map to catalog keys; the cs name stays as the fallback
+  // for any future code this build doesn't know yet.
+  switch (sub.plan.code) {
+    case "enterprise":
+      return t("billingShared.planNameEnterprise");
+    case "trial":
+      return t("billingShared.planNameTrial");
+    case "monthly":
+      return t("billingShared.planNameMonthly");
+    case "annual":
+      return t("billingShared.planNameAnnual");
+    default:
+      return sub.plan.display_name_cs;
+  }
 }
 
 export function planInterval(

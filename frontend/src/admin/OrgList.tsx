@@ -10,7 +10,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ADMIN_PAGE_SIZE, type AdminOrgRow, useAdminOrgList } from "@/admin/hooks";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatRelativeDays } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { cn } from "@/lib/utils";
@@ -18,16 +18,6 @@ import { cn } from "@/lib/utils";
 interface OrgListProps {
   selectedOrgId: string | null;
   onSelect: (orgId: string, userCount: number) => void;
-}
-
-function formatRelativeDays(iso: string | null | undefined, locale: string): string {
-  if (!iso) return "—";
-  const relFmt = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-  const ms = new Date(iso).getTime() - Date.now();
-  const days = Math.round(ms / (24 * 3600 * 1000));
-  if (Math.abs(days) >= 1) return relFmt.format(days, "day");
-  const hours = Math.round(ms / (3600 * 1000));
-  return relFmt.format(hours, "hour");
 }
 
 const ORG_STATUS_KEY: Record<AdminOrgRow["status"], ParseKeys<"admin">> = {

@@ -4,7 +4,7 @@ import resourcesToBackend from "i18next-resources-to-backend";
 import { initReactI18next } from "react-i18next";
 
 import { cs } from "@/locales/cs";
-import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from "./languages";
+import { DEFAULT_LANGUAGE, LANGUAGE_STORAGE_KEY, SUPPORTED_LANGUAGES } from "./languages";
 
 export const NAMESPACES = Object.keys(cs) as (keyof typeof cs)[];
 
@@ -27,10 +27,27 @@ export const i18nInitPromise = i18n
     interpolation: { escapeValue: false },
     detection: {
       order: ["localStorage", "navigator"],
-      caches: ["localStorage"],
-      lookupLocalStorage: "simplecrm.lang",
+      // No detector caching: changeLanguage() must not implicitly persist,
+      // or the URL-driven marketing `/en`/`cs` trees would overwrite the
+      // stored preference on every visit. Deliberate choices persist via
+      // persistLanguagePreference() (switcher, server sync).
+      caches: [],
+      lookupLocalStorage: LANGUAGE_STORAGE_KEY,
     },
     react: { useSuspense: false },
   });
+
+// partialBundledLanguages caveat: on a cold visit init resolves against the
+// bundled cs while the detected language's catalogs are still streaming in,
+// leaving `resolvedLanguage` stuck on the fallback (switcher checks the wrong
+// radio, useLocale formats with cs). Once the real language's resources land,
+// re-run changeLanguage so resolvedLanguage snaps to it. The guard makes the
+// recompute run at most once — afterwards base === resolvedLanguage.
+i18n.on("loaded", () => {
+  const base = i18n.language?.split("-")[0];
+  if (base && base !== i18n.resolvedLanguage && i18n.hasResourceBundle(base, "common")) {
+    void i18n.changeLanguage(i18n.language);
+  }
+});
 
 export default i18n;

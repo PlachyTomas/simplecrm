@@ -1,4 +1,5 @@
 {
+  "pdfFilenamePrefix": "faktura",
   "title": "Faktura {number}",
   "kindVatInvoice": "Faktura — daňový doklad",
   "kindVatProforma": "Proforma faktura",

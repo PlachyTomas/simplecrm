@@ -20,7 +20,7 @@ from jinja2 import Template
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.i18n import language_for_locale
+from app.core.i18n import language_for_locale, t
 from app.db.models import BillingSettings, Invoice, InvoiceAuditLog, Organization
 from app.services.email import Email, EmailAttachment, send_email
 from app.services.invoicing.renderer import formatters
@@ -96,7 +96,7 @@ class InvoiceMailer:
         # form; the original number stays inside the PDF + audit log.
         safe_number = re.sub(r"[^A-Za-z0-9_.-]+", "-", invoice.number).strip("-") or "invoice"
         attachment = EmailAttachment(
-            filename=f"faktura-{safe_number}.pdf",
+            filename=f"{t(lang, 'invoice.pdfFilenamePrefix')}-{safe_number}.pdf",
             content_type="application/pdf",
             content=pdf_bytes,
         )

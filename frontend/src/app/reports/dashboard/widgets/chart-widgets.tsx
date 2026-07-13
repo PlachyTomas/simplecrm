@@ -18,7 +18,7 @@ import {
 } from "@/app/reports/dashboard/types";
 import { useWidgetQuery } from "@/app/reports/dashboard/useWidgetQuery";
 import { BarChartWidget, type BarRow } from "@/app/reports/dashboard/widgets/BarChartWidget";
-import { formatMoney, formatNumber } from "@/lib/format";
+import { formatMoney, formatNumber, formatPercent } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 import type { components } from "@/types/api.generated";
 
@@ -40,12 +40,6 @@ function narrowConfig<T extends Config["type"]>(
     throw new Error(`widget config type mismatch: expected ${expected}, got ${config.type}`);
   }
   return config as Extract<Config, { type: T }>;
-}
-
-/** Percent formatter — no translatable unit, just a locale-invariant "%" suffix. */
-function formatPercent(value: number | null | undefined, digits = 0): string {
-  if (value === null || value === undefined) return "—";
-  return `${value.toFixed(digits)} %`;
 }
 
 // ---------- lost_reasons_breakdown ----------
@@ -151,7 +145,7 @@ function formatLeaderboardValue(
     case "won_value":
       return formatMoney(n, currency, locale);
     case "win_rate":
-      return formatPercent(n, 1);
+      return formatPercent(n, locale, 1);
     case "won_count":
     case "deals_added":
     default:
