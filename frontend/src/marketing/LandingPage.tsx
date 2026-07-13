@@ -18,6 +18,7 @@ import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 
 import { Logo } from "@/components/Logo";
+import { LANGUAGE_LABEL, SUPPORTED_LANGUAGES } from "@/lib/i18n/languages";
 import { ThemeToggle } from "@/lib/ThemeToggle";
 
 import { HeroPlasma } from "./HeroPlasma";
@@ -28,6 +29,12 @@ import { AresDemoSection } from "@/marketing/AresDemoSection";
 import { CalendarDemoSection } from "@/marketing/CalendarDemoSection";
 import { InteractivePipeline } from "@/marketing/InteractivePipeline";
 import { ReportsDemoSection } from "@/marketing/ReportsDemoSection";
+import {
+  counterpartPath,
+  type MarketingKey,
+  marketingLangFromPath,
+  marketingPath,
+} from "@/marketing/slugs";
 
 const SIGNUP_PATH = "/signup";
 
@@ -38,14 +45,57 @@ const PRICE_PER_USER_ANNUAL_MONTHLY_CZK = 83;
 
 type NavLink =
   | { kind: "anchor"; href: string; label: string }
-  | { kind: "route"; to: string; label: string };
+  | { kind: "route"; slug: MarketingKey; label: string };
 
 const NAV_LINKS: NavLink[] = [
   { kind: "anchor", href: "#funkce", label: "Funkce" },
-  { kind: "route", to: "/cenik", label: "Ceník" },
+  { kind: "route", slug: "cenik", label: "Ceník" },
   { kind: "anchor", href: "#faq", label: "FAQ" },
-  { kind: "route", to: "/kontakt", label: "Kontakt" },
+  { kind: "route", slug: "kontakt", label: "Kontakt" },
 ];
+
+/**
+ * Language toggle for the marketing site. Each option is a plain `<Link>` to
+ * the counterpart URL in that language — navigating there is what flips the
+ * running language (via `MarketingLanguageLayout`). Query string is preserved
+ * so e.g. `?plan=annual` survives the switch.
+ */
+export function MarketingLanguageSwitcher({ className }: { className?: string }) {
+  const { pathname, search } = useLocation();
+  const current = marketingLangFromPath(pathname);
+  return (
+    <div
+      role="group"
+      aria-label="Language"
+      className={cn(
+        "inline-flex items-center gap-1 rounded-md border border-border bg-surface p-0.5",
+        className,
+      )}
+    >
+      {SUPPORTED_LANGUAGES.map((lang) => {
+        const active = lang === current;
+        const target = active
+          ? pathname
+          : (counterpartPath(pathname) ?? marketingPath("landing", lang));
+        return (
+          <Link
+            key={lang}
+            to={target + search}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "inline-flex h-7 items-center rounded-sm px-2 text-xs font-medium transition-colors duration-fast",
+              active
+                ? "bg-accent-subtle text-accent"
+                : "text-text-tertiary hover:bg-surface-overlay hover:text-text-primary",
+            )}
+          >
+            {LANGUAGE_LABEL[lang]}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
 
 /**
  * On `/`, anchor hrefs let the browser smooth-scroll to the section
@@ -65,7 +115,8 @@ function HashNavLink({
   children: React.ReactNode;
 }) {
   const { pathname } = useLocation();
-  if (pathname === "/") {
+  const landingPath = marketingPath("landing", marketingLangFromPath(pathname));
+  if (pathname === landingPath) {
     return (
       <a href={href} onClick={onClick} className={className}>
         {children}
@@ -73,7 +124,7 @@ function HashNavLink({
     );
   }
   return (
-    <Link to={`/${href}`} onClick={onClick} className={className}>
+    <Link to={`${landingPath}${href}`} onClick={onClick} className={className}>
       {children}
     </Link>
   );
@@ -82,6 +133,7 @@ function HashNavLink({
 export function Nav() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const lang = marketingLangFromPath(useLocation().pathname);
 
   // Close on Escape; lock body scroll while open.
   useEffect(() => {
@@ -101,15 +153,19 @@ export function Nav() {
   return (
     <header className="sticky top-0 z-30 border-b border-border-subtle bg-bg/70 backdrop-blur">
       <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-2 px-4 py-4 md:gap-8 md:px-8">
-        <Link to="/" className="flex items-center gap-2" aria-label="SimpleCRM">
+        <Link
+          to={marketingPath("landing", lang)}
+          className="flex items-center gap-2"
+          aria-label="SimpleCRM"
+        >
           <Logo />
         </Link>
         <nav aria-label="Hlavní" className="hidden items-center gap-6 md:flex">
           {NAV_LINKS.map((link) =>
             link.kind === "route" ? (
               <Link
-                key={link.to}
-                to={link.to}
+                key={link.slug}
+                to={marketingPath(link.slug, lang)}
                 className="text-sm text-text-secondary hover:text-text-primary"
               >
                 {link.label}
@@ -126,6 +182,7 @@ export function Nav() {
           )}
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">
+          <MarketingLanguageSwitcher className="hidden md:inline-flex" />
           <ThemeToggle variant="compact" className="hidden md:inline-flex" />
           <Link
             to="/login"
@@ -172,6 +229,7 @@ function MobileDrawer({
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const lang = marketingLangFromPath(useLocation().pathname);
 
   // Move focus into the drawer on open; restore to the trigger on close.
   useEffect(() => {
@@ -243,8 +301,8 @@ function MobileDrawer({
         {NAV_LINKS.map((link) =>
           link.kind === "route" ? (
             <Link
-              key={link.to}
-              to={link.to}
+              key={link.slug}
+              to={marketingPath(link.slug, lang)}
               onClick={onClose}
               className="rounded-md px-3 py-3 text-base font-medium text-text-primary transition-colors duration-fast hover:bg-surface-overlay"
             >
@@ -269,12 +327,15 @@ function MobileDrawer({
           Přihlásit se
         </Link>
       </nav>
-      <div className="flex items-center justify-between gap-3 border-t border-border-subtle px-4 py-4">
-        <ThemeToggle variant="compact" />
+      <div className="flex flex-col gap-3 border-t border-border-subtle px-4 py-4">
+        <div className="flex items-center gap-3">
+          <MarketingLanguageSwitcher />
+          <ThemeToggle variant="compact" />
+        </div>
         <Link
           to={SIGNUP_PATH}
           onClick={onClose}
-          className="inline-flex h-10 flex-1 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
+          className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
         >
           Vyzkoušet zdarma
         </Link>
@@ -646,12 +707,20 @@ function Faq() {
 }
 
 export function Footer() {
+  const lang = marketingLangFromPath(useLocation().pathname);
+  // Legal pages (and the subscription page) are Czech-only; on the English
+  // site we flag that with a quiet "(česky)" note.
+  const csNote = lang === "en" ? <span className="text-text-tertiary"> (česky)</span> : null;
   return (
     <footer className="border-t border-border-subtle">
       <div className="mx-auto max-w-[1200px] px-4 py-10 md:px-8">
         <div className="grid gap-8 md:grid-cols-4">
           <div className="md:col-span-1">
-            <Link to="/" className="flex items-center gap-2" aria-label="SimpleCRM">
+            <Link
+              to={marketingPath("landing", lang)}
+              className="flex items-center gap-2"
+              aria-label="SimpleCRM"
+            >
               <Logo size="sm" />
             </Link>
             <p className="mt-3 text-xs text-text-tertiary">
@@ -691,16 +760,25 @@ export function Footer() {
               Produkt
             </h3>
             <nav aria-label="Patička – produkt" className="mt-3 flex flex-col gap-2 text-xs">
-              <Link to="/" className="text-text-secondary hover:text-text-primary">
+              <Link
+                to={marketingPath("landing", lang)}
+                className="text-text-secondary hover:text-text-primary"
+              >
                 Úvod
               </Link>
-              <Link to="/cenik" className="text-text-secondary hover:text-text-primary">
+              <Link
+                to={marketingPath("cenik", lang)}
+                className="text-text-secondary hover:text-text-primary"
+              >
                 Ceník
               </Link>
               <Link to="/predplatne" className="text-text-secondary hover:text-text-primary">
-                Předplatné a platby
+                Předplatné a platby{csNote}
               </Link>
-              <Link to="/kontakt" className="text-text-secondary hover:text-text-primary">
+              <Link
+                to={marketingPath("kontakt", lang)}
+                className="text-text-secondary hover:text-text-primary"
+              >
                 Kontakt
               </Link>
             </nav>
@@ -715,34 +793,34 @@ export function Footer() {
               className="mt-3 flex flex-col gap-2 text-xs"
             >
               <Link to="/obchodni-podminky" className="text-text-secondary hover:text-text-primary">
-                Obchodní podmínky
+                Obchodní podmínky{csNote}
               </Link>
               <Link
                 to="/reklamacni-podminky"
                 className="text-text-secondary hover:text-text-primary"
               >
-                Reklamační podmínky
+                Reklamační podmínky{csNote}
               </Link>
               <Link
                 to="/dodaci-a-platebni-podminky"
                 className="text-text-secondary hover:text-text-primary"
               >
-                Dodací a platební podmínky
+                Dodací a platební podmínky{csNote}
               </Link>
               <Link
                 to="/ochrana-osobnich-udaju"
                 className="text-text-secondary hover:text-text-primary"
               >
-                Ochrana osobních údajů
+                Ochrana osobních údajů{csNote}
               </Link>
               <Link
                 to="/zpracovatelska-smlouva"
                 className="text-text-secondary hover:text-text-primary"
               >
-                Zpracovatelská smlouva (DPA)
+                Zpracovatelská smlouva (DPA){csNote}
               </Link>
               <Link to="/cookies" className="text-text-secondary hover:text-text-primary">
-                Cookies
+                Cookies{csNote}
               </Link>
               <button
                 type="button"
@@ -784,7 +862,10 @@ export function Footer() {
           </p>
         </div>
 
-        <p className="mt-6 text-xs text-text-tertiary">© {new Date().getFullYear()} SimpleCRM</p>
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+          <p className="text-xs text-text-tertiary">© {new Date().getFullYear()} SimpleCRM</p>
+          <MarketingLanguageSwitcher />
+        </div>
       </div>
     </footer>
   );
