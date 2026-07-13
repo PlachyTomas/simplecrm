@@ -1,8 +1,9 @@
 import type { ParseKeys } from "i18next";
 import { useTranslation } from "react-i18next";
 
-import { formatCzk, formatCzkMinorWithFraction } from "@/components/billing/format";
 import { useBillingSettings } from "@/components/billing/useBillingSettings";
+import { formatMoney, formatMoneyMinor } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { cn } from "@/lib/utils";
 
 type Interval = "monthly" | "annual" | "custom";
@@ -70,12 +71,13 @@ export function PriceDisplay({
   className,
 }: PriceDisplayProps) {
   const { t } = useTranslation("common");
+  const locale = useLocale();
   const { data: settings } = useBillingSettings();
   const isVatPayer = settings?.is_vat_payer ?? false;
   const rate = Number(settings?.vat_rate_percent ?? "21.00");
 
   const baseKc = baseMinor / 100;
-  const headline = formatCzk(baseKc);
+  const headline = formatMoney(baseKc, "CZK", locale);
   const suffixKey = SUFFIX_KEY[interval];
   const suffix = suffixKey ? t(suffixKey) : "";
 
@@ -100,7 +102,9 @@ export function PriceDisplay({
       {hideVatLine ? null : (
         <p className={cn("text-text-tertiary", SUB_CLASSES[size])}>
           {isVatPayer
-            ? t("priceDisplay.inclVatParen", { amount: formatCzkMinorWithFraction(withVatMinor) })
+            ? t("priceDisplay.inclVatParen", {
+                amount: formatMoneyMinor(withVatMinor, "CZK", locale, { fraction: true }),
+              })
             : t("priceDisplay.notVatPayer")}
         </p>
       )}

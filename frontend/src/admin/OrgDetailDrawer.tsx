@@ -11,9 +11,8 @@ import {
   useAdminOrgUsers,
 } from "@/admin/hooks";
 import { useAuth } from "@/auth/useAuth";
-import { formatCzkMinor } from "@/components/billing/format";
 import { ApiError, apiFetch } from "@/lib/api";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatMoneyMinor } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { cn } from "@/lib/utils";
 
@@ -132,7 +131,7 @@ export function OrgDetailDrawer({ orgId, userCount }: OrgDetailDrawerProps) {
                 Efektivní cena
               </dt>
               <dd className="text-text-primary">
-                {formatCzkMinor(sub.effective_price_per_user_minor)} / uživatel
+                {formatMoneyMinor(sub.effective_price_per_user_minor, "CZK", locale)} / uživatel
               </dd>
             </div>
           ) : null}
@@ -548,7 +547,9 @@ function SetEnterpriseModal({
             className="rounded-md border border-border-subtle bg-surface-overlay p-3 text-sm text-text-secondary"
           >
             Měsíční účet:{" "}
-            <span className="font-semibold text-text-primary">{formatCzkMinor(previewTotal)}</span>{" "}
+            <span className="font-semibold text-text-primary">
+              {formatMoneyMinor(previewTotal, "CZK", "cs-CZ")}
+            </span>{" "}
             / měsíc bez DPH
           </p>
         ) : userCount == null ? (

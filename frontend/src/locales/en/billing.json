@@ -7,5 +7,140 @@
     "payment_in_progress": "Payment is already in progress. Finish it, or try again shortly.",
     "billing_details_required": "You need to fill in your billing details before paying.",
     "generic": "Payment failed. Please try again."
+  },
+  "billingShared": {
+    "statusLoading": "Loading…",
+    "statusComp": "Complimentary",
+    "statusEnterpriseActive": "Active · Enterprise",
+    "statusTrialing": "Trial",
+    "statusPendingActivation": "Awaiting payment",
+    "statusActive": "Active",
+    "statusPastDue": "Past due",
+    "statusCanceled": "Canceled",
+    "planNameComp": "Complimentary",
+    "planNameEnterprise": "Custom plan",
+    "enterpriseMailtoSubject": "SimpleCRM enterprise — inquiry"
+  },
+  "billingSection": {
+    "loading": "Loading…",
+    "userCount_one": "{{count}} user",
+    "userCount_other": "{{count}} users"
+  },
+  "paidThroughBlock": {
+    "headingTrial": "Trial period",
+    "headingCanceled": "Paid through",
+    "headingDefault": "Billing period",
+    "trialHint": "After your trial ends, we'll send an invoice due on the trial end date. Once it's paid, your subscription activates automatically.",
+    "activeHint": "At the end of the period, your subscription renews automatically from your saved card.",
+    "pastDueHint": "The payment failed. The renewal keeps retrying — you may want to update your card.",
+    "canceledHint": "Your subscription is canceled. After this date your organization loses access."
+  },
+  "currentPlanCard": {
+    "heading": "Current plan",
+    "pendingActivation": "You selected the {{planName}} plan. We'll activate it within 24 hours of the payment landing.",
+    "compNotice": "Your organization has special terms. Contact support for details.",
+    "enterprisePricePrefix": "Custom plan ·",
+    "enterprisePriceSuffix": "/ user / month",
+    "contactSalesCta": "Contact sales",
+    "changePlanCta": "Change plan",
+    "contactSupportCta": "Contact support"
+  },
+  "billingDetailsCard": {
+    "heading": "Billing",
+    "periodMonth": "month",
+    "periodYear": "year",
+    "monthlySavingsPrefix": "If you paid annually, you'd save",
+    "monthlySavingsSuffix": "a year.",
+    "switchToAnnualCta": "Switch to annual",
+    "annualSavingsPrefix": "You're saving",
+    "annualSavingsSuffix": "compared to the monthly plan.",
+    "renewalPrefix": "Next renewal:"
+  },
+  "paymentsCard": {
+    "heading": "Payments",
+    "subtitle": "History of payment attempts (ComGate). You'll find tax invoices above, in the \"Invoices\" section.",
+    "loadError": "Couldn't load payments.",
+    "empty": "Payments will show up here after your first payment.",
+    "kind": {
+      "initial": "Initial activation",
+      "renewal": "Renewal",
+      "seat_upgrade": "Seat upgrade"
+    },
+    "status": {
+      "paid": "Paid",
+      "pending": "Pending",
+      "failed": "Failed",
+      "refunded": "Refunded"
+    }
+  },
+  "taxInvoicesCard": {
+    "heading": "Invoices",
+    "subtitle": "Tax documents under Czech law. You can download the PDF for your records at any time.",
+    "downloadError": "Couldn't download the PDF. Try again or contact support.",
+    "loadError": "Couldn't load invoices.",
+    "empty": "You don't have any invoices yet. They'll appear here after your first payment.",
+    "issuedDue": "Issued {{issued}} · Due {{due}}",
+    "downloadAriaLabel": "Download PDF for invoice {{number}}",
+    "kind": {
+      "invoice": "Invoice",
+      "credit_note": "Credit note",
+      "proforma": "Proforma"
+    },
+    "status": {
+      "draft": "Draft",
+      "issued": "Issued",
+      "paid": "Paid",
+      "overdue": "Overdue",
+      "voided": "Voided"
+    }
+  },
+  "cancelSubscriptionCard": {
+    "scheduledHeading": "Subscription scheduled to cancel",
+    "scheduledBodyWithDate": "We'll keep app access active until {{endsAt}}. After that, the pay gate limits activity — you can export your data at any time.",
+    "scheduledBodyDefault": "We'll keep app access active until the end of the current period. After that, the pay gate limits activity — you can export your data at any time.",
+    "reactivateError": "Reactivation failed. Please try again.",
+    "reactivating": "Reactivating…",
+    "reactivateCta": "Reactivate subscription",
+    "heading": "Cancel subscription",
+    "bodyWithDate": "After canceling, we keep billing until the end of the current period (until {{endsAt}}) — no one loses access right away. You won't be charged again. You can always export your data from the Reports section.",
+    "bodyWithoutDate": "After canceling, we keep billing until the end of the current period — no one loses access right away. You won't be charged again. You can always export your data from the Reports section.",
+    "cancelCta": "Cancel subscription",
+    "confirmHeading": "Are you sure you want to cancel your subscription?",
+    "reasonLabel": "Reason (optional, helps us improve)",
+    "cancelError": "Cancellation failed. Please try again.",
+    "canceling": "Canceling…",
+    "confirmCancel": "Yes, cancel",
+    "keepSubscription": "No, keep it"
+  },
+  "choosePlanModal": {
+    "consentRequiredError": "You need to confirm consent to recurring payments to continue.",
+    "billingDetailsRequiredError": "Please fill in your billing details.",
+    "billingSaveError": "Saving your billing details failed. Please try again.",
+    "heading": "Choose a plan",
+    "intro": "After you choose, we'll redirect you to a secure payment gateway. Once the payment succeeds, you'll return here and your subscription will be active immediately.",
+    "planRadioGroupLabel": "Plan",
+    "monthlyTitle": "Monthly",
+    "annualTitle": "Annual",
+    "annualBadge": "Save 16%",
+    "annualSavingsIntro_one": "With your {{count}} user, you'll save",
+    "annualSavingsIntro_other": "With your {{count}} users, you'll save",
+    "annualSavingsSuffix": "a year.",
+    "billingDetailsHeading": "Billing details",
+    "billingDetailsHint": "We'll use these details for your tax invoice. Filling them in is required to continue to payment.",
+    "cancelCta": "Cancel",
+    "submitting": "Redirecting…",
+    "submitCta": "Continue to payment"
+  },
+  "billingReturnPage": {
+    "pageTitle": "Returning from the payment gateway",
+    "backToBillingCta": "Back to billing",
+    "overviewCta": "Overview",
+    "successHeading": "Payment successful.",
+    "successBody": "Thank you — your subscription is active. The invoice has arrived by email and you'll find it in the Billing section.",
+    "pendingHeading": "Processing your payment.",
+    "pendingBody": "Card payments usually confirm within a few seconds. Bank transfers can take up to a few hours for the bank to confirm — your subscription activates automatically and we'll email you the invoice once the payment is matched.",
+    "failedBody": "No money was charged. Try the payment again, or contact support if the problem persists.",
+    "unknownHeading": "You're back from the payment gateway.",
+    "unknownBody": "The payment status hasn't been confirmed yet. Check the Billing section — invoices land there as soon as a payment is received."
   }
 }

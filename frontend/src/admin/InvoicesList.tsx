@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { formatCzkMinor } from "@/components/billing/format";
+import { formatMoneyMinor } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import { ManualInvoiceModal } from "@/admin/ManualInvoiceModal";
@@ -219,7 +219,7 @@ export function InvoicesList({ selectedInvoiceId, onSelect }: InvoicesListProps)
                       </span>
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
-                      {formatCzkMinor(row.total_minor)}
+                      {formatMoneyMinor(row.total_minor, "CZK", "cs-CZ")}
                     </td>
                   </tr>
                 );

@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "@/auth/useAuth";
-import { formatCzkMinor } from "@/components/billing/format";
 import { OrgBillingFields } from "@/components/billing/OrgBillingFields";
 import {
   billingFormFromOrg,
@@ -19,6 +18,8 @@ import { RecurringPaymentConsent } from "@/components/billing/RecurringPaymentCo
 import { useInitialPaymentInit } from "@/components/billing/usePayments";
 import { usePublicPlans } from "@/components/billing/usePublicPlans";
 import { ApiError, apiFetch, type TrialExpiredPayload } from "@/lib/api";
+import { formatMoneyMinor } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/usePageTitle";
 import type { components } from "@/types/api.generated";
@@ -33,6 +34,7 @@ interface TrialExpiredGateProps {
 
 export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
   const { t } = useTranslation("auth");
+  const locale = useLocale();
   usePageTitle(t("trialExpiredGate.pageTitle"));
   const { accessToken } = useAuth();
   const summary = useBillingSummary();
@@ -173,7 +175,7 @@ export function TrialExpiredGate({ payload, onExport }: TrialExpiredGateProps) {
                           count: summary.data.user_count,
                         })}{" "}
                         <span className="font-semibold text-text-primary">
-                          {formatCzkMinor(summary.data.savings_minor)}
+                          {formatMoneyMinor(summary.data.savings_minor, "CZK", locale)}
                         </span>{" "}
                         {t("trialExpiredGate.annualSavingsSuffix")}
                       </p>

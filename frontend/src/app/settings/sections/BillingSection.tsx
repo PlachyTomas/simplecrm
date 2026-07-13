@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
+import type { ParseKeys } from "i18next";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "@/auth/useAuth";
-import { formatCzkMinor } from "@/components/billing/format";
 import { OrgBillingFields } from "@/components/billing/OrgBillingFields";
 import {
   billingFormFromOrg,
@@ -33,14 +33,14 @@ import {
   type TaxInvoiceOut,
 } from "@/components/billing/useTaxInvoices";
 import { apiFetch } from "@/lib/api";
-import { csNoun } from "@/lib/i18n/nouns";
+import { formatMoneyMinor } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { useModalDialog } from "@/lib/useModalDialog";
 import { cn } from "@/lib/utils";
 import type { components } from "@/types/api.generated";
 
 import {
-  ENTERPRISE_MAILTO,
+  enterpriseMailto,
   SUPPORT_MAILTO,
   formatCsDate,
   getStatusPill,
@@ -53,6 +53,7 @@ import {
 type OrganizationOut = components["schemas"]["OrganizationOut"];
 
 export function BillingSection() {
+  const { t } = useTranslation("billing");
   const subQuery = useCurrentSubscription();
   const summaryQuery = useBillingSummary();
   const sub = subQuery.data;
@@ -73,7 +74,7 @@ export function BillingSection() {
   if (subQuery.isPending) {
     return (
       <section className="rounded-lg border border-border bg-surface p-6 text-sm text-text-tertiary">
-        Načítání…
+        {t("billingSection.loading")}
       </section>
     );
   }
@@ -96,12 +97,13 @@ export function BillingSection() {
 
 /**
  * Renders the "paid through" date range for the current subscription.
- * Trialing → "Zkušební doba: start – end"; active/past_due → "Předplaceno: start – end"
- * with a renewal hint; canceled → "Předplaceno do: end"; pending_activation
+ * Trialing → headingTrial: start – end; active/past_due → headingDefault: start – end
+ * with a renewal hint; canceled → headingCanceled: end; pending_activation
  * → waiting copy already handled by the parent so we render nothing.
  * Comp + enterprise opt out at the call site.
  */
 function PaidThroughBlock({ sub }: { sub: SubscriptionOut | null | undefined }) {
+  const { t } = useTranslation("billing");
   const locale = useLocale();
   if (!sub) return null;
   if (sub.is_comp) return null;
@@ -119,7 +121,11 @@ function PaidThroughBlock({ sub }: { sub: SubscriptionOut | null | undefined }) 
   const isPastDue = sub.status === "past_due";
   const isCanceled = sub.status === "canceled";
 
-  const heading = isTrial ? "Zkušební doba" : isCanceled ? "Předplaceno do" : "Předplacené období";
+  const heading = isTrial
+    ? t("paidThroughBlock.headingTrial")
+    : isCanceled
+      ? t("paidThroughBlock.headingCanceled")
+      : t("paidThroughBlock.headingDefault");
 
   return (
     <div
@@ -139,22 +145,13 @@ function PaidThroughBlock({ sub }: { sub: SubscriptionOut | null | undefined }) 
         )}
       </p>
       {isTrial ? (
-        <p className="mt-2 text-xs text-text-tertiary">
-          Po skončení zkušebky vám zašleme fakturu se splatností v den ukončení zkoušky. Po úhradě
-          se vaše předplatné automaticky aktivuje.
-        </p>
+        <p className="mt-2 text-xs text-text-tertiary">{t("paidThroughBlock.trialHint")}</p>
       ) : isActive ? (
-        <p className="mt-2 text-xs text-text-tertiary">
-          Po skončení období se předplatné automaticky obnoví z uložené karty.
-        </p>
+        <p className="mt-2 text-xs text-text-tertiary">{t("paidThroughBlock.activeHint")}</p>
       ) : isPastDue ? (
-        <p className="mt-2 text-xs text-warning">
-          Platba se nezdařila. Prodloužení období se opakuje — případně aktualizujte kartu.
-        </p>
+        <p className="mt-2 text-xs text-warning">{t("paidThroughBlock.pastDueHint")}</p>
       ) : isCanceled ? (
-        <p className="mt-2 text-xs text-text-tertiary">
-          Předplatné je zrušené. Po tomto datu se vaší organizaci zablokuje přístup.
-        </p>
+        <p className="mt-2 text-xs text-text-tertiary">{t("paidThroughBlock.canceledHint")}</p>
       ) : null}
     </div>
   );
@@ -166,8 +163,10 @@ interface CurrentPlanCardProps {
 }
 
 function CurrentPlanCard({ sub, onChangePlan }: CurrentPlanCardProps) {
-  const pill = getStatusPill(sub);
-  const planName = planDisplayName(sub);
+  const { t } = useTranslation("billing");
+  const locale = useLocale();
+  const pill = getStatusPill(sub, t);
+  const planName = planDisplayName(sub, t);
   const isComp = !!sub?.is_comp;
   const isEnterprise = sub?.plan?.code === "enterprise";
   const showChangePlan =
@@ -190,7 +189,7 @@ function CurrentPlanCard({ sub, onChangePlan }: CurrentPlanCardProps) {
 
   return (
     <section className="rounded-lg border border-border bg-surface p-6">
-      <h2 className="text-lg font-semibold">Aktuální plán</h2>
+      <h2 className="text-lg font-semibold">{t("currentPlanCard.heading")}</h2>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <span className="text-base font-medium text-text-primary">{planName}</span>
@@ -214,31 +213,30 @@ function CurrentPlanCard({ sub, onChangePlan }: CurrentPlanCardProps) {
 
       {sub?.status === "pending_activation" ? (
         <p className="mt-4 text-sm text-text-secondary">
-          Vybrali jste plán <span className="font-medium">{planName}</span>. Po připsání platby vás
-          aktivujeme do 24 hodin.
+          {t("currentPlanCard.pendingActivation", { planName })}
         </p>
       ) : null}
 
       {isComp ? (
-        <p className="mt-4 text-sm text-text-secondary">
-          Vaše organizace má speciální podmínky. Pro detaily kontaktujte podporu.
-        </p>
+        <p className="mt-4 text-sm text-text-secondary">{t("currentPlanCard.compNotice")}</p>
       ) : null}
 
       {isEnterprise ? (
         <div className="mt-4 space-y-3">
           {effective !== null ? (
             <p className="text-sm text-text-secondary">
-              Vlastní balíček ·{" "}
-              <span className="font-medium text-text-primary">{formatCzkMinor(effective)}</span> /
-              uživatel / měsíc
+              {t("currentPlanCard.enterprisePricePrefix")}{" "}
+              <span className="font-medium text-text-primary">
+                {formatMoneyMinor(effective, "CZK", locale)}
+              </span>{" "}
+              {t("currentPlanCard.enterprisePriceSuffix")}
             </p>
           ) : null}
           <a
-            href={ENTERPRISE_MAILTO}
+            href={enterpriseMailto(t)}
             className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-4 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
           >
-            Kontaktovat obchod
+            {t("currentPlanCard.contactSalesCta")}
           </a>
         </div>
       ) : null}
@@ -249,7 +247,7 @@ function CurrentPlanCard({ sub, onChangePlan }: CurrentPlanCardProps) {
           onClick={onChangePlan}
           className="mt-5 inline-flex h-10 items-center justify-center rounded-md bg-accent px-4 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
         >
-          Změnit plán
+          {t("currentPlanCard.changePlanCta")}
         </button>
       ) : null}
 
@@ -258,7 +256,7 @@ function CurrentPlanCard({ sub, onChangePlan }: CurrentPlanCardProps) {
           href={SUPPORT_MAILTO}
           className="mt-5 inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface px-4 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-overlay"
         >
-          Kontaktujte podporu
+          {t("currentPlanCard.contactSupportCta")}
         </a>
       ) : null}
     </section>
@@ -272,6 +270,7 @@ interface BillingDetailsCardProps {
 }
 
 function BillingDetailsCard({ sub, summary, onSwitchToAnnual }: BillingDetailsCardProps) {
+  const { t } = useTranslation("billing");
   const locale = useLocale();
   if (!sub) return null;
   if (sub.is_comp) return null;
@@ -286,7 +285,7 @@ function BillingDetailsCard({ sub, summary, onSwitchToAnnual }: BillingDetailsCa
 
   const interval = planInterval(sub);
   const isAnnual = interval === "annual";
-  const periodLabel = isAnnual ? "rok" : "měsíc";
+  const periodLabel = isAnnual ? t("billingDetailsCard.periodYear") : t("billingDetailsCard.periodMonth");
   // Bill total is computed against the contracted seat_count, not the
   // live active-user count — so a queued downsize that takes effect next
   // period still bills the contracted amount this period, and a
@@ -300,82 +299,89 @@ function BillingDetailsCard({ sub, summary, onSwitchToAnnual }: BillingDetailsCa
 
   return (
     <section className="rounded-lg border border-border bg-surface p-6">
-      <h2 className="text-lg font-semibold">Účtování</h2>
+      <h2 className="text-lg font-semibold">{t("billingDetailsCard.heading")}</h2>
 
       <p className="mt-4 text-sm text-text-secondary">
-        {billedSeats} {csNoun(billedSeats, "uzivatel")} ×{" "}
-        <span className="font-medium text-text-primary">{formatCzkMinor(perUserMinor)}</span> ={" "}
-        <span className="font-semibold text-text-primary">{formatCzkMinor(totalMinor)}</span> /{" "}
-        {periodLabel}
+        {t("billingSection.userCount", { count: billedSeats })} ×{" "}
+        <span className="font-medium text-text-primary">
+          {formatMoneyMinor(perUserMinor, "CZK", locale)}
+        </span>{" "}
+        ={" "}
+        <span className="font-semibold text-text-primary">
+          {formatMoneyMinor(totalMinor, "CZK", locale)}
+        </span>{" "}
+        / {periodLabel}
       </p>
 
       {!isAnnual && summary.savings_minor != null && summary.savings_minor > 0 ? (
         <p className="mt-3 text-sm text-text-secondary">
-          Pokud byste platili ročně, ušetříte{" "}
+          {t("billingDetailsCard.monthlySavingsPrefix")}{" "}
           <span className="font-semibold text-text-primary">
-            {formatCzkMinor(summary.savings_minor)}
+            {formatMoneyMinor(summary.savings_minor, "CZK", locale)}
           </span>{" "}
-          ročně.{" "}
+          {t("billingDetailsCard.monthlySavingsSuffix")}{" "}
           <button
             type="button"
             onClick={onSwitchToAnnual}
             className="text-accent underline-offset-2 hover:underline"
           >
-            Přejít na roční
+            {t("billingDetailsCard.switchToAnnualCta")}
           </button>
         </p>
       ) : null}
 
       {isAnnual && summary.savings_minor != null && summary.savings_minor > 0 ? (
         <p className="mt-3 text-sm text-text-secondary">
-          Šetříte{" "}
+          {t("billingDetailsCard.annualSavingsPrefix")}{" "}
           <span className="font-semibold text-text-primary">
-            {formatCzkMinor(summary.savings_minor)}
+            {formatMoneyMinor(summary.savings_minor, "CZK", locale)}
           </span>{" "}
-          oproti měsíčnímu plánu.
+          {t("billingDetailsCard.annualSavingsSuffix")}
         </p>
       ) : null}
 
       {renewalDate && (sub.status === "active" || sub.status === "past_due") ? (
         <p className="mt-3 text-sm text-text-tertiary">
-          Další obnova: <span className="text-text-primary">{renewalDate}</span>
+          {t("billingDetailsCard.renewalPrefix")} <span className="text-text-primary">{renewalDate}</span>
         </p>
       ) : null}
     </section>
   );
 }
 
-const PAYMENT_KIND_LABEL: Record<ChargeOut["kind"], string> = {
-  initial: "První aktivace",
-  renewal: "Obnova",
-  seat_upgrade: "Navýšení uživatelů",
+const PAYMENT_KIND_LABEL: Record<ChargeOut["kind"], ParseKeys<"billing">> = {
+  initial: "paymentsCard.kind.initial",
+  renewal: "paymentsCard.kind.renewal",
+  seat_upgrade: "paymentsCard.kind.seat_upgrade",
 };
 
-const PAYMENT_STATUS_PILL: Record<ChargeOut["status"], { label: string; className: string }> = {
-  paid: { label: "Zaplaceno", className: "bg-success-subtle text-success" },
-  pending: { label: "Čeká", className: "bg-warning-subtle text-warning" },
-  failed: { label: "Selhalo", className: "bg-danger-subtle text-danger" },
-  refunded: { label: "Vráceno", className: "bg-info-subtle text-info" },
+const PAYMENT_STATUS_PILL: Record<
+  ChargeOut["status"],
+  { labelKey: ParseKeys<"billing">; className: string }
+> = {
+  paid: { labelKey: "paymentsCard.status.paid", className: "bg-success-subtle text-success" },
+  pending: { labelKey: "paymentsCard.status.pending", className: "bg-warning-subtle text-warning" },
+  failed: { labelKey: "paymentsCard.status.failed", className: "bg-danger-subtle text-danger" },
+  refunded: { labelKey: "paymentsCard.status.refunded", className: "bg-info-subtle text-info" },
 };
 
 function PaymentsCard() {
+  const { t } = useTranslation("billing");
   const payments = useInvoices();
   const locale = useLocale();
 
   return (
     <section className="rounded-lg border border-border bg-surface p-6">
-      <h2 className="text-lg font-semibold">Platby</h2>
-      <p className="mt-1 text-xs text-text-tertiary">
-        Historie platebních pokusů (ComGate). Daňové doklady najdete výše v sekci „Faktury“.
-      </p>
+      <h2 className="text-lg font-semibold">{t("paymentsCard.heading")}</h2>
+      <p className="mt-1 text-xs text-text-tertiary">{t("paymentsCard.subtitle")}</p>
       {payments.isPending ? (
-        <p className="mt-3 text-sm text-text-tertiary">Načítání…</p>
+        <p className="mt-3 text-sm text-text-tertiary">{t("billingSection.loading")}</p>
       ) : payments.isError ? (
         <p className="mt-3 text-sm text-danger" role="alert">
-          Platby se nepodařilo načíst.
+          {t("paymentsCard.loadError")}
         </p>
       ) : !payments.data || payments.data.items.length === 0 ? (
-        <p className="mt-3 text-sm text-text-secondary">Platby budou dostupné po první platbě.</p>
+        <p className="mt-3 text-sm text-text-secondary">{t("paymentsCard.empty")}</p>
       ) : (
         <ul className="mt-4 divide-y divide-border-subtle">
           {payments.data.items.map((row) => {
@@ -385,17 +391,17 @@ function PaymentsCard() {
               <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-text-primary">
-                    {PAYMENT_KIND_LABEL[row.kind]}
+                    {t(PAYMENT_KIND_LABEL[row.kind])}
                   </p>
                   <p className="text-xs text-text-tertiary">
                     {created}
-                    {row.seats != null ? ` · ${row.seats} ${csNoun(row.seats, "uzivatel")}` : ""}
+                    {row.seats != null ? ` · ${t("billingSection.userCount", { count: row.seats })}` : ""}
                     {row.failure_reason ? ` · ${row.failure_reason}` : ""}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm tabular-nums text-text-primary">
-                    {formatCzkMinor(row.amount_minor)}
+                    {formatMoneyMinor(row.amount_minor, "CZK", locale)}
                   </span>
                   <span
                     className={cn(
@@ -403,7 +409,7 @@ function PaymentsCard() {
                       pill.className,
                     )}
                   >
-                    {pill.label}
+                    {t(pill.labelKey)}
                   </span>
                 </div>
               </li>
@@ -415,24 +421,28 @@ function PaymentsCard() {
   );
 }
 
-const TAX_INVOICE_KIND_LABEL: Record<TaxInvoiceOut["kind"], string> = {
-  invoice: "Faktura",
-  credit_note: "Dobropis",
-  proforma: "Proforma",
+const TAX_INVOICE_KIND_LABEL: Record<TaxInvoiceOut["kind"], ParseKeys<"billing">> = {
+  invoice: "taxInvoicesCard.kind.invoice",
+  credit_note: "taxInvoicesCard.kind.credit_note",
+  proforma: "taxInvoicesCard.kind.proforma",
 };
 
 const TAX_INVOICE_STATUS_PILL: Record<
   TaxInvoiceOut["status"],
-  { label: string; className: string }
+  { labelKey: ParseKeys<"billing">; className: string }
 > = {
-  draft: { label: "Koncept", className: "bg-bg-elevated text-text-secondary" },
-  issued: { label: "Vystavena", className: "bg-info-subtle text-info" },
-  paid: { label: "Zaplacena", className: "bg-success-subtle text-success" },
-  overdue: { label: "Po splatnosti", className: "bg-danger-subtle text-danger" },
-  voided: { label: "Stornována", className: "bg-bg-elevated text-text-tertiary line-through" },
+  draft: { labelKey: "taxInvoicesCard.status.draft", className: "bg-bg-elevated text-text-secondary" },
+  issued: { labelKey: "taxInvoicesCard.status.issued", className: "bg-info-subtle text-info" },
+  paid: { labelKey: "taxInvoicesCard.status.paid", className: "bg-success-subtle text-success" },
+  overdue: { labelKey: "taxInvoicesCard.status.overdue", className: "bg-danger-subtle text-danger" },
+  voided: {
+    labelKey: "taxInvoicesCard.status.voided",
+    className: "bg-bg-elevated text-text-tertiary line-through",
+  },
 };
 
 function TaxInvoicesCard() {
+  const { t } = useTranslation("billing");
   const invoices = useTaxInvoices();
   const downloadPdf = useDownloadTaxInvoicePdf();
   const [error, setError] = useState<string | null>(null);
@@ -443,18 +453,15 @@ function TaxInvoicesCard() {
     downloadPdf.mutate(
       { id: row.id, number: row.number },
       {
-        onError: () =>
-          setError("Stažení PDF se nezdařilo. Zkuste to znovu nebo kontaktujte podporu."),
+        onError: () => setError(t("taxInvoicesCard.downloadError")),
       },
     );
   }
 
   return (
     <section className="rounded-lg border border-border bg-surface p-6">
-      <h2 className="text-lg font-semibold">Faktury</h2>
-      <p className="mt-1 text-xs text-text-tertiary">
-        Daňové doklady podle českého zákona. PDF si můžete kdykoli stáhnout pro účetnictví.
-      </p>
+      <h2 className="text-lg font-semibold">{t("taxInvoicesCard.heading")}</h2>
+      <p className="mt-1 text-xs text-text-tertiary">{t("taxInvoicesCard.subtitle")}</p>
       {error ? (
         <p
           role="alert"
@@ -464,15 +471,13 @@ function TaxInvoicesCard() {
         </p>
       ) : null}
       {invoices.isPending ? (
-        <p className="mt-3 text-sm text-text-tertiary">Načítání…</p>
+        <p className="mt-3 text-sm text-text-tertiary">{t("billingSection.loading")}</p>
       ) : invoices.isError ? (
         <p className="mt-3 text-sm text-danger" role="alert">
-          Faktury se nepodařilo načíst.
+          {t("taxInvoicesCard.loadError")}
         </p>
       ) : !invoices.data || invoices.data.items.length === 0 ? (
-        <p className="mt-3 text-sm text-text-secondary">
-          Zatím nemáte žádné faktury. Po první platbě tu uvidíte přehled.
-        </p>
+        <p className="mt-3 text-sm text-text-secondary">{t("taxInvoicesCard.empty")}</p>
       ) : (
         <ul className="mt-4 divide-y divide-border-subtle">
           {invoices.data.items.map((inv) => {
@@ -483,15 +488,15 @@ function TaxInvoicesCard() {
               <li key={inv.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-text-primary">
-                    {TAX_INVOICE_KIND_LABEL[inv.kind]} {inv.number}
+                    {t(TAX_INVOICE_KIND_LABEL[inv.kind])} {inv.number}
                   </p>
                   <p className="text-xs text-text-tertiary">
-                    Vystaveno {issued} · Splatnost {due}
+                    {t("taxInvoicesCard.issuedDue", { issued, due })}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm tabular-nums text-text-primary">
-                    {formatCzkMinor(inv.total_minor)}
+                    {formatMoneyMinor(inv.total_minor, "CZK", locale)}
                   </span>
                   <span
                     className={cn(
@@ -499,13 +504,13 @@ function TaxInvoicesCard() {
                       pill.className,
                     )}
                   >
-                    {pill.label}
+                    {t(pill.labelKey)}
                   </span>
                   <button
                     type="button"
                     onClick={() => onDownload(inv)}
                     disabled={downloadPdf.isPending}
-                    aria-label={`Stáhnout PDF faktury ${inv.number}`}
+                    aria-label={t("taxInvoicesCard.downloadAriaLabel", { number: inv.number })}
                     className="hover:bg-bg-elevated inline-flex items-center justify-center rounded-md border border-border bg-bg p-1.5 text-text-secondary transition hover:text-text-primary disabled:cursor-wait disabled:opacity-50"
                   >
                     <Download className="size-4" aria-hidden="true" />
@@ -525,6 +530,7 @@ interface CancelSubscriptionCardProps {
 }
 
 function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
+  const { t } = useTranslation("billing");
   const cancel = useCancelSubscription();
   const reactivate = useReactivateSubscription();
   const locale = useLocale();
@@ -551,12 +557,12 @@ function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
     return (
       <section className="rounded-lg border border-warning/40 bg-warning-subtle p-6">
         <h2 className="text-lg font-semibold text-text-primary">
-          Předplatné je naplánované ke zrušení
+          {t("cancelSubscriptionCard.scheduledHeading")}
         </h2>
         <p className="mt-3 text-sm text-text-primary">
           {endsAt
-            ? `Přístup do aplikace zachováme do ${endsAt}. Poté pay-gate omezí činnost — data můžete kdykoli vyexportovat.`
-            : "Přístup do aplikace zachováme do konce aktuálního období. Poté pay-gate omezí činnost — data můžete kdykoli vyexportovat."}
+            ? t("cancelSubscriptionCard.scheduledBodyWithDate", { endsAt })
+            : t("cancelSubscriptionCard.scheduledBodyDefault")}
         </p>
         {error ? (
           <p
@@ -572,12 +578,14 @@ function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
           onClick={() => {
             setError(null);
             reactivate.mutate(undefined, {
-              onError: () => setError("Obnovení se nezdařilo. Zkuste to prosím znovu."),
+              onError: () => setError(t("cancelSubscriptionCard.reactivateError")),
             });
           }}
           className="mt-4 inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {reactivate.isPending ? "Obnovuji…" : "Obnovit předplatné"}
+          {reactivate.isPending
+            ? t("cancelSubscriptionCard.reactivating")
+            : t("cancelSubscriptionCard.reactivateCta")}
         </button>
       </section>
     );
@@ -587,11 +595,11 @@ function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
 
   return (
     <section className="rounded-lg border border-border bg-surface p-6">
-      <h2 className="text-lg font-semibold">Zrušit předplatné</h2>
+      <h2 className="text-lg font-semibold">{t("cancelSubscriptionCard.heading")}</h2>
       <p className="mt-3 text-sm text-text-secondary">
-        Po zrušení dále hradíme až do konce aktuálního období
-        {endsAt ? ` (do ${endsAt})` : ""} — nikdo o přístup nepřijde okamžitě. Žádné další platby
-        vám pak strhnuty nebudou. Data si vždy můžete vyexportovat ze sekce Reporty.
+        {endsAt
+          ? t("cancelSubscriptionCard.bodyWithDate", { endsAt })
+          : t("cancelSubscriptionCard.bodyWithoutDate")}
       </p>
 
       {!confirming ? (
@@ -603,13 +611,15 @@ function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
           }}
           className="mt-4 inline-flex h-10 items-center justify-center rounded-md border border-danger bg-surface px-5 text-sm font-medium text-danger transition-colors duration-fast hover:bg-danger-subtle"
         >
-          Zrušit předplatné
+          {t("cancelSubscriptionCard.cancelCta")}
         </button>
       ) : (
         <div className="mt-4 space-y-3 rounded-md border border-danger/40 bg-danger-subtle p-4">
-          <p className="text-sm font-medium text-text-primary">Opravdu chcete zrušit předplatné?</p>
+          <p className="text-sm font-medium text-text-primary">
+            {t("cancelSubscriptionCard.confirmHeading")}
+          </p>
           <label className="block text-xs font-medium text-text-tertiary">
-            Důvod (nepovinné, pomůže nám se zlepšit)
+            {t("cancelSubscriptionCard.reasonLabel")}
             <textarea
               rows={2}
               maxLength={2000}
@@ -633,13 +643,15 @@ function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
                   { reason: reason.trim() || undefined },
                   {
                     onSuccess: () => setConfirming(false),
-                    onError: () => setError("Zrušení se nezdařilo. Zkuste to prosím znovu."),
+                    onError: () => setError(t("cancelSubscriptionCard.cancelError")),
                   },
                 );
               }}
               className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-danger/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {cancel.isPending ? "Rušíme…" : "Ano, zrušit"}
+              {cancel.isPending
+                ? t("cancelSubscriptionCard.canceling")
+                : t("cancelSubscriptionCard.confirmCancel")}
             </button>
             <button
               type="button"
@@ -650,7 +662,7 @@ function CancelSubscriptionCard({ sub }: CancelSubscriptionCardProps) {
               }}
               className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface px-4 text-sm font-medium text-text-secondary hover:text-text-primary"
             >
-              Ne, ponechat
+              {t("cancelSubscriptionCard.keepSubscription")}
             </button>
           </div>
         </div>
@@ -667,6 +679,7 @@ interface ChoosePlanModalProps {
 function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
   const dialogRef = useModalDialog<HTMLDivElement>(onClose);
   const { t } = useTranslation("billing");
+  const locale = useLocale();
   const { accessToken } = useAuth();
   const plans = usePublicPlans();
   const summary = useBillingSummary();
@@ -707,11 +720,11 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
     // initiates the first charge. Static T&Cs page is not enough; this
     // checkbox is the moment of consent for risk-review purposes.
     if (!recurringConsent) {
-      setError("Pro pokračování je nutné potvrdit souhlas s opakovanými platbami.");
+      setError(t("choosePlanModal.consentRequiredError"));
       return;
     }
     if (!isBillingFormValid(billing)) {
-      setError("Vyplňte prosím fakturační údaje.");
+      setError(t("choosePlanModal.billingDetailsRequiredError"));
       return;
     }
     setError(null);
@@ -726,7 +739,7 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
       });
     } catch {
       setSaving(false);
-      setError("Uložení fakturačních údajů se nezdařilo. Zkuste to prosím znovu.");
+      setError(t("choosePlanModal.billingSaveError"));
       return;
     }
     setSaving(false);
@@ -757,21 +770,18 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
         className="w-full max-w-2xl rounded-xl border border-border bg-surface p-6 shadow-lg sm:p-8"
       >
         <h2 id="choose-plan-title" className="text-xl font-semibold text-text-primary">
-          Vyberte plán
+          {t("choosePlanModal.heading")}
         </h2>
-        <p className="mt-2 text-sm text-text-secondary">
-          Po výběru vás přesměrujeme na zabezpečenou platební bránu. Po úspěšné platbě se vrátíte
-          zpět a předplatné bude okamžitě aktivní.
-        </p>
+        <p className="mt-2 text-sm text-text-secondary">{t("choosePlanModal.intro")}</p>
 
         <div
           role="radiogroup"
-          aria-label="Plán"
+          aria-label={t("choosePlanModal.planRadioGroupLabel")}
           className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2"
         >
           <PlanModalCard
             code="monthly"
-            title="Měsíční"
+            title={t("choosePlanModal.monthlyTitle")}
             priceMinor={monthlyPlan?.price_per_user_minor ?? null}
             priceInterval="monthly"
             selected={selected === "monthly"}
@@ -780,24 +790,21 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
           />
           <PlanModalCard
             code="annual"
-            title="Roční"
+            title={t("choosePlanModal.annualTitle")}
             priceMinor={annualPlan?.price_per_user_minor ?? null}
             priceInterval="annual"
             selected={selected === "annual"}
             disabled={submitting}
             onSelect={() => setSelected("annual")}
-            badge="Ušetříte 16 %"
+            badge={t("choosePlanModal.annualBadge")}
             caption={
               summary.data && summary.data.savings_minor != null ? (
                 <p className="text-sm text-text-secondary">
-                  {summary.data.user_count === 1
-                    ? "S Vaším 1 uživatelem"
-                    : `S Vašimi ${summary.data.user_count} uživateli`}{" "}
-                  ušetříte{" "}
+                  {t("choosePlanModal.annualSavingsIntro", { count: summary.data.user_count })}{" "}
                   <span className="font-semibold text-text-primary">
-                    {formatCzkMinor(summary.data.savings_minor)}
+                    {formatMoneyMinor(summary.data.savings_minor, "CZK", locale)}
                   </span>{" "}
-                  ročně.
+                  {t("choosePlanModal.annualSavingsSuffix")}
                 </p>
               ) : null
             }
@@ -817,9 +824,11 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
         </div>
 
         <div className="mt-6">
-          <h3 className="text-sm font-semibold text-text-primary">Fakturační údaje</h3>
+          <h3 className="text-sm font-semibold text-text-primary">
+            {t("choosePlanModal.billingDetailsHeading")}
+          </h3>
           <p className="mt-1 text-xs text-text-secondary">
-            Tyto údaje použijeme na daňový doklad. Vyplnění je povinné pro pokračování k platbě.
+            {t("choosePlanModal.billingDetailsHint")}
           </p>
           <div className="mt-4">
             <OrgBillingFields
@@ -847,14 +856,14 @@ function ChoosePlanModal({ preselect, onClose }: ChoosePlanModalProps) {
             disabled={submitting}
             className="inline-flex h-10 items-center justify-center rounded-md bg-transparent px-4 text-sm font-medium text-text-secondary hover:text-text-primary disabled:opacity-50"
           >
-            Zrušit
+            {t("choosePlanModal.cancelCta")}
           </button>
           <button
             type="submit"
             disabled={!selected || submitting || !recurringConsent || !isBillingFormValid(billing)}
             className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {submitting ? "Přesměrování…" : "Pokračovat na platbu"}
+            {submitting ? t("choosePlanModal.submitting") : t("choosePlanModal.submitCta")}
           </button>
         </div>
       </form>

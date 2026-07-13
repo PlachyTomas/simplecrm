@@ -5,7 +5,7 @@ import {
   type CreditNoteLineDraft,
   useIssueCreditNote,
 } from "@/admin/useAdminInvoices";
-import { formatCzkMinor } from "@/components/billing/format";
+import { formatMoneyMinor } from "@/lib/format";
 
 interface CreditNoteModalProps {
   parent: AdminInvoiceDetail;
@@ -162,9 +162,11 @@ export function CreditNoteModal({ parent, onClose, onIssued }: CreditNoteModalPr
 
           <p className="rounded-md border border-border bg-bg px-3 py-2 text-sm">
             Dobropis celkem:{" "}
-            <span className="font-medium tabular-nums">{formatCzkMinor(creditTotalMinor)}</span>{" "}
+            <span className="font-medium tabular-nums">
+              {formatMoneyMinor(creditTotalMinor, "CZK", "cs-CZ")}
+            </span>{" "}
             <span className="text-text-tertiary">
-              (z původních {formatCzkMinor(-Math.abs(parent.subtotal_minor))})
+              (z původních {formatMoneyMinor(-Math.abs(parent.subtotal_minor), "CZK", "cs-CZ")})
             </span>
           </p>
         </div>

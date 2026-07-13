@@ -6,7 +6,6 @@ import { InvoiceDetailsCard } from "@/app/settings/InvoiceDetailsCard";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
-import { formatCzkMinor } from "@/components/billing/format";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
 import {
   billingErrorCode,
@@ -15,7 +14,7 @@ import {
   useSeatChangeInit,
 } from "@/components/billing/usePayments";
 import { ApiError, apiFetch } from "@/lib/api";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatMoneyMinor } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { cn } from "@/lib/utils";
 import type { components } from "@/types/api.generated";
@@ -367,6 +366,7 @@ function LiveSeatCostPreview({
   // price isn't surfaced (trial / enterprise / comp orgs sit outside
   // the published ladder).
   const { t } = useTranslation("settings");
+  const locale = useLocale();
   if (!targetValid) return null;
   if (perUserMinor == null) return null;
   if (planCode !== "monthly" && planCode !== "annual") return null;
@@ -387,7 +387,7 @@ function LiveSeatCostPreview({
       <p className="text-text-secondary">
         {t("organization.livePreview.newCostLabel")}{" "}
         <span className="font-semibold tabular-nums text-text-primary">
-          {formatCzkMinor(newTotal)}
+          {formatMoneyMinor(newTotal, "CZK", locale)}
         </span>{" "}
         / {periodLabel}
         {!unchanged ? (
@@ -395,7 +395,7 @@ function LiveSeatCostPreview({
             {" ("}
             <span className={delta > 0 ? "text-warning" : "text-success"}>
               {delta > 0 ? "+" : "−"}
-              {formatCzkMinor(Math.abs(delta))} / {periodLabel}
+              {formatMoneyMinor(Math.abs(delta), "CZK", locale)} / {periodLabel}
             </span>
             {")"}
           </>
@@ -407,6 +407,7 @@ function LiveSeatCostPreview({
 
 function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
   const { t } = useTranslation("settings");
+  const locale = useLocale();
   const { accessToken } = useAuth();
   const qc = useQueryClient();
 
@@ -473,7 +474,7 @@ function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
   const annualSubtitle =
     annualSavingsMinor > 0
       ? t("organization.billingInterval.annual.subtitleWithSavings", {
-          amount: formatCzkMinor(annualSavingsMinor),
+          amount: formatMoneyMinor(annualSavingsMinor, "CZK", locale),
         })
       : t("organization.billingInterval.annual.subtitleNoSavings");
 

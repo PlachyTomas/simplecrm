@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 
 import { useAdminOrgList } from "@/admin/hooks";
 import { type ManualLineDraft, useIssueManualInvoice } from "@/admin/useAdminInvoices";
-import { formatCzkMinor } from "@/components/billing/format";
+import { formatMoneyMinor } from "@/lib/format";
 
 interface ManualInvoiceModalProps {
   onClose: () => void;
@@ -278,7 +278,9 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
 
           <p className="rounded-md border border-border bg-bg px-3 py-2 text-sm">
             Mezisoučet:{" "}
-            <span className="font-medium tabular-nums">{formatCzkMinor(subtotalMinor)}</span>{" "}
+            <span className="font-medium tabular-nums">
+              {formatMoneyMinor(subtotalMinor, "CZK", "cs-CZ")}
+            </span>{" "}
             <span className="text-text-tertiary">(DPH se dopočítá podle vašeho nastavení DPH)</span>
           </p>
         </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { formatCzkMinor } from "@/components/billing/format";
+import { formatMoneyMinor } from "@/lib/format";
 
 import { CreditNoteModal } from "@/admin/CreditNoteModal";
 import {
@@ -114,7 +114,7 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
         <dt className="text-text-tertiary">Variabilní symbol</dt>
         <dd className="tabular-nums">{inv.variable_symbol}</dd>
         <dt className="text-text-tertiary">Celkem</dt>
-        <dd className="font-medium tabular-nums">{formatCzkMinor(inv.total_minor)}</dd>
+        <dd className="font-medium tabular-nums">{formatMoneyMinor(inv.total_minor, "CZK", "cs-CZ")}</dd>
         <dt className="text-text-tertiary">Email</dt>
         <dd>{inv.customer_email ?? "—"}</dd>
       </dl>
@@ -139,10 +139,10 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
                     {line.quantity} {line.unit_label ?? ""}
                   </td>
                   <td className="py-1 text-right tabular-nums">
-                    {formatCzkMinor(line.unit_price_minor)}
+                    {formatMoneyMinor(line.unit_price_minor, "CZK", "cs-CZ")}
                   </td>
                   <td className="py-1 text-right tabular-nums">
-                    {formatCzkMinor(line.line_total_minor)}
+                    {formatMoneyMinor(line.line_total_minor, "CZK", "cs-CZ")}
                   </td>
                 </tr>
               ))}

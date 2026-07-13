@@ -5,8 +5,8 @@ import { useTranslation } from "react-i18next";
 
 import { billingErrorCode, billingErrorMessage } from "@/components/billing/usePayments";
 import { usePublicPlans } from "@/components/billing/usePublicPlans";
-import { formatCzkMinor } from "@/components/billing/format";
 import { apiFetch } from "@/lib/api";
+import { formatMoneyMinor } from "@/lib/format";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 import { Footer, Nav } from "@/marketing/LandingPage";
@@ -143,9 +143,11 @@ export function ObjednavkaPage() {
                       {PLAN_LABEL[code]}
                     </span>
                     <span className="mt-1 text-xs text-text-secondary">
-                      {formatCzkMinor(
+                      {formatMoneyMinor(
                         plans?.find((p) => p.code === code)?.price_per_user_minor ??
                           FALLBACK_PRICE_MINOR[code],
+                        "CZK",
+                        "cs-CZ",
                       )}{" "}
                       / uživatel / {PLAN_PERIOD[code]}
                     </span>
@@ -214,13 +216,13 @@ export function ObjednavkaPage() {
                 <dt>
                   SimpleCRM — plán {PLAN_LABEL[plan]} · {seats}{" "}
                   {seats === 1 ? "uživatel" : seats <= 4 ? "uživatelé" : "uživatelů"} ×{" "}
-                  {formatCzkMinor(unitMinor)}
+                  {formatMoneyMinor(unitMinor, "CZK", "cs-CZ")}
                 </dt>
-                <dd>{formatCzkMinor(totalMinor)}</dd>
+                <dd>{formatMoneyMinor(totalMinor, "CZK", "cs-CZ")}</dd>
               </div>
               <div className="flex items-center justify-between text-base font-semibold text-text-primary">
                 <dt>Celkem za {PLAN_PERIOD[plan]}</dt>
-                <dd data-testid="order-total">{formatCzkMinor(totalMinor)}</dd>
+                <dd data-testid="order-total">{formatMoneyMinor(totalMinor, "CZK", "cs-CZ")}</dd>
               </div>
               <p className="text-xs text-text-tertiary">Nejsme plátci DPH. Cena je konečná.</p>
             </dl>
@@ -245,7 +247,7 @@ export function ObjednavkaPage() {
             ) : (
               <>
                 <Lock size={16} strokeWidth={1.75} aria-hidden />
-                Zaplatit {formatCzkMinor(totalMinor)}
+                Zaplatit {formatMoneyMinor(totalMinor, "CZK", "cs-CZ")}
               </>
             )}
           </button>

@@ -7,10 +7,10 @@ import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
-import { formatCzkMinor } from "@/components/billing/format";
 import { PriceDisplay } from "@/components/billing/PriceDisplay";
 import { usePublicPlans } from "@/components/billing/usePublicPlans";
 import { ApiError, apiFetch } from "@/lib/api";
+import { formatMoneyMinor } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { queryClient } from "@/lib/queryClient";
 import { testIds } from "@/lib/testids";
@@ -318,6 +318,7 @@ function SeatsStep({
   planCode: PlanCode;
 }) {
   const { t } = useTranslation("onboarding");
+  const locale = useLocale();
   const plans = usePublicPlans();
   const monthlyPlan = useMemo(() => plans.data?.find((p) => p.code === "monthly"), [plans.data]);
   const annualPlan = useMemo(() => plans.data?.find((p) => p.code === "annual"), [plans.data]);
@@ -372,7 +373,7 @@ function SeatsStep({
             {t("createOrg.seatsPhrase", { count: seatCount })}{" "}
             {t("createOrg.seatsStep.billingWouldTotal")}{" "}
             <span className="font-semibold tabular-nums text-text-primary">
-              {formatCzkMinor(previewMinor)}
+              {formatMoneyMinor(previewMinor, "CZK", locale)}
             </span>{" "}
             / {previewSuffix}.
           </p>
@@ -500,6 +501,7 @@ function BillingPlanCard({
   savingsMinor,
 }: BillingPlanCardProps) {
   const { t } = useTranslation("onboarding");
+  const locale = useLocale();
   const totalMinor = priceMinor != null ? priceMinor * seatCount : null;
   return (
     <div
@@ -541,7 +543,7 @@ function BillingPlanCard({
         >
           {t("createOrg.seatsPhrase", { count: seatCount })} {t("createOrg.planCard.weInvoice")}{" "}
           <span className="font-semibold tabular-nums text-text-primary">
-            {formatCzkMinor(totalMinor)}
+            {formatMoneyMinor(totalMinor, "CZK", locale)}
           </span>{" "}
           / {per}.
         </p>
@@ -553,7 +555,9 @@ function BillingPlanCard({
           aria-live="polite"
         >
           {t("createOrg.planCard.savingsPrefix")}{" "}
-          <span className="font-semibold tabular-nums">{formatCzkMinor(savingsMinor)}</span>{" "}
+          <span className="font-semibold tabular-nums">
+            {formatMoneyMinor(savingsMinor, "CZK", locale)}
+          </span>{" "}
           {t("createOrg.planCard.savingsSuffix")}
         </p>
       ) : null}
