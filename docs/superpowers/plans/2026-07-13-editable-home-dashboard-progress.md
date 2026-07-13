@@ -11,15 +11,20 @@
 - [x] `23ca69c` AddDealModal: always-visible "+ Nová firma" toggle (clears companyId on open — conflict fix), key `addDealModal.newCompanyToggle`.
 - [x] `298fdca` regenerated `api.generated.ts` (home-dashboard endpoints, date_preset).
 
+- [x] `6aae7ab` phase 2: DashboardPage rework (grid + picker + quick actions incl. EventFormModal deal picker for unbound create, per-widget date-preset popover, mobile reorder) + orchestrator cleanups (onConfigClick threaded through WidgetByType/renderers instead of the positional gear overlay; InviteTeammatesCard mt-8 dropped with the [&>section] hack). FE checks after: tsc OK, vitest 251 pass, i18n parity OK.
+
 ## In flight
 
-- [ ] **Phase 2 agent (opus)**: DashboardPage rework per spec §3 — useHomeDashboard hook trio (key `["home","dashboard-config"]`), homeWidgetCatalog (gating: invite → admin/can_invite; velocity/leaderboard/team analytics → admin/manager/org-flag), HomeWidgetByType (kpi_* → KpiCard, action_* → QuickActionTile, invite wrapper, velocity port, report types → WidgetByType with synthesized `{dateRange:{preset: config.date_preset ?? 'last_30_days'}}`), quick-action flows (AddDealModal/AddCompanyModal/AddContactModal/EventFormModal), **EventFormModal gains searchable deal picker when no dealId**, per-widget date-preset config popover, mobile via MobileWidgetList persisting mobileOrder, i18n dashboard+deals ns, vitest. If the session died mid-agent: `git status` shows its uncommitted output; if absent/partial, relaunch one opus agent with spec §3 + the module API summary above.
+- [ ] **Playwright verification agent** (opus, shared browser): desktop edit cycle, mobile 390px, quick actions, AddDealModal toggle, both themes, reports regression, console; instructed to reset eva's layout to default at the end. Screenshots in session scratchpad.
 
-## Remaining after phase 2
+## Remaining
 
-- [ ] Review phase-2 diff (orchestrator), full FE checks (npx vitest run, npx tsc -b --noEmit, pnpm i18n:check), commit.
-- [ ] Playwright verification, ONE agent (shared browser): desktop edit cycle (picker add, drag, resize, remove, save, reload persists), 390px mobile (stack order, reorder, bottom-sheet picker), quick actions incl. EventFormModal deal picker, AddDealModal "+ Nová firma" (ARES + manual), both themes, console clean (React Router future-flag warnings + favicon 404 = known noise). Screenshots → scratchpad, never repo.
-- [ ] Fix findings, re-verify, final summary. Merge decision is owner's (finishing-a-development-branch).
+- [ ] Fix verification findings, re-verify, final summary. Merge decision is owner's (finishing-a-development-branch).
+
+## Known accepted trade-offs (from phase-2 agent)
+
+- EventFormModal deal picker searches the latest 100 deals client-side (GET /deals has no search param yet).
+- Date-preset gear is edit-mode-only, saved with Uložit (no view-mode immediate PUT).
 
 ## Env notes
 
