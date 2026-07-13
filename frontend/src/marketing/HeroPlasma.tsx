@@ -11,12 +11,14 @@ function envNum(raw: string | undefined, fallback: number): number {
 // Splash behaviour is env-tunable (Vite bakes VITE_* in at build time); every
 // knob defaults to the locked design when its variable is unset.
 const CONFIG = {
-  speed: envNum(import.meta.env.VITE_HERO_SPEED, 1),
+  // "Seek" tuning (2026-07-13): faster, smaller, denser cores so the blobs
+  // read as searching rather than ambient fog. Loops land at ~8-12s.
+  speed: envNum(import.meta.env.VITE_HERO_SPEED, 3),
   erraticity: envNum(import.meta.env.VITE_HERO_ERRATICITY, 1),
   opacity: envNum(import.meta.env.VITE_HERO_OPACITY, 1),
   count: Math.max(0, Math.min(24, Math.round(envNum(import.meta.env.VITE_HERO_COUNT, 6)))),
-  blur: envNum(import.meta.env.VITE_HERO_BLUR, 44),
-  size: envNum(import.meta.env.VITE_HERO_SIZE, 1),
+  blur: envNum(import.meta.env.VITE_HERO_BLUR, 26),
+  size: envNum(import.meta.env.VITE_HERO_SIZE, 0.5),
 };
 
 // Base flock: positions are %, sizes rem, durations/delays seconds. erraticity
