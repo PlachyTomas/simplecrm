@@ -509,14 +509,16 @@ Always respect `prefers-reduced-motion: reduce` — `tokens.css` already forces 
 
 ---
 
-## 11. Czech language and copy voice
+## 11. Language, i18n catalogs, and copy voice
 
-- Tone: confident, warm, slightly playful. Never corporate-stiff, never cutesy.
-- Use **vykání** ("Vaše firmy", not "Tvoje firmy") throughout.
+- **All UI copy lives in i18next catalogs** (`frontend/src/locales/{cs,en}/<ns>.json`), never as literals in components. Add each user-facing string as a key to **both** cs (reference) and en (first translation), then render via `useTranslation("<ns>")` + `t("key")`. New strings must pass `pnpm i18n:check` (cs↔en key parity). Counts use one plural key (`_one/_few/_other` cs, `_one/_other` en) — never hand-rolled ternaries. Enum-label maps become key maps typed against the catalog.
+- **Czech is the reference language** and sets the voice below; **English** is concise, professional SaaS tone (no "please kindly").
+- Tone (cs): confident, warm, slightly playful. Never corporate-stiff, never cutesy.
+- Use **vykání** ("Vaše firmy", not "Tvoje firmy") throughout the Czech copy.
 - Button verbs are imperative: "Uložit", "Přidat firmu", "Označit jako vyhráno" — not "Uložení".
 - Errors are human, not system-voice: "IČO {…} nebylo v ARES nalezeno. Zkontrolujte zadání nebo pokračujte ručně." — not "Error: Entity not found (404)."
-- Numbers/currency/dates via `Intl` with the org's locale/currency; never hand-format.
-- Don't mix Czech and English in the UI. "Dashboard" is an accepted loan word; "Sign in" is not — use "Přihlásit se".
+- Numbers/currency/dates via `@/lib/format` (`formatMoney`/`formatDate`/…) with the locale from `useLocale()` (follows the active UI language); never hand-format, never hardcode `"cs-CZ"` or a literal `Kč`.
+- Don't mix languages within one locale's UI. "Dashboard" is an accepted Czech loan word; "Sign in" is not — the cs catalog uses "Přihlásit se". Brand words stay untranslated in both: SimpleCRM, Pipeline, QR Platba, ISDOC, ARES, IČO/DIČ.
 
 ---
 

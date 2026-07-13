@@ -108,12 +108,6 @@ def formatters(
     return fmt_money, fmt_qty, fmt_date
 
 
-# Backwards-compatible cs-only formatters. The invoice mailer still imports
-# these; once it migrates to `formatters("cs"|"en")` (i18n Task 7) they can be
-# removed. Kept as thin aliases so there is a single formatting implementation.
-_fmt_money_cs, _fmt_qty_cs, _fmt_date_cs = formatters("cs")
-
-
 # --------------------------------------------------------------------------- #
 # Invoice-template labels
 # --------------------------------------------------------------------------- #
