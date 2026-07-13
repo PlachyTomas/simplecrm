@@ -106,6 +106,7 @@
     "companySearchPlaceholder": "Start typing a company name…",
     "noCompanyMatch": "No company matches the search.",
     "createCompanyButton": "Create company “{{name}}”",
+    "newCompanyToggle": "New company",
     "newCompanyLabel": "New company",
     "hide": "Hide",
     "icoLabel": "Company ID (IČO)",

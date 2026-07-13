@@ -413,6 +413,23 @@ export function AddDealModal({
                 className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
                 autoComplete="off"
               />
+              {!showNewCompany ? (
+                <button
+                  type="button"
+                  data-testid={testIds.deals.addModal.newCompanyToggle}
+                  onClick={() => {
+                    setShowNewCompany(true);
+                    // Opening the subform always wins over a previously
+                    // selected company — clear it so hasCompany/submit
+                    // resolve through newCompanyReady, not a stale pick.
+                    setForm((prev) => ({ ...prev, companyId: "" }));
+                    setNewCompany({ ...EMPTY_NEW_COMPANY, name: companySearch.trim() });
+                  }}
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-accent hover:text-accent-hover"
+                >
+                  <Plus size={12} strokeWidth={1.75} /> {t("addDealModal.newCompanyToggle")}
+                </button>
+              ) : null}
               {companySearch && companies.length > 0 ? (
                 <ul className="mt-2 max-h-40 overflow-y-auto rounded-md border border-border bg-surface">
                   {companies.map((company) => (

@@ -108,6 +108,7 @@
     "companySearchPlaceholder": "Začněte psát název firmy…",
     "noCompanyMatch": "Žádná firma neodpovídá hledání.",
     "createCompanyButton": "Vytvořit firmu „{{name}}\"",
+    "newCompanyToggle": "Nová firma",
     "newCompanyLabel": "Nová firma",
     "hide": "Skrýt",
     "icoLabel": "IČO",
