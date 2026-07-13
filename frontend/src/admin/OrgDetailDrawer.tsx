@@ -1,5 +1,7 @@
+import type { ParseKeys, TFunction } from "i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -16,24 +18,41 @@ import { formatDate, formatMoneyMinor } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { cn } from "@/lib/utils";
 
-function statusPillSpec(sub: AdminSubscriptionOut): { label: string; className: string } {
+const ORG_DETAIL_STATUS_KEY: Record<AdminSubscriptionOut["status"], ParseKeys<"admin">> = {
+  trialing: "orgDetail.status.trialing",
+  pending_activation: "orgDetail.status.pendingActivation",
+  active: "orgDetail.status.active",
+  past_due: "orgDetail.status.pastDue",
+  canceled: "orgDetail.status.canceled",
+};
+
+function statusPillSpec(
+  sub: AdminSubscriptionOut,
+  t: TFunction<"admin">,
+): { label: string; className: string } {
   if (sub.is_comp) {
-    return { label: "Komplementární", className: "bg-info-subtle text-info" };
+    return { label: t("orgDetail.status.complementary"), className: "bg-info-subtle text-info" };
   }
   if (sub.plan?.code === "enterprise" && sub.status === "active") {
-    return { label: "Aktivní · Enterprise", className: "bg-info-subtle text-info" };
+    return { label: t("orgDetail.status.activeEnterprise"), className: "bg-info-subtle text-info" };
   }
   switch (sub.status) {
     case "trialing":
-      return { label: "Zkušební verze", className: "bg-info-subtle text-info" };
+      return { label: t(ORG_DETAIL_STATUS_KEY.trialing), className: "bg-info-subtle text-info" };
     case "pending_activation":
-      return { label: "Čeká na platbu", className: "bg-warning-subtle text-warning" };
+      return {
+        label: t(ORG_DETAIL_STATUS_KEY.pending_activation),
+        className: "bg-warning-subtle text-warning",
+      };
     case "active":
-      return { label: "Aktivní", className: "bg-success-subtle text-success" };
+      return { label: t(ORG_DETAIL_STATUS_KEY.active), className: "bg-success-subtle text-success" };
     case "past_due":
-      return { label: "Po splatnosti", className: "bg-warning-subtle text-warning" };
+      return {
+        label: t(ORG_DETAIL_STATUS_KEY.past_due),
+        className: "bg-warning-subtle text-warning",
+      };
     case "canceled":
-      return { label: "Zrušeno", className: "bg-danger-subtle text-danger" };
+      return { label: t(ORG_DETAIL_STATUS_KEY.canceled), className: "bg-danger-subtle text-danger" };
     default:
       return { label: sub.status, className: "bg-surface-overlay text-text-tertiary" };
   }
@@ -49,6 +68,7 @@ interface OrgDetailDrawerProps {
 type ActiveModal = "activate" | "set-comp" | "set-enterprise" | "extend-trial" | "cancel" | null;
 
 export function OrgDetailDrawer({ orgId, userCount }: OrgDetailDrawerProps) {
+  const { t } = useTranslation("admin");
   const locale = useLocale();
   const subQuery = useAdminOrgSubscription(orgId);
   const sub = subQuery.data;
@@ -63,7 +83,7 @@ export function OrgDetailDrawer({ orgId, userCount }: OrgDetailDrawerProps) {
   if (subQuery.isPending) {
     return (
       <section className="rounded-lg border border-border bg-surface p-6 text-sm text-text-tertiary">
-        Načítání detailu…
+        {t("orgDetail.loading")}
       </section>
     );
   }
@@ -74,12 +94,12 @@ export function OrgDetailDrawer({ orgId, userCount }: OrgDetailDrawerProps) {
         className="rounded-lg border border-border bg-surface p-6 text-sm text-danger"
         role="alert"
       >
-        Načítání detailu se nezdařilo.
+        {t("orgDetail.loadError")}
       </section>
     );
   }
 
-  const pill = statusPillSpec(sub);
+  const pill = statusPillSpec(sub, t);
 
   return (
     <section className="space-y-6">
@@ -98,28 +118,38 @@ export function OrgDetailDrawer({ orgId, userCount }: OrgDetailDrawerProps) {
 
         <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
           <div>
-            <dt className="text-xs uppercase tracking-wider text-text-tertiary">Plán</dt>
+            <dt className="text-xs uppercase tracking-wider text-text-tertiary">
+              {t("orgDetail.labels.plan")}
+            </dt>
             <dd className="text-text-primary">{sub.plan?.code ?? "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wider text-text-tertiary">Stav</dt>
+            <dt className="text-xs uppercase tracking-wider text-text-tertiary">
+              {t("orgDetail.labels.status")}
+            </dt>
             <dd className="text-text-primary">{sub.status}</dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wider text-text-tertiary">Začátek</dt>
+            <dt className="text-xs uppercase tracking-wider text-text-tertiary">
+              {t("orgDetail.labels.start")}
+            </dt>
             <dd className="text-text-primary">
               {formatDate(sub.started_at, locale, { dateStyle: "long" })}
             </dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wider text-text-tertiary">Konec období</dt>
+            <dt className="text-xs uppercase tracking-wider text-text-tertiary">
+              {t("orgDetail.labels.periodEnd")}
+            </dt>
             <dd className="text-text-primary">
               {formatDate(sub.current_period_ends_at, locale, { dateStyle: "long" })}
             </dd>
           </div>
           {sub.canceled_at ? (
             <div>
-              <dt className="text-xs uppercase tracking-wider text-text-tertiary">Zrušeno</dt>
+              <dt className="text-xs uppercase tracking-wider text-text-tertiary">
+                {t("orgDetail.labels.canceled")}
+              </dt>
               <dd className="text-text-primary">
                 {formatDate(sub.canceled_at, locale, { dateStyle: "long" })}
               </dd>
@@ -128,10 +158,11 @@ export function OrgDetailDrawer({ orgId, userCount }: OrgDetailDrawerProps) {
           {sub.effective_price_per_user_minor != null ? (
             <div>
               <dt className="text-xs uppercase tracking-wider text-text-tertiary">
-                Efektivní cena
+                {t("orgDetail.labels.effectivePrice")}
               </dt>
               <dd className="text-text-primary">
-                {formatMoneyMinor(sub.effective_price_per_user_minor, "CZK", locale)} / uživatel
+                {formatMoneyMinor(sub.effective_price_per_user_minor, "CZK", locale)}{" "}
+                {t("orgDetail.labels.perUser")}
               </dd>
             </div>
           ) : null}
@@ -139,33 +170,35 @@ export function OrgDetailDrawer({ orgId, userCount }: OrgDetailDrawerProps) {
 
         {sub.is_comp && sub.comp_reason ? (
           <p className="mt-4 rounded-md border border-border-subtle bg-surface-overlay p-3 text-sm text-text-secondary">
-            <span className="font-medium text-text-primary">Důvod komplimentu: </span>
+            <span className="font-medium text-text-primary">
+              {t("orgDetail.labels.compReasonPrefix")}
+            </span>
             {sub.comp_reason}
           </p>
         ) : null}
 
         {sub.notes ? (
           <p className="mt-4 rounded-md border border-border-subtle bg-surface-overlay p-3 text-sm text-text-secondary">
-            <span className="font-medium text-text-primary">Poznámky: </span>
+            <span className="font-medium text-text-primary">{t("orgDetail.labels.notesPrefix")}</span>
             {sub.notes}
           </p>
         ) : null}
 
         <div className="mt-6 flex flex-wrap gap-2">
           <ActionButton onClick={() => setActiveModal("activate")}>
-            Aktivovat předplatné
+            {t("orgDetail.actions.activate")}
           </ActionButton>
           <ActionButton onClick={() => setActiveModal("set-comp")}>
-            Nastavit jako komplementární
+            {t("orgDetail.actions.setComp")}
           </ActionButton>
           <ActionButton onClick={() => setActiveModal("set-enterprise")}>
-            Nastavit Enterprise cenu
+            {t("orgDetail.actions.setEnterprise")}
           </ActionButton>
           <ActionButton onClick={() => setActiveModal("extend-trial")}>
-            Prodloužit zkušební dobu
+            {t("orgDetail.actions.extendTrial")}
           </ActionButton>
           <ActionButton onClick={() => setActiveModal("cancel")} variant="danger">
-            Zrušit předplatné
+            {t("orgDetail.actions.cancel")}
           </ActionButton>
         </div>
       </div>
@@ -237,6 +270,7 @@ interface ModalShellProps {
 }
 
 function ModalShell({ title, onClose, children }: ModalShellProps) {
+  const { t } = useTranslation("admin");
   return (
     <div
       role="dialog"
@@ -254,7 +288,7 @@ function ModalShell({ title, onClose, children }: ModalShellProps) {
             type="button"
             onClick={onClose}
             className="text-sm text-text-tertiary hover:text-text-primary"
-            aria-label="Zavřít"
+            aria-label={t("modalShell.close")}
           >
             ✕
           </button>
@@ -274,9 +308,10 @@ function useInvalidateOrgDetail(orgId: string) {
   };
 }
 
-// ---------- Aktivovat předplatné ----------
+// ---------- Activate subscription ----------
 
 function ActivateModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
+  const { t } = useTranslation("admin");
   const { accessToken } = useAuth();
   const invalidate = useInvalidateOrgDetail(orgId);
   const [planCode, setPlanCode] = useState<"monthly" | "annual" | "enterprise">("monthly");
@@ -302,8 +337,8 @@ function ActivateModal({ orgId, onClose }: { orgId: string; onClose: () => void 
     onError: (err) => {
       setError(
         err instanceof ApiError
-          ? `Aktivace selhala: ${JSON.stringify(err.body)}`
-          : "Aktivace selhala. Zkuste to prosím znovu.",
+          ? t("orgDetail.activateModal.errorWithDetail", { detail: JSON.stringify(err.body) })
+          : t("orgDetail.activateModal.errorGeneric"),
       );
     },
   });
@@ -311,7 +346,7 @@ function ActivateModal({ orgId, onClose }: { orgId: string; onClose: () => void 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (planCode === "enterprise" && !overrideKc) {
-      setError("Pro Enterprise plán je vyžadována cena za uživatele.");
+      setError(t("orgDetail.activateModal.errorEnterprisePriceRequired"));
       return;
     }
     setError(null);
@@ -319,24 +354,26 @@ function ActivateModal({ orgId, onClose }: { orgId: string; onClose: () => void 
   }
 
   return (
-    <ModalShell title="Aktivovat předplatné" onClose={onClose}>
+    <ModalShell title={t("orgDetail.activateModal.title")} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-4">
         <label className="block text-sm font-medium">
-          Plán
+          {t("orgDetail.activateModal.planLabel")}
           <select
             value={planCode}
             onChange={(e) => setPlanCode(e.target.value as typeof planCode)}
             className="mt-1 block h-10 w-full rounded-md border border-border bg-bg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
           >
-            <option value="monthly">Měsíční</option>
-            <option value="annual">Roční</option>
-            <option value="enterprise">Enterprise</option>
+            <option value="monthly">{t("orgDetail.activateModal.planOptions.monthly")}</option>
+            <option value="annual">{t("orgDetail.activateModal.planOptions.annual")}</option>
+            <option value="enterprise">{t("orgDetail.activateModal.planOptions.enterprise")}</option>
           </select>
         </label>
         <label className="block text-sm font-medium">
-          Cena za uživatele (Kč bez DPH){" "}
+          {t("orgDetail.activateModal.priceLabel")}{" "}
           <span className="text-text-tertiary">
-            {planCode === "enterprise" ? "(povinné)" : "(volitelné)"}
+            {planCode === "enterprise"
+              ? t("orgDetail.activateModal.priceHintRequired")
+              : t("orgDetail.activateModal.priceHintOptional")}
           </span>
           <input
             type="number"
@@ -347,9 +384,11 @@ function ActivateModal({ orgId, onClose }: { orgId: string; onClose: () => void 
           />
         </label>
         <label className="block text-sm font-medium">
-          Délka období (měsíce){" "}
+          {t("orgDetail.activateModal.periodLabel")}{" "}
           <span className="text-text-tertiary">
-            {planCode === "enterprise" ? "(povinné)" : "(volitelné, jinak default plánu)"}
+            {planCode === "enterprise"
+              ? t("orgDetail.activateModal.periodHintRequired")
+              : t("orgDetail.activateModal.periodHintOptional")}
           </span>
           <input
             type="number"
@@ -368,15 +407,20 @@ function ActivateModal({ orgId, onClose }: { orgId: string; onClose: () => void 
             {error}
           </p>
         ) : null}
-        <ModalFooter onCancel={onClose} submitting={mutation.isPending} submitLabel="Aktivovat" />
+        <ModalFooter
+          onCancel={onClose}
+          submitting={mutation.isPending}
+          submitLabel={t("orgDetail.activateModal.submit")}
+        />
       </form>
     </ModalShell>
   );
 }
 
-// ---------- Nastavit komplementární ----------
+// ---------- Set as complimentary ----------
 
 function SetCompModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
+  const { t } = useTranslation("admin");
   const { accessToken } = useAuth();
   const invalidate = useInvalidateOrgDetail(orgId);
   const [reason, setReason] = useState("");
@@ -397,13 +441,13 @@ function SetCompModal({ orgId, onClose }: { orgId: string; onClose: () => void }
       invalidate();
       onClose();
     },
-    onError: () => setError("Změna selhala. Zkuste to prosím znovu."),
+    onError: () => setError(t("orgDetail.setCompModal.errorGeneric")),
   });
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!reason.trim()) {
-      setError("Důvod je povinný.");
+      setError(t("orgDetail.setCompModal.errorReasonRequired"));
       return;
     }
     setError(null);
@@ -411,10 +455,10 @@ function SetCompModal({ orgId, onClose }: { orgId: string; onClose: () => void }
   }
 
   return (
-    <ModalShell title="Nastavit jako komplementární" onClose={onClose}>
+    <ModalShell title={t("orgDetail.setCompModal.title")} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-4">
         <label className="block text-sm font-medium">
-          Důvod
+          {t("orgDetail.setCompModal.reasonLabel")}
           <textarea
             required
             minLength={1}
@@ -422,12 +466,12 @@ function SetCompModal({ orgId, onClose }: { orgId: string; onClose: () => void }
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={3}
-            placeholder="Např. partner / interní použití…"
+            placeholder={t("orgDetail.setCompModal.reasonPlaceholder")}
             className="mt-1 block w-full rounded-md border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
           />
         </label>
         <label className="block text-sm font-medium">
-          Platnost do (volitelné)
+          {t("orgDetail.setCompModal.endsAtLabel")}
           <input
             type="date"
             value={endsAt}
@@ -443,7 +487,11 @@ function SetCompModal({ orgId, onClose }: { orgId: string; onClose: () => void }
             {error}
           </p>
         ) : null}
-        <ModalFooter onCancel={onClose} submitting={mutation.isPending} submitLabel="Nastavit" />
+        <ModalFooter
+          onCancel={onClose}
+          submitting={mutation.isPending}
+          submitLabel={t("orgDetail.setCompModal.submit")}
+        />
       </form>
     </ModalShell>
   );
@@ -460,6 +508,8 @@ function SetEnterpriseModal({
   userCount: number | undefined;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("admin");
+  const locale = useLocale();
   const { accessToken } = useAuth();
   const invalidate = useInvalidateOrgDetail(orgId);
   const [overrideKc, setOverrideKc] = useState<string>("");
@@ -488,17 +538,17 @@ function SetEnterpriseModal({
       invalidate();
       onClose();
     },
-    onError: () => setError("Změna selhala. Zkuste to prosím znovu."),
+    onError: () => setError(t("orgDetail.setEnterpriseModal.errorGeneric")),
   });
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!overrideKc) {
-      setError("Cena za uživatele je povinná.");
+      setError(t("orgDetail.setEnterpriseModal.errorPriceRequired"));
       return;
     }
     if (!periodMonths || Number(periodMonths) < 1) {
-      setError("Délka období musí být alespoň 1 měsíc.");
+      setError(t("orgDetail.setEnterpriseModal.errorPeriodInvalid"));
       return;
     }
     setError(null);
@@ -506,10 +556,10 @@ function SetEnterpriseModal({
   }
 
   return (
-    <ModalShell title="Nastavit Enterprise cenu" onClose={onClose}>
+    <ModalShell title={t("orgDetail.setEnterpriseModal.title")} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-4">
         <label className="block text-sm font-medium">
-          Cena za uživatele (Kč bez DPH)
+          {t("orgDetail.setEnterpriseModal.priceLabel")}
           <input
             type="number"
             min={0}
@@ -520,7 +570,7 @@ function SetEnterpriseModal({
           />
         </label>
         <label className="block text-sm font-medium">
-          Délka období (měsíce)
+          {t("orgDetail.setEnterpriseModal.periodLabel")}
           <input
             type="number"
             min={1}
@@ -532,7 +582,7 @@ function SetEnterpriseModal({
           />
         </label>
         <label className="block text-sm font-medium">
-          Poznámky (volitelné)
+          {t("orgDetail.setEnterpriseModal.notesLabel")}
           <textarea
             value={notes}
             maxLength={2000}
@@ -546,15 +596,15 @@ function SetEnterpriseModal({
             data-testid="enterprise-preview"
             className="rounded-md border border-border-subtle bg-surface-overlay p-3 text-sm text-text-secondary"
           >
-            Měsíční účet:{" "}
+            {t("orgDetail.setEnterpriseModal.monthlyTotalPrefix")}
             <span className="font-semibold text-text-primary">
-              {formatMoneyMinor(previewTotal, "CZK", "cs-CZ")}
-            </span>{" "}
-            / měsíc bez DPH
+              {formatMoneyMinor(previewTotal, "CZK", locale)}
+            </span>
+            {t("orgDetail.setEnterpriseModal.perMonthExVat")}
           </p>
         ) : userCount == null ? (
           <p className="text-xs text-text-tertiary">
-            Náhled celkové ceny zatím není dostupný (počet uživatelů se načítá).
+            {t("orgDetail.setEnterpriseModal.previewUnavailable")}
           </p>
         ) : null}
         {error ? (
@@ -565,13 +615,17 @@ function SetEnterpriseModal({
             {error}
           </p>
         ) : null}
-        <ModalFooter onCancel={onClose} submitting={mutation.isPending} submitLabel="Uložit" />
+        <ModalFooter
+          onCancel={onClose}
+          submitting={mutation.isPending}
+          submitLabel={t("orgDetail.setEnterpriseModal.submit")}
+        />
       </form>
     </ModalShell>
   );
 }
 
-// ---------- Prodloužit zkušební dobu ----------
+// ---------- Extend trial ----------
 
 function ExtendTrialModal({
   orgId,
@@ -582,6 +636,7 @@ function ExtendTrialModal({
   currentEndsAt: string | null | undefined;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("admin");
   const locale = useLocale();
   const { accessToken } = useAuth();
   const invalidate = useInvalidateOrgDetail(orgId);
@@ -608,14 +663,14 @@ function ExtendTrialModal({
       invalidate();
       onClose();
     },
-    onError: () => setError("Prodloužení selhalo. Zkuste to prosím znovu."),
+    onError: () => setError(t("orgDetail.extendTrialModal.errorGeneric")),
   });
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     const n = Number(days);
     if (!Number.isFinite(n) || n < 1 || n > 365) {
-      setError("Počet dní musí být mezi 1 a 365.");
+      setError(t("orgDetail.extendTrialModal.errorDaysRange"));
       return;
     }
     setError(null);
@@ -623,10 +678,10 @@ function ExtendTrialModal({
   }
 
   return (
-    <ModalShell title="Prodloužit zkušební dobu" onClose={onClose}>
+    <ModalShell title={t("orgDetail.extendTrialModal.title")} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-4">
         <label className="block text-sm font-medium">
-          Počet dní
+          {t("orgDetail.extendTrialModal.daysLabel")}
           <input
             type="number"
             min={1}
@@ -642,7 +697,7 @@ function ExtendTrialModal({
             data-testid="extend-preview"
             className="rounded-md border border-border-subtle bg-surface-overlay p-3 text-sm text-text-secondary"
           >
-            Nový konec zkušební doby:{" "}
+            {t("orgDetail.extendTrialModal.newEndPrefix")}
             <span className="font-semibold text-text-primary">{previewEndsAt}</span>
           </p>
         ) : null}
@@ -654,13 +709,17 @@ function ExtendTrialModal({
             {error}
           </p>
         ) : null}
-        <ModalFooter onCancel={onClose} submitting={mutation.isPending} submitLabel="Prodloužit" />
+        <ModalFooter
+          onCancel={onClose}
+          submitting={mutation.isPending}
+          submitLabel={t("orgDetail.extendTrialModal.submit")}
+        />
       </form>
     </ModalShell>
   );
 }
 
-// ---------- Zrušit předplatné ----------
+// ---------- Cancel subscription ----------
 
 function CancelModal({
   orgId,
@@ -671,6 +730,7 @@ function CancelModal({
   orgName: string;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("admin");
   const { accessToken } = useAuth();
   const invalidate = useInvalidateOrgDetail(orgId);
   const [confirmName, setConfirmName] = useState("");
@@ -696,7 +756,7 @@ function CancelModal({
       invalidate();
       onClose();
     },
-    onError: () => setError("Zrušení selhalo. Zkuste to prosím znovu."),
+    onError: () => setError(t("orgDetail.cancelModal.errorGeneric")),
   });
 
   function onSubmit(e: FormEvent) {
@@ -707,10 +767,10 @@ function CancelModal({
   }
 
   return (
-    <ModalShell title="Zrušit předplatné" onClose={onClose}>
+    <ModalShell title={t("orgDetail.cancelModal.title")} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-4">
         <p className="text-sm text-text-secondary">
-          Pro potvrzení napište přesný název plánu:{" "}
+          {t("orgDetail.cancelModal.confirmPrefix")}
           <span className="font-medium text-text-primary">{orgName}</span>
         </p>
         <input
@@ -721,7 +781,7 @@ function CancelModal({
           className="block h-10 w-full rounded-md border border-border bg-bg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-danger"
         />
         <label className="block text-sm font-medium">
-          Účinnost (volitelné)
+          {t("orgDetail.cancelModal.effectiveAtLabel")}
           <input
             type="date"
             value={effectiveAt}
@@ -744,14 +804,16 @@ function CancelModal({
             disabled={mutation.isPending}
             className="inline-flex h-10 items-center justify-center rounded-md bg-transparent px-4 text-sm font-medium text-text-secondary hover:text-text-primary disabled:opacity-50"
           >
-            Zrušit
+            {t("orgDetail.cancelModal.cancel")}
           </button>
           <button
             type="submit"
             disabled={!confirmMatches || mutation.isPending}
             className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-semibold text-white hover:bg-danger/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {mutation.isPending ? "Rušíme…" : "Zrušit předplatné"}
+            {mutation.isPending
+              ? t("orgDetail.cancelModal.submitting")
+              : t("orgDetail.cancelModal.submit")}
           </button>
         </div>
       </form>
@@ -768,6 +830,7 @@ function ModalFooter({
   submitting: boolean;
   submitLabel: string;
 }) {
+  const { t } = useTranslation("admin");
   return (
     <div className="flex justify-end gap-2">
       <button
@@ -776,46 +839,39 @@ function ModalFooter({
         disabled={submitting}
         className="inline-flex h-10 items-center justify-center rounded-md bg-transparent px-4 text-sm font-medium text-text-secondary hover:text-text-primary disabled:opacity-50"
       >
-        Zrušit
+        {t("orgDetail.modalFooter.cancel")}
       </button>
       <button
         type="submit"
         disabled={submitting}
         className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {submitting ? "Odesíláme…" : submitLabel}
+        {submitting ? t("orgDetail.modalFooter.submitting") : submitLabel}
       </button>
     </div>
   );
 }
 
-function roleLabel(role: string): string {
-  switch (role) {
-    case "admin":
-      return "Admin";
-    case "manager":
-      return "Manažer";
-    case "salesperson":
-      return "Obchodník";
-    default:
-      return role;
-  }
-}
+const ROLE_LABEL_KEY: Record<string, ParseKeys<"admin">> = {
+  admin: "orgDetail.role.admin",
+  manager: "orgDetail.role.manager",
+  salesperson: "orgDetail.role.salesperson",
+};
 
 function MembersList({ orgId }: { orgId: string }) {
+  const { t } = useTranslation("admin");
   const { data, isPending } = useAdminOrgUsers(orgId);
   const items = data?.items ?? [];
   return (
     <div className="rounded-lg border border-border bg-surface p-6">
-      <h3 className="text-base font-semibold">Členové organizace</h3>
+      <h3 className="text-base font-semibold">{t("orgDetail.membersList.title")}</h3>
       <p className="mt-1 text-xs text-text-tertiary">
-        Přepnutí (impersonace) je auditováno v server logu. Po obnovení stránky se vrátíte do své
-        vlastní super-admin relace.
+        {t("orgDetail.membersList.impersonationNote")}
       </p>
       {isPending ? (
-        <p className="mt-3 text-sm text-text-tertiary">Načítání…</p>
+        <p className="mt-3 text-sm text-text-tertiary">{t("orgDetail.membersList.loading")}</p>
       ) : items.length === 0 ? (
-        <p className="mt-3 text-sm text-text-tertiary">Žádní členové.</p>
+        <p className="mt-3 text-sm text-text-tertiary">{t("orgDetail.membersList.empty")}</p>
       ) : (
         <ul className="mt-4 space-y-2">
           {items.map((u) => (
@@ -828,6 +884,7 @@ function MembersList({ orgId }: { orgId: string }) {
 }
 
 function MemberRow({ user }: { user: AdminOrgUserRow }) {
+  const { t } = useTranslation("admin");
   const { accessToken, setAccessToken } = useAuth();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
@@ -849,10 +906,12 @@ function MemberRow({ user }: { user: AdminOrgUserRow }) {
       setAccessToken(res.access_token);
       navigate("/app");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Impersonace selhala.");
+      setError(err instanceof Error ? err.message : t("orgDetail.membersList.impersonateError"));
       setBusy(false);
     }
   }
+
+  const roleKey = ROLE_LABEL_KEY[user.role];
 
   return (
     <li className="flex flex-wrap items-center gap-3 rounded-md border border-border-subtle bg-surface-overlay px-3 py-2 text-sm">
@@ -862,13 +921,15 @@ function MemberRow({ user }: { user: AdminOrgUserRow }) {
           <span className="text-xs text-text-tertiary">{user.email}</span>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs text-text-tertiary">
-          <span>{roleLabel(user.role)}</span>
+          <span>{roleKey ? t(roleKey) : user.role}</span>
           {user.is_super_admin ? (
-            <span className="rounded-full bg-info-subtle px-2 py-0.5 text-info">super-admin</span>
+            <span className="rounded-full bg-info-subtle px-2 py-0.5 text-info">
+              {t("orgDetail.membersList.superAdminBadge")}
+            </span>
           ) : null}
           {!user.is_active ? (
             <span className="rounded-full bg-surface px-2 py-0.5 text-text-tertiary">
-              neaktivní
+              {t("orgDetail.membersList.inactiveBadge")}
             </span>
           ) : null}
           {error ? (
@@ -884,23 +945,24 @@ function MemberRow({ user }: { user: AdminOrgUserRow }) {
         disabled={disabled || busy}
         className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-surface px-3 text-xs font-medium text-text-primary hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {busy ? "Přepínám…" : "Přepnout na uživatele"}
+        {busy ? t("orgDetail.membersList.impersonating") : t("orgDetail.membersList.impersonateButton")}
       </button>
     </li>
   );
 }
 
 function ActivityTimeline({ orgId }: { orgId: string }) {
+  const { t } = useTranslation("admin");
   const locale = useLocale();
   const { data, isPending } = useAdminOrgActivity(orgId);
   const items = data?.items ?? [];
   return (
     <div className="rounded-lg border border-border bg-surface p-6">
-      <h3 className="text-base font-semibold">Historie změn</h3>
+      <h3 className="text-base font-semibold">{t("orgDetail.activityTimeline.title")}</h3>
       {isPending ? (
-        <p className="mt-3 text-sm text-text-tertiary">Načítání…</p>
+        <p className="mt-3 text-sm text-text-tertiary">{t("orgDetail.activityTimeline.loading")}</p>
       ) : items.length === 0 ? (
-        <p className="mt-3 text-sm text-text-tertiary">Žádná aktivita dosud nezaznamenána.</p>
+        <p className="mt-3 text-sm text-text-tertiary">{t("orgDetail.activityTimeline.empty")}</p>
       ) : (
         <ol className="mt-4 space-y-3">
           {items.map((row) => {
@@ -914,7 +976,9 @@ function ActivityTimeline({ orgId }: { orgId: string }) {
                 <div className="flex flex-wrap items-baseline gap-2 text-sm">
                   <span className="font-medium text-text-primary">{action}</span>
                   <span className="text-text-tertiary">·</span>
-                  <span className="text-text-secondary">{row.actor?.name ?? "Systém"}</span>
+                  <span className="text-text-secondary">
+                    {row.actor?.name ?? t("orgDetail.activityTimeline.systemActor")}
+                  </span>
                   <span className="text-text-tertiary">·</span>
                   <span className="text-text-tertiary">
                     {formatDate(row.created_at, locale, {

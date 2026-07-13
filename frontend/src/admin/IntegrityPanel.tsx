@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "@/auth/useAuth";
 import { ApiError, apiFetch } from "@/lib/api";
+import { formatDate } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/useLocale";
 
 export interface IntegrityFailure {
   invoice_id: string;
@@ -54,6 +57,8 @@ function useRunIntegrityCheck() {
 }
 
 export function IntegrityPanel() {
+  const { t } = useTranslation("admin");
+  const locale = useLocale();
   const lastRun = useLatestIntegrityRun();
   const runCheck = useRunIntegrityCheck();
 
@@ -64,11 +69,8 @@ export function IntegrityPanel() {
     <section className="rounded-lg border border-border bg-surface p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-base font-semibold">Integrita archivu</h2>
-          <p className="text-xs text-text-tertiary">
-            Hash-verifikace každého uloženého PDF a ISDOC. Spouští se týdně automaticky; tady ji
-            můžete spustit ručně.
-          </p>
+          <h2 className="text-base font-semibold">{t("integrityPanel.title")}</h2>
+          <p className="text-xs text-text-tertiary">{t("integrityPanel.description")}</p>
         </div>
         <button
           type="button"
@@ -76,31 +78,35 @@ export function IntegrityPanel() {
           disabled={runCheck.isPending}
           className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
         >
-          {runCheck.isPending ? "Probíhá kontrola…" : "Spustit kontrolu"}
+          {runCheck.isPending ? t("integrityPanel.running") : t("integrityPanel.runButton")}
         </button>
       </div>
 
       {lastRun.isPending ? (
-        <p className="mt-4 text-sm text-text-tertiary">Načítání…</p>
+        <p className="mt-4 text-sm text-text-tertiary">{t("integrityPanel.loading")}</p>
       ) : noRunYet ? (
-        <p className="mt-4 text-sm text-text-secondary">
-          Kontrola dosud nebyla spuštěna. Klikněte na „Spustit kontrolu“.
-        </p>
+        <p className="mt-4 text-sm text-text-secondary">{t("integrityPanel.noRunYet")}</p>
       ) : data ? (
         <div className="mt-4 space-y-3">
           <div className="grid grid-cols-3 gap-3 text-center">
-            <Stat label="Zkontrolováno" value={data.checked} />
+            <Stat label={t("integrityPanel.stats.checked")} value={data.checked} />
             <Stat
-              label="V pořádku"
+              label={t("integrityPanel.stats.ok")}
               value={data.ok}
               tone={data.ok === data.checked ? "ok" : "neutral"}
             />
-            <Stat label="Selhalo" value={data.failed} tone={data.failed > 0 ? "danger" : "ok"} />
+            <Stat
+              label={t("integrityPanel.stats.failed")}
+              value={data.failed}
+              tone={data.failed > 0 ? "danger" : "ok"}
+            />
           </div>
           {data.created_at ? (
             <p className="text-xs text-text-tertiary">
-              Poslední běh: {formatLocalDateTime(data.created_at)} (run_id:{" "}
-              {data.run_id.slice(0, 8)}…)
+              {t("integrityPanel.lastRun", {
+                date: formatDate(data.created_at, locale, { dateStyle: "short", timeStyle: "short" }),
+                runId: data.run_id.slice(0, 8),
+              })}
             </p>
           ) : null}
           {data.failures.length > 0 ? (
@@ -113,9 +119,7 @@ export function IntegrityPanel() {
               ))}
             </ul>
           ) : (
-            <p className="text-xs text-success">
-              Vše ověřeno. Žádné nesoulady mezi uloženými soubory a hashy v databázi.
-            </p>
+            <p className="text-xs text-success">{t("integrityPanel.allVerified")}</p>
           )}
         </div>
       ) : null}
@@ -138,16 +142,4 @@ function Stat({ label, value, tone = "neutral" }: StatProps) {
       <p className="text-xs text-text-tertiary">{label}</p>
     </div>
   );
-}
-
-function formatLocalDateTime(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("cs-CZ", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }

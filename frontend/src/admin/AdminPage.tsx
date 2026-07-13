@@ -1,5 +1,7 @@
+import type { ParseKeys } from "i18next";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { AdminBillingSettings } from "@/admin/AdminBillingSettings";
@@ -15,14 +17,15 @@ import { cn } from "@/lib/utils";
 
 type AdminTab = "organizations" | "invoices" | "settings";
 
-const TABS: { key: AdminTab; label: string }[] = [
-  { key: "organizations", label: "Organizace" },
-  { key: "invoices", label: "Faktury" },
-  { key: "settings", label: "Nastavení" },
+const TABS: { key: AdminTab; labelKey: ParseKeys<"admin"> }[] = [
+  { key: "organizations", labelKey: "page.tabs.organizations" },
+  { key: "invoices", labelKey: "page.tabs.invoices" },
+  { key: "settings", labelKey: "page.tabs.settings" },
 ];
 
 export function AdminPage() {
-  usePageTitle("Admin");
+  const { t } = useTranslation("admin");
+  usePageTitle(t("page.title"));
   useSyncUserLanguage();
   const [activeTab, setActiveTab] = useState<AdminTab>("organizations");
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
@@ -37,10 +40,8 @@ export function AdminPage() {
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-8">
           <div>
-            <h1 className="text-2xl font-semibold">Admin</h1>
-            <p className="mt-0.5 text-sm text-text-tertiary">
-              Správa organizací, předplatných a fakturačních údajů.
-            </p>
+            <h1 className="text-2xl font-semibold">{t("page.title")}</h1>
+            <p className="mt-0.5 text-sm text-text-tertiary">{t("page.subtitle")}</p>
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
@@ -49,12 +50,12 @@ export function AdminPage() {
               className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary"
             >
               <ArrowLeft size={16} strokeWidth={1.75} />
-              Zpět do aplikace
+              {t("page.backToApp")}
             </Link>
           </div>
         </div>
 
-        <nav aria-label="Sekce admin" className="mx-auto max-w-7xl px-4 md:px-8">
+        <nav aria-label={t("page.sectionsAriaLabel")} className="mx-auto max-w-7xl px-4 md:px-8">
           <ul role="tablist" className="-mb-px flex gap-1">
             {TABS.map((tab) => {
               const isActive = activeTab === tab.key;
@@ -72,7 +73,7 @@ export function AdminPage() {
                         : "border-transparent text-text-secondary hover:text-text-primary",
                     )}
                   >
-                    {tab.label}
+                    {t(tab.labelKey)}
                   </button>
                 </li>
               );
@@ -95,7 +96,7 @@ export function AdminPage() {
               <OrgDetailDrawer orgId={selectedOrgId} userCount={selectedUserCount} />
             ) : (
               <div className="hidden rounded-lg border border-dashed border-border bg-surface p-8 text-center text-sm text-text-tertiary md:block">
-                Vyberte organizaci ze seznamu pro zobrazení detailu.
+                {t("page.selectOrgPrompt")}
               </div>
             )}
           </div>
@@ -111,7 +112,7 @@ export function AdminPage() {
                 />
               ) : (
                 <div className="hidden rounded-lg border border-dashed border-border bg-surface p-8 text-center text-sm text-text-tertiary md:block">
-                  Vyberte fakturu ze seznamu pro zobrazení detailu.
+                  {t("page.selectInvoicePrompt")}
                 </div>
               )}
             </div>

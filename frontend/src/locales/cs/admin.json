@@ -1,7 +1,339 @@
 {
+  "page": {
+    "title": "Admin",
+    "subtitle": "Správa organizací, předplatných a fakturačních údajů.",
+    "backToApp": "Zpět do aplikace",
+    "sectionsAriaLabel": "Sekce admin",
+    "tabs": {
+      "organizations": "Organizace",
+      "invoices": "Faktury",
+      "settings": "Nastavení"
+    },
+    "selectOrgPrompt": "Vyberte organizaci ze seznamu pro zobrazení detailu.",
+    "selectInvoicePrompt": "Vyberte fakturu ze seznamu pro zobrazení detailu."
+  },
+  "modalShell": {
+    "close": "Zavřít"
+  },
+  "orgList": {
+    "columns": {
+      "name": "Název",
+      "plan": "Plán",
+      "status": "Stav",
+      "userCount": "Uživatelé",
+      "endsAt": "Končí",
+      "lastActivity": "Poslední aktivita"
+    },
+    "status": {
+      "complementary": "Komplementární",
+      "trialing": "Zkušební verze",
+      "pendingActivation": "Čeká na platbu",
+      "active": "Aktivní",
+      "pastDue": "Po splatnosti",
+      "canceled": "Zrušeno"
+    },
+    "searchPlaceholder": "Hledat organizaci…",
+    "count_one": "{{count}} organizace",
+    "count_few": "{{count}} organizace",
+    "count_other": "{{count}} organizací",
+    "loading": "Načítání…",
+    "loadError": "Načítání seznamu se nezdařilo.",
+    "empty": "Žádné organizace nevyhovují filtru.",
+    "pageRange": "{{from}}–{{to}} z {{total}}",
+    "noResults": "0 z 0",
+    "prevPage": "Předchozí strana",
+    "nextPage": "Další strana"
+  },
+  "orgDetail": {
+    "loading": "Načítání detailu…",
+    "loadError": "Načítání detailu se nezdařilo.",
+    "labels": {
+      "plan": "Plán",
+      "status": "Stav",
+      "start": "Začátek",
+      "periodEnd": "Konec období",
+      "canceled": "Zrušeno",
+      "effectivePrice": "Efektivní cena",
+      "perUser": "/ uživatel",
+      "compReasonPrefix": "Důvod komplimentu: ",
+      "notesPrefix": "Poznámky: "
+    },
+    "status": {
+      "complementary": "Komplementární",
+      "activeEnterprise": "Aktivní · Enterprise",
+      "trialing": "Zkušební verze",
+      "pendingActivation": "Čeká na platbu",
+      "active": "Aktivní",
+      "pastDue": "Po splatnosti",
+      "canceled": "Zrušeno"
+    },
+    "actions": {
+      "activate": "Aktivovat předplatné",
+      "setComp": "Nastavit jako komplementární",
+      "setEnterprise": "Nastavit Enterprise cenu",
+      "extendTrial": "Prodloužit zkušební dobu",
+      "cancel": "Zrušit předplatné"
+    },
+    "modalFooter": {
+      "cancel": "Zrušit",
+      "submitting": "Odesíláme…"
+    },
+    "activateModal": {
+      "title": "Aktivovat předplatné",
+      "planLabel": "Plán",
+      "planOptions": {
+        "monthly": "Měsíční",
+        "annual": "Roční",
+        "enterprise": "Enterprise"
+      },
+      "priceLabel": "Cena za uživatele (Kč bez DPH)",
+      "priceHintRequired": "(povinné)",
+      "priceHintOptional": "(volitelné)",
+      "periodLabel": "Délka období (měsíce)",
+      "periodHintRequired": "(povinné)",
+      "periodHintOptional": "(volitelné, jinak default plánu)",
+      "errorEnterprisePriceRequired": "Pro Enterprise plán je vyžadována cena za uživatele.",
+      "errorWithDetail": "Aktivace selhala: {{detail}}",
+      "errorGeneric": "Aktivace selhala. Zkuste to prosím znovu.",
+      "submit": "Aktivovat"
+    },
+    "setCompModal": {
+      "title": "Nastavit jako komplementární",
+      "reasonLabel": "Důvod",
+      "reasonPlaceholder": "Např. partner / interní použití…",
+      "endsAtLabel": "Platnost do (volitelné)",
+      "errorReasonRequired": "Důvod je povinný.",
+      "errorGeneric": "Změna selhala. Zkuste to prosím znovu.",
+      "submit": "Nastavit"
+    },
+    "setEnterpriseModal": {
+      "title": "Nastavit Enterprise cenu",
+      "priceLabel": "Cena za uživatele (Kč bez DPH)",
+      "periodLabel": "Délka období (měsíce)",
+      "notesLabel": "Poznámky (volitelné)",
+      "monthlyTotalPrefix": "Měsíční účet: ",
+      "perMonthExVat": " / měsíc bez DPH",
+      "previewUnavailable": "Náhled celkové ceny zatím není dostupný (počet uživatelů se načítá).",
+      "errorPriceRequired": "Cena za uživatele je povinná.",
+      "errorPeriodInvalid": "Délka období musí být alespoň 1 měsíc.",
+      "errorGeneric": "Změna selhala. Zkuste to prosím znovu.",
+      "submit": "Uložit"
+    },
+    "extendTrialModal": {
+      "title": "Prodloužit zkušební dobu",
+      "daysLabel": "Počet dní",
+      "newEndPrefix": "Nový konec zkušební doby: ",
+      "errorDaysRange": "Počet dní musí být mezi 1 a 365.",
+      "errorGeneric": "Prodloužení selhalo. Zkuste to prosím znovu.",
+      "submit": "Prodloužit"
+    },
+    "cancelModal": {
+      "title": "Zrušit předplatné",
+      "confirmPrefix": "Pro potvrzení napište přesný název plánu: ",
+      "effectiveAtLabel": "Účinnost (volitelné)",
+      "errorGeneric": "Zrušení selhalo. Zkuste to prosím znovu.",
+      "cancel": "Zrušit",
+      "submitting": "Rušíme…",
+      "submit": "Zrušit předplatné"
+    },
+    "role": {
+      "admin": "Admin",
+      "manager": "Manažer",
+      "salesperson": "Obchodník"
+    },
+    "membersList": {
+      "title": "Členové organizace",
+      "impersonationNote": "Přepnutí (impersonace) je auditováno v server logu. Po obnovení stránky se vrátíte do své vlastní super-admin relace.",
+      "loading": "Načítání…",
+      "empty": "Žádní členové.",
+      "superAdminBadge": "super-admin",
+      "inactiveBadge": "neaktivní",
+      "impersonateButton": "Přepnout na uživatele",
+      "impersonating": "Přepínám…",
+      "impersonateError": "Impersonace selhala."
+    },
+    "activityTimeline": {
+      "title": "Historie změn",
+      "loading": "Načítání…",
+      "empty": "Žádná aktivita dosud nezaznamenána.",
+      "systemActor": "Systém"
+    }
+  },
+  "integrityPanel": {
+    "title": "Integrita archivu",
+    "description": "Hash-verifikace každého uloženého PDF a ISDOC. Spouští se týdně automaticky; tady ji můžete spustit ručně.",
+    "runButton": "Spustit kontrolu",
+    "running": "Probíhá kontrola…",
+    "loading": "Načítání…",
+    "noRunYet": "Kontrola dosud nebyla spuštěna. Klikněte na „Spustit kontrolu“.",
+    "stats": {
+      "checked": "Zkontrolováno",
+      "ok": "V pořádku",
+      "failed": "Selhalo"
+    },
+    "lastRun": "Poslední běh: {{date}} (run_id: {{runId}}…)",
+    "allVerified": "Vše ověřeno. Žádné nesoulady mezi uloženými soubory a hashy v databázi."
+  },
+  "invoicesList": {
+    "title": "Faktury",
+    "exportCsv": "CSV {{year}}",
+    "exportCsvTitle": "Export {{year}} – CSV",
+    "exportPdfZip": "PDF ZIP {{year}}",
+    "exportFull": "Úplný {{year}}",
+    "downloading": "Stahuji…",
+    "issueManually": "Vystavit ručně",
+    "exportCsvError": "Export CSV selhal.",
+    "exportPdfError": "Export PDFs selhal.",
+    "exportFullError": "Úplný export selhal.",
+    "searchPlaceholder": "Hledat (číslo, zákazník)…",
+    "yearPlaceholder": "Rok",
+    "status": {
+      "draft": "Koncept",
+      "issued": "Vystavena",
+      "paid": "Zaplacena",
+      "overdue": "Po splatnosti",
+      "voided": "Stornována"
+    },
+    "kind": {
+      "invoice": "Faktura",
+      "credit_note": "Dobropis",
+      "proforma": "Proforma"
+    },
+    "columns": {
+      "number": "Číslo",
+      "customer": "Zákazník",
+      "kind": "Druh",
+      "issuedAt": "Vystaveno",
+      "dueAt": "Splatnost",
+      "status": "Stav",
+      "total": "Celkem"
+    },
+    "loading": "Načítání…",
+    "loadError": "Faktury se nepodařilo načíst.",
+    "empty": "Žádné faktury neodpovídají filtru.",
+    "shown": "Zobrazeno {{count}} z {{total}} faktur."
+  },
+  "invoiceDetail": {
+    "loading": "Načítání faktury…",
+    "loadError": "Detail faktury se nepodařilo načíst.",
+    "labels": {
+      "issuedAt": "Vystaveno",
+      "taxableSupplyDate": "DUZP",
+      "dueAt": "Splatnost",
+      "variableSymbol": "Variabilní symbol",
+      "total": "Celkem",
+      "email": "Email"
+    },
+    "status": {
+      "draft": "Koncept",
+      "issued": "Vystavena",
+      "paid": "Zaplacena",
+      "overdue": "Po splatnosti",
+      "voided": "Stornována"
+    },
+    "lineItems": {
+      "title": "Položky",
+      "description": "Popis",
+      "quantity": "Množství",
+      "price": "Cena",
+      "total": "Celkem"
+    },
+    "actions": {
+      "title": "Akce",
+      "markPaid": "Označit jako zaplaceno",
+      "send": "Odeslat",
+      "voidPlaceholder": "Důvod storna…",
+      "void": "Stornovat",
+      "issueCreditNote": "Vystavit dobropis",
+      "markPaidError": "Označení selhalo.",
+      "sendError": "Odeslání selhalo.",
+      "voidError": "Storno selhalo.",
+      "voidReasonRequired": "Důvod storna je povinný (min. 3 znaky)."
+    },
+    "auditLog": {
+      "title": "Audit log",
+      "empty": "Bez záznamů.",
+      "event": {
+        "allocated": "Přiděleno číslo",
+        "issued": "Vystaveno",
+        "pdf_stored": "PDF uloženo",
+        "pdf_verified": "PDF ověřeno",
+        "sent": "Odesláno",
+        "send_failed": "Odeslání selhalo",
+        "paid": "Označeno jako zaplaceno",
+        "voided": "Stornováno",
+        "credit_note_created": "Vystaven dobropis",
+        "export_run": "Spuštěn export",
+        "integrity_failure": "Selhání integrity"
+      }
+    }
+  },
+  "manualInvoiceModal": {
+    "title": "Vystavit fakturu ručně",
+    "description": "Vystaví novou fakturu mimo standardní ComGate flow (refundy, comp orgs, korekce).",
+    "customerLabel": "Zákazník",
+    "customerSearchPlaceholder": "Hledat organizaci…",
+    "noResults": "Žádné výsledky.",
+    "lineItems": {
+      "title": "Položky",
+      "description": "Popis",
+      "quantity": "Množství",
+      "unit": "Jed.",
+      "price": "Cena (Kč)",
+      "remove": "Odebrat",
+      "add": "+ Přidat položku"
+    },
+    "dueAtLabel": "Splatnost (volitelné)",
+    "noteLabel": "Poznámka (volitelné)",
+    "linkSubscription": "Propojit s předplatným zákazníka (po označení jako zaplacené prodlouží období)",
+    "linkSubscriptionHint": "Odškrtněte u refundů, dobropisů a jednorázových oprav.",
+    "subtotalPrefix": "Mezisoučet: ",
+    "vatHint": "(DPH se dopočítá podle vašeho nastavení DPH)",
+    "cancel": "Zrušit",
+    "submit": "Vystavit fakturu",
+    "submitting": "Vystavuji…",
+    "errorCustomerRequired": "Vyberte zákazníka.",
+    "errorDescriptionRequired": "Doplňte popis u všech položek.",
+    "errorGeneric": "Vystavení faktury selhalo."
+  },
+  "creditNoteModal": {
+    "title": "Vystavit dobropis k faktuře {{number}}",
+    "description": "Dobropis odečte částku z původní faktury. Záporné jednotkové ceny jsou předvyplněné.",
+    "lineItems": {
+      "title": "Položky dobropisu",
+      "description": "Popis",
+      "quantity": "Množství",
+      "unit": "Jed.",
+      "price": "Cena (Kč, ≤ 0)"
+    },
+    "descriptionPrefix": "Storno: {{description}}",
+    "reasonLabel": "Důvod dobropisu",
+    "reasonPlaceholder": "např. Refund po reklamaci",
+    "totalPrefix": "Dobropis celkem: ",
+    "originalTotal": "(z původních {{amount}})",
+    "cancel": "Zrušit",
+    "submit": "Vystavit dobropis",
+    "submitting": "Vystavuji…",
+    "errorReasonRequired": "Důvod dobropisu je povinný (min. 3 znaky).",
+    "errorGeneric": "Vystavení dobropisu selhalo."
+  },
   "billingSettings": {
+    "loading": "Načítání…",
+    "title": "Fakturační nastavení",
+    "subtitle": "Tato nastavení ovlivňují všechny ceny v aplikaci a faktury, které posíláme zákazníkům.",
+    "isVatPayer": "Jsem plátce DPH",
+    "isVatPayerHint": "Při zapnutí všechny ceny v aplikaci přepočtou s DPH a fakturační doklady obsahují DPH řádek.",
+    "vatRatePercent": "Sazba DPH (%)",
+    "iban": "IBAN",
+    "ico": "IČO",
+    "contactEmail": "Kontaktní e-mail",
     "invoiceEmailSubjectTemplateEn": "Šablona předmětu e-mailu s fakturou (anglicky)",
     "invoiceEmailSubjectTemplateEnHint": "Použije se pro organizace s anglickým jazykem. Stejné proměnné jako u české šablony výše.",
-    "invoiceEmailBodyTemplateEn": "Šablona textu e-mailu s fakturou (anglicky)"
+    "invoiceEmailBodyTemplateEn": "Šablona textu e-mailu s fakturou (anglicky)",
+    "saving": "Ukládáme…",
+    "save": "Uložit",
+    "saved": "Uloženo.",
+    "errorValidation": "Uložení selhalo. Zkontrolujte hodnoty a zkuste to znovu.",
+    "errorGeneric": "Něco se pokazilo. Zkuste to prosím znovu."
   }
 }

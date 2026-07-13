@@ -58,7 +58,7 @@ export function AdminBillingSettings() {
         invoice_email_subject_template_en: form.invoice_email_subject_template_en,
         invoice_email_body_template_en: form.invoice_email_body_template_en,
       };
-      // Only send IBAN/IČO when set; backend types them as nullable so
+      // Only send IBAN/company ID when set; backend types them as nullable so
       // empty strings would be coerced to "" rather than null.
       if (form.seller_iban) body.seller_iban = form.seller_iban;
       if (form.seller_ico) body.seller_ico = form.seller_ico;
@@ -79,8 +79,8 @@ export function AdminBillingSettings() {
     onError: (err) => {
       setError(
         err instanceof ApiError
-          ? "Uložení selhalo. Zkontrolujte hodnoty a zkuste to znovu."
-          : "Něco se pokazilo. Zkuste to prosím znovu.",
+          ? t("billingSettings.errorValidation")
+          : t("billingSettings.errorGeneric"),
       );
     },
   });
@@ -94,7 +94,7 @@ export function AdminBillingSettings() {
   if (isPending) {
     return (
       <section className="rounded-lg border border-border bg-surface p-6 text-sm text-text-tertiary">
-        Načítání…
+        {t("billingSettings.loading")}
       </section>
     );
   }
@@ -105,10 +105,8 @@ export function AdminBillingSettings() {
       className="max-w-2xl space-y-6 rounded-lg border border-border bg-surface p-6"
     >
       <header>
-        <h2 className="text-lg font-semibold">Fakturační nastavení</h2>
-        <p className="mt-1 text-sm text-text-tertiary">
-          Tato nastavení ovlivňují všechny ceny v aplikaci a faktury, které posíláme zákazníkům.
-        </p>
+        <h2 className="text-lg font-semibold">{t("billingSettings.title")}</h2>
+        <p className="mt-1 text-sm text-text-tertiary">{t("billingSettings.subtitle")}</p>
       </header>
 
       <label className="flex items-start gap-3 text-sm">
@@ -119,16 +117,15 @@ export function AdminBillingSettings() {
           className="mt-0.5 h-4 w-4"
         />
         <span>
-          <span className="font-medium text-text-primary">Jsem plátce DPH</span>
+          <span className="font-medium text-text-primary">{t("billingSettings.isVatPayer")}</span>
           <span className="mt-1 block text-text-tertiary">
-            Při zapnutí všechny ceny v aplikaci přepočtou s DPH a fakturační doklady obsahují DPH
-            řádek.
+            {t("billingSettings.isVatPayerHint")}
           </span>
         </span>
       </label>
 
       <label className="block text-sm font-medium">
-        Sazba DPH (%)
+        {t("billingSettings.vatRatePercent")}
         <input
           type="number"
           min={0}
@@ -141,7 +138,7 @@ export function AdminBillingSettings() {
       </label>
 
       <label className="block text-sm font-medium">
-        IBAN
+        {t("billingSettings.iban")}
         <input
           type="text"
           maxLength={34}
@@ -153,7 +150,7 @@ export function AdminBillingSettings() {
       </label>
 
       <label className="block text-sm font-medium">
-        IČO
+        {t("billingSettings.ico")}
         <input
           type="text"
           maxLength={8}
@@ -164,7 +161,7 @@ export function AdminBillingSettings() {
       </label>
 
       <label className="block text-sm font-medium">
-        Kontaktní e-mail
+        {t("billingSettings.contactEmail")}
         <input
           type="email"
           maxLength={120}
@@ -217,11 +214,11 @@ export function AdminBillingSettings() {
           disabled={mutation.isPending}
           className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent hover:bg-accent-hover disabled:opacity-50"
         >
-          {mutation.isPending ? "Ukládáme…" : "Uložit"}
+          {mutation.isPending ? t("billingSettings.saving") : t("billingSettings.save")}
         </button>
         {savedFlash ? (
           <span className="text-sm text-success" role="status">
-            Uloženo.
+            {t("billingSettings.saved")}
           </span>
         ) : null}
       </div>
