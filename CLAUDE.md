@@ -3,6 +3,7 @@
 ## Task start
 
 - Evaluate the task's difficulty first and recommend a model for it (mention /fast when it fits). Never switch the main-session model yourself — that's the owner's call. For subagent tiers, follow the budget-optimal-ultracode skill.
+- Before exploring the codebase, load the `navigating-simplecrm-code` skill (repo map, house patterns, gotchas) — don't rediscover by grepping.
 
 ## UI verification
 
