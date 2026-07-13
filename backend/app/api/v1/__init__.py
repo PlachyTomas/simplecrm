@@ -16,6 +16,7 @@ from app.api.v1 import (
     feedback,
     google_calendar,
     health,
+    home_dashboard,
     imports,
     invitations,
     invoices,
@@ -83,6 +84,9 @@ api_router.include_router(reports.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(reports_widgets.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(teams.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(users.router, dependencies=PROTECTED_DEPS)
+# Editable home dashboard layout (/users/me/home-dashboard). Open to every
+# role — the default layout is role-aware. Org-membership + trial gated.
+api_router.include_router(home_dashboard.router, dependencies=PROTECTED_DEPS)
 # Per-user outbound SMTP settings (used by bulk email). Org-membership +
 # trial gated like the rest of the in-app surfaces.
 api_router.include_router(user_smtp.router, dependencies=PROTECTED_DEPS)

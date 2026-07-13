@@ -122,6 +122,15 @@ class User(Base):
         JSONB, default=dict, server_default="{}", nullable=False
     )
 
+    # Per-user editable home dashboard layout (the `/` DashboardPage grid).
+    # Sibling to `reports_dashboard_config`. Empty `{}` means "use the
+    # role-aware default from `services/home_dashboard.py`"; populated dicts
+    # conform to the `HomeDashboardConfig` Pydantic schema. Validated at the
+    # API edge (`/users/me/home-dashboard`).
+    home_dashboard_config: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=dict, server_default="{}", nullable=False
+    )
+
     # Free-form per-user preference blob. Populated only by
     # `PATCH /users/me/preferences`, which enforces an allowlist of keys
     # (currently: `tutorial_completed_at`, `tutorial_dismissed_at`,
