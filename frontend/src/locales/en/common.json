@@ -161,6 +161,20 @@
     "mobileAriaLabel": "Bottom navigation",
     "desktopAriaLabel": "Main navigation"
   },
+  "pwa": {
+    "nudge": {
+      "message": "You can have SimpleCRM as an app right on your home screen.",
+      "install": "Install",
+      "later": "Later",
+      "never": "Don't show again"
+    },
+    "iosModal": {
+      "title": "Add to Home Screen",
+      "step1": "In your browser, tap the Share button.",
+      "step2": "Choose “Add to Home Screen”.",
+      "done": "Got it"
+    }
+  },
   "tutorial": {
     "welcome": {
       "title": "Welcome to SimpleCRM",

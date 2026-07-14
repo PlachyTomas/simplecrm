@@ -163,6 +163,20 @@
     "mobileAriaLabel": "Spodní navigace",
     "desktopAriaLabel": "Hlavní navigace"
   },
+  "pwa": {
+    "nudge": {
+      "message": "SimpleCRM můžete mít jako aplikaci přímo na ploše telefonu.",
+      "install": "Nainstalovat",
+      "later": "Později",
+      "never": "Už nezobrazovat"
+    },
+    "iosModal": {
+      "title": "Přidat na plochu",
+      "step1": "V prohlížeči klepněte na tlačítko Sdílet.",
+      "step2": "Zvolte možnost „Přidat na plochu“.",
+      "done": "Rozumím"
+    }
+  },
   "tutorial": {
     "welcome": {
       "title": "Vítejte v SimpleCRM",

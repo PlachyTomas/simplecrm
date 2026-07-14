@@ -26,6 +26,15 @@ export const testIds = {
     reports: "nav-reports",
     settings: "nav-settings",
   },
+  pwa: {
+    nudge: "pwa-nudge",
+    nudgeInstall: "pwa-nudge-install",
+    nudgeLater: "pwa-nudge-later",
+    nudgeNever: "pwa-nudge-never",
+    moreInstall: "pwa-more-install",
+    settingsInstall: "pwa-settings-install",
+    iosModalClose: "pwa-ios-modal-close",
+  },
   companies: {
     addButton: "companies-add-button",
     addModal: {
