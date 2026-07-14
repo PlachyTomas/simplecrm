@@ -665,6 +665,12 @@ export function PipelinePage() {
   const toast = useToast();
   const { dealId: dialogDealId, openDeal, closeDeal } = useDealDialog();
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
+  // Whether releasing now would move the deal to another stage. Drives the
+  // DragOverlay's dropAnimation: the default animation flies the overlay back
+  // to the source card's rect — correct for cancels/same-column/trash, but a
+  // moved deal would visibly "return" to the old column before the optimistic
+  // board update re-renders it in the target column.
+  const [dropWillMove, setDropWillMove] = useState(false);
   const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [addDealOpen, setAddDealOpen] = useState(false);
@@ -1012,7 +1018,15 @@ export function PipelinePage() {
           {/* Desktop: drag-and-drop kanban. */}
           <DndContext
             sensors={sensors}
-            onDragStart={(event) => setActiveDealId(String(event.active.id))}
+            onDragStart={(event) => {
+              setActiveDealId(String(event.active.id));
+              setDropWillMove(false);
+            }}
+            onDragOver={(event) => {
+              const fromStage = event.active.data.current?.stageId;
+              const overId = event.over ? String(event.over.id) : null;
+              setDropWillMove(overId !== null && overId !== "trash" && overId !== fromStage);
+            }}
             onDragEnd={handleDragEnd}
             onDragCancel={() => setActiveDealId(null)}
           >
@@ -1046,7 +1060,7 @@ export function PipelinePage() {
               ))}
             </div>
             <TrashDropZone visible={activeDealId !== null} />
-            <DragOverlay>
+            <DragOverlay dropAnimation={dropWillMove ? null : undefined}>
               {activeDeal ? <DealCard deal={activeDeal} locale={locale} /> : null}
             </DragOverlay>
           </DndContext>
