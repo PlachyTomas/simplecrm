@@ -4,7 +4,12 @@
     "languageSaved": "Jazyk aplikace byl uložen.",
     "languageSaveFailed": "Jazyk se nepodařilo uložit. Zkuste to prosím znovu.",
     "title": "Vzhled",
-    "subtitle": "Vyberte světlý nebo tmavý motiv. Volba se ukládá lokálně v prohlížeči."
+    "subtitle": "Vyberte světlý nebo tmavý motiv. Volba se ukládá lokálně v prohlížeči.",
+    "installApp": {
+      "title": "Aplikace",
+      "description": "Nainstalujte si SimpleCRM jako aplikaci — otevře se v samostatném okně přímo z plochy.",
+      "button": "Nainstalovat aplikaci"
+    }
   },
   "nav": {
     "groups": {

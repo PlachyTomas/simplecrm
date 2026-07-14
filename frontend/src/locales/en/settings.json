@@ -4,7 +4,12 @@
     "languageSaved": "Application language saved.",
     "languageSaveFailed": "Couldn't save the language. Please try again.",
     "title": "Appearance",
-    "subtitle": "Choose a light or dark theme. The choice is saved locally in your browser."
+    "subtitle": "Choose a light or dark theme. The choice is saved locally in your browser.",
+    "installApp": {
+      "title": "App",
+      "description": "Install SimpleCRM as an app — it opens in its own window right from your home screen.",
+      "button": "Install app"
+    }
   },
   "nav": {
     "groups": {
