@@ -4,6 +4,7 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { MobileTabBar } from "@/app/MobileTabBar";
+import { InstallNudge } from "@/app/pwa/InstallNudge";
 import { Sidebar } from "@/app/Sidebar";
 import { TourOverlay, TourReplayButton } from "@/app/tutorial";
 import { TrialBanner } from "@/app/TrialBanner";
@@ -178,6 +179,7 @@ export function AppShell() {
       </div>
 
       <MobileTabBar />
+      <InstallNudge />
       <TourOverlay />
     </div>
   );
