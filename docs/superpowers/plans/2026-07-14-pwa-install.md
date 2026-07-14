@@ -31,7 +31,7 @@
 **Interfaces:**
 - Produces: `/manifest.webmanifest` + `/icons/*.png` served from public root; later tasks don't depend on this task's code, only on installability being real when testing in a browser.
 
-- [ ] **Step 1: Write the icon-generation script in the scratchpad**
+- [x] **Step 1: Write the icon-generation script in the scratchpad**
 
 `<scratchpad>/gen-icons.mjs` (run with node from `frontend/` so `@playwright/test` resolves). The maskable/apple icons put the mark on a full-bleed `#EC4899` square — the favicon's rounded rect is the same color, so it blends seamlessly; glyph stays inside the maskable safe zone.
 
@@ -66,12 +66,12 @@ for (const [size, html, name, transparent] of jobs) {
 await browser.close();
 ```
 
-- [ ] **Step 2: Run it and verify the PNGs**
+- [x] **Step 2: Run it and verify the PNGs**
 
 Run: `cd frontend && node <scratchpad>/gen-icons.mjs && file public/icons/*.png`
 Expected: four PNGs with dimensions 192x192, 512x512, 512x512, 180x180. Eyeball them (Read tool renders PNGs) — pink box + white sparkles, maskable has extra bleed.
 
-- [ ] **Step 3: Create the manifest**
+- [x] **Step 3: Create the manifest**
 
 `frontend/public/manifest.webmanifest`:
 
@@ -95,7 +95,7 @@ Expected: four PNGs with dimensions 192x192, 512x512, 512x512, 180x180. Eyeball 
 }
 ```
 
-- [ ] **Step 4: Link manifest + apple-touch-icon in index.html**
+- [x] **Step 4: Link manifest + apple-touch-icon in index.html**
 
 In `frontend/index.html`, directly after the `<link rel="icon" ...>` line, add:
 
@@ -104,13 +104,13 @@ In `frontend/index.html`, directly after the `<link rel="icon" ...>` line, add:
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 ```
 
-- [ ] **Step 5: Verify the dev server serves both**
+- [x] **Step 5: Verify the dev server serves both**
 
 Dev server must be running (see `running-simplecrm` skill; owner may already have it up — check first).
 Run: `curl -s http://localhost:5173/manifest.webmanifest | head -5 && curl -s -o /dev/null -w "%{http_code}" http://localhost:5173/icons/icon-192.png`
 Expected: manifest JSON + `200`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add frontend/public/manifest.webmanifest frontend/public/icons frontend/index.html
@@ -128,7 +128,7 @@ git commit -m "feat(pwa): web app manifest + install icons"
 **Interfaces:**
 - Produces: `shouldShowNudge(now?: number): boolean`, `snoozeNudge(now?: number): void` (14 days), `suppressNudge(): void`. Storage key `simplecrm-pwa-nudge`, JSON `{ never?: boolean; remindAfter?: number }`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `frontend/src/lib/__tests__/pwaInstallPrefs.test.ts`:
 
@@ -164,12 +164,12 @@ describe("pwaInstallPrefs", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/lib/__tests__/pwaInstallPrefs.test.ts`
 Expected: FAIL — cannot resolve `@/lib/pwaInstallPrefs`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `frontend/src/lib/pwaInstallPrefs.ts`:
 
@@ -223,12 +223,12 @@ export function suppressNudge(): void {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/lib/__tests__/pwaInstallPrefs.test.ts`
 Expected: 4 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/pwaInstallPrefs.ts src/lib/__tests__/pwaInstallPrefs.test.ts
@@ -247,7 +247,7 @@ git commit -m "feat(pwa): device-scoped install-nudge dismissal state"
 - Produces: `usePwaInstall(): { canPrompt: boolean; isInstalled: boolean; isIos: boolean; promptInstall(): Promise<"accepted" | "dismissed" | "unavailable"> }`. Also exports `isIos()` / `isStandalone()` helpers and the `BeforeInstallPromptEvent` type.
 - Consumes: nothing from earlier tasks.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Note: the module captures `beforeinstallprompt` at import time and keeps it in module state; tests reset it by dispatching `appinstalled` in `afterEach`. jsdom's `matchMedia` is stubbed in `src/test-setup.ts` (`matches: false`).
 
@@ -343,12 +343,12 @@ describe("usePwaInstall", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/lib/__tests__/usePwaInstall.test.tsx`
 Expected: FAIL — cannot resolve `@/lib/usePwaInstall`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `frontend/src/lib/usePwaInstall.ts`:
 
@@ -436,12 +436,12 @@ export function usePwaInstall() {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/lib/__tests__/usePwaInstall.test.tsx`
 Expected: 6 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/usePwaInstall.ts src/lib/__tests__/usePwaInstall.test.tsx
@@ -462,7 +462,7 @@ git commit -m "feat(pwa): usePwaInstall hook with module-level prompt capture"
 - Consumes: `useModalDialog` (existing), `actions.close` common key (exists: "Zavřít").
 - Produces: `<IosInstallModal open onClose />` — reused by Tasks 5–7. `testIds.pwa.*` for all pwa surfaces (defined here once): `nudge`, `nudgeInstall`, `nudgeLater`, `nudgeNever`, `moreInstall`, `settingsInstall`, `iosModalClose`.
 
-- [ ] **Step 1: Add testids**
+- [x] **Step 1: Add testids**
 
 In `frontend/src/lib/testids.ts`, add inside `testIds` (after the `nav` group):
 
@@ -478,7 +478,7 @@ In `frontend/src/lib/testids.ts`, add inside `testIds` (after the `nav` group):
   },
 ```
 
-- [ ] **Step 2: Add strings (both catalogs)**
+- [x] **Step 2: Add strings (both catalogs)**
 
 `frontend/src/locales/cs/common.json` — add a top-level `pwa` group:
 
@@ -518,7 +518,7 @@ In `frontend/src/lib/testids.ts`, add inside `testIds` (after the `nav` group):
   }
 ```
 
-- [ ] **Step 3: Write the failing test**
+- [x] **Step 3: Write the failing test**
 
 `frontend/src/app/pwa/__tests__/IosInstallModal.test.tsx`:
 
@@ -548,12 +548,12 @@ describe("IosInstallModal", () => {
 });
 ```
 
-- [ ] **Step 4: Run test to verify it fails**
+- [x] **Step 4: Run test to verify it fails**
 
 Run: `npx vitest run src/app/pwa/__tests__/IosInstallModal.test.tsx`
 Expected: FAIL — cannot resolve `@/app/pwa/IosInstallModal`.
 
-- [ ] **Step 5: Implement the modal**
+- [x] **Step 5: Implement the modal**
 
 `frontend/src/app/pwa/IosInstallModal.tsx` (house modal pattern per ui-design §5.6: `bg-bg/80 backdrop-blur-sm` backdrop, bottom sheet on mobile, `useModalDialog` focus trap):
 
@@ -635,12 +635,12 @@ export function IosInstallModal({ open, onClose }: IosInstallModalProps) {
 }
 ```
 
-- [ ] **Step 6: Run test + i18n check**
+- [x] **Step 6: Run test + i18n check**
 
 Run: `npx vitest run src/app/pwa/__tests__/IosInstallModal.test.tsx && pnpm i18n:check`
 Expected: 2 passed; i18n parity OK.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/app/pwa src/lib/testids.ts src/locales/cs/common.json src/locales/en/common.json
@@ -660,7 +660,7 @@ git commit -m "feat(pwa): iOS add-to-home-screen instruction modal"
 - Consumes: `usePwaInstall`, `pwaInstallPrefs`, `IosInstallModal`, `useMediaQuery`, `testIds.pwa.*`, `pwa.nudge.*` strings (all from earlier tasks).
 - Produces: `<InstallNudge />` (no props).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `frontend/src/app/pwa/__tests__/InstallNudge.test.tsx`:
 
@@ -743,12 +743,12 @@ describe("InstallNudge", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/app/pwa/__tests__/InstallNudge.test.tsx`
 Expected: FAIL — cannot resolve `@/app/pwa/InstallNudge`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `frontend/src/app/pwa/InstallNudge.tsx`:
 
@@ -839,12 +839,12 @@ export function InstallNudge() {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/app/pwa/__tests__/InstallNudge.test.tsx`
 Expected: 5 passed.
 
-- [ ] **Step 5: Mount in AppShell**
+- [x] **Step 5: Mount in AppShell**
 
 In `frontend/src/app/AppShell.tsx`: add `import { InstallNudge } from "@/app/pwa/InstallNudge";` (alphabetical, after the MobileTabBar import) and render `<InstallNudge />` directly after `<MobileTabBar />`:
 
@@ -854,7 +854,7 @@ In `frontend/src/app/AppShell.tsx`: add `import { InstallNudge } from "@/app/pwa
       <TourOverlay />
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/app/pwa src/app/AppShell.tsx
@@ -872,12 +872,12 @@ git commit -m "feat(pwa): one-time mobile install nudge above the tab bar"
 **Interfaces:**
 - Consumes: `usePwaInstall`, `IosInstallModal`, `testIds.pwa.moreInstall`.
 
-- [ ] **Step 1: Add the nav string to both catalogs**
+- [x] **Step 1: Add the nav string to both catalogs**
 
 cs `common.json`, inside `nav` (after `"feedback"`): `"installApp": "Nainstalovat aplikaci",`
 en `common.json`, same position: `"installApp": "Install app",`
 
-- [ ] **Step 2: Modify MorePage**
+- [x] **Step 2: Modify MorePage**
 
 In `frontend/src/app/MorePage.tsx`:
 
@@ -913,12 +913,12 @@ In `frontend/src/app/MorePage.tsx`:
       <IosInstallModal open={iosModalOpen} onClose={() => setIosModalOpen(false)} />
 ```
 
-- [ ] **Step 3: Verify: typecheck + i18n + full lib/pwa tests**
+- [x] **Step 3: Verify: typecheck + i18n + full lib/pwa tests**
 
 Run: `npx tsc -b --noEmit && pnpm i18n:check && npx vitest run src/app/pwa src/lib/__tests__`
 Expected: clean typecheck, i18n parity, all pwa tests pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/app/MorePage.tsx src/locales/cs/common.json src/locales/en/common.json
@@ -936,7 +936,7 @@ git commit -m "feat(pwa): install-app row on the mobile More page"
 **Interfaces:**
 - Consumes: `usePwaInstall`, `IosInstallModal`, `testIds.pwa.settingsInstall`.
 
-- [ ] **Step 1: Add strings**
+- [x] **Step 1: Add strings**
 
 cs `settings.json`, inside `appearance`:
 
@@ -958,7 +958,7 @@ en `settings.json`, inside `appearance`:
     }
 ```
 
-- [ ] **Step 2: Modify AppearanceSection**
+- [x] **Step 2: Modify AppearanceSection**
 
 Replace `frontend/src/app/settings/sections/AppearanceSection.tsx` with:
 
@@ -1015,12 +1015,12 @@ export function AppearanceSection() {
 }
 ```
 
-- [ ] **Step 3: Verify: typecheck + i18n**
+- [x] **Step 3: Verify: typecheck + i18n**
 
 Run: `npx tsc -b --noEmit && pnpm i18n:check`
 Expected: clean.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/app/settings/sections/AppearanceSection.tsx src/locales/cs/settings.json src/locales/en/settings.json
@@ -1033,12 +1033,12 @@ git commit -m "feat(pwa): install-app card in settings appearance section"
 
 **Files:** none new (fixes only if verification finds issues).
 
-- [ ] **Step 1: Full frontend suites**
+- [x] **Step 1: Full frontend suites**
 
 Run from `frontend/`: `npx tsc -b --noEmit && npx vitest run && pnpm i18n:check && npx eslint src/app/pwa src/lib/usePwaInstall.ts src/lib/pwaInstallPrefs.ts src/app/MorePage.tsx src/app/settings/sections/AppearanceSection.tsx src/app/AppShell.tsx`
 Expected: all pass, no lint errors.
 
-- [ ] **Step 2: Playwright MCP visual pass** (dev stack running + logged in per `running-simplecrm` skill; screenshots go to scratchpad, never the repo)
+- [x] **Step 2: Playwright MCP visual pass** (dev stack running + logged in per `running-simplecrm` skill; screenshots go to scratchpad, never the repo)
 
 1. Desktop 1280×800, `/app/settings` → Vzhled: card hidden or visible depending on `canPrompt` — no console errors either way; screenshot.
 2. Resize to 390×844 (mobile). In the page, force-capture a fake prompt via `browser_run_code_unsafe`:
@@ -1050,6 +1050,6 @@ Expected: all pass, no lint errors.
 6. `browser_console_messages` → no errors throughout.
 7. Manifest sanity in the real browser: `browser_navigate` to `http://localhost:5173/manifest.webmanifest` renders the JSON.
 
-- [ ] **Step 3: Update memory/tracker + final commit**
+- [x] **Step 3: Update memory/tracker + final commit**
 
 Update memory index entry for this track (branch, status, spec/plan paths). Commit any verification fixes.
