@@ -69,8 +69,14 @@ describe("addWidget", () => {
   it("uses per-type default sizes", () => {
     const base = config([]);
     expect(addWidget(base, "kpi_won_month").widgets![0]!.position).toMatchObject({ w: 3, h: 2 });
-    expect(addWidget(base, "invite_teammates").widgets![0]!.position).toMatchObject({ w: 12, h: 3 });
-    expect(addWidget(base, "sales_leaderboard").widgets![0]!.position).toMatchObject({ w: 6, h: 4 });
+    expect(addWidget(base, "invite_teammates").widgets![0]!.position).toMatchObject({
+      w: 12,
+      h: 3,
+    });
+    expect(addWidget(base, "sales_leaderboard").widgets![0]!.position).toMatchObject({
+      w: 6,
+      h: 4,
+    });
     expect(addWidget(base, "pipeline_value").widgets![0]!.position).toMatchObject({ w: 3, h: 2 });
   });
 });

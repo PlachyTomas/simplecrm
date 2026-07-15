@@ -300,9 +300,7 @@ class InvoiceRenderer:
     # which `storage.py`'s `pdf_sha256` integrity check requires.
     _warmed = False
 
-    def render_pdf(
-        self, invoice: Invoice, lines: Iterable[InvoiceLine], lang: str = "cs"
-    ) -> bytes:
+    def render_pdf(self, invoice: Invoice, lines: Iterable[InvoiceLine], lang: str = "cs") -> bytes:
         """Render `invoice` to a PDF/A-2b byte string in ``lang`` (cs/en).
 
         Determinism is enforced by a finisher that pins ``CreationDate``

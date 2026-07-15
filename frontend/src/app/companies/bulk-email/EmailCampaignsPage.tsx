@@ -70,7 +70,9 @@ export function EmailCampaignsPage() {
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-text-primary">{c.subject}</p>
-                  <p className="text-xs text-text-tertiary">{formatDate(c.created_at, locale, { dateStyle: "medium", timeStyle: "short" })}</p>
+                  <p className="text-xs text-text-tertiary">
+                    {formatDate(c.created_at, locale, { dateStyle: "medium", timeStyle: "short" })}
+                  </p>
                 </div>
                 <CampaignCounts c={c} />
               </button>

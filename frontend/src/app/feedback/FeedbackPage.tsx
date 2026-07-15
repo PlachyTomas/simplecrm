@@ -126,7 +126,8 @@ export function FeedbackPage() {
     } catch (err) {
       if (err instanceof ApiError) {
         const detail = (err.body as { detail?: unknown })?.detail;
-        const message = typeof detail === "string" ? detail : t("feedback.errors.submitFailedGeneric");
+        const message =
+          typeof detail === "string" ? detail : t("feedback.errors.submitFailedGeneric");
         toast.error(message);
       } else {
         toast.error(t("feedback.errors.submitFailedRetry"));

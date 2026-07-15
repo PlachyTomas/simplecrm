@@ -68,8 +68,10 @@ function GoogleCalendarCard() {
                 type="button"
                 onClick={() =>
                   disconnect.mutate(undefined, {
-                    onSuccess: () => toast.success(t("integrations.googleCalendar.disconnectSuccessToast")),
-                    onError: () => toast.error(t("integrations.googleCalendar.disconnectErrorToast")),
+                    onSuccess: () =>
+                      toast.success(t("integrations.googleCalendar.disconnectSuccessToast")),
+                    onError: () =>
+                      toast.error(t("integrations.googleCalendar.disconnectErrorToast")),
                   })
                 }
                 disabled={disconnect.isPending}

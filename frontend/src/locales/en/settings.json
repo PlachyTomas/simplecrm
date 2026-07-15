@@ -19,7 +19,10 @@
       "billing": "Subscription"
     },
     "sections": {
-      "appearance": { "label": "Appearance", "description": "Theme, colors, and other visual settings." },
+      "appearance": {
+        "label": "Appearance",
+        "description": "Theme, colors, and other visual settings."
+      },
       "integrations": {
         "label": "Integrations",
         "description": "Connections to external services and sending emails (SMTP)."

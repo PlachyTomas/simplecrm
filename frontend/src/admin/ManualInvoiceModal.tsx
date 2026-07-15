@@ -164,7 +164,9 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
             <table className="w-full text-sm">
               <thead className="text-xs text-text-tertiary">
                 <tr className="border-b border-border">
-                  <th className="py-1 text-left">{t("manualInvoiceModal.lineItems.description")}</th>
+                  <th className="py-1 text-left">
+                    {t("manualInvoiceModal.lineItems.description")}
+                  </th>
                   <th className="py-1 text-right">{t("manualInvoiceModal.lineItems.quantity")}</th>
                   <th className="py-1 text-right">{t("manualInvoiceModal.lineItems.unit")}</th>
                   <th className="py-1 text-right">{t("manualInvoiceModal.lineItems.price")}</th>

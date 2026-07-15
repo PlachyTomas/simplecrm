@@ -12,6 +12,7 @@ dashboard layout, sibling to `reports_dashboard_config`. Empty `{}`
 Plain column add, no enum changes.
 
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence

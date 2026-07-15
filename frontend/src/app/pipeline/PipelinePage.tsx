@@ -11,15 +11,7 @@ import {
 } from "@dnd-kit/core";
 import { createPortal } from "react-dom";
 import { Crown, Plus, Trash2, Workflow, X } from "lucide-react";
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AddDealModal } from "@/app/deals/AddDealModal";
@@ -262,7 +254,9 @@ function DealCard({
         </p>
       ) : (
         <p className="mt-1 text-xs tabular-nums text-text-tertiary">
-          {t("pipelinePage.card.createdLabel", { date: formatCreatedDate(deal.created_at, locale) })}
+          {t("pipelinePage.card.createdLabel", {
+            date: formatCreatedDate(deal.created_at, locale),
+          })}
         </p>
       )}
       {onTogglePaid ? (
@@ -373,7 +367,9 @@ function MobileDealCard({
         </p>
       ) : (
         <p className="mt-1 text-xs tabular-nums text-text-tertiary">
-          {t("pipelinePage.card.createdLabel", { date: formatCreatedDate(deal.created_at, locale) })}
+          {t("pipelinePage.card.createdLabel", {
+            date: formatCreatedDate(deal.created_at, locale),
+          })}
         </p>
       )}
       {stageType === "won" ? (
@@ -1159,9 +1155,7 @@ function TrashDropZone({ visible }: { visible: boolean }) {
         )}
       >
         <Trash2 size={16} strokeWidth={1.75} aria-hidden />
-        <span>
-          {isOver ? t("pipelinePage.trash.dropHere") : t("pipelinePage.trash.dragHere")}
-        </span>
+        <span>{isOver ? t("pipelinePage.trash.dropHere") : t("pipelinePage.trash.dragHere")}</span>
       </div>
     </div>
   );
@@ -1220,7 +1214,9 @@ function DeleteConfirmDialog({
             disabled={pending}
             className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-medium text-white transition-colors duration-fast hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {pending ? t("pipelinePage.deleteDialog.deleting") : t("pipelinePage.deleteDialog.confirm")}
+            {pending
+              ? t("pipelinePage.deleteDialog.deleting")
+              : t("pipelinePage.deleteDialog.confirm")}
           </button>
         </div>
       </div>

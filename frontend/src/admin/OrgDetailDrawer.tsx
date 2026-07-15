@@ -45,14 +45,20 @@ function statusPillSpec(
         className: "bg-warning-subtle text-warning",
       };
     case "active":
-      return { label: t(ORG_DETAIL_STATUS_KEY.active), className: "bg-success-subtle text-success" };
+      return {
+        label: t(ORG_DETAIL_STATUS_KEY.active),
+        className: "bg-success-subtle text-success",
+      };
     case "past_due":
       return {
         label: t(ORG_DETAIL_STATUS_KEY.past_due),
         className: "bg-warning-subtle text-warning",
       };
     case "canceled":
-      return { label: t(ORG_DETAIL_STATUS_KEY.canceled), className: "bg-danger-subtle text-danger" };
+      return {
+        label: t(ORG_DETAIL_STATUS_KEY.canceled),
+        className: "bg-danger-subtle text-danger",
+      };
     default:
       return { label: sub.status, className: "bg-surface-overlay text-text-tertiary" };
   }
@@ -179,7 +185,9 @@ export function OrgDetailDrawer({ orgId, userCount }: OrgDetailDrawerProps) {
 
         {sub.notes ? (
           <p className="mt-4 rounded-md border border-border-subtle bg-surface-overlay p-3 text-sm text-text-secondary">
-            <span className="font-medium text-text-primary">{t("orgDetail.labels.notesPrefix")}</span>
+            <span className="font-medium text-text-primary">
+              {t("orgDetail.labels.notesPrefix")}
+            </span>
             {sub.notes}
           </p>
         ) : null}
@@ -365,7 +373,9 @@ function ActivateModal({ orgId, onClose }: { orgId: string; onClose: () => void 
           >
             <option value="monthly">{t("orgDetail.activateModal.planOptions.monthly")}</option>
             <option value="annual">{t("orgDetail.activateModal.planOptions.annual")}</option>
-            <option value="enterprise">{t("orgDetail.activateModal.planOptions.enterprise")}</option>
+            <option value="enterprise">
+              {t("orgDetail.activateModal.planOptions.enterprise")}
+            </option>
           </select>
         </label>
         <label className="block text-sm font-medium">
@@ -945,7 +955,9 @@ function MemberRow({ user }: { user: AdminOrgUserRow }) {
         disabled={disabled || busy}
         className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-surface px-3 text-xs font-medium text-text-primary hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {busy ? t("orgDetail.membersList.impersonating") : t("orgDetail.membersList.impersonateButton")}
+        {busy
+          ? t("orgDetail.membersList.impersonating")
+          : t("orgDetail.membersList.impersonateButton")}
       </button>
     </li>
   );

@@ -42,8 +42,7 @@ function byBase(flat) {
 
 function placeholderUnion(variants) {
   const out = new Set();
-  for (const value of variants.values())
-    for (const m of value.matchAll(PLACEHOLDER)) out.add(m[1]);
+  for (const value of variants.values()) for (const m of value.matchAll(PLACEHOLDER)) out.add(m[1]);
   return out;
 }
 
@@ -76,7 +75,8 @@ for (const [file, refBases] of refBasesByFile) {
   for (const [base, variants] of refBases) {
     if (variants.has(null)) continue;
     for (const cat of refCats)
-      if (!variants.has(cat)) errors.push(`${REF}/${file}: "${base}" missing plural category _${cat}`);
+      if (!variants.has(cat))
+        errors.push(`${REF}/${file}: "${base}" missing plural category _${cat}`);
   }
 }
 
@@ -118,10 +118,13 @@ for (const locale of targets) {
       const refPh = placeholderUnion(refVariants);
       const targetPh = placeholderUnion(targetVariants);
       for (const p of refPh)
-        if (!targetPh.has(p)) errors.push(`${locale}/${file}: "${base}" missing placeholder {{${p}}}`);
+        if (!targetPh.has(p))
+          errors.push(`${locale}/${file}: "${base}" missing placeholder {{${p}}}`);
       for (const p of targetPh)
         if (!refPh.has(p))
-          errors.push(`${locale}/${file}: "${base}" has extra placeholder {{${p}}} (not in ${REF})`);
+          errors.push(
+            `${locale}/${file}: "${base}" has extra placeholder {{${p}}} (not in ${REF})`,
+          );
     }
 
     for (const base of targetBases.keys())

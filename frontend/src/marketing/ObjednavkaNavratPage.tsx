@@ -60,7 +60,9 @@ export function ObjednavkaNavratPage() {
       <main className="mx-auto max-w-xl px-4 pb-16 pt-16 text-center md:px-8">
         <Icon size={48} strokeWidth={1.5} aria-hidden className={`mx-auto ${iconClass}`} />
         <h1 className="mt-4 text-2xl font-bold md:text-3xl">{t(titleKey)}</h1>
-        <p className="mt-3 text-sm leading-relaxed text-text-secondary md:text-base">{t(bodyKey)}</p>
+        <p className="mt-3 text-sm leading-relaxed text-text-secondary md:text-base">
+          {t(bodyKey)}
+        </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link
             to="/signup"

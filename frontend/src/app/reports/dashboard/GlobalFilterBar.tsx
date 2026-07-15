@@ -175,7 +175,9 @@ export function GlobalFilterBar({ value, onChange }: GlobalFilterBarProps) {
                 aria-label={t("globalFilterBar.team")}
               >
                 <option value="">
-                  {isAdmin ? t("globalFilterBar.allTeamsAdmin") : t("globalFilterBar.allTeamsManager")}
+                  {isAdmin
+                    ? t("globalFilterBar.allTeamsAdmin")
+                    : t("globalFilterBar.allTeamsManager")}
                 </option>
                 {visibleTeams.map((team) => (
                   <option key={team.id} value={team.id}>

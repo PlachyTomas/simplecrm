@@ -67,7 +67,8 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
     markPaid.mutate(
       { invoiceId, body: { paid_at: null } },
       {
-        onError: (err) => setActionError(extractMessage(err) ?? t("invoiceDetail.actions.markPaidError")),
+        onError: (err) =>
+          setActionError(extractMessage(err) ?? t("invoiceDetail.actions.markPaidError")),
       },
     );
   }
@@ -82,7 +83,8 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
       { invoiceId, body: { reason: voidReason.trim() } },
       {
         onSuccess: () => setVoidReason(""),
-        onError: (err) => setActionError(extractMessage(err) ?? t("invoiceDetail.actions.voidError")),
+        onError: (err) =>
+          setActionError(extractMessage(err) ?? t("invoiceDetail.actions.voidError")),
       },
     );
   }
@@ -92,7 +94,8 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
     sendInvoice.mutate(
       { invoiceId, body: { override_to: null } },
       {
-        onError: (err) => setActionError(extractMessage(err) ?? t("invoiceDetail.actions.sendError")),
+        onError: (err) =>
+          setActionError(extractMessage(err) ?? t("invoiceDetail.actions.sendError")),
       },
     );
   }
@@ -119,7 +122,9 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
         <dt className="text-text-tertiary">{t("invoiceDetail.labels.variableSymbol")}</dt>
         <dd className="tabular-nums">{inv.variable_symbol}</dd>
         <dt className="text-text-tertiary">{t("invoiceDetail.labels.total")}</dt>
-        <dd className="font-medium tabular-nums">{formatMoneyMinor(inv.total_minor, "CZK", locale)}</dd>
+        <dd className="font-medium tabular-nums">
+          {formatMoneyMinor(inv.total_minor, "CZK", locale)}
+        </dd>
         <dt className="text-text-tertiary">{t("invoiceDetail.labels.email")}</dt>
         <dd>{inv.customer_email ?? "—"}</dd>
       </dl>
@@ -159,7 +164,9 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
       ) : null}
 
       <div className="space-y-2 rounded-md border border-border bg-bg p-3">
-        <h4 className="text-sm font-medium text-text-secondary">{t("invoiceDetail.actions.title")}</h4>
+        <h4 className="text-sm font-medium text-text-secondary">
+          {t("invoiceDetail.actions.title")}
+        </h4>
         {actionError ? (
           <p
             role="alert"
@@ -232,7 +239,10 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
 }
 
 const INVOICE_STATUS_PILL: Record<string, { labelKey: ParseKeys<"admin">; className: string }> = {
-  draft: { labelKey: "invoiceDetail.status.draft", className: "bg-bg-elevated text-text-secondary" },
+  draft: {
+    labelKey: "invoiceDetail.status.draft",
+    className: "bg-bg-elevated text-text-secondary",
+  },
   issued: { labelKey: "invoiceDetail.status.issued", className: "bg-info-subtle text-info" },
   paid: { labelKey: "invoiceDetail.status.paid", className: "bg-success-subtle text-success" },
   overdue: { labelKey: "invoiceDetail.status.overdue", className: "bg-danger-subtle text-danger" },

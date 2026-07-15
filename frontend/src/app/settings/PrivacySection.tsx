@@ -233,9 +233,7 @@ function EraseOrgDialog({ orgName, onClose }: { orgName: string; onClose: () => 
         <h2 id="erase-org-title" className="text-lg font-semibold text-text-primary">
           {t("privacy.eraseDialog.title")}
         </h2>
-        <p className="mt-2 text-sm text-text-secondary">
-          {t("privacy.eraseDialog.confirmBody")}
-        </p>
+        <p className="mt-2 text-sm text-text-secondary">{t("privacy.eraseDialog.confirmBody")}</p>
         <p className="mt-2 rounded-md border border-border bg-surface-overlay px-3 py-2 font-mono text-sm text-text-primary">
           {orgName}
         </p>
@@ -262,7 +260,9 @@ function EraseOrgDialog({ orgName, onClose }: { orgName: string; onClose: () => 
             disabled={submitDisabled}
             className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-danger/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {erase.isPending ? t("privacy.eraseDialog.submitting") : t("privacy.eraseDialog.submit")}
+            {erase.isPending
+              ? t("privacy.eraseDialog.submitting")
+              : t("privacy.eraseDialog.submit")}
           </button>
           <button
             type="button"

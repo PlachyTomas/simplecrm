@@ -200,9 +200,7 @@ export function InviteTeammatesCard() {
           className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           <UserPlus size={16} strokeWidth={1.75} aria-hidden />
-          {create.isPending
-            ? t("inviteTeammatesCard.submitting")
-            : t("inviteTeammatesCard.submit")}
+          {create.isPending ? t("inviteTeammatesCard.submitting") : t("inviteTeammatesCard.submit")}
         </button>
       </form>
       {error ? (

@@ -104,7 +104,10 @@ export function IntegrityPanel() {
           {data.created_at ? (
             <p className="text-xs text-text-tertiary">
               {t("integrityPanel.lastRun", {
-                date: formatDate(data.created_at, locale, { dateStyle: "short", timeStyle: "short" }),
+                date: formatDate(data.created_at, locale, {
+                  dateStyle: "short",
+                  timeStyle: "short",
+                }),
                 runId: data.run_id.slice(0, 8),
               })}
             </p>

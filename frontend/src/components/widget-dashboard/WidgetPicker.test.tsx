@@ -11,8 +11,22 @@ function catalog(): WidgetPickerGroup[] {
     {
       title: "Group A",
       items: [
-        { type: "normal", label: "Normal", description: "d", icon: LayoutGrid, unique: false, added: false },
-        { type: "dupe", label: "Dupe", description: "d", icon: LayoutGrid, unique: false, added: true },
+        {
+          type: "normal",
+          label: "Normal",
+          description: "d",
+          icon: LayoutGrid,
+          unique: false,
+          added: false,
+        },
+        {
+          type: "dupe",
+          label: "Dupe",
+          description: "d",
+          icon: LayoutGrid,
+          unique: false,
+          added: true,
+        },
         {
           type: "uniqueAdded",
           label: "Unique added",
@@ -84,7 +98,9 @@ describe("WidgetPicker", () => {
   });
 
   it("shows the empty state when no groups have items", () => {
-    render(<WidgetPicker open onClose={vi.fn()} groups={[{ title: "X", items: [] }]} onAdd={vi.fn()} />);
+    render(
+      <WidgetPicker open onClose={vi.fn()} groups={[{ title: "X", items: [] }]} onAdd={vi.fn()} />,
+    );
     expect(screen.getByText("Žádné další widgety k přidání.")).toBeInTheDocument();
   });
 });

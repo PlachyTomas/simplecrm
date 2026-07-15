@@ -58,6 +58,8 @@ describe("formatDate", () => {
   });
 
   it("accepts a Date instance and DateTimeFormatOptions", () => {
-    expect(formatDate(new Date(2026, 0, 15), "cs-CZ", { dateStyle: "long" })).toBe("15. ledna 2026");
+    expect(formatDate(new Date(2026, 0, 15), "cs-CZ", { dateStyle: "long" })).toBe(
+      "15. ledna 2026",
+    );
   });
 });

@@ -512,24 +512,27 @@ function Differentiators() {
 
 function HowItWorks() {
   const { t } = useTranslation("marketing");
-  const steps: { icon: LucideIcon; titleKey: ParseKeys<"marketing">; bodyKey: ParseKeys<"marketing"> }[] =
-    [
-      {
-        icon: MousePointerClick,
-        titleKey: "howItWorks.signupTitle",
-        bodyKey: "howItWorks.signupBody",
-      },
-      {
-        icon: Building2,
-        titleKey: "howItWorks.firstCompanyTitle",
-        bodyKey: "howItWorks.firstCompanyBody",
-      },
-      {
-        icon: Check,
-        titleKey: "howItWorks.pipelineTitle",
-        bodyKey: "howItWorks.pipelineBody",
-      },
-    ];
+  const steps: {
+    icon: LucideIcon;
+    titleKey: ParseKeys<"marketing">;
+    bodyKey: ParseKeys<"marketing">;
+  }[] = [
+    {
+      icon: MousePointerClick,
+      titleKey: "howItWorks.signupTitle",
+      bodyKey: "howItWorks.signupBody",
+    },
+    {
+      icon: Building2,
+      titleKey: "howItWorks.firstCompanyTitle",
+      bodyKey: "howItWorks.firstCompanyBody",
+    },
+    {
+      icon: Check,
+      titleKey: "howItWorks.pipelineTitle",
+      bodyKey: "howItWorks.pipelineBody",
+    },
+  ];
   return (
     <section className="bg-surface">
       <div className="mx-auto max-w-[1200px] px-4 py-16 md:px-8 md:py-24">
@@ -763,7 +766,10 @@ export function Footer() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
               {t("footer.productHeading")}
             </h3>
-            <nav aria-label={t("footer.productNavAria")} className="mt-3 flex flex-col gap-2 text-xs">
+            <nav
+              aria-label={t("footer.productNavAria")}
+              className="mt-3 flex flex-col gap-2 text-xs"
+            >
               <Link
                 to={marketingPath("landing", lang)}
                 className="text-text-secondary hover:text-text-primary"

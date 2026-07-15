@@ -3,7 +3,11 @@ import { useTranslation } from "react-i18next";
 
 import { resolvePreset } from "@/app/reports/dashboard/dateRange";
 import { useVelocity } from "@/app/reports/useReports";
-import { WidgetEmpty, WidgetFrame, WidgetSkeleton } from "@/components/widget-dashboard/WidgetFrame";
+import {
+  WidgetEmpty,
+  WidgetFrame,
+  WidgetSkeleton,
+} from "@/components/widget-dashboard/WidgetFrame";
 import { formatNumber } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 
@@ -23,7 +27,12 @@ interface HomeVelocityWidgetProps {
  * `ManagerWidgets`. Respects the widget's `date_preset` (default last 30
  * days) and exposes the config gear so the range can be changed per widget.
  */
-export function HomeVelocityWidget({ entry, isEditMode, onRemove, onConfigOpen }: HomeVelocityWidgetProps) {
+export function HomeVelocityWidget({
+  entry,
+  isEditMode,
+  onRemove,
+  onConfigOpen,
+}: HomeVelocityWidgetProps) {
   const { t } = useTranslation("dashboard");
   const locale = useLocale();
   const preset = entry.config.date_preset ?? "last_30_days";

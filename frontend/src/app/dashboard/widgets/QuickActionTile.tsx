@@ -17,7 +17,13 @@ interface QuickActionTileProps {
  * `bg-accent-subtle` box, label to the right. Indigo accent only. In edit
  * mode the click is inert (drag/remove happen through the edit chrome).
  */
-export function QuickActionTile({ type, label, icon: Icon, onActivate, isEditMode }: QuickActionTileProps) {
+export function QuickActionTile({
+  type,
+  label,
+  icon: Icon,
+  onActivate,
+  isEditMode,
+}: QuickActionTileProps) {
   return (
     <button
       type="button"

@@ -31,10 +31,20 @@ interface NavItem {
 const PRIMARY_ITEMS: NavItem[] = [
   { to: "/app", labelKey: "nav.overview", icon: Home, end: true, testId: testIds.nav.overview },
   { to: "/app/pipeline", labelKey: "nav.pipeline", icon: Workflow, testId: testIds.nav.pipeline },
-  { to: "/app/companies", labelKey: "nav.companies", icon: Building2, testId: testIds.nav.companies },
+  {
+    to: "/app/companies",
+    labelKey: "nav.companies",
+    icon: Building2,
+    testId: testIds.nav.companies,
+  },
   { to: "/app/contacts", labelKey: "nav.contacts", icon: Users, testId: testIds.nav.contacts },
   { to: "/app/deals", labelKey: "nav.deals", icon: Handshake, testId: testIds.nav.deals },
-  { to: "/app/calendar", labelKey: "nav.calendar", icon: CalendarDays, testId: testIds.nav.calendar },
+  {
+    to: "/app/calendar",
+    labelKey: "nav.calendar",
+    icon: CalendarDays,
+    testId: testIds.nav.calendar,
+  },
   { to: "/app/reports", labelKey: "nav.reports", icon: LineChart, testId: testIds.nav.reports },
 ];
 

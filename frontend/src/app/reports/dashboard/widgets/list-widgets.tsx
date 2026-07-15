@@ -11,7 +11,11 @@
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-import { WidgetError, WidgetFrame, WidgetSkeleton } from "@/components/widget-dashboard/WidgetFrame";
+import {
+  WidgetError,
+  WidgetFrame,
+  WidgetSkeleton,
+} from "@/components/widget-dashboard/WidgetFrame";
 import {
   type GlobalFilters,
   type WidgetEntry,
@@ -183,7 +187,11 @@ export function CompaniesAtRiskWidget(props: BaseWidgetProps) {
       nowrap: true,
       render: (r) => (
         <span className="text-text-tertiary">
-          {formatDate(r.last_activity_at, locale, { day: "numeric", month: "numeric", year: "2-digit" })}
+          {formatDate(r.last_activity_at, locale, {
+            day: "numeric",
+            month: "numeric",
+            year: "2-digit",
+          })}
         </span>
       ),
     },

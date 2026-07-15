@@ -16,8 +16,10 @@ export function SeoAlternates() {
   useEffect(() => {
     const currentLang = marketingLangFromPath(pathname);
     const counterpart = counterpartPath(pathname);
-    const csPath = currentLang === "cs" ? pathname : (counterpart ?? marketingPath("landing", "cs"));
-    const enPath = currentLang === "en" ? pathname : (counterpart ?? marketingPath("landing", "en"));
+    const csPath =
+      currentLang === "cs" ? pathname : (counterpart ?? marketingPath("landing", "cs"));
+    const enPath =
+      currentLang === "en" ? pathname : (counterpart ?? marketingPath("landing", "en"));
     const origin = typeof window !== "undefined" ? window.location.origin : "";
 
     const alternates: ReadonlyArray<readonly [string, string]> = [

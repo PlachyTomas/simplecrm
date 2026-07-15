@@ -12,10 +12,7 @@ import { useCurrentUser } from "@/auth/useCurrentUser";
 import { WidgetSkeleton } from "@/components/widget-dashboard/WidgetFrame";
 import { WidgetGrid } from "@/components/widget-dashboard/WidgetGrid";
 import { MobileWidgetList } from "@/components/widget-dashboard/MobileWidgetList";
-import {
-  WidgetPicker,
-  type WidgetPickerGroup,
-} from "@/components/widget-dashboard/WidgetPicker";
+import { WidgetPicker, type WidgetPickerGroup } from "@/components/widget-dashboard/WidgetPicker";
 import { useDashboardEditor } from "@/components/widget-dashboard/useDashboardEditor";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { testIds } from "@/lib/testids";
@@ -23,11 +20,7 @@ import { useMediaQuery } from "@/lib/useMediaQuery";
 import { usePageTitle } from "@/lib/usePageTitle";
 
 import { HomeWidgetByType } from "@/app/dashboard/HomeWidgetByType";
-import {
-  addWidget,
-  removeWidget,
-  setWidgetDatePreset,
-} from "@/app/dashboard/homeLayout";
+import { addWidget, removeWidget, setWidgetDatePreset } from "@/app/dashboard/homeLayout";
 import { buildHomePickerGroups } from "@/app/dashboard/homeWidgetCatalog";
 import {
   useHomeDashboardConfig,
@@ -280,9 +273,7 @@ export function DashboardPage() {
         onChange={handlePresetChange}
       />
 
-      {openAction === "deal" ? (
-        <DealQuickAction open onClose={() => setOpenAction(null)} />
-      ) : null}
+      {openAction === "deal" ? <DealQuickAction open onClose={() => setOpenAction(null)} /> : null}
       <AddCompanyModal
         open={openAction === "company"}
         onClose={() => setOpenAction(null)}

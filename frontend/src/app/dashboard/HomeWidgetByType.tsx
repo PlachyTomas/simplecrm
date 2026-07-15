@@ -11,7 +11,11 @@
 import { useTranslation } from "react-i18next";
 
 import type { HomeWidgetEntry, HomeWidgetType } from "@/app/dashboard/useHomeDashboard";
-import { homeWidgetIcon, homeWidgetLabel, isHomeNativeType } from "@/app/dashboard/homeWidgetCatalog";
+import {
+  homeWidgetIcon,
+  homeWidgetLabel,
+  isHomeNativeType,
+} from "@/app/dashboard/homeWidgetCatalog";
 import { HomeEditChrome } from "@/app/dashboard/widgets/HomeEditChrome";
 import { HomeInviteWidget } from "@/app/dashboard/widgets/HomeInviteWidget";
 import { HomeKpiWidget, type HomeKpiType } from "@/app/dashboard/widgets/HomeKpiWidget";

@@ -19,7 +19,10 @@
       "billing": "Předplatné"
     },
     "sections": {
-      "appearance": { "label": "Vzhled", "description": "Motiv, barvy a další vizuální nastavení." },
+      "appearance": {
+        "label": "Vzhled",
+        "description": "Motiv, barvy a další vizuální nastavení."
+      },
       "integrations": {
         "label": "Integrace",
         "description": "Propojení s externími službami a odesílání e-mailů (SMTP)."

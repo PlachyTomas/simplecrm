@@ -285,7 +285,9 @@ function BillingDetailsCard({ sub, summary, onSwitchToAnnual }: BillingDetailsCa
 
   const interval = planInterval(sub);
   const isAnnual = interval === "annual";
-  const periodLabel = isAnnual ? t("billingDetailsCard.periodYear") : t("billingDetailsCard.periodMonth");
+  const periodLabel = isAnnual
+    ? t("billingDetailsCard.periodYear")
+    : t("billingDetailsCard.periodMonth");
   // Bill total is computed against the contracted seat_count, not the
   // live active-user count — so a queued downsize that takes effect next
   // period still bills the contracted amount this period, and a
@@ -342,7 +344,8 @@ function BillingDetailsCard({ sub, summary, onSwitchToAnnual }: BillingDetailsCa
 
       {renewalDate && (sub.status === "active" || sub.status === "past_due") ? (
         <p className="mt-3 text-sm text-text-tertiary">
-          {t("billingDetailsCard.renewalPrefix")} <span className="text-text-primary">{renewalDate}</span>
+          {t("billingDetailsCard.renewalPrefix")}{" "}
+          <span className="text-text-primary">{renewalDate}</span>
         </p>
       ) : null}
     </section>
@@ -395,7 +398,9 @@ function PaymentsCard() {
                   </p>
                   <p className="text-xs text-text-tertiary">
                     {created}
-                    {row.seats != null ? ` · ${t("billingSection.userCount", { count: row.seats })}` : ""}
+                    {row.seats != null
+                      ? ` · ${t("billingSection.userCount", { count: row.seats })}`
+                      : ""}
                     {row.failure_reason ? ` · ${row.failure_reason}` : ""}
                   </p>
                 </div>
@@ -431,10 +436,16 @@ const TAX_INVOICE_STATUS_PILL: Record<
   TaxInvoiceOut["status"],
   { labelKey: ParseKeys<"billing">; className: string }
 > = {
-  draft: { labelKey: "taxInvoicesCard.status.draft", className: "bg-bg-elevated text-text-secondary" },
+  draft: {
+    labelKey: "taxInvoicesCard.status.draft",
+    className: "bg-bg-elevated text-text-secondary",
+  },
   issued: { labelKey: "taxInvoicesCard.status.issued", className: "bg-info-subtle text-info" },
   paid: { labelKey: "taxInvoicesCard.status.paid", className: "bg-success-subtle text-success" },
-  overdue: { labelKey: "taxInvoicesCard.status.overdue", className: "bg-danger-subtle text-danger" },
+  overdue: {
+    labelKey: "taxInvoicesCard.status.overdue",
+    className: "bg-danger-subtle text-danger",
+  },
   voided: {
     labelKey: "taxInvoicesCard.status.voided",
     className: "bg-bg-elevated text-text-tertiary line-through",

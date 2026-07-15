@@ -210,10 +210,9 @@ export function AvgDealSizeWidget(props: BaseWidgetProps) {
         <KPITile
           value={formatMoney(q.data.value, q.data.currency, locale)}
           delta={<DeltaBadge comparison={q.data.comparison} />}
-          hint={t(
-            config.scope === "won" ? "kpi.avgDealSize.hintWon" : "kpi.avgDealSize.hintOpen",
-            { count: q.data.sample_count },
-          )}
+          hint={t(config.scope === "won" ? "kpi.avgDealSize.hintWon" : "kpi.avgDealSize.hintOpen", {
+            count: q.data.sample_count,
+          })}
         />
       )}
     </Frame>

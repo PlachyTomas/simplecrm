@@ -141,7 +141,9 @@ export function BulkEmailWizard({
   const summaryParts: string[] = [];
   if (initialFilters.unowned) summaryParts.push(t("wizard.filterUnowned"));
   else if (initialFilters.owner_user_id)
-    summaryParts.push(usersById.get(initialFilters.owner_user_id) ?? t("wizard.filterUnknownOwner"));
+    summaryParts.push(
+      usersById.get(initialFilters.owner_user_id) ?? t("wizard.filterUnknownOwner"),
+    );
   if (initialFilters.industry) summaryParts.push(initialFilters.industry);
   if (initialFilters.city) summaryParts.push(initialFilters.city);
   const filterSummary = summaryParts.length

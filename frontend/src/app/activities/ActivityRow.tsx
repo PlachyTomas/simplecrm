@@ -78,8 +78,8 @@ function ChangesDetail({ entries }: { entries: [string, unknown][] }): JSX.Eleme
         const key = changeFieldLabelKey(field);
         return (
           <p key={field} className="text-sm text-text-secondary">
-            <span className="text-text-tertiary">{key ? t(key) : field}:</span>{" "}
-            {sideValue(d.from)} → {sideValue(d.to)}
+            <span className="text-text-tertiary">{key ? t(key) : field}:</span> {sideValue(d.from)}{" "}
+            → {sideValue(d.to)}
           </p>
         );
       })}

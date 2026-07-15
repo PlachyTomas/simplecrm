@@ -349,9 +349,7 @@ function ConfirmationCard({ onExport }: ConfirmationCardProps) {
       <h2 className="text-2xl font-semibold text-text-primary">
         {t("trialExpiredGate.confirmation.heading")}
       </h2>
-      <p className="mt-3 text-sm text-text-secondary">
-        {t("trialExpiredGate.confirmation.body")}
-      </p>
+      <p className="mt-3 text-sm text-text-secondary">{t("trialExpiredGate.confirmation.body")}</p>
       <button
         type="button"
         onClick={onExport}

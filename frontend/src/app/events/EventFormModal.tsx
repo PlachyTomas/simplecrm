@@ -412,10 +412,7 @@ function DealPickerField({
   const q = debounced.toLowerCase();
   const matches = q
     ? (deals.data?.items ?? [])
-        .filter(
-          (d) =>
-            d.name.toLowerCase().includes(q) || d.company_name.toLowerCase().includes(q),
-        )
+        .filter((d) => d.name.toLowerCase().includes(q) || d.company_name.toLowerCase().includes(q))
         .slice(0, 25)
     : [];
 

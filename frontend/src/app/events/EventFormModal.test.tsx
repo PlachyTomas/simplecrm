@@ -131,10 +131,7 @@ describe("EventFormModal deal picker", () => {
 
   it("blocks submit with a validation message until a deal is picked", async () => {
     wrap(<EventFormModal open onClose={vi.fn()} />);
-    await userEvent.type(
-      screen.getByTestId(testIds.events.dealPicker.input),
-      "nic neodpovídá",
-    );
+    await userEvent.type(screen.getByTestId(testIds.events.dealPicker.input), "nic neodpovídá");
     // Give the title a value so only the deal is missing.
     await userEvent.type(screen.getByRole("textbox", { name: "Název" }), "Schůzka");
     await userEvent.click(screen.getByRole("button", { name: "Vytvořit událost" }));

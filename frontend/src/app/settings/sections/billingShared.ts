@@ -29,13 +29,19 @@ export function getStatusPill(
   t: TFunction<"billing">,
 ): StatusPillSpec {
   if (!sub) {
-    return { label: t("billingShared.statusLoading"), className: "bg-surface-overlay text-text-tertiary" };
+    return {
+      label: t("billingShared.statusLoading"),
+      className: "bg-surface-overlay text-text-tertiary",
+    };
   }
   if (sub.is_comp) {
     return { label: t("billingShared.statusComp"), className: "bg-info-subtle text-info" };
   }
   if (sub.plan?.code === "enterprise" && sub.status === "active") {
-    return { label: t("billingShared.statusEnterpriseActive"), className: "bg-info-subtle text-info" };
+    return {
+      label: t("billingShared.statusEnterpriseActive"),
+      className: "bg-info-subtle text-info",
+    };
   }
   switch (sub.status) {
     case "trialing":
@@ -46,11 +52,20 @@ export function getStatusPill(
         className: "bg-warning-subtle text-warning",
       };
     case "active":
-      return { label: t("billingShared.statusActive"), className: "bg-success-subtle text-success" };
+      return {
+        label: t("billingShared.statusActive"),
+        className: "bg-success-subtle text-success",
+      };
     case "past_due":
-      return { label: t("billingShared.statusPastDue"), className: "bg-warning-subtle text-warning" };
+      return {
+        label: t("billingShared.statusPastDue"),
+        className: "bg-warning-subtle text-warning",
+      };
     case "canceled":
-      return { label: t("billingShared.statusCanceled"), className: "bg-danger-subtle text-danger" };
+      return {
+        label: t("billingShared.statusCanceled"),
+        className: "bg-danger-subtle text-danger",
+      };
     default:
       return { label: sub.status, className: "bg-surface-overlay text-text-tertiary" };
   }

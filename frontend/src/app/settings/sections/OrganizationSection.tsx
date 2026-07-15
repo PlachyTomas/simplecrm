@@ -532,7 +532,9 @@ function BillingIntervalCard({ sub }: { sub: SubscriptionLite }) {
           disabled={mutation.isPending || target === effective}
           className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {mutation.isPending ? t("organization.shared.saving") : t("organization.billingInterval.submit")}
+          {mutation.isPending
+            ? t("organization.shared.saving")
+            : t("organization.billingInterval.submit")}
         </button>
         {savedFlash ? (
           <span className="text-sm text-success" role="status">

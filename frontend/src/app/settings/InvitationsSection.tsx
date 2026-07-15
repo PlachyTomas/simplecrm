@@ -112,9 +112,7 @@ export function InvitationsSection() {
     return (
       <section className="rounded-lg border border-border bg-surface p-6">
         <h2 className="text-lg font-semibold">{t("invitations.permissionDenied.title")}</h2>
-        <p className="mt-2 text-sm text-text-secondary">
-          {t("invitations.permissionDenied.body")}
-        </p>
+        <p className="mt-2 text-sm text-text-secondary">{t("invitations.permissionDenied.body")}</p>
       </section>
     );
   }
@@ -253,7 +251,9 @@ export function InvitationsSection() {
               className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-text-on-accent hover:bg-accent-hover disabled:opacity-50"
             >
               <Plus size={16} strokeWidth={1.75} />{" "}
-              {create.isPending ? t("invitations.invite.submitting") : t("invitations.invite.submit")}
+              {create.isPending
+                ? t("invitations.invite.submitting")
+                : t("invitations.invite.submit")}
             </button>
           </div>
         </form>
@@ -314,13 +314,13 @@ function InvitationRow({
     <tr className="border-b border-border-subtle last:border-0">
       <td className="py-3 text-sm text-text-primary">{invitation.email}</td>
       <td className="py-3 text-sm text-text-secondary">
-        {invitation.role in ROLE_LABEL_KEY
-          ? t(ROLE_LABEL_KEY[invitation.role]!)
-          : invitation.role}
+        {invitation.role in ROLE_LABEL_KEY ? t(ROLE_LABEL_KEY[invitation.role]!) : invitation.role}
       </td>
       <td className="py-3 text-sm text-text-secondary">{teamName}</td>
       <td className="py-3 text-sm text-text-secondary">
-        {invitation.can_invite ? t("invitations.pending.canInviteYes") : t("invitations.pending.canInviteNo")}
+        {invitation.can_invite
+          ? t("invitations.pending.canInviteYes")
+          : t("invitations.pending.canInviteNo")}
       </td>
       <td className="py-3 text-sm text-text-tertiary">{expires}</td>
       <td className="py-3 text-right">

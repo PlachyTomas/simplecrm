@@ -56,7 +56,9 @@ export function MarkLostDialog({
   // store the cs reference label regardless of the marker's UI language —
   // mixed-language values would fragment the lost-deals report.
   const finalReason =
-    reason === "other" ? custom.trim() : i18n.getFixedT("cs", "deals")(LOST_REASON_LABEL_KEY[reason]);
+    reason === "other"
+      ? custom.trim()
+      : i18n.getFixedT("cs", "deals")(LOST_REASON_LABEL_KEY[reason]);
 
   return (
     <div
@@ -84,7 +86,8 @@ export function MarkLostDialog({
           {dealName ? (
             <>
               {t("markLostDialog.bodyPrefix")}{" "}
-              <strong className="text-text-primary">{dealName}</strong>. {t("markLostDialog.bodySuffix")}
+              <strong className="text-text-primary">{dealName}</strong>.{" "}
+              {t("markLostDialog.bodySuffix")}
             </>
           ) : (
             t("markLostDialog.bodySuffix")

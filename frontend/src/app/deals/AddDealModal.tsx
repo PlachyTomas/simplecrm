@@ -301,7 +301,8 @@ export function AddDealModal({
 
     // Deal name defaults to the company name so a lead can be logged without
     // inventing a title.
-    const effectiveName = form.name.trim() || resolvedCompanyName || t("addDealModal.defaultDealName");
+    const effectiveName =
+      form.name.trim() || resolvedCompanyName || t("addDealModal.defaultDealName");
 
     try {
       const created = await createDeal.mutateAsync({

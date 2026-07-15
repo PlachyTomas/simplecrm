@@ -1,12 +1,18 @@
 import { useTranslation } from "react-i18next";
 
-import { PRESET_LABEL_KEY, VISIBLE_PRESETS, type RangePreset } from "@/app/reports/dashboard/dateRange";
+import {
+  PRESET_LABEL_KEY,
+  VISIBLE_PRESETS,
+  type RangePreset,
+} from "@/app/reports/dashboard/dateRange";
 import { testIds } from "@/lib/testids";
 import { useModalDialog } from "@/lib/useModalDialog";
 import { cn } from "@/lib/utils";
 
 /** The presets a home widget may pick — the shared set minus `custom`. */
-const HOME_PRESETS = VISIBLE_PRESETS.filter((p): p is Exclude<RangePreset, "custom"> => p !== "custom");
+const HOME_PRESETS = VISIBLE_PRESETS.filter(
+  (p): p is Exclude<RangePreset, "custom"> => p !== "custom",
+);
 
 export type HomeDatePreset = (typeof HOME_PRESETS)[number];
 

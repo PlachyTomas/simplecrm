@@ -195,7 +195,11 @@ export function ReportsDemoSection() {
 
         <div className="mx-auto mt-10 max-w-[1100px]">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <DemoTile label={t("reports.tilePipeline")} data={FAKE_DATA[preset]} variant="pipeline" />
+            <DemoTile
+              label={t("reports.tilePipeline")}
+              data={FAKE_DATA[preset]}
+              variant="pipeline"
+            />
             <DemoTile
               label={t("reports.tileLeaderboard")}
               data={FAKE_DATA[preset]}
@@ -206,7 +210,11 @@ export function ReportsDemoSection() {
               data={FAKE_DATA[preset]}
               variant="lost_reasons"
             />
-            <DemoTile label={t("reports.tileStale")} data={FAKE_DATA[preset]} variant="stale_deals" />
+            <DemoTile
+              label={t("reports.tileStale")}
+              data={FAKE_DATA[preset]}
+              variant="stale_deals"
+            />
           </div>
         </div>
       </div>

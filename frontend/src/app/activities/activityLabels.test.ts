@@ -36,18 +36,19 @@ describe("activityLabels", () => {
   });
 
   it("derives a readable detail from the payload", () => {
-    expect(activityDetail({ activity_type: "deal_created", payload: { name: "Big deal" } })).toEqual(
-      { kind: "text", value: "Big deal" },
-    );
+    expect(
+      activityDetail({ activity_type: "deal_created", payload: { name: "Big deal" } }),
+    ).toEqual({ kind: "text", value: "Big deal" });
     expect(
       activityDetail({ activity_type: "deal_updated", payload: { changed: ["name", "value"] } }),
     ).toEqual({ kind: "fieldsChanged", fields: ["name", "value"] });
     expect(
       activityDetail({ activity_type: "event_created", payload: { title: "Meeting" } }),
     ).toEqual({ kind: "text", value: "Meeting" });
-    expect(
-      activityDetail({ activity_type: "email_sent", payload: { subject: "Offer" } }),
-    ).toEqual({ kind: "text", value: "Offer" });
+    expect(activityDetail({ activity_type: "email_sent", payload: { subject: "Offer" } })).toEqual({
+      kind: "text",
+      value: "Offer",
+    });
   });
 
   it("renders a stage change from resolved stage names, never UUIDs", () => {

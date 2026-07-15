@@ -162,7 +162,9 @@ export function BlockedCompaniesSection() {
             disabled={add.isPending}
             className="inline-flex h-9 items-center rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent hover:bg-accent-hover disabled:opacity-60"
           >
-            {add.isPending ? t("blockedCompanies.form.adding") : t("blockedCompanies.form.addButton")}
+            {add.isPending
+              ? t("blockedCompanies.form.adding")
+              : t("blockedCompanies.form.addButton")}
           </button>
         </div>
       </form>

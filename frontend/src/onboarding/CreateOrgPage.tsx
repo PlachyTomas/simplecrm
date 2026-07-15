@@ -360,7 +360,9 @@ function SeatsStep({
             className="block h-10 w-32 rounded-md border border-border bg-surface-overlay pl-10 pr-3 text-sm tabular-nums text-text-primary focus:border-accent focus:outline-none"
           />
         </div>
-        <span className="mt-2 block text-xs text-text-tertiary">{t("createOrg.seatsStep.hint")}</span>
+        <span className="mt-2 block text-xs text-text-tertiary">
+          {t("createOrg.seatsStep.hint")}
+        </span>
       </label>
 
       {previewMinor != null ? (

@@ -39,8 +39,7 @@ export function isStandalone(): boolean {
 export function isIos(): boolean {
   const ua = window.navigator.userAgent;
   return (
-    /iPhone|iPad|iPod/.test(ua) ||
-    (ua.includes("Macintosh") && window.navigator.maxTouchPoints > 1)
+    /iPhone|iPad|iPod/.test(ua) || (ua.includes("Macintosh") && window.navigator.maxTouchPoints > 1)
   );
 }
 

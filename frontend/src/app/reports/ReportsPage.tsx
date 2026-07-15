@@ -29,10 +29,7 @@ import { WidgetByType } from "@/app/reports/dashboard/widgets/WidgetByType";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { WidgetSkeleton } from "@/components/widget-dashboard/WidgetFrame";
 import { WidgetGrid } from "@/components/widget-dashboard/WidgetGrid";
-import {
-  WidgetPicker,
-  type WidgetPickerGroup,
-} from "@/components/widget-dashboard/WidgetPicker";
+import { WidgetPicker, type WidgetPickerGroup } from "@/components/widget-dashboard/WidgetPicker";
 import { useDashboardEditor } from "@/components/widget-dashboard/useDashboardEditor";
 import { makeWidgetId } from "@/components/widget-dashboard/widgetId";
 import { testIds } from "@/lib/testids";

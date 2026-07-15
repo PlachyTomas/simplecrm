@@ -148,10 +148,7 @@ function UserRow({
               // Deactivating revokes the member's login immediately — confirm
               // first so a stray click doesn't lock a colleague out (review UX
               // P1). Reactivating is harmless and needs no confirm.
-              if (
-                u.is_active &&
-                !window.confirm(t("users.deactivateConfirm", { name: u.name }))
-              ) {
+              if (u.is_active && !window.confirm(t("users.deactivateConfirm", { name: u.name }))) {
                 return;
               }
               void onToggleActive();

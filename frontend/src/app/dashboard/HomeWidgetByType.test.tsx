@@ -140,8 +140,6 @@ describe("HomeWidgetByType", () => {
   it("shows the edit-mode config gear on reports widgets", () => {
     renderWidget(entryOf("stale_deals"), { isEditMode: true });
     // The gear rides WidgetFrame's onConfigClick slot (no testid of its own).
-    expect(
-      screen.getByRole("button", { name: "Nastavení widgetu" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Nastavení widgetu" })).toBeInTheDocument();
   });
 });

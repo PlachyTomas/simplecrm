@@ -143,7 +143,9 @@ function OwnershipWindowSetting() {
           disabled={mutation.isPending || Number(days) === initial}
           className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-4 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {mutation.isPending ? t("permissions.ownershipWindow.saving") : t("permissions.ownershipWindow.save")}
+          {mutation.isPending
+            ? t("permissions.ownershipWindow.saving")
+            : t("permissions.ownershipWindow.save")}
         </button>
         {savedFlash ? (
           <span className="text-sm text-success" role="status">
@@ -187,18 +189,14 @@ export function PermissionsSection() {
     <section className="space-y-4">
       <div className="rounded-lg border border-border bg-surface p-6">
         <h2 className="text-lg font-semibold">{t("permissions.visibility.title")}</h2>
-        <p className="mt-1 text-sm text-text-tertiary">
-          {t("permissions.visibility.subtitle")}
-        </p>
+        <p className="mt-1 text-sm text-text-tertiary">{t("permissions.visibility.subtitle")}</p>
         <div className="mt-4">
           <LeaderboardVisibilityToggle />
         </div>
       </div>
       <div className="rounded-lg border border-border bg-surface p-6">
         <h2 className="text-lg font-semibold">{t("permissions.companyRules.title")}</h2>
-        <p className="mt-1 text-sm text-text-tertiary">
-          {t("permissions.companyRules.subtitle")}
-        </p>
+        <p className="mt-1 text-sm text-text-tertiary">{t("permissions.companyRules.subtitle")}</p>
         <div className="mt-4">
           <OwnershipWindowSetting />
         </div>

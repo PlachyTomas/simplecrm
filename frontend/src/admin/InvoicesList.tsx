@@ -19,16 +19,20 @@ import {
   useExportInvoicesPdfZip,
 } from "@/admin/useExportInvoiceYear";
 
-const STATUS_PILL: Record<AdminInvoiceStatus, { labelKey: ParseKeys<"admin">; className: string }> = {
-  draft: { labelKey: "invoicesList.status.draft", className: "bg-bg-elevated text-text-secondary" },
-  issued: { labelKey: "invoicesList.status.issued", className: "bg-info-subtle text-info" },
-  paid: { labelKey: "invoicesList.status.paid", className: "bg-success-subtle text-success" },
-  overdue: { labelKey: "invoicesList.status.overdue", className: "bg-danger-subtle text-danger" },
-  voided: {
-    labelKey: "invoicesList.status.voided",
-    className: "bg-bg-elevated text-text-tertiary line-through",
-  },
-};
+const STATUS_PILL: Record<AdminInvoiceStatus, { labelKey: ParseKeys<"admin">; className: string }> =
+  {
+    draft: {
+      labelKey: "invoicesList.status.draft",
+      className: "bg-bg-elevated text-text-secondary",
+    },
+    issued: { labelKey: "invoicesList.status.issued", className: "bg-info-subtle text-info" },
+    paid: { labelKey: "invoicesList.status.paid", className: "bg-success-subtle text-success" },
+    overdue: { labelKey: "invoicesList.status.overdue", className: "bg-danger-subtle text-danger" },
+    voided: {
+      labelKey: "invoicesList.status.voided",
+      className: "bg-bg-elevated text-text-tertiary line-through",
+    },
+  };
 
 const KIND_LABEL: Record<AdminInvoiceListItem["kind"], ParseKeys<"admin">> = {
   invoice: "invoicesList.kind.invoice",

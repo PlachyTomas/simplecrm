@@ -12,10 +12,7 @@ export interface MobileWidgetItem {
  * Kept in its own module (no component export) so the mobile list stays
  * fast-refresh friendly and the derivation is unit-testable in isolation.
  */
-export function deriveMobileOrder(
-  items: MobileWidgetItem[],
-  order: string[],
-): MobileWidgetItem[] {
+export function deriveMobileOrder(items: MobileWidgetItem[], order: string[]): MobileWidgetItem[] {
   const byId = new Map(items.map((i) => [i.id, i]));
   const seen = new Set<string>();
   const result: MobileWidgetItem[] = [];
