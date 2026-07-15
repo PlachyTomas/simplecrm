@@ -29,6 +29,21 @@ Gotchas that WILL bite otherwise:
 - Regenerate API types via the running server: `BACKEND_OPENAPI_URL=http://localhost:8000/api/v1/openapi.json pnpm types:generate` (default mode imports the backend in-process → same macOS glib crash).
 - App login + seeded demo data for UI verification: see `.claude/skills/running-simplecrm/SKILL.md`.
 
+## Before pushing
+
+Run CI locally and get it green BEFORE every push — `.github/workflows/ci.yml` is the source of truth and nothing auto-fixes on the remote. The formatters are what actually go red; a green test suite says nothing about `ruff format` / `prettier`, so run the fix commands, not just the checks.
+
+Fix first:
+
+- `cd backend && uv run ruff check --fix . && uv run ruff format .`
+- `cd frontend && npx prettier --write .`
+
+Then verify all three jobs (prefix every backend command with the env from Dev environment; use `npx` on the frontend — see gotchas):
+
+- backend: `uv run ruff check .` · `uv run ruff format --check .` · `uv run mypy app` · `uv run alembic upgrade head` · `uv run pytest`
+- frontend: `npx eslint .` · `npx tsc -b --noEmit` · `npx prettier --check .` · `npx vitest run` · `npx vite build`
+- api-types: `cd frontend && node scripts/generate-api-types.mjs --check`
+
 ## Conventions
 
 - All UI copy lives in i18n catalogs (`frontend/src/locales`, `backend/app/locales`); cs (vykání) is the reference language, en the first translation. New strings must land in both and pass `pnpm i18n:check`. Money/dates via `@/lib/format` with the locale from `useLocale()` (follows the active UI language) — details in the ui-design skill.
