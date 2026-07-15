@@ -44,6 +44,11 @@ Then verify all three jobs (prefix every backend command with the env from Dev e
 - frontend: `npx eslint .` · `npx tsc -b --noEmit` · `npx prettier --check .` · `npx vitest run` · `npx vite build`
 - api-types: `cd frontend && node scripts/generate-api-types.mjs --check`
 
+Two traps this has already sprung:
+
+- **Local green is necessary, not sufficient — CI is Ubuntu.** Anything asserting on output from a *system* library (not pinned by `uv.lock`) can pass here and fail there: WeasyPrint embeds a font subset via harfbuzz on macOS but via fontTools on the CI image, so identical markup yields different PDF bytes. Never pin a hash of rendered PDF output; assert on the deterministic layer above it (HTML — jinja2/babel/qrcode are pinned and pure-Python) or on same-process equality.
+- **The backend job is fail-fast: ruff runs before mypy and pytest.** A lint error masks every test failure behind it, so a red job's first error is rarely the only one — fix it and re-run the rest locally before assuming you're done.
+
 ## Conventions
 
 - All UI copy lives in i18n catalogs (`frontend/src/locales`, `backend/app/locales`); cs (vykání) is the reference language, en the first translation. New strings must land in both and pass `pnpm i18n:check`. Money/dates via `@/lib/format` with the locale from `useLocale()` (follows the active UI language) — details in the ui-design skill.
