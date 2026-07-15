@@ -216,28 +216,54 @@ def test_render_pdf_size_in_expected_range(plátce: bool) -> None:
 # --------------------------------------------------------------------------- #
 
 
-# SHA-256 of the cs/CZK fixture PDF captured from the *pre-i18n* renderer.
-# The i18n refactor (labels dict + `lang` var) must keep the Czech PDF
-# byte-identical — `storage.py` records `pdf_sha256` at issuance and verifies
-# it on every read, so a byte drift invalidates already-issued invoices.
+# SHA-256 of the cs/CZK fixture *HTML* captured from the pre-i18n renderer.
+# The i18n refactor (labels dict + `lang` var) must keep the Czech document
+# identical, and the markup is the layer that refactor touches.
+#
+# This guard deliberately pins the HTML, not the PDF. WeasyPrint embeds a font
+# subset produced by the *system* font stack, so identical markup still hashes
+# differently per machine: this repo's dev macOS uses the harfbuzz subsetter
+# while the CI image (harfbuzz < 4.1.0) falls back to fontTools — see
+# `test_render_pdf_deterministic_through_fonttools_subset`. A pinned PDF hash
+# therefore only ever passes on the machine that captured it; the previous
+# `_CS_PDF_SHA256` was captured on macOS and could never go green on CI.
+# The PDF's own guarantees are covered without a machine-bound constant by the
+# determinism, fontTools-subset and `default == cs` tests.
 # Regenerate ONLY after a deliberate, reviewed template change.
-_CS_PDF_SHA256 = {
-    False: "7edc1096d5510225c223c665eee39297dd20cb5c812c4fb676544076b3a11eef",
-    True: "bf0281d074284d19615df192fd929f4f2e61a1a0efdfb316f7d17a5601dd14bd",
+_CS_HTML_SHA256 = {
+    False: "247d2551f067d742d10259ddca909efecc63d2ea1e2adc8fcc6dc59d1b09bf8f",
+    True: "3a74491785b4f4ba625b37c553283b797e6b092101a33c439312355ec1cd908e",
 }
 
 
 @pytest.mark.parametrize("plátce", [False, True])
-def test_render_pdf_cs_byte_identical_to_prerefactor(plátce: bool) -> None:
-    """The Czech invoice PDF must be byte-identical to the pre-i18n output,
-    both for the default (`lang` omitted) and the explicit `lang="cs"` call."""
+def test_render_cs_html_identical_to_prerefactor(plátce: bool) -> None:
+    """The Czech invoice markup must be identical to the pre-i18n output, both
+    for the default (`lang` omitted) and the explicit `lang="cs"` call."""
+    from app.services.invoicing.renderer import _render_html
+
+    invoice = _make_invoice(plátce=plátce)
+    line = _make_line(invoice.id, plátce=plátce)
+    default_html = _render_html(invoice, [line])
+    cs_html = _render_html(invoice, [line], lang="cs")
+    assert hashlib.sha256(default_html.encode()).hexdigest() == _CS_HTML_SHA256[plátce]
+    assert hashlib.sha256(cs_html.encode()).hexdigest() == _CS_HTML_SHA256[plátce]
+
+
+@pytest.mark.parametrize("plátce", [False, True])
+def test_render_pdf_cs_default_matches_explicit_cs(plátce: bool) -> None:
+    """Omitting `lang` must render the exact bytes `lang="cs"` renders.
+
+    `storage.py` records `pdf_sha256` at issuance and verifies it on every
+    read, so the default must never drift away from cs — an invoice issued
+    through one call path and re-rendered through the other would fail the
+    integrity check. This compares two renders in the same process, so it
+    holds on every font stack (unlike a pinned hash; see `_CS_HTML_SHA256`).
+    """
     invoice = _make_invoice(plátce=plátce)
     line = _make_line(invoice.id, plátce=plátce)
     r = InvoiceRenderer()
-    default_pdf = r.render_pdf(invoice, [line])
-    cs_pdf = r.render_pdf(invoice, [line], lang="cs")
-    assert hashlib.sha256(default_pdf).hexdigest() == _CS_PDF_SHA256[plátce]
-    assert hashlib.sha256(cs_pdf).hexdigest() == _CS_PDF_SHA256[plátce]
+    assert r.render_pdf(invoice, [line]) == r.render_pdf(invoice, [line], lang="cs")
 
 
 def test_render_pdf_en_html_has_english_labels() -> None:
