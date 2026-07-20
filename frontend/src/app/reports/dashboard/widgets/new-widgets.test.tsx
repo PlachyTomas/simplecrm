@@ -135,6 +135,28 @@ describe("new report widgets", () => {
     );
   });
 
+  it("shows a fill-in-dates nudge when no open deal has a close date", async () => {
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({
+        buckets: [
+          { kind: "overdue", year_month: null, count: 0, value: "0", weighted_value: "0" },
+          { kind: "month", year_month: "2026-07", count: 0, value: "0", weighted_value: "0" },
+          { kind: "later", year_month: null, count: 0, value: "0", weighted_value: "0" },
+          { kind: "no_date", year_month: null, count: 3, value: "900.00", weighted_value: "90.00" },
+        ],
+        currency: "CZK",
+        total_value: "900.00",
+        total_weighted_value: "90.00",
+      }),
+    );
+    renderWidget(entryOf("sales_forecast"));
+    await waitFor(() =>
+      expect(screen.getByText(/nemají předpokládané datum uzavření/)).toBeInTheDocument(),
+    );
+    // No zero-month bars rendered as chart rows.
+    expect(screen.queryByText("červenec 2026")).not.toBeInTheDocument();
+  });
+
   it("renders won vs paid with the paid share hint", async () => {
     fetchMock.mockImplementation(async () =>
       jsonResponse({

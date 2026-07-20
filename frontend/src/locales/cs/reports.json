@@ -120,6 +120,7 @@
   "chart": {
     "salesForecastAriaLabel": "Odhad prodeje podle měsíce uzavření",
     "salesForecastEmpty": "Žádné otevřené obchody k předpovědi.",
+    "salesForecastNoDates": "Otevřené obchody zatím nemají předpokládané datum uzavření. Doplňte ho v detailu obchodu a odhad se zobrazí.",
     "salesForecastOverdue": "Po termínu",
     "salesForecastLater": "Později",
     "salesForecastNoDate": "Bez termínu",

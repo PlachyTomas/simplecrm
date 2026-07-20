@@ -116,6 +116,7 @@
   "chart": {
     "salesForecastAriaLabel": "Sales forecast by close month",
     "salesForecastEmpty": "No open deals to forecast.",
+    "salesForecastNoDates": "Open deals have no expected close date yet. Add one in the deal detail and the forecast will appear.",
     "salesForecastOverdue": "Overdue",
     "salesForecastLater": "Later",
     "salesForecastNoDate": "No close date",

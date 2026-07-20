@@ -73,9 +73,12 @@ export function SalesForecastWidget(props: BaseWidgetProps) {
   const weighted = config.weighted === true;
   const buckets = q.data?.buckets ?? [];
   const hasAnyDeal = buckets.some((b) => b.count > 0);
+  // A chart of six zero months + one "no date" bar says nothing — until
+  // at least one open deal has a close date, nudge instead of charting.
+  const hasDatedDeal = buckets.some((b) => b.kind !== "no_date" && b.count > 0);
   // Month buckets always render (an empty month is information); the
   // overflow rows (overdue / later / no date) only when non-empty.
-  const rows: BarRow[] = !hasAnyDeal
+  const rows: BarRow[] = !hasDatedDeal
     ? []
     : buckets
         .filter((b) => b.kind === "month" || b.count > 0)
@@ -107,7 +110,9 @@ export function SalesForecastWidget(props: BaseWidgetProps) {
         <BarChartWidget
           rows={rows}
           ariaLabel={t("chart.salesForecastAriaLabel")}
-          emptyMessage={t("chart.salesForecastEmpty")}
+          emptyMessage={
+            hasAnyDeal ? t("chart.salesForecastNoDates") : t("chart.salesForecastEmpty")
+          }
         />
       )}
     </WidgetFrame>
