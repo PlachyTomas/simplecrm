@@ -21,20 +21,26 @@ from app.schemas.reports.widgets.new_companies import NewCompaniesConfig
 from app.schemas.reports.widgets.pipeline_value import PipelineValueConfig
 from app.schemas.reports.widgets.rep_activity import RepActivityConfig
 from app.schemas.reports.widgets.sales_cycle_length import SalesCycleLengthConfig
+from app.schemas.reports.widgets.sales_forecast import SalesForecastConfig
 from app.schemas.reports.widgets.sales_leaderboard import SalesLeaderboardConfig
 from app.schemas.reports.widgets.stale_deals import StaleDealsConfig
+from app.schemas.reports.widgets.weighted_pipeline import WeightedPipelineConfig
 from app.schemas.reports.widgets.win_rate import WinRateConfig
+from app.schemas.reports.widgets.won_vs_paid import WonVsPaidConfig
 
 WidgetType = Literal[
     "pipeline_value",
+    "weighted_pipeline",
     "new_companies",
     "deals_won",
+    "won_vs_paid",
     "win_rate",
     "avg_deal_size",
     "sales_cycle_length",
     "lead_to_deal_conversion",
     "lost_reasons_breakdown",
     "sales_leaderboard",
+    "sales_forecast",
     "rep_activity",
     "stale_deals",
     "companies_at_risk",
@@ -50,8 +56,11 @@ __all__ = [
     "PipelineValueConfig",
     "RepActivityConfig",
     "SalesCycleLengthConfig",
+    "SalesForecastConfig",
     "SalesLeaderboardConfig",
     "StaleDealsConfig",
+    "WeightedPipelineConfig",
     "WidgetType",
     "WinRateConfig",
+    "WonVsPaidConfig",
 ]

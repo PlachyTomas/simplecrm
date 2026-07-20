@@ -39,9 +39,12 @@ from app.schemas.reports.widgets import (
     PipelineValueConfig,
     RepActivityConfig,
     SalesCycleLengthConfig,
+    SalesForecastConfig,
     SalesLeaderboardConfig,
     StaleDealsConfig,
+    WeightedPipelineConfig,
     WinRateConfig,
+    WonVsPaidConfig,
 )
 from app.schemas.reports.widgets._base import WidgetConfigBase
 
@@ -97,8 +100,11 @@ class VelocityConfig(WidgetConfigBase):
 # validation instead of silently coercing.
 HomeWidgetConfig = Annotated[
     PipelineValueConfig
+    | WeightedPipelineConfig
     | NewCompaniesConfig
     | DealsWonConfig
+    | WonVsPaidConfig
+    | SalesForecastConfig
     | WinRateConfig
     | AvgDealSizeConfig
     | SalesCycleLengthConfig

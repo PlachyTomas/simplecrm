@@ -39,9 +39,12 @@ from app.schemas.reports import (
     PipelineValueResponse,
     RepActivityResponse,
     SalesCycleLengthResponse,
+    SalesForecastResponse,
     SalesLeaderboardResponse,
     StaleDealsResponse,
+    WeightedPipelineResponse,
     WinRateResponse,
+    WonVsPaidResponse,
 )
 from app.schemas.reports.widgets import (
     AvgDealSizeConfig,
@@ -53,9 +56,12 @@ from app.schemas.reports.widgets import (
     PipelineValueConfig,
     RepActivityConfig,
     SalesCycleLengthConfig,
+    SalesForecastConfig,
     SalesLeaderboardConfig,
     StaleDealsConfig,
+    WeightedPipelineConfig,
     WinRateConfig,
+    WonVsPaidConfig,
 )
 from app.services.reports.avg_deal_size import compute_avg_deal_size
 from app.services.reports.companies_at_risk import compute_companies_at_risk
@@ -70,9 +76,12 @@ from app.services.reports.new_companies import compute_new_companies
 from app.services.reports.pipeline_value import compute_pipeline_value
 from app.services.reports.rep_activity import compute_rep_activity
 from app.services.reports.sales_cycle_length import compute_sales_cycle_length
+from app.services.reports.sales_forecast import compute_sales_forecast
 from app.services.reports.sales_leaderboard import compute_sales_leaderboard
 from app.services.reports.stale_deals import compute_stale_deals
+from app.services.reports.weighted_pipeline import compute_weighted_pipeline
 from app.services.reports.win_rate import compute_win_rate
+from app.services.reports.won_vs_paid import compute_won_vs_paid
 
 
 async def _enforce_widget_scope(
@@ -125,6 +134,76 @@ async def widget_pipeline_value(
         team_id=team_id,
         owner_user_id=owner_user_id,
         config=PipelineValueConfig(group_by=group_by),  # type: ignore[arg-type]
+    )
+
+
+@router.get("/weighted-pipeline", response_model=WeightedPipelineResponse)
+async def widget_weighted_pipeline(
+    from_: date = Query(alias="from"),
+    to: date = Query(),
+    team_id: UUID | None = Query(default=None),
+    owner_user_id: UUID | None = Query(default=None),
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> WeightedPipelineResponse:
+    _validate_window(from_, to)
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return await compute_weighted_pipeline(
+        session,
+        organization_id=user.organization_id,
+        from_=from_,
+        to=to,
+        team_id=team_id,
+        owner_user_id=owner_user_id,
+        config=WeightedPipelineConfig(),
+    )
+
+
+@router.get("/sales-forecast", response_model=SalesForecastResponse)
+async def widget_sales_forecast(
+    from_: date = Query(alias="from"),
+    to: date = Query(),
+    team_id: UUID | None = Query(default=None),
+    owner_user_id: UUID | None = Query(default=None),
+    weighted: bool = Query(default=False),
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> SalesForecastResponse:
+    _validate_window(from_, to)
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return await compute_sales_forecast(
+        session,
+        organization_id=user.organization_id,
+        from_=from_,
+        to=to,
+        team_id=team_id,
+        owner_user_id=owner_user_id,
+        config=SalesForecastConfig(weighted=weighted),
+    )
+
+
+@router.get("/won-vs-paid", response_model=WonVsPaidResponse)
+async def widget_won_vs_paid(
+    from_: date = Query(alias="from"),
+    to: date = Query(),
+    team_id: UUID | None = Query(default=None),
+    owner_user_id: UUID | None = Query(default=None),
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> WonVsPaidResponse:
+    _validate_window(from_, to)
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return await compute_won_vs_paid(
+        session,
+        organization_id=user.organization_id,
+        from_=from_,
+        to=to,
+        team_id=team_id,
+        owner_user_id=owner_user_id,
+        config=WonVsPaidConfig(),
     )
 
 

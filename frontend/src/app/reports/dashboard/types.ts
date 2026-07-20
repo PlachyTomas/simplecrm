@@ -16,14 +16,17 @@ export type DateRangeFilter = components["schemas"]["DateRangeFilter"];
 
 export type WidgetType =
   | "pipeline_value"
+  | "weighted_pipeline"
   | "new_companies"
   | "deals_won"
+  | "won_vs_paid"
   | "win_rate"
   | "avg_deal_size"
   | "sales_cycle_length"
   | "lead_to_deal_conversion"
   | "lost_reasons_breakdown"
   | "sales_leaderboard"
+  | "sales_forecast"
   | "rep_activity"
   | "stale_deals"
   | "companies_at_risk";
@@ -36,8 +39,11 @@ export type WidgetType =
  */
 export const WIDGET_LABEL_KEY: Record<WidgetType, ParseKeys<"reports">> = {
   pipeline_value: "widgetLabels.pipeline_value",
+  weighted_pipeline: "widgetLabels.weighted_pipeline",
   new_companies: "widgetLabels.new_companies",
   deals_won: "widgetLabels.deals_won",
+  won_vs_paid: "widgetLabels.won_vs_paid",
+  sales_forecast: "widgetLabels.sales_forecast",
   win_rate: "widgetLabels.win_rate",
   avg_deal_size: "widgetLabels.avg_deal_size",
   sales_cycle_length: "widgetLabels.sales_cycle_length",

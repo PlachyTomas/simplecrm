@@ -109,6 +109,37 @@ export function PipelineValueWidget(props: BaseWidgetProps) {
   );
 }
 
+// --------- weighted_pipeline ---------
+
+export function WeightedPipelineWidget(props: BaseWidgetProps) {
+  const config = narrowConfig(props.entry.config, "weighted_pipeline");
+  const { t } = useTranslation("reports");
+  const locale = useLocale();
+  const q = useWidgetQuery<ApiSchemas["WeightedPipelineResponse"]>({
+    type: "weighted_pipeline",
+    endpoint: "weighted-pipeline",
+    config,
+    globalFilters: props.globalFilters,
+  });
+  return (
+    <Frame {...props} type="weighted_pipeline">
+      {q.isPending ? (
+        <WidgetSkeleton />
+      ) : q.isError || !q.data ? (
+        <WidgetError onRetry={() => void q.refetch()} />
+      ) : (
+        <KPITile
+          value={formatMoney(q.data.value, q.data.currency, locale)}
+          delta={<DeltaBadge comparison={q.data.comparison} />}
+          hint={t("kpi.weightedPipeline.hint", {
+            value: formatMoney(q.data.open_value, q.data.currency, locale),
+          })}
+        />
+      )}
+    </Frame>
+  );
+}
+
 // --------- deals_won ---------
 
 export function DealsWonWidget(props: BaseWidgetProps) {
@@ -141,6 +172,46 @@ export function DealsWonWidget(props: BaseWidgetProps) {
           delta={<DeltaBadge comparison={q.data.comparison} />}
           sparkline={q.data.sparkline}
           sparklineLabel={t("kpi.dealsWon.sparklineLabel")}
+        />
+      )}
+    </Frame>
+  );
+}
+
+// --------- won_vs_paid ---------
+
+export function WonVsPaidWidget(props: BaseWidgetProps) {
+  const config = narrowConfig(props.entry.config, "won_vs_paid");
+  const { t } = useTranslation("reports");
+  const locale = useLocale();
+  const q = useWidgetQuery<ApiSchemas["WonVsPaidResponse"]>({
+    type: "won_vs_paid",
+    endpoint: "won-vs-paid",
+    config,
+    globalFilters: props.globalFilters,
+  });
+  return (
+    <Frame {...props} type="won_vs_paid">
+      {q.isPending ? (
+        <WidgetSkeleton />
+      ) : q.isError || !q.data ? (
+        <WidgetError onRetry={() => void q.refetch()} />
+      ) : q.data.won_count === 0 ? (
+        <WidgetEmpty message={t("kpi.wonVsPaid.emptyNoWonDeals")} />
+      ) : (
+        <KPITile
+          value={formatMoney(q.data.paid_value, q.data.currency, locale)}
+          secondary={t("kpi.wonVsPaid.secondary", {
+            value: formatMoney(q.data.won_value, q.data.currency, locale),
+          })}
+          hint={t("kpi.wonVsPaid.hint", {
+            count: q.data.won_count,
+            paid: q.data.paid_count,
+            pct:
+              q.data.paid_pct === null || q.data.paid_pct === undefined
+                ? "—"
+                : formatPercent(q.data.paid_pct, locale, 0),
+          })}
         />
       )}
     </Frame>

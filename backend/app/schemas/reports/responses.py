@@ -16,6 +16,7 @@ from __future__ import annotations
 import uuid
 from datetime import date
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -179,3 +180,42 @@ class CompanyAtRiskItem(_BaseResponse):
 class CompaniesAtRiskResponse(_BaseResponse):
     items: list[CompanyAtRiskItem]
     threshold_days: int
+
+
+class WeightedPipelineResponse(_BaseResponse):
+    """Probability-weighted open pipeline + the unweighted sum for context."""
+
+    value: Decimal
+    open_value: Decimal
+    currency: str
+    comparison: Comparison | None
+
+
+class ForecastBucket(_BaseResponse):
+    kind: Literal["overdue", "month", "later", "no_date"]
+    year_month: str | None  # "YYYY-MM", set only when kind == "month"
+    count: int
+    value: Decimal
+    weighted_value: Decimal
+
+
+class SalesForecastResponse(_BaseResponse):
+    """Open-deal value bucketed by expected close month (6-month horizon)."""
+
+    buckets: list[ForecastBucket]
+    currency: str
+    total_value: Decimal
+    total_weighted_value: Decimal
+
+
+class WonVsPaidResponse(_BaseResponse):
+    """Paid/unpaid split of deals won in the window. `paid_pct` is None
+    when nothing was won (no denominator)."""
+
+    won_count: int
+    paid_count: int
+    won_value: Decimal
+    paid_value: Decimal
+    unpaid_value: Decimal
+    paid_pct: float | None
+    currency: str

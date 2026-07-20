@@ -31,9 +31,12 @@ from app.schemas.reports import (
     PipelineValueConfig,
     RepActivityConfig,
     SalesCycleLengthConfig,
+    SalesForecastConfig,
     SalesLeaderboardConfig,
     StaleDealsConfig,
+    WeightedPipelineConfig,
     WinRateConfig,
+    WonVsPaidConfig,
 )
 from app.services.reports.avg_deal_size import compute_avg_deal_size
 from app.services.reports.companies_at_risk import compute_companies_at_risk
@@ -48,12 +51,18 @@ from app.services.reports.new_companies import compute_new_companies
 from app.services.reports.pipeline_value import compute_pipeline_value
 from app.services.reports.rep_activity import compute_rep_activity
 from app.services.reports.sales_cycle_length import compute_sales_cycle_length
+from app.services.reports.sales_forecast import compute_sales_forecast
 from app.services.reports.sales_leaderboard import compute_sales_leaderboard
 from app.services.reports.stale_deals import compute_stale_deals
+from app.services.reports.weighted_pipeline import compute_weighted_pipeline
 from app.services.reports.win_rate import compute_win_rate
+from app.services.reports.won_vs_paid import compute_won_vs_paid
 
 WIDGET_LABEL = {
     "pipeline_value": "Hodnota pipeline",
+    "weighted_pipeline": "Vážená hodnota pipeline",
+    "sales_forecast": "Odhad prodeje",
+    "won_vs_paid": "Vyhráno vs. zaplaceno",
     "new_companies": "Nové firmy",
     "deals_won": "Vyhrané obchody",
     "win_rate": "Úspěšnost",
@@ -140,6 +149,61 @@ async def _render_section(
                 _fmt(r.value),
                 r.currency,
                 _fmt(r.comparison.delta_pct) if r.comparison else "",
+            ]
+        )
+
+    elif widget_type == "weighted_pipeline":
+        cfg = WeightedPipelineConfig(**raw_config)
+        r = await compute_weighted_pipeline(**common, config=cfg)
+        writer.writerow(["vážená_hodnota", "hodnota", "měna", "delta_pct"])
+        writer.writerow(
+            [
+                _fmt(r.value),
+                _fmt(r.open_value),
+                r.currency,
+                _fmt(r.comparison.delta_pct) if r.comparison else "",
+            ]
+        )
+
+    elif widget_type == "sales_forecast":
+        cfg = SalesForecastConfig(**raw_config)
+        r = await compute_sales_forecast(**common, config=cfg)
+        bucket_label = {"overdue": "po_termínu", "later": "později", "no_date": "bez_termínu"}
+        writer.writerow(["období", "počet", "hodnota", "vážená_hodnota"])
+        for bucket in r.buckets:
+            writer.writerow(
+                [
+                    bucket.year_month or bucket_label[bucket.kind],
+                    bucket.count,
+                    _fmt(bucket.value),
+                    _fmt(bucket.weighted_value),
+                ]
+            )
+        writer.writerow(["celkem", "", _fmt(r.total_value), _fmt(r.total_weighted_value)])
+
+    elif widget_type == "won_vs_paid":
+        cfg = WonVsPaidConfig(**raw_config)
+        r = await compute_won_vs_paid(**common, config=cfg)
+        writer.writerow(
+            [
+                "vyhráno_počet",
+                "zaplaceno_počet",
+                "vyhráno_hodnota",
+                "zaplaceno_hodnota",
+                "nezaplaceno_hodnota",
+                "zaplaceno_%",
+                "měna",
+            ]
+        )
+        writer.writerow(
+            [
+                r.won_count,
+                r.paid_count,
+                _fmt(r.won_value),
+                _fmt(r.paid_value),
+                _fmt(r.unpaid_value),
+                _fmt(r.paid_pct),
+                r.currency,
             ]
         )
 

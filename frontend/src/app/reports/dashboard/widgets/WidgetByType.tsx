@@ -14,6 +14,7 @@ import {
 import {
   LostReasonsBreakdownWidget,
   RepActivityWidget,
+  SalesForecastWidget,
   SalesLeaderboardWidget,
 } from "@/app/reports/dashboard/widgets/chart-widgets";
 import {
@@ -23,7 +24,9 @@ import {
   NewCompaniesWidget,
   PipelineValueWidget,
   SalesCycleLengthWidget,
+  WeightedPipelineWidget,
   WinRateWidget,
+  WonVsPaidWidget,
 } from "@/app/reports/dashboard/widgets/kpi-widgets";
 import {
   CompaniesAtRiskWidget,
@@ -44,8 +47,14 @@ export function WidgetByType(props: Props) {
   switch (type) {
     case "pipeline_value":
       return <PipelineValueWidget {...props} />;
+    case "weighted_pipeline":
+      return <WeightedPipelineWidget {...props} />;
     case "deals_won":
       return <DealsWonWidget {...props} />;
+    case "won_vs_paid":
+      return <WonVsPaidWidget {...props} />;
+    case "sales_forecast":
+      return <SalesForecastWidget {...props} />;
     case "win_rate":
       return <WinRateWidget {...props} />;
     case "avg_deal_size":

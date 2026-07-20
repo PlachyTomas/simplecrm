@@ -28,8 +28,11 @@
   },
   "widgetLabels": {
     "pipeline_value": "Pipeline value",
+    "weighted_pipeline": "Weighted pipeline value",
     "new_companies": "New companies",
     "deals_won": "Deals won",
+    "won_vs_paid": "Won vs. paid",
+    "sales_forecast": "Sales forecast",
     "win_rate": "Win rate",
     "avg_deal_size": "Average deal size",
     "sales_cycle_length": "Sales cycle length",
@@ -42,8 +45,11 @@
   },
   "widgetDescriptions": {
     "pipeline_value": "Total value of open deals.",
+    "weighted_pipeline": "Open deal value weighted by stage probability.",
     "new_companies": "Count of newly added companies.",
     "deals_won": "Count and value of deals won.",
+    "won_vs_paid": "How much of the won value is already paid.",
+    "sales_forecast": "Expected revenue from open deals by close date.",
     "win_rate": "Share of closed deals that were won.",
     "avg_deal_size": "Average deal value.",
     "sales_cycle_length": "Average time to close a deal.",
@@ -67,6 +73,15 @@
     "pipelineValue": {
       "sparklineLabel": "Pipeline value trend",
       "hint": "Open deals in the period"
+    },
+    "weightedPipeline": {
+      "hint": "Unweighted total: {{value}}"
+    },
+    "wonVsPaid": {
+      "emptyNoWonDeals": "No deals won in this period.",
+      "secondary": "of {{value}} won",
+      "hint_one": "{{paid}} of {{count}} deal paid ({{pct}})",
+      "hint_other": "{{paid}} of {{count}} deals paid ({{pct}})"
     },
     "dealsWon": {
       "sparklineLabel": "Deals won trend"
@@ -99,6 +114,11 @@
     }
   },
   "chart": {
+    "salesForecastAriaLabel": "Sales forecast by close month",
+    "salesForecastEmpty": "No open deals to forecast.",
+    "salesForecastOverdue": "Overdue",
+    "salesForecastLater": "Later",
+    "salesForecastNoDate": "No close date",
     "lostReasonsAriaLabel": "Lost reasons breakdown",
     "lostReasonsEmpty": "No lost deals with a reason recorded in this period.",
     "leaderboardAriaLabel": "Sales leaderboard",

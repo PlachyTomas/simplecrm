@@ -28,8 +28,11 @@
   },
   "widgetLabels": {
     "pipeline_value": "Hodnota pipeline",
+    "weighted_pipeline": "Vážená hodnota pipeline",
     "new_companies": "Nové firmy",
     "deals_won": "Vyhrané obchody",
+    "won_vs_paid": "Vyhráno vs. zaplaceno",
+    "sales_forecast": "Odhad prodeje",
     "win_rate": "Úspěšnost",
     "avg_deal_size": "Průměrná velikost obchodu",
     "sales_cycle_length": "Délka prodejního cyklu",
@@ -42,8 +45,11 @@
   },
   "widgetDescriptions": {
     "pipeline_value": "Součet hodnoty otevřených obchodů.",
+    "weighted_pipeline": "Hodnota otevřených obchodů vážená pravděpodobností fáze.",
     "new_companies": "Počet nově přidaných firem.",
     "deals_won": "Počet a hodnota vyhraných obchodů.",
+    "won_vs_paid": "Kolik z vyhraných obchodů je už zaplaceno.",
+    "sales_forecast": "Očekávané výnosy z otevřených obchodů podle data uzavření.",
     "win_rate": "Podíl vyhraných z uzavřených obchodů.",
     "avg_deal_size": "Průměrná hodnota obchodu.",
     "sales_cycle_length": "Průměrná doba do uzavření obchodu.",
@@ -67,6 +73,16 @@
     "pipelineValue": {
       "sparklineLabel": "Trend hodnoty pipeline",
       "hint": "Otevřené obchody v období"
+    },
+    "weightedPipeline": {
+      "hint": "Nevážený součet: {{value}}"
+    },
+    "wonVsPaid": {
+      "emptyNoWonDeals": "V tomto období nejsou žádné vyhrané obchody.",
+      "secondary": "z vyhraných {{value}}",
+      "hint_one": "{{paid}} z {{count}} obchodu zaplaceno ({{pct}})",
+      "hint_few": "{{paid}} z {{count}} obchodů zaplaceno ({{pct}})",
+      "hint_other": "{{paid}} z {{count}} obchodů zaplaceno ({{pct}})"
     },
     "dealsWon": {
       "sparklineLabel": "Trend vyhraných obchodů"
@@ -102,6 +118,11 @@
     }
   },
   "chart": {
+    "salesForecastAriaLabel": "Odhad prodeje podle měsíce uzavření",
+    "salesForecastEmpty": "Žádné otevřené obchody k předpovědi.",
+    "salesForecastOverdue": "Po termínu",
+    "salesForecastLater": "Později",
+    "salesForecastNoDate": "Bez termínu",
     "lostReasonsAriaLabel": "Důvody prohraných obchodů",
     "lostReasonsEmpty": "V tomto období nebyly ztracené obchody s vyplněným důvodem.",
     "leaderboardAriaLabel": "Žebříček obchodníků",

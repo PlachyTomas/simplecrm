@@ -1413,6 +1413,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/widgets/weighted-pipeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Widget Weighted Pipeline */
+        get: operations["widget_weighted_pipeline_api_v1_reports_widgets_weighted_pipeline_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/widgets/sales-forecast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Widget Sales Forecast */
+        get: operations["widget_sales_forecast_api_v1_reports_widgets_sales_forecast_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/widgets/won-vs-paid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Widget Won Vs Paid */
+        get: operations["widget_won_vs_paid_api_v1_reports_widgets_won_vs_paid_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reports/widgets/deals-won": {
         parameters: {
             query?: never;
@@ -4627,6 +4678,22 @@ export interface components {
             /** Contact */
             contact: components["schemas"]["FieldDescriptor"][];
         };
+        /** ForecastBucket */
+        ForecastBucket: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "overdue" | "month" | "later" | "no_date";
+            /** Year Month */
+            year_month: string | null;
+            /** Count */
+            count: number;
+            /** Value */
+            value: string;
+            /** Weighted Value */
+            weighted_value: string;
+        };
         /** GlobalFilters */
         GlobalFilters: {
             dateRange?: components["schemas"]["DateRangeFilter"];
@@ -4713,7 +4780,7 @@ export interface components {
             id: string;
             position: components["schemas"]["WidgetPosition"];
             /** Config */
-            config: components["schemas"]["PipelineValueConfig"] | components["schemas"]["NewCompaniesConfig"] | components["schemas"]["DealsWonConfig"] | components["schemas"]["WinRateConfig"] | components["schemas"]["AvgDealSizeConfig"] | components["schemas"]["SalesCycleLengthConfig"] | components["schemas"]["LeadToDealConversionConfig"] | components["schemas"]["LostReasonsBreakdownConfig"] | components["schemas"]["SalesLeaderboardConfig"] | components["schemas"]["RepActivityConfig"] | components["schemas"]["StaleDealsConfig"] | components["schemas"]["CompaniesAtRiskConfig"] | components["schemas"]["KpiOpenDealsConfig"] | components["schemas"]["KpiPipelineValueConfig"] | components["schemas"]["KpiWonMonthConfig"] | components["schemas"]["KpiRevenueMonthConfig"] | components["schemas"]["ActionNewDealConfig"] | components["schemas"]["ActionNewCompanyConfig"] | components["schemas"]["ActionNewContactConfig"] | components["schemas"]["ActionNewActivityConfig"] | components["schemas"]["InviteTeammatesConfig"] | components["schemas"]["VelocityConfig"];
+            config: components["schemas"]["PipelineValueConfig"] | components["schemas"]["WeightedPipelineConfig"] | components["schemas"]["NewCompaniesConfig"] | components["schemas"]["DealsWonConfig"] | components["schemas"]["WonVsPaidConfig"] | components["schemas"]["SalesForecastConfig"] | components["schemas"]["WinRateConfig"] | components["schemas"]["AvgDealSizeConfig"] | components["schemas"]["SalesCycleLengthConfig"] | components["schemas"]["LeadToDealConversionConfig"] | components["schemas"]["LostReasonsBreakdownConfig"] | components["schemas"]["SalesLeaderboardConfig"] | components["schemas"]["RepActivityConfig"] | components["schemas"]["StaleDealsConfig"] | components["schemas"]["CompaniesAtRiskConfig"] | components["schemas"]["KpiOpenDealsConfig"] | components["schemas"]["KpiPipelineValueConfig"] | components["schemas"]["KpiWonMonthConfig"] | components["schemas"]["KpiRevenueMonthConfig"] | components["schemas"]["ActionNewDealConfig"] | components["schemas"]["ActionNewCompanyConfig"] | components["schemas"]["ActionNewContactConfig"] | components["schemas"]["ActionNewActivityConfig"] | components["schemas"]["InviteTeammatesConfig"] | components["schemas"]["VelocityConfig"];
         };
         /**
          * ImpersonateOut
@@ -5757,6 +5824,41 @@ export interface components {
             sample_count: number;
         };
         /**
+         * SalesForecastConfig
+         * @description Currently-open deals bucketed by `expected_close_date` month.
+         *
+         *     Forward-looking: ignores the global date range. `weighted` switches
+         *     the displayed series to probability-weighted values.
+         */
+        SalesForecastConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "sales_forecast";
+            /**
+             * Weighted
+             * @default false
+             */
+            weighted: boolean;
+        };
+        /**
+         * SalesForecastResponse
+         * @description Open-deal value bucketed by expected close month (6-month horizon).
+         */
+        SalesForecastResponse: {
+            /** Buckets */
+            buckets: components["schemas"]["ForecastBucket"][];
+            /** Currency */
+            currency: string;
+            /** Total Value */
+            total_value: string;
+            /** Total Weighted Value */
+            total_weighted_value: string;
+        };
+        /**
          * SalesLeaderboardConfig
          * @description Bar chart of reps ranked by a configurable metric.
          */
@@ -6636,6 +6738,32 @@ export interface components {
             password?: string | null;
         };
         /**
+         * WeightedPipelineConfig
+         * @description Open `Deal.value` × stage probability (or per-deal override) in range.
+         */
+        WeightedPipelineConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "weighted_pipeline";
+        };
+        /**
+         * WeightedPipelineResponse
+         * @description Probability-weighted open pipeline + the unweighted sum for context.
+         */
+        WeightedPipelineResponse: {
+            /** Value */
+            value: string;
+            /** Open Value */
+            open_value: string;
+            /** Currency */
+            currency: string;
+            comparison: components["schemas"]["Comparison"] | null;
+        };
+        /**
          * WidgetEntry
          * @description One widget on the dashboard.
          *
@@ -6648,7 +6776,7 @@ export interface components {
             id: string;
             position: components["schemas"]["WidgetPosition"];
             /** Config */
-            config: components["schemas"]["PipelineValueConfig"] | components["schemas"]["NewCompaniesConfig"] | components["schemas"]["DealsWonConfig"] | components["schemas"]["WinRateConfig"] | components["schemas"]["AvgDealSizeConfig"] | components["schemas"]["SalesCycleLengthConfig"] | components["schemas"]["LeadToDealConversionConfig"] | components["schemas"]["LostReasonsBreakdownConfig"] | components["schemas"]["SalesLeaderboardConfig"] | components["schemas"]["RepActivityConfig"] | components["schemas"]["StaleDealsConfig"] | components["schemas"]["CompaniesAtRiskConfig"];
+            config: components["schemas"]["PipelineValueConfig"] | components["schemas"]["WeightedPipelineConfig"] | components["schemas"]["NewCompaniesConfig"] | components["schemas"]["DealsWonConfig"] | components["schemas"]["WonVsPaidConfig"] | components["schemas"]["WinRateConfig"] | components["schemas"]["AvgDealSizeConfig"] | components["schemas"]["SalesCycleLengthConfig"] | components["schemas"]["LeadToDealConversionConfig"] | components["schemas"]["LostReasonsBreakdownConfig"] | components["schemas"]["SalesLeaderboardConfig"] | components["schemas"]["SalesForecastConfig"] | components["schemas"]["RepActivityConfig"] | components["schemas"]["StaleDealsConfig"] | components["schemas"]["CompaniesAtRiskConfig"];
         };
         /** WidgetPosition */
         WidgetPosition: {
@@ -6686,6 +6814,40 @@ export interface components {
             /** Lost Count */
             lost_count: number;
             comparison: components["schemas"]["Comparison"] | null;
+        };
+        /**
+         * WonVsPaidConfig
+         * @description Paid vs. unpaid split of deals won in the date range.
+         */
+        WonVsPaidConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "won_vs_paid";
+        };
+        /**
+         * WonVsPaidResponse
+         * @description Paid/unpaid split of deals won in the window. `paid_pct` is None
+         *     when nothing was won (no denominator).
+         */
+        WonVsPaidResponse: {
+            /** Won Count */
+            won_count: number;
+            /** Paid Count */
+            paid_count: number;
+            /** Won Value */
+            won_value: string;
+            /** Paid Value */
+            paid_value: string;
+            /** Unpaid Value */
+            unpaid_value: string;
+            /** Paid Pct */
+            paid_pct: number | null;
+            /** Currency */
+            currency: string;
         };
         /**
          * _ExportCsvRequest
@@ -9350,6 +9512,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PipelineValueResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    widget_weighted_pipeline_api_v1_reports_widgets_weighted_pipeline_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                team_id?: string | null;
+                owner_user_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeightedPipelineResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    widget_sales_forecast_api_v1_reports_widgets_sales_forecast_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                team_id?: string | null;
+                owner_user_id?: string | null;
+                weighted?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesForecastResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    widget_won_vs_paid_api_v1_reports_widgets_won_vs_paid_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                team_id?: string | null;
+                owner_user_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WonVsPaidResponse"];
                 };
             };
             /** @description Validation Error */

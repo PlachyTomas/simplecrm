@@ -27,9 +27,12 @@ from app.schemas.reports.widgets import (
     PipelineValueConfig,
     RepActivityConfig,
     SalesCycleLengthConfig,
+    SalesForecastConfig,
     SalesLeaderboardConfig,
     StaleDealsConfig,
+    WeightedPipelineConfig,
     WinRateConfig,
+    WonVsPaidConfig,
 )
 
 # Discriminated union: Pydantic picks the right subclass off the `type`
@@ -37,14 +40,17 @@ from app.schemas.reports.widgets import (
 # silently coercing into one of the variants.
 WidgetConfig = Annotated[
     PipelineValueConfig
+    | WeightedPipelineConfig
     | NewCompaniesConfig
     | DealsWonConfig
+    | WonVsPaidConfig
     | WinRateConfig
     | AvgDealSizeConfig
     | SalesCycleLengthConfig
     | LeadToDealConversionConfig
     | LostReasonsBreakdownConfig
     | SalesLeaderboardConfig
+    | SalesForecastConfig
     | RepActivityConfig
     | StaleDealsConfig
     | CompaniesAtRiskConfig,

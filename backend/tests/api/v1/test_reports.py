@@ -2012,3 +2012,325 @@ async def test_widgets_export_csv_rejects_inverted_window(
         json={"from": "2026-12-31", "to": "2024-01-01", "widgets": []},
     )
     assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Widget endpoints, batch 4: weighted_pipeline, sales_forecast, won_vs_paid
+# ---------------------------------------------------------------------------
+
+
+async def _seed_forecast_corpus(
+    session: AsyncSession,
+    *,
+    org: Organization,
+    user: User,
+    open_stage: Stage,
+    won_stage: Stage,
+    company: Company,
+) -> None:
+    """Open deals with a deterministic probability/close-date mix, plus won
+    deals with a paid/unpaid split. Default open stage probability is 10
+    ("Nový lead"); overrides are set explicitly where the math needs them.
+    """
+
+    now = datetime.now(tz=UTC)
+    today = now.date()
+    cur_in = now - timedelta(days=10)
+    prev_in = now - timedelta(days=40)
+
+    session.add_all(
+        [
+            # Open, created in current window, stage probability 10 → weighted 10.
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                owner_user_id=user.id,
+                name="F-O1",
+                value=Decimal("100"),
+                currency=org.currency,
+                created_at=cur_in,
+                expected_close_date=today,  # forecast bucket: current month
+            ),
+            # Open, created in current window, override 50 → weighted 100.
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                owner_user_id=user.id,
+                name="F-O2",
+                value=Decimal("200"),
+                currency=org.currency,
+                created_at=cur_in,
+                probability_override=50,
+                expected_close_date=today - timedelta(days=5),  # overdue
+            ),
+            # Open, created in previous window → weighted comparison = 8;
+            # 200 days out is always past the 6-month horizon → "later".
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                owner_user_id=user.id,
+                name="F-O0",
+                value=Decimal("80"),
+                currency=org.currency,
+                created_at=prev_in,
+                expected_close_date=today + timedelta(days=200),
+            ),
+            # Open with no expected close date → "no_date" bucket.
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                owner_user_id=user.id,
+                name="F-O3",
+                value=Decimal("40"),
+                currency=org.currency,
+                created_at=cur_in,
+                probability_override=25,
+            ),
+            # Open but foreign currency → excluded everywhere.
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                owner_user_id=user.id,
+                name="F-FX",
+                value=Decimal("999"),
+                currency="EUR" if org.currency != "EUR" else "USD",
+                created_at=cur_in,
+                expected_close_date=today,
+            ),
+            # Won in current window, paid.
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                owner_user_id=user.id,
+                name="F-W1",
+                value=Decimal("300"),
+                currency=org.currency,
+                closed_at=cur_in,
+                is_paid=True,
+                paid_at=now,
+            ),
+            # Won in current window, not paid yet.
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                owner_user_id=user.id,
+                name="F-W2",
+                value=Decimal("400"),
+                currency=org.currency,
+                closed_at=cur_in,
+            ),
+            # Won in previous window → outside the won_vs_paid window.
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                owner_user_id=user.id,
+                name="F-W0",
+                value=Decimal("250"),
+                currency=org.currency,
+                closed_at=prev_in,
+                is_paid=True,
+                paid_at=now,
+            ),
+        ]
+    )
+    await session.commit()
+
+
+async def test_widget_weighted_pipeline_happy(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, open_stage, won_stage, company = await _setup(db_session, owned_cleanup)
+    await _seed_forecast_corpus(
+        db_session, org=org, user=user, open_stage=open_stage, won_stage=won_stage, company=company
+    )
+    resp = await client.get(
+        "/api/v1/reports/widgets/weighted-pipeline",
+        headers=_auth(user),
+        params=_window_params(),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    # F-O1: 100×10% + F-O2: 200×50% + F-O3: 40×25% = 10 + 100 + 10 = 120.
+    assert Decimal(str(body["value"])) == Decimal("120")
+    # Unweighted open sum in window: 100 + 200 + 40 = 340.
+    assert Decimal(str(body["open_value"])) == Decimal("340")
+    assert body["currency"] == org.currency
+    # Previous window: F-O0 80×10% = 8.
+    assert Decimal(str(body["comparison"]["value"])) == Decimal("8")
+
+
+async def test_widget_weighted_pipeline_blocks_salesperson(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _admin, *_ = await _setup(db_session, owned_cleanup)
+    sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(sp_email)
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
+    db_session.add(sp)
+    await db_session.commit()
+    await db_session.refresh(sp)
+    resp = await client.get(
+        "/api/v1/reports/widgets/weighted-pipeline",
+        headers=_auth(sp),
+        params=_window_params(),
+    )
+    assert resp.status_code == 403
+
+
+async def test_widget_sales_forecast_buckets(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, open_stage, won_stage, company = await _setup(db_session, owned_cleanup)
+    await _seed_forecast_corpus(
+        db_session, org=org, user=user, open_stage=open_stage, won_stage=won_stage, company=company
+    )
+    # A window far in the past: the forecast must ignore it (it always
+    # reads the org's currently-open deals).
+    resp = await client.get(
+        "/api/v1/reports/widgets/sales-forecast",
+        headers=_auth(user),
+        params={"from": "2020-01-01", "to": "2020-01-31"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    buckets = {b["kind"]: b for b in body["buckets"] if b["kind"] != "month"}
+    months = [b for b in body["buckets"] if b["kind"] == "month"]
+    assert len(months) == 6
+    today = datetime.now(tz=UTC).date()
+    assert months[0]["year_month"] == today.strftime("%Y-%m")
+    # F-O1 (100, prob 10) closes today → current month bucket.
+    assert Decimal(str(months[0]["value"])) == Decimal("100")
+    assert Decimal(str(months[0]["weighted_value"])) == Decimal("10")
+    assert months[0]["count"] == 1
+    # F-O2 (200, override 50) is overdue.
+    assert Decimal(str(buckets["overdue"]["value"])) == Decimal("200")
+    assert Decimal(str(buckets["overdue"]["weighted_value"])) == Decimal("100")
+    # F-O0 (80) is ~200 days out → later.
+    assert Decimal(str(buckets["later"]["value"])) == Decimal("80")
+    # F-O3 (40, override 25) has no date.
+    assert Decimal(str(buckets["no_date"]["value"])) == Decimal("40")
+    assert Decimal(str(buckets["no_date"]["weighted_value"])) == Decimal("10")
+    # Totals cover every open org-currency deal: 100+200+80+40.
+    assert Decimal(str(body["total_value"])) == Decimal("420")
+    assert Decimal(str(body["total_weighted_value"])) == Decimal("128")
+    assert body["currency"] == org.currency
+
+
+async def test_widget_sales_forecast_blocks_salesperson(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _admin, *_ = await _setup(db_session, owned_cleanup)
+    sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(sp_email)
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
+    db_session.add(sp)
+    await db_session.commit()
+    await db_session.refresh(sp)
+    resp = await client.get(
+        "/api/v1/reports/widgets/sales-forecast",
+        headers=_auth(sp),
+        params=_window_params(),
+    )
+    assert resp.status_code == 403
+
+
+async def test_widget_won_vs_paid_happy(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, user, open_stage, won_stage, company = await _setup(db_session, owned_cleanup)
+    await _seed_forecast_corpus(
+        db_session, org=org, user=user, open_stage=open_stage, won_stage=won_stage, company=company
+    )
+    resp = await client.get(
+        "/api/v1/reports/widgets/won-vs-paid",
+        headers=_auth(user),
+        params=_window_params(),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["won_count"] == 2
+    assert body["paid_count"] == 1
+    assert Decimal(str(body["won_value"])) == Decimal("700")
+    assert Decimal(str(body["paid_value"])) == Decimal("300")
+    assert Decimal(str(body["unpaid_value"])) == Decimal("400")
+    assert abs(body["paid_pct"] - 42.857) < 0.01
+    assert body["currency"] == org.currency
+
+
+async def test_widget_won_vs_paid_empty(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    _, user, *_ = await _setup(db_session, owned_cleanup)
+    resp = await client.get(
+        "/api/v1/reports/widgets/won-vs-paid",
+        headers=_auth(user),
+        params=_window_params(),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["won_count"] == 0
+    assert body["paid_pct"] is None
+    assert Decimal(str(body["won_value"])) == Decimal("0")
+
+
+async def test_widget_won_vs_paid_blocks_salesperson(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _admin, *_ = await _setup(db_session, owned_cleanup)
+    sp_email = f"sp-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(sp_email)
+    sp = User(email=sp_email, name="SP", role=UserRole.salesperson, organization_id=org.id)
+    db_session.add(sp)
+    await db_session.commit()
+    await db_session.refresh(sp)
+    resp = await client.get(
+        "/api/v1/reports/widgets/won-vs-paid",
+        headers=_auth(sp),
+        params=_window_params(),
+    )
+    assert resp.status_code == 403
+
+
+async def test_widgets_export_csv_renders_new_widget_sections(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """The forecast/paid widgets export real sections, not the unknown-type
+    error row."""
+    org, user, open_stage, won_stage, company = await _setup(db_session, owned_cleanup)
+    await _seed_forecast_corpus(
+        db_session, org=org, user=user, open_stage=open_stage, won_stage=won_stage, company=company
+    )
+
+    body = {
+        "from": _window_params()["from"],
+        "to": _window_params()["to"],
+        "widgets": [
+            {"type": "weighted_pipeline", "config": {"type": "weighted_pipeline"}},
+            {"type": "sales_forecast", "config": {"type": "sales_forecast", "weighted": False}},
+            {"type": "won_vs_paid", "config": {"type": "won_vs_paid"}},
+        ],
+    }
+    resp = await client.post("/api/v1/reports/export-csv", headers=_auth(user), json=body)
+    assert resp.status_code == 200
+    text = resp.content.decode("utf-8")
+    assert "neznámý typ widgetu" not in text
+    assert "# Vážená hodnota pipeline" in text
+    assert "# Odhad prodeje" in text
+    assert "# Vyhráno vs. zaplaceno" in text
+    # Weighted pipeline: 120 weighted of 340 open.
+    assert "120.00" in text
+    assert "340.00" in text
+    # Forecast rows: one per bucket with a value; the overdue row carries 200.
+    assert "po_termínu" in text
+    assert "bez_termínu" in text
+    # Won vs paid: 300 paid of 700 won.
+    assert "700.00" in text
+    assert "300.00" in text

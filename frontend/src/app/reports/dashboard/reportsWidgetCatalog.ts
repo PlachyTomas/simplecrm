@@ -11,14 +11,17 @@ import {
   AlertTriangle,
   Banknote,
   Building2,
+  CalendarClock,
   Clock,
   Filter,
   Medal,
   Percent,
   PieChart,
+  Scale,
   Timer,
   TrendingUp,
   Trophy,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -28,8 +31,10 @@ import type { WidgetGridPosition } from "@/components/widget-dashboard/WidgetGri
 /** Report KPI tiles are small (w=3, h=2); charts/lists are large (w=6, h=4). */
 const KPI_TYPES = [
   "pipeline_value",
+  "weighted_pipeline",
   "new_companies",
   "deals_won",
+  "won_vs_paid",
   "win_rate",
   "avg_deal_size",
   "sales_cycle_length",
@@ -37,6 +42,7 @@ const KPI_TYPES = [
 ] as const satisfies readonly WidgetType[];
 
 const ANALYTICS_TYPES = [
+  "sales_forecast",
   "sales_leaderboard",
   "rep_activity",
   "lost_reasons_breakdown",
@@ -65,8 +71,11 @@ export function nextRowY(positions: readonly WidgetGridPosition[]): number {
 
 export const WIDGET_ICONS: Record<WidgetType, LucideIcon> = {
   pipeline_value: TrendingUp,
+  weighted_pipeline: Scale,
   new_companies: Building2,
   deals_won: Trophy,
+  won_vs_paid: Wallet,
+  sales_forecast: CalendarClock,
   win_rate: Percent,
   avg_deal_size: Banknote,
   sales_cycle_length: Timer,
@@ -80,8 +89,11 @@ export const WIDGET_ICONS: Record<WidgetType, LucideIcon> = {
 
 export const WIDGET_DESCRIPTION_KEY: Record<WidgetType, ParseKeys<"reports">> = {
   pipeline_value: "widgetDescriptions.pipeline_value",
+  weighted_pipeline: "widgetDescriptions.weighted_pipeline",
   new_companies: "widgetDescriptions.new_companies",
   deals_won: "widgetDescriptions.deals_won",
+  won_vs_paid: "widgetDescriptions.won_vs_paid",
+  sales_forecast: "widgetDescriptions.sales_forecast",
   win_rate: "widgetDescriptions.win_rate",
   avg_deal_size: "widgetDescriptions.avg_deal_size",
   sales_cycle_length: "widgetDescriptions.sales_cycle_length",

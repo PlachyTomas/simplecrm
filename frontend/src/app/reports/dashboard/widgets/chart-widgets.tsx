@@ -48,6 +48,78 @@ function narrowConfig<T extends Config["type"]>(
   return config as Extract<Config, { type: T }>;
 }
 
+// ---------- sales_forecast ----------
+
+/** "2026-08" → "srpen 2026" via the active locale. */
+function formatMonthLabel(yearMonth: string, locale: string): string {
+  const year = Number(yearMonth.slice(0, 4));
+  const month = Number(yearMonth.slice(5, 7));
+  return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(
+    new Date(Date.UTC(year, month - 1, 1)),
+  );
+}
+
+export function SalesForecastWidget(props: BaseWidgetProps) {
+  const config = narrowConfig(props.entry.config, "sales_forecast");
+  const { t } = useTranslation("reports");
+  const locale = useLocale();
+  const q = useWidgetQuery<ApiSchemas["SalesForecastResponse"]>({
+    type: "sales_forecast",
+    endpoint: "sales-forecast",
+    config,
+    globalFilters: props.globalFilters,
+  });
+
+  const weighted = config.weighted === true;
+  const buckets = q.data?.buckets ?? [];
+  const hasAnyDeal = buckets.some((b) => b.count > 0);
+  // Month buckets always render (an empty month is information); the
+  // overflow rows (overdue / later / no date) only when non-empty.
+  const rows: BarRow[] = !hasAnyDeal
+    ? []
+    : buckets
+        .filter((b) => b.kind === "month" || b.count > 0)
+        .map((b) => {
+          const raw = weighted ? b.weighted_value : b.value;
+          const label =
+            b.kind === "month"
+              ? formatMonthLabel(b.year_month ?? "", locale)
+              : t(FORECAST_BUCKET_KEY[b.kind]);
+          return {
+            label,
+            value: Number(raw),
+            display: formatMoney(raw, q.data!.currency, locale),
+          };
+        });
+
+  return (
+    <WidgetFrame
+      label={t(WIDGET_LABEL_KEY.sales_forecast)}
+      isEditMode={props.isEditMode}
+      onRemove={props.onRemove}
+      onConfigClick={props.onConfigClick}
+    >
+      {q.isPending ? (
+        <WidgetSkeleton />
+      ) : q.isError || !q.data ? (
+        <WidgetError onRetry={() => void q.refetch()} />
+      ) : (
+        <BarChartWidget
+          rows={rows}
+          ariaLabel={t("chart.salesForecastAriaLabel")}
+          emptyMessage={t("chart.salesForecastEmpty")}
+        />
+      )}
+    </WidgetFrame>
+  );
+}
+
+const FORECAST_BUCKET_KEY = {
+  overdue: "chart.salesForecastOverdue",
+  later: "chart.salesForecastLater",
+  no_date: "chart.salesForecastNoDate",
+} as const;
+
 // ---------- lost_reasons_breakdown ----------
 
 export function LostReasonsBreakdownWidget(props: BaseWidgetProps) {
