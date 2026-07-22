@@ -31,6 +31,7 @@
     "emailOptional": "Email (optional)",
     "phoneOptional": "Phone (optional)",
     "saveError": "Failed to save the contact. Check the details and try again.",
+    "createSuccess": "Contact saved.",
     "cancel": "Cancel",
     "save": "Save contact",
     "saving": "Saving…"

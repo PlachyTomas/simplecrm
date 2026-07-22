@@ -21,9 +21,9 @@ import {
   Table2,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { AddCompanyModal } from "@/app/companies/AddCompanyModal";
 import { BulkEmailWizard } from "@/app/companies/bulk-email/BulkEmailWizard";
@@ -62,6 +62,9 @@ const SORT_KEY_BY_COLUMN: Record<string, CompanySortKey> = {
 type ViewMode = "cards" | "table";
 
 const VIEW_MODE_STORAGE_KEY = "simplecrm.companies.viewMode";
+// Scroll offset stashed when leaving for a company detail, keyed to the exact
+// list URL it belongs to so a differently-filtered visit never inherits it.
+const COMPANIES_SCROLL_KEY = "simplecrm.companies.scroll";
 
 function readStoredViewMode(): ViewMode {
   // localStorage can be absent (SSR, some webviews) or throw on access
@@ -148,6 +151,23 @@ export function CompaniesListPage() {
   }, [viewMode]);
 
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Opening a company detail must be reversible: pass the CURRENT list URL
+  // (page + filters live in the query string) so the detail's back button
+  // returns here, and stash the scroll offset so the row the user left from
+  // is back under their pointer. Scroll is restored once, only when the list
+  // URL matches the one it was saved for.
+  const openCompany = (companyId: string) => {
+    sessionStorage.setItem(
+      COMPANIES_SCROLL_KEY,
+      JSON.stringify({ at: location.pathname + location.search, y: window.scrollY }),
+    );
+    navigate(`/app/companies/${companyId}`, {
+      state: { from: location.pathname + location.search },
+    });
+  };
+
   const { data: user } = useCurrentUser();
   const { data: usersPage } = useOrgUsers();
   const { data: filterOptions } = useCompanyFilterOptions();
@@ -502,8 +522,30 @@ export function CompaniesListPage() {
   });
 
   const handleCreated = (companyId: string) => {
-    navigate(`/app/companies/${companyId}`);
+    // Continue into the fresh company, but keep the way back to this exact
+    // list state — same contract as clicking a row.
+    navigate(`/app/companies/${companyId}`, {
+      state: { from: location.pathname + location.search },
+    });
   };
+
+  // Restore the stashed scroll once the returning list has rows to scroll to.
+  const scrollRestoredRef = useRef(false);
+  useEffect(() => {
+    if (scrollRestoredRef.current || !companies) return;
+    scrollRestoredRef.current = true;
+    const raw = sessionStorage.getItem(COMPANIES_SCROLL_KEY);
+    if (!raw) return;
+    sessionStorage.removeItem(COMPANIES_SCROLL_KEY);
+    try {
+      const saved = JSON.parse(raw) as { at?: string; y?: number };
+      if (saved.at === location.pathname + location.search && typeof saved.y === "number") {
+        window.scrollTo(0, saved.y);
+      }
+    } catch {
+      /* corrupted stash — ignore */
+    }
+  }, [companies, location.pathname, location.search]);
 
   const total = companies?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -690,7 +732,7 @@ export function CompaniesListPage() {
                 <li key={row.id}>
                   <button
                     type="button"
-                    onClick={() => navigate(`/app/companies/${company.id}`)}
+                    onClick={() => openCompany(company.id)}
                     className="flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors duration-fast hover:bg-surface-overlay"
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -783,7 +825,7 @@ export function CompaniesListPage() {
                 {table.getRowModel().rows.map((row) => (
                   <tr
                     key={row.id}
-                    onClick={() => navigate(`/app/companies/${row.original.id}`)}
+                    onClick={() => openCompany(row.original.id)}
                     className="cursor-pointer transition-colors duration-fast hover:bg-surface-overlay"
                   >
                     {row.getVisibleCells().map((cell) => (

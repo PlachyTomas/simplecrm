@@ -1,7 +1,6 @@
 import { Pencil, Plus, RotateCcw, Save, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 
 import { AddCompanyModal } from "@/app/companies/AddCompanyModal";
 import { AddContactModal } from "@/app/contacts/AddContactModal";
@@ -73,7 +72,6 @@ export function DashboardPage() {
   const { t: tReports } = useTranslation("reports");
   const { t: tw } = useTranslation("widgets");
   usePageTitle(t("dashboardPage.title"));
-  const navigate = useNavigate();
   const { data: user } = useCurrentUser();
   const isMobile = useMediaQuery("(max-width: 767px)");
 
@@ -276,15 +274,18 @@ export function DashboardPage() {
       />
 
       {openAction === "deal" ? <DealQuickAction open onClose={() => setOpenAction(null)} /> : null}
+      {/* Quick actions are fire-and-continue: the deal and event ones stay
+          on the dashboard, so company and contact do too. The modals toast
+          their own success; the created record lives in its section. */}
       <AddCompanyModal
         open={openAction === "company"}
         onClose={() => setOpenAction(null)}
-        onCreated={(companyId) => navigate(`/app/companies/${companyId}`)}
+        onCreated={() => setOpenAction(null)}
       />
       <AddContactModal
         open={openAction === "contact"}
         onClose={() => setOpenAction(null)}
-        onCreated={(contactId) => navigate(`/app/contacts/${contactId}`)}
+        onCreated={() => setOpenAction(null)}
       />
       <EventFormModal open={openAction === "activity"} onClose={() => setOpenAction(null)} />
     </div>
