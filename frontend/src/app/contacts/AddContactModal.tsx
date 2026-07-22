@@ -6,6 +6,7 @@ import { useCreateContact } from "@/app/contacts/useCreateContact";
 import { CompanyCombobox } from "@/components/ui/CompanyCombobox";
 import { useDismissGuard } from "@/lib/useDismissGuard";
 import { useModalDialog } from "@/lib/useModalDialog";
+import { useToast } from "@/lib/toast";
 
 interface AddContactModalProps {
   open: boolean;
@@ -37,6 +38,7 @@ const EMPTY: Form = {
 export function AddContactModal({ open, onClose, onCreated, forCompanyId }: AddContactModalProps) {
   const { t } = useTranslation("contacts");
   const dialogRef = useModalDialog<HTMLDivElement>(onClose, open);
+  const toast = useToast();
   const [form, setForm] = useState<Form>(EMPTY);
   const mutation = useCreateContact();
 
@@ -71,6 +73,10 @@ export function AddContactModal({ open, onClose, onCreated, forCompanyId }: AddC
         phone: form.phone.trim() || null,
         position: form.position.trim() || null,
       });
+      // Toast here (not at call sites): several origins keep the user where
+      // they are after creating, and a silent close reads as "nothing
+      // happened" — mirror AddCompanyModal's own createSuccess toast.
+      toast.success(t("addContactModal.createSuccess"));
       onCreated(created.id);
       onClose();
     } catch {

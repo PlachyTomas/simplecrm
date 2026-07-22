@@ -1,7 +1,7 @@
 import { ArrowLeft, ExternalLink, Mail, Pencil, Plus, Star } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 
 import { ActivityRow } from "@/app/activities/ActivityRow";
 import { useActivities } from "@/app/activities/useActivities";
@@ -133,7 +133,6 @@ function OverviewTab({ company, locale }: { company: CompanyOut; locale: string 
 function ContactsTab({ company }: { company: CompanyOut }) {
   const { t } = useTranslation("companies");
   const [adding, setAdding] = useState(false);
-  const navigate = useNavigate();
   const toast = useToast();
   const { data, isPending, isError } = useContacts({ companyId: company.id, limit: 100 });
   const update = useUpdateCompany(company.id);
@@ -246,7 +245,10 @@ function ContactsTab({ company }: { company: CompanyOut }) {
       <AddContactModal
         open={adding}
         onClose={() => setAdding(false)}
-        onCreated={(id) => navigate(`/app/contacts/${id}`)}
+        // Stay on the company detail — the contacts tab refreshes via query
+        // invalidation and the new person appears right here, where the
+        // user is working. (Previously bounced to /app/contacts.)
+        onCreated={() => setAdding(false)}
         forCompanyId={company.id}
       />
     </section>
@@ -592,6 +594,10 @@ function NotesTab({ companyId, initialNote }: { companyId: string; initialNote: 
 export function CompanyDetailPage() {
   const { t } = useTranslation("companies");
   const { companyId } = useParams<{ companyId: string }>();
+  const location = useLocation();
+  // The list passes its full URL (page + filters in the query string) when
+  // opening a detail; going back must land on that exact state, not page one.
+  const backTo = (location.state as { from?: string } | null)?.from ?? "/app/companies";
   const locale = useLocale();
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [editOpen, setEditOpen] = useState(false);
@@ -615,7 +621,7 @@ export function CompanyDetailPage() {
     return (
       <div className="p-8">
         <Link
-          to="/app/companies"
+          to={backTo}
           className="mb-4 inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary"
         >
           <ArrowLeft size={16} strokeWidth={1.75} /> {t("companyDetail.backToList")}
@@ -630,7 +636,7 @@ export function CompanyDetailPage() {
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
       <Link
-        to="/app/companies"
+        to={backTo}
         className="mb-4 inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary"
       >
         <ArrowLeft size={16} strokeWidth={1.75} /> {t("companyDetail.backToList")}
