@@ -7,6 +7,7 @@ import { type CalendarEventOut, useCreateEvent, useUpdateEvent } from "@/app/eve
 import { useGoogleCalendarStatus } from "@/app/settings/useGoogleCalendar";
 import { testIds } from "@/lib/testids";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { useDismissGuard } from "@/lib/useDismissGuard";
 import { useModalDialog } from "@/lib/useModalDialog";
 import { useToast } from "@/lib/toast";
 
@@ -89,6 +90,24 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
   const [addToGoogle, setAddToGoogle] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Snapshot of the values the reset effect just produced, so `dirty` means
+  // "differs from the prefill" — auto slot times and the auto title never
+  // count as the user's data. `addToGoogle` is excluded: its default flips
+  // when the Google status loads, and re-ticking it is one click.
+  const initialFormRef = useRef<string>("");
+  const dirty =
+    initialFormRef.current !== "" &&
+    JSON.stringify([
+      title,
+      date,
+      startTime,
+      endTime,
+      location,
+      description,
+      selectedDeal?.id ?? "",
+    ]) !== initialFormRef.current;
+  const { onBackdropClick, nudgeClass } = useDismissGuard(onClose, dirty);
+
   useEffect(() => {
     if (!open) return;
     setError(null);
@@ -102,9 +121,19 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
       // `error` means the user wanted the Google copy but the push failed —
       // keep the intent checked so saving retries it.
       setAddToGoogle(event.google_sync_status !== "not_synced" && googleAvailable);
+      initialFormRef.current = JSON.stringify([
+        event.title,
+        toLocalDate(event.starts_at),
+        toLocalTime(event.starts_at),
+        toLocalTime(event.ends_at),
+        event.location ?? "",
+        event.description ?? "",
+        "",
+      ]);
     } else {
       const slot = defaultStart();
-      setTitle(dealName ? t("eventFormModal.defaultTitle", { dealName }) : "");
+      const defaultTitle = dealName ? t("eventFormModal.defaultTitle", { dealName }) : "";
+      setTitle(defaultTitle);
       setDate(slot.date);
       setStartTime(slot.start);
       setEndTime(slot.end);
@@ -113,6 +142,15 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
       setAddToGoogle(googleAvailable);
       setSelectedDeal(null);
       lastDefaultTitleRef.current = null;
+      initialFormRef.current = JSON.stringify([
+        defaultTitle,
+        slot.date,
+        slot.start,
+        slot.end,
+        "",
+        "",
+        "",
+      ]);
     }
     // googleAvailable intentionally re-applies when the status loads while
     // the modal is open (first paint may race the status query). `t` stays
@@ -225,13 +263,11 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
       aria-modal="true"
       aria-labelledby="event-form-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      onClick={onBackdropClick}
     >
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg"
+        className={`w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg ${nudgeClass}`}
       >
         <h2 id="event-form-title" className="text-xl font-semibold">
           {editing ? t("eventFormModal.titleEdit") : t("eventFormModal.titleCreate")}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ParseKeys } from "i18next";
 import { useTranslation } from "react-i18next";
 
+import { useDismissGuard } from "@/lib/useDismissGuard";
 import { useModalDialog } from "@/lib/useModalDialog";
 
 const LOST_REASON_KEYS = [
@@ -43,6 +44,9 @@ export function MarkLostDialog({
   const [reason, setReason] = useState<LostReasonKey>(LOST_REASON_KEYS[0]);
   const [custom, setCustom] = useState("");
 
+  // Only typed text is worth guarding — a radio pick is one click to redo.
+  const { onBackdropClick, nudgeClass } = useDismissGuard(onClose, custom.trim() !== "");
+
   useEffect(() => {
     if (open) {
       setReason(LOST_REASON_KEYS[0]);
@@ -68,16 +72,14 @@ export function MarkLostDialog({
       aria-modal="true"
       aria-labelledby="mark-lost-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      onClick={onBackdropClick}
     >
       <form
         onSubmit={(e) => {
           e.preventDefault();
           if (finalReason) onConfirm(finalReason);
         }}
-        className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg"
+        className={`w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg ${nudgeClass}`}
       >
         <h2 id="mark-lost-title" className="text-xl font-semibold">
           {t("markLostDialog.title")}

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { type SentEmailOut, useSendEmail } from "@/app/emails/useEmails";
+import { useDismissGuard } from "@/lib/useDismissGuard";
 import { useModalDialog } from "@/lib/useModalDialog";
 import { useToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -147,6 +148,16 @@ export function EmailComposeModal({
   const [body, setBody] = useState("");
   const [files, setFiles] = useState<File[]>([]);
 
+  // Dirty = anything beyond the reply/defaultTo prefill.
+  const dirty =
+    body.trim() !== "" ||
+    files.length > 0 ||
+    bcc.length > 0 ||
+    subject !== initial.subject ||
+    to.join("\n") !== initial.to.join("\n") ||
+    cc.join("\n") !== initial.cc.join("\n");
+  const { onBackdropClick, nudgeClass } = useDismissGuard(onClose, dirty);
+
   if (!open) return null;
 
   const hasInvalidAttachment = files.some((f) => attachmentError(f, t) !== null);
@@ -189,11 +200,11 @@ export function EmailComposeModal({
       aria-modal="true"
       aria-labelledby="email-compose-title"
       className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-bg/80 px-4 py-6 backdrop-blur-sm sm:py-10"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      onClick={onBackdropClick}
     >
-      <div className="my-auto w-full max-w-xl rounded-lg border border-border bg-surface p-6 shadow-lg">
+      <div
+        className={`my-auto w-full max-w-xl rounded-lg border border-border bg-surface p-6 shadow-lg ${nudgeClass}`}
+      >
         <div className="mb-4 flex items-start justify-between">
           <h2 id="email-compose-title" className="text-lg font-semibold">
             {replyTo ? t("compose.titleReply") : t("compose.titleNew")}

@@ -8,6 +8,7 @@ import { useLookupRegistry } from "@/app/companies/useLookupRegistry";
 import { useCreateContact } from "@/app/contacts/useCreateContact";
 import { ApiError } from "@/lib/api";
 import { testIds } from "@/lib/testids";
+import { useDismissGuard } from "@/lib/useDismissGuard";
 import { useModalDialog } from "@/lib/useModalDialog";
 import { useToast } from "@/lib/toast";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
@@ -89,6 +90,12 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
   // auto-filled fields are cleared so a subsequent failed lookup can't leave
   // the previous record's name + address bound to the new company ID.
   const lastFilledIcoRef = useRef<string | null>(null);
+
+  // ARES-autofilled fields count too — they're still lost on close.
+  const dirty =
+    Object.values(form).some((v) => v.trim() !== "") ||
+    Object.values(contact).some((v) => v.trim() !== "");
+  const { onBackdropClick, nudgeClass } = useDismissGuard(onClose, dirty);
 
   useEffect(() => {
     if (open) {
@@ -215,13 +222,11 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
       aria-modal="true"
       aria-labelledby="add-company-title"
       className="fixed inset-0 z-50 flex items-end justify-center bg-bg/80 px-0 backdrop-blur-sm md:items-center md:px-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      onClick={onBackdropClick}
     >
       <form
         onSubmit={handleSubmit}
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-lg border border-border bg-surface p-6 shadow-lg md:rounded-lg"
+        className={`max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-lg border border-border bg-surface p-6 shadow-lg md:rounded-lg ${nudgeClass}`}
       >
         <div
           aria-hidden
@@ -257,7 +262,7 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
                 // "270 824 40" or "CZ27082440" still resolves correctly.
                 setForm((prev) => ({ ...prev, ico: e.target.value.replace(/\D/g, "").slice(0, 8) }))
               }
-              placeholder="27082440"
+              placeholder="12345678"
               className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 font-mono text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
             />
             {lookupState === "empty" ? (
