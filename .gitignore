@@ -67,3 +67,4 @@ playwright-report/
 test-results/
 misc/
 .playwright-mcp/
+.claude/worktrees/
