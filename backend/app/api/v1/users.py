@@ -155,7 +155,7 @@ async def patch_my_language(
     ``SUPPORTED_LANGUAGES`` with a coded 422 the frontend can map."""
     if payload.language not in SUPPORTED_LANGUAGES:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={"code": "invalid_language"},
         )
     user.language = payload.language

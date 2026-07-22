@@ -199,7 +199,7 @@ async def _validate_main_contact_id(
     contact: Contact | None = (await session.execute(stmt)).scalar_one_or_none()
     if contact is None or contact.company_id != company.id:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="main_contact_id must reference a contact that belongs to this company",
         )
 

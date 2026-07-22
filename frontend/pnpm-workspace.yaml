@@ -1,2 +1,19 @@
+# pnpm 11 settings (pnpm reads these from pnpm-workspace.yaml; the "pnpm"
+# field in package.json is silently ignored since v11).
+
+# Lifecycle scripts are blocked for everything except this allowlist.
 allowBuilds:
   esbuild: true
+
+# Supply-chain hardening (2026-07 audit): quarantine newly-published versions
+# for 3 days before pnpm will resolve them. Every major 2025/26 npm
+# compromise was unpublished within hours to ~2 days, so this window skips
+# them. For an urgent security patch younger than the window, temporarily add
+# the package to minimumReleaseAgeExclude.
+minimumReleaseAge: 4320
+minimumReleaseAgeExclude: []
+
+# @redocly/openapi-core (openapi-typescript chain, dev-only) holds js-yaml at
+# 4.1.1, which carries two ReDoS advisories fixed in 4.3.0.
+overrides:
+  js-yaml: ">=4.3.0"

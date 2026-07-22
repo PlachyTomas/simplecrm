@@ -67,7 +67,7 @@ async def send(
         data = BulkEmailSendIn.model_validate_json(payload)
     except ValidationError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.errors()
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.errors()
         ) from exc
 
     att: BulkAttachment | None = None
@@ -75,12 +75,12 @@ async def send(
         content = await attachment.read()
         if len(content) > _MAX_ATTACHMENT_BYTES:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Příloha je příliš velká (max 10 MB).",
             )
         if attachment.content_type not in _ALLOWED_ATTACHMENT_TYPES:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Nepodporovaný typ přílohy: {attachment.content_type}",
             )
         att = BulkAttachment(
@@ -93,7 +93,7 @@ async def send(
         campaign = await send_campaign(session, user, data, att)
     except BulkEmailError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
     return CampaignOut.model_validate(campaign)
 

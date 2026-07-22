@@ -13,8 +13,9 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import jwt
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-from jose import JWTError, jwt
+from jwt import PyJWTError as JWTError
 
 from app.core.config import get_settings
 from app.db.models.enums import UserRole

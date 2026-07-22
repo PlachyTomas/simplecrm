@@ -128,7 +128,7 @@ async def initial_payment_init(
     sub = await billing.get_current_subscription(session, org_id)
     if sub.is_comp:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Comp subscriptions are managed by support.",
         )
 
@@ -178,7 +178,7 @@ async def initial_payment_init(
     plan = await billing._load_plan_by_code(session, payload.plan_code)
     if plan.price_per_user_minor is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"plan {payload.plan_code!r} has no public price.",
         )
     amount_minor = sub.seat_count * plan.price_per_user_minor
@@ -186,7 +186,7 @@ async def initial_payment_init(
     org = await session.get(Organization, org_id)
     if org is None or not billing_complete(org):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={"code": "billing_details_required"},
         )
 
@@ -257,7 +257,7 @@ async def demo_order(
     plan = await billing._load_plan_by_code(session, payload.plan_code)
     if plan.price_per_user_minor is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"plan {payload.plan_code!r} has no public price.",
         )
     amount_minor = payload.seats * plan.price_per_user_minor
@@ -314,12 +314,12 @@ async def seat_change_init(
     sub = await billing.get_current_subscription(session, org_id)
     if sub.is_comp:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Comp subscriptions are managed by support.",
         )
     if sub.status != "active":
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "code": "not_active",
                 "detail": ("Subscription must be active to upgrade seats. Choose a plan first."),
@@ -327,7 +327,7 @@ async def seat_change_init(
         )
     if payload.seat_count <= sub.contracted_seat_count:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "code": "not_an_upgrade",
                 "detail": ("Use PUT /subscription/seat-count for decreases and no-op changes."),
@@ -339,7 +339,7 @@ async def seat_change_init(
     ).scalar_one_or_none()
     if payment_method is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "code": "no_payment_method",
                 "detail": (
@@ -352,7 +352,7 @@ async def seat_change_init(
     if amount_minor <= 0:
         # Defensive — the upgrade check above should have caught this.
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Computed proration was zero; nothing to charge.",
         )
 

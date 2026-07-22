@@ -319,7 +319,7 @@ async def update_event(
         setattr(event, key, value)
     if event.ends_at <= event.starts_at:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="ends_at must be after starts_at",
         )
 

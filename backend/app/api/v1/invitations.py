@@ -115,7 +115,7 @@ async def create(
         ) from exc
     except SeatLimitReachedError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "detail": (
                     "Dosáhli jste smluvního počtu uživatelů. "

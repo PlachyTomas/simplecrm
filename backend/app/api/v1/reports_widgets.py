@@ -108,7 +108,7 @@ router = APIRouter(
 def _validate_window(from_: date, to: date) -> None:
     if to < from_:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="`to` must be on or after `from`",
         )
 
@@ -443,7 +443,7 @@ async def widget_stale_deals(
     _validate_window(from_, to)
     if threshold not in (30, 60, 90):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="threshold must be one of 30, 60, 90",
         )
     if user.organization_id is None:
@@ -472,7 +472,7 @@ async def widget_companies_at_risk(
     _validate_window(from_, to)
     if threshold not in (30, 14, 7):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="threshold must be one of 7, 14, 30",
         )
     if user.organization_id is None:

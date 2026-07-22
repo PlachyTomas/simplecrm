@@ -4,7 +4,7 @@ Google Calendar refresh tokens grant standing access to a user's calendar,
 so unlike ComGate transaction ids they must not sit in the DB as plaintext.
 The Fernet key is derived from `jwt_secret` (SHA-256 → urlsafe base64) —
 no extra secret to provision, and `cryptography` is already a transitive
-dependency via python-jose. Rotating `jwt_secret` invalidates stored
+dependency via authlib. Rotating `jwt_secret` invalidates stored
 tokens; affected users simply reconnect their calendar.
 """
 

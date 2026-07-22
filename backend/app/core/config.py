@@ -3,7 +3,8 @@ from functools import lru_cache
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-_DEFAULT_JWT_SECRET = "dev-secret-change-me-in-prod"  # noqa: S105
+# ≥32 bytes so PyJWT's RFC 7518 HS256 key-length check stays quiet in dev.
+_DEFAULT_JWT_SECRET = "dev-secret-change-me-in-production-only"  # noqa: S105
 
 
 class Settings(BaseSettings):

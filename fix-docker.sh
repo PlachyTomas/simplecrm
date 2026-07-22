@@ -24,7 +24,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
 # uv (Python package manager)
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+# Version-pinned installer (supply-chain audit 2026-07): never pipe the
+# floating installer — a compromised astral.sh would execute in every build.
+RUN curl -LsSf https://astral.sh/uv/0.11.26/install.sh | sh
 ENV PATH="/root/.local/bin:${PATH}"
 
 # pnpm + Claude Code CLI (install globally as root, then switch user)

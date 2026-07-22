@@ -13,7 +13,9 @@
 
 services:
   postgres:
-    image: postgres:16-alpine
+    # Digest-pinned (supply-chain audit 2026-07): tags are mutable, prod pulls
+    # exactly this manifest. Refresh the digest deliberately when bumping.
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-simplecrm}

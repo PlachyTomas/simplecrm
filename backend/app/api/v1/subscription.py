@@ -182,7 +182,7 @@ async def choose_plan(
         )
     except billing.BillingError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
     await session.commit()
     sub = await billing.get_current_subscription(session, user.organization_id)
@@ -330,7 +330,7 @@ async def update_seat_count(
     needed = active_count - new_count
     if len(payload.deactivate_user_ids) != needed:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "code": "deactivation_count_mismatch",
                 "detail": (
@@ -344,12 +344,12 @@ async def update_seat_count(
     for victim_id in payload.deactivate_user_ids:
         if victim_id not in ids_in_org:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="User is not in your organization or already inactive.",
             )
         if victim_id == user.id:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="You cannot deactivate yourself.",
             )
 
@@ -399,7 +399,7 @@ async def change_billing_interval(
     ).scalar_one_or_none()
     if plan is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Unknown plan code: {payload.plan_code}",
         )
 
@@ -444,7 +444,7 @@ async def cancel_subscription(
         )
     except billing.BillingError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
 
     # Best-effort merchant-side disable. We commit regardless of the
@@ -483,7 +483,7 @@ async def reactivate_subscription(
         )
     except billing.BillingError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
     await session.commit()
     await session.refresh(sub, attribute_names=["plan", "pending_plan"])

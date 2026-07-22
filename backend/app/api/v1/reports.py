@@ -663,7 +663,7 @@ async def export_widgets_csv(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
     if payload.to < payload.from_:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="`to` must be on or after `from`",
         )
     # Reject filters outside the caller's team/rep visibility (review R1 P2) —

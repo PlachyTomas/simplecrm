@@ -16,7 +16,10 @@ dependencies = [
     "alembic>=1.13",
     "greenlet>=3.1",
     "authlib>=1.3",
-    "python-jose[cryptography]>=3.3",
+    # PyJWT replaced python-jose (2026-07 supply-chain audit): python-jose
+    # dragged in ecdsa (unfixed PYSEC-2026-1325) + pyasn1/rsa and is lightly
+    # maintained. Only HS256 encode/decode is used; PyJWT covers it.
+    "pyjwt>=2.10",
     "itsdangerous>=2.2",
     "passlib[bcrypt]>=1.7",
     # passlib 1.7.x calls bcrypt.hashpw(...) during backend probe with a 73-byte
@@ -24,11 +27,13 @@ dependencies = [
     # breaks the probe. Pin to 4.x until passlib ships a fix.
     "bcrypt>=4.0,<5",
     # Tax-invoice rendering pipeline (commit #3 of INVOICES_TASK.md).
-    # WeasyPrint version is pinned narrowly because PDF byte-output isn't
-    # contractually stable across feature releases — bumping minor versions
-    # can change byte layout even when the rendered page is visually
-    # identical, which would invalidate stored pdf_sha256 values.
-    "weasyprint>=63.0,<64",
+    # WeasyPrint is pinned to one major because PDF byte-output isn't
+    # contractually stable across feature releases. That only needs to hold
+    # WITHIN a deployed version: `pdf_sha256` is recorded at issuance and
+    # verified against the stored bytes, so upgrading the renderer never
+    # invalidates archived invoices — it only changes bytes of future
+    # renders. Bump the major deliberately (security fixes), never blindly.
+    "weasyprint>=68,<69",
     # SPAYD QR-code (CZ "QR Platba") generator. Pure-Python, MIT.
     "qrplatba>=1.0",
     # Czech locale-aware number/date formatting in the PDF template.
@@ -137,7 +142,6 @@ check_untyped_defs = true
 
 [[tool.mypy.overrides]]
 module = [
-    "jose", "jose.*",
     "authlib", "authlib.*",
     "passlib", "passlib.*",
     "weasyprint", "weasyprint.*",

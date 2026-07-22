@@ -433,7 +433,7 @@ async def signup(
         )
     except WeakPasswordError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={"code": "weak_password", "message": str(exc)},
         ) from exc
     except EmailAlreadyRegisteredError as exc:
@@ -494,12 +494,12 @@ async def verify_email_consume(
         ) from exc
     except PasswordRequiredError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={"code": "password_required"},
         ) from exc
     except WeakPasswordError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={"code": "weak_password", "message": str(exc)},
         ) from exc
     return await _issue_session(session, response, user)
@@ -588,7 +588,7 @@ async def password_reset_confirm(
         ) from exc
     except WeakPasswordError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={"code": "weak_password", "message": str(exc)},
         ) from exc
     return await _issue_session(session, response, user)
@@ -619,7 +619,7 @@ async def invite_accept(
         validate_password_strength(body.password)
     except WeakPasswordError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={"code": "weak_password", "message": str(exc)},
         ) from exc
     try:

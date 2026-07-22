@@ -83,7 +83,7 @@ async def put_smtp(
     if row is None:
         if not payload.password:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Heslo je povinné při prvním nastavení SMTP.",
             )
         row = UserSmtpSettings(

@@ -67,7 +67,7 @@ async def send_email_endpoint(
         data = SentEmailCreate.model_validate_json(payload)
     except ValidationError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.errors()
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.errors()
         ) from exc
 
     reply_parent: SentEmail | None = None
@@ -90,12 +90,12 @@ async def send_email_endpoint(
     if reply_parent is not None:
         if data.deal_id is not None and data.deal_id != reply_parent.deal_id:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Odpověď musí zůstat u stejného obchodu jako původní e-mail.",
             )
         if data.company_id is not None and data.company_id != reply_parent.company_id:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Odpověď musí zůstat u stejné firmy jako původní e-mail.",
             )
         target_deal_id = reply_parent.deal_id
@@ -116,12 +116,12 @@ async def send_email_endpoint(
         content = await upload.read()
         if len(content) > _MAX_ATTACHMENT_BYTES:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Příloha je příliš velká (max 10 MB).",
             )
         if upload.content_type not in _ALLOWED_ATTACHMENT_TYPES:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Nepodporovaný typ přílohy: {upload.content_type}",
             )
         email_attachments.append(
