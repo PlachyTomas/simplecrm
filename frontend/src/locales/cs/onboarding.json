@@ -64,7 +64,7 @@
     "nameStep": {
       "intro": "Začněte názvem. Detaily firmy lze doplnit kdykoli později.",
       "label": "Název organizace",
-      "placeholder": "Acme s.r.o."
+      "placeholder": "Moje firma s.r.o."
     },
     "seatsStep": {
       "intro": "Kolik obchodníků bude SimpleCRM používat? Můžete kdykoli později změnit v Nastavení.",
