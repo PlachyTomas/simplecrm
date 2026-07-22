@@ -96,7 +96,7 @@
     "websiteLabel": "Web (volitelné)",
     "websitePlaceholder": "https://firma.cz",
     "phoneLabel": "Telefon (volitelné)",
-    "phonePlaceholder": "+420 777 123 456",
+    "phonePlaceholder": "1234 567 890",
     "industryLabel": "Obor (volitelné)",
     "industryPlaceholder": "např. Gastro, Automotive, IT",
     "industryOptions": {

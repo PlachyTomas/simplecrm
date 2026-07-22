@@ -93,7 +93,7 @@
     "websiteLabel": "Website (optional)",
     "websitePlaceholder": "https://company.com",
     "phoneLabel": "Phone (optional)",
-    "phonePlaceholder": "+420 777 123 456",
+    "phonePlaceholder": "1234 567 890",
     "industryLabel": "Industry (optional)",
     "industryPlaceholder": "e.g. Gastro, Automotive, IT",
     "industryOptions": {
