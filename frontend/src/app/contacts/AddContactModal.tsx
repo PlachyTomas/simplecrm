@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { useCreateContact } from "@/app/contacts/useCreateContact";
 import { CompanyCombobox } from "@/components/ui/CompanyCombobox";
+import { useDismissGuard } from "@/lib/useDismissGuard";
 import { useModalDialog } from "@/lib/useModalDialog";
 
 interface AddContactModalProps {
@@ -38,6 +39,17 @@ export function AddContactModal({ open, onClose, onCreated, forCompanyId }: AddC
   const dialogRef = useModalDialog<HTMLDivElement>(onClose, open);
   const [form, setForm] = useState<Form>(EMPTY);
   const mutation = useCreateContact();
+
+  // The preset company (opened from a company page) isn't the user's typing;
+  // a company they picked themselves is.
+  const dirty =
+    form.first_name.trim() !== "" ||
+    form.last_name.trim() !== "" ||
+    form.email.trim() !== "" ||
+    form.phone.trim() !== "" ||
+    form.position.trim() !== "" ||
+    form.company_id !== (forCompanyId ?? "");
+  const { onBackdropClick, nudgeClass } = useDismissGuard(onClose, dirty);
 
   useEffect(() => {
     if (open) setForm({ ...EMPTY, company_id: forCompanyId ?? "" });
@@ -74,13 +86,11 @@ export function AddContactModal({ open, onClose, onCreated, forCompanyId }: AddC
       aria-modal="true"
       aria-labelledby="add-contact-title"
       className="fixed inset-0 z-50 flex items-end justify-center bg-bg/80 px-0 backdrop-blur-sm md:items-center md:px-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      onClick={onBackdropClick}
     >
       <form
         onSubmit={onSubmit}
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-lg border border-border bg-surface p-6 shadow-lg md:rounded-lg"
+        className={`max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-lg border border-border bg-surface p-6 shadow-lg md:rounded-lg ${nudgeClass}`}
       >
         <div
           aria-hidden

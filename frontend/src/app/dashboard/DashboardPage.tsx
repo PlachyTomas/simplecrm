@@ -20,6 +20,7 @@ import { useMediaQuery } from "@/lib/useMediaQuery";
 import { usePageTitle } from "@/lib/usePageTitle";
 
 import { HomeWidgetByType } from "@/app/dashboard/HomeWidgetByType";
+import { HOME_EDIT_CHROME_GUTTER } from "@/app/dashboard/widgets/HomeEditChrome";
 import { addWidget, removeWidget, setWidgetDatePreset } from "@/app/dashboard/homeLayout";
 import { buildHomePickerGroups } from "@/app/dashboard/homeWidgetCatalog";
 import {
@@ -255,6 +256,7 @@ export function DashboardPage() {
             isEditMode={isEditMode}
             onLayoutChange={handleLayoutChange}
             renderWidget={renderEntry}
+            editGutter={HOME_EDIT_CHROME_GUTTER}
           />
         )}
       </section>

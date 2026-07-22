@@ -7,6 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { ApiError, apiFetch } from "@/lib/api";
+import { useDismissGuard } from "@/lib/useDismissGuard";
 import { formatDate } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 import type { components } from "@/types/api.generated";
@@ -175,6 +176,7 @@ function EraseOrgDialog({ orgName, onClose }: { orgName: string; onClose: () => 
   const { t } = useTranslation("settings");
   const [typed, setTyped] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const { onBackdropClick, nudgeClass } = useDismissGuard(onClose, typed.trim() !== "");
   const navigate = useNavigate();
   const { accessToken, clearAuth } = useAuth();
   const queryClient = useQueryClient();
@@ -223,12 +225,13 @@ function EraseOrgDialog({ orgName, onClose }: { orgName: string; onClose: () => 
       aria-labelledby="erase-org-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 py-8"
       onClick={(e) => {
-        if (e.target === e.currentTarget && !erase.isPending) onClose();
+        // While erasing runs, stay open silently — same as before the guard.
+        if (!erase.isPending) onBackdropClick(e);
       }}
     >
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg"
+        className={`w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg ${nudgeClass}`}
       >
         <h2 id="erase-org-title" className="text-lg font-semibold text-text-primary">
           {t("privacy.eraseDialog.title")}

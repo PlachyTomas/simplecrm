@@ -136,8 +136,48 @@
   }
 }
 
+/* Dirty-dialog dismiss guard (useDismissGuard): a backdrop click that would
+   discard user input nudges the panel — short decisive shake + warning border
+   flash (warning = unsaved-changes semantics) — instead of closing. */
+.dialog-dismiss-nudge {
+  animation: dialog-dismiss-nudge var(--duration-slow) var(--ease-in-out);
+}
+
+@keyframes dialog-dismiss-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+    border-color: var(--color-warning);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  45% {
+    transform: translateX(5px);
+  }
+  70% {
+    transform: translateX(-3px);
+  }
+  85% {
+    transform: translateX(2px);
+  }
+}
+
+/* Flash-only variant: border-color pinned at both ends so it holds for the
+   whole run, then reverts with the class. */
+@keyframes dialog-dismiss-nudge-flash {
+  0%,
+  100% {
+    border-color: var(--color-warning);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hero-blob {
     animation: none !important;
+  }
+
+  .dialog-dismiss-nudge {
+    animation-name: dialog-dismiss-nudge-flash;
   }
 }

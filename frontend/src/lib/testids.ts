@@ -45,6 +45,15 @@ export const testIds = {
       submit: "companies-add-modal-submit",
       cancel: "companies-add-modal-cancel",
     },
+    editButton: "companies-edit-button",
+    editModal: {
+      nameInput: "companies-edit-modal-name",
+      icoInput: "companies-edit-modal-ico",
+      phoneInput: "companies-edit-modal-phone",
+      ownerSelect: "companies-edit-modal-owner",
+      submit: "companies-edit-modal-submit",
+      cancel: "companies-edit-modal-cancel",
+    },
   },
   contacts: {
     addButton: "contacts-add-button",
@@ -54,6 +63,15 @@ export const testIds = {
       emailInput: "contacts-add-modal-email",
       submit: "contacts-add-modal-submit",
       cancel: "contacts-add-modal-cancel",
+    },
+    editButton: "contacts-edit-button",
+    editModal: {
+      firstNameInput: "contacts-edit-modal-first-name",
+      lastNameInput: "contacts-edit-modal-last-name",
+      positionInput: "contacts-edit-modal-position",
+      phoneInput: "contacts-edit-modal-phone",
+      submit: "contacts-edit-modal-submit",
+      cancel: "contacts-edit-modal-cancel",
     },
   },
   deals: {

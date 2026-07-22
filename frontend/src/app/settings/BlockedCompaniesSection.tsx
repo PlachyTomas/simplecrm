@@ -124,7 +124,7 @@ export function BlockedCompaniesSection() {
             inputMode="numeric"
             value={ico}
             onChange={(e) => setIco(e.target.value.replace(/\D/g, "").slice(0, 8))}
-            placeholder="27082440"
+            placeholder="12345678"
             className="mt-1 block h-9 w-full rounded-md border border-border bg-surface-overlay px-2 font-mono text-sm"
           />
         </label>

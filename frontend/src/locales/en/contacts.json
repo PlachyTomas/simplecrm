@@ -36,7 +36,20 @@
     "saving": "Saving…"
   },
 
+  "editContactModal": {
+    "title": "Edit contact",
+    "subtitle": "Changes propagate to the deals and emails the contact appears in.",
+    "noteOptional": "Note (optional)",
+    "firstNameRequired": "First and last name cannot be empty.",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "savedToast": "Contact updated.",
+    "saveError": "Saving failed. Please try again."
+  },
+
   "contactDetail": {
+    "editButton": "Edit contact",
     "selectPrompt": "Select a contact from the list.",
     "loading": "Loading…",
     "loadError": "Failed to load the contact.",

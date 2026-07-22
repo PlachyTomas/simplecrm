@@ -1,11 +1,13 @@
-import { Building2, Mail, Phone, Users } from "lucide-react";
+import { Building2, Mail, Pencil, Phone, Users } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { useCompany } from "@/app/companies/useCompany";
+import { EditContactModal } from "@/app/contacts/EditContactModal";
 import { useContact, useUpdateContact } from "@/app/contacts/useContacts";
 import { CompanyCombobox } from "@/components/ui/CompanyCombobox";
+import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
 
 interface ContactDetailPanelProps {
@@ -20,6 +22,7 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
   const toast = useToast();
   const [editingCompany, setEditingCompany] = useState(false);
   const [pendingCompanyId, setPendingCompanyId] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
 
   if (!contactId) {
     return (
@@ -73,12 +76,21 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
         >
           {fullName.slice(0, 1).toUpperCase()}
         </span>
-        <div>
+        <div className="min-w-0 flex-1">
           <h2 className="text-xl font-semibold">{fullName}</h2>
           {contact.position ? (
             <p className="text-sm text-text-secondary">{contact.position}</p>
           ) : null}
         </div>
+        <button
+          type="button"
+          onClick={() => setEditOpen(true)}
+          data-testid={testIds.contacts.editButton}
+          className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
+        >
+          <Pencil size={14} strokeWidth={1.75} aria-hidden />
+          {t("contactDetail.editButton")}
+        </button>
       </header>
 
       <section>
@@ -168,6 +180,13 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
           <p className="mt-2 whitespace-pre-wrap text-sm text-text-primary">{contact.note}</p>
         </section>
       ) : null}
+
+      <EditContactModal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        contact={contact}
+        companyName={company?.name}
+      />
     </div>
   );
 }

@@ -5,6 +5,15 @@ import { useTranslation } from "react-i18next";
 import { testIds } from "@/lib/testids";
 import { cn } from "@/lib/utils";
 
+/**
+ * Vertical space the edit-mode toolbar strip needs, passed to WidgetGrid's
+ * `editGutter` so rows spread apart instead of overlapping: the 32px strip
+ * (h-7 buttons + pb-1) plus 4px for the KPI card's intrinsic min-height
+ * overshoot of its h=2 grid box. With it, the common KPI tile's ring sits
+ * exactly on its grid box in edit mode.
+ */
+export const HOME_EDIT_CHROME_GUTTER = 36;
+
 interface HomeEditChromeProps {
   isEditMode: boolean;
   /** Stable widget id — drives control test ids. */

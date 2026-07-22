@@ -93,7 +93,7 @@
     "websiteLabel": "Website (optional)",
     "websitePlaceholder": "https://company.com",
     "phoneLabel": "Phone (optional)",
-    "phonePlaceholder": "+420 777 123 456",
+    "phonePlaceholder": "123 456 789",
     "industryLabel": "Industry (optional)",
     "industryPlaceholder": "e.g. Gastro, Automotive, IT",
     "industryOptions": {
@@ -123,7 +123,23 @@
     "createContactError": "Company saved, but the contact could not be assigned."
   },
 
+  "editCompanyModal": {
+    "title": "Edit company",
+    "subtitle": "Changes propagate everywhere the company is used — deals, contacts, and reports.",
+    "ownerLabel": "Owner",
+    "ownerPool": "— shared pool —",
+    "ownerHint": "Reassigning to another salesperson resets the company's protection window.",
+    "nameRequired": "The company name cannot be empty.",
+    "icoBadFormat": "The company ID must have 8 digits.",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "savedToast": "Company updated.",
+    "saveError": "Saving failed. Please try again."
+  },
+
   "companyDetail": {
+    "editButton": "Edit company",
     "loading": "Loading…",
     "loadError": "Failed to load the company.",
     "backToList": "Back to list",

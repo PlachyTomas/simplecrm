@@ -179,7 +179,7 @@ export function OrgBillingFields({
               data-testid={testIds.billing.ico}
               value={value.ico}
               onChange={(e) => onIcoChange(e.target.value)}
-              placeholder="27082440"
+              placeholder="12345678"
               className={monoInputClass}
             />
             {lookupState === "idle" && value.ico ? (
@@ -255,6 +255,7 @@ export function OrgBillingFields({
                 autoComplete="off"
                 value={value.dic}
                 onChange={(e) => onChange({ ...value, dic: e.target.value })}
+                placeholder="CZ12345678"
                 className={monoInputClass}
               />
             </label>
