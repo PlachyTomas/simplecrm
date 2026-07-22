@@ -4,7 +4,9 @@ Owner request: (1) create events directly from the calendar, (2) fix the calenda
 scroll / add week–month zoom / clarify the prev–Dnes–next controls, (3) diagnose and fix the
 production `google_calendar_not_connected` 400 — silent renewal preferred.
 
-Status: **awaiting owner decisions** (marked ⭘). No implementation yet.
+Status: **DECIDED 2026-07-22** — T1: A+B · T2: Layout B (master-detail) + zoom toggle +
+nav (a) · T3: degrade to save+flag; Phase 0 walkthrough delivered to owner. Implementation
+not started.
 
 ---
 
@@ -41,7 +43,7 @@ extra interaction surface inside cells that already have chips + selection.
 **D. Double-click / drag a cell** — rejected: conflicts with click-to-select, no time axis
 in a month grid, poor accessibility.
 
-### Recommendation ⭘
+### Decision: A + B ✔
 
 **A + B together** (header button for discoverability, panel/empty-state CTA for context);
 **C later** if desired once the new layout settles. Both open the same modal; one new
@@ -99,12 +101,16 @@ if you want it sticky).
   arrows still page "something written far away on the left".
 - (c) Tooltips only — rejected, doesn't fix the reading order.
 
-### Recommendation ⭘
+### Decision: Layout B (master-detail) + segmented zoom + nav (a) ✔
 
-**Layout A + segmented zoom + nav (a).** One coherent header row:
-`Kalendář · [‹] červenec 2026 [›] · [Dnes] ·· [Týden|Měsíc] · [Nová událost]`.
-`calendarMath` gains `weekGrid()` + adaptive `monthGrid()` (both pure, unit-tested — jsdom
-tests exist already); `gridRange` unchanged. Mobile agenda keeps its layout.
+Owner chose the **split layout**: month/week grid left (~2/3 width), the selected-day panel
+as a full-height, internally-scrolling column on the right (Kontakty pattern). Same header
+row as proposed: `Kalendář · [‹] červenec 2026 [›] · [Dnes] ·· [Týden|Měsíc] · [Nová událost]`.
+Implementation notes for B: adaptive weeks still apply (a 6-week ghost row would push the
+grid past the viewport on 13″ laptops even in the split — trim weeks with no in-month days
+and shorten cells slightly so the grid always fits); the right panel is `overflow-y-auto
+min-h-0` with the day heading sticky; `calendarMath` gains `weekGrid()` + adaptive
+`monthGrid()` (pure, unit-tested); `gridRange` unchanged; mobile agenda keeps its layout.
 
 ---
 
@@ -170,10 +176,10 @@ impossible to miss. That's the plan:
   `refresh_token` in Google's response ([google_calendar.py:224-231](../../../backend/app/services/google_calendar.py#L224-L231)); save it when present.
 - **One bounded retry** on `invalid_grant` before flipping `sync_broken` (per Google's own
   error guidance; never retry it in a loop).
-- **Stop failing event writes on Google state** ⭘: `add_to_google` on a broken connection
-  should degrade — save the CRM event, mark `google_sync_status=error`, return 2xx — instead
-  of 400ing the whole request. Google is a mirror; the CRM record should never be hostage
-  to it. (Alternative: keep the 400 and only fix the frontend gating — smaller, worse UX.)
+- **Stop failing event writes on Google state** *(DECIDED ✔)*: `add_to_google` on a broken
+  connection degrades — save the CRM event, mark `google_sync_status=error`, return 2xx —
+  instead of 400ing the whole request. Google is a mirror; the CRM record is never hostage
+  to it.
 - Structured log line on every `invalid_grant` (user id + google_email + connection age)
   so prod recurrence is diagnosable from logs.
 
@@ -198,11 +204,12 @@ calendarMath unit tests and Playwright verification at 1280/768/390.
 
 ---
 
-## Decisions needed (⭘)
+## Decisions (recorded 2026-07-22)
 
-1. Task 1: options **A+B** (header + day-panel CTA), or a different mix (C now?).
-2. Task 2: **Layout A** + zoom toggle + nav (a) — or Layout B/C, or different nav?
-3. Task 3: degrade event-create to **save + sync-error + reconnect CTA** (recommended), or
-   keep the hard 400 and only fix status gating/surfacing?
-4. Task 3 Phase 0: owner runs the reconnect + checks/updates the Google Cloud publishing
-   status (I can't reach the Console or prod DB).
+1. Task 1: **A+B** — header button + day-panel CTA. ✔
+2. Task 2: **Layout B** (master-detail split) + zoom toggle + nav (a). ✔
+3. Task 3: **degrade to save + sync-error + reconnect CTA**. ✔
+4. Task 3 Phase 0: owner runs it with a step-by-step walkthrough (delivered in chat;
+   summary: reconnect in Settings → Integrace, then Google Cloud Console → OAuth consent
+   screen/Audience → if publishing status is Testing, Publish app, then reconnect once more
+   so the new grant is issued under Production rules).
