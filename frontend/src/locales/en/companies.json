@@ -93,7 +93,7 @@
     "websiteLabel": "Website (optional)",
     "websitePlaceholder": "https://company.com",
     "phoneLabel": "Phone (optional)",
-    "phonePlaceholder": "1234 567 890",
+    "phonePlaceholder": "123 456 789",
     "industryLabel": "Industry (optional)",
     "industryPlaceholder": "e.g. Gastro, Automotive, IT",
     "industryOptions": {

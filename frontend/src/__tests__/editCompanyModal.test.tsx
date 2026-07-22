@@ -153,14 +153,14 @@ describe("EditCompanyModal", () => {
     expect(screen.getByTestId("companies-edit-modal-ico")).toHaveValue("12345670");
 
     const phoneInput = screen.getByTestId("companies-edit-modal-phone");
-    await user.type(phoneInput, "1234 567 890");
+    await user.type(phoneInput, "123 456 789");
     await user.click(screen.getByTestId("companies-edit-modal-submit"));
 
     await waitFor(() => expect(mutations).toHaveLength(1));
     const [method, path, body] = mutations[0] as [string, string, unknown];
     expect(method).toBe("PUT");
     expect(path).toBe(`/api/v1/companies/${COMPANY_ID}`);
-    expect(body).toEqual({ phone: "1234 567 890" });
+    expect(body).toEqual({ phone: "123 456 789" });
   });
 
   it("reassigns ownership through the reassign endpoint when the owner changes", async () => {

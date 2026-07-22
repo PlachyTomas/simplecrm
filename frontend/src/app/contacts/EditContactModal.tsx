@@ -186,7 +186,7 @@ export function EditContactModal({ open, onClose, contact, companyName }: EditCo
               <span className={labelCls}>{t("addContactModal.phoneOptional")}</span>
               <input
                 type="tel"
-                placeholder="1234 567 890"
+                placeholder="123 456 789"
                 value={form.phone}
                 onChange={set("phone")}
                 data-testid={testIds.contacts.editModal.phoneInput}

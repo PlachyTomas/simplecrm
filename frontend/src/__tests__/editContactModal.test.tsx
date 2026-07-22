@@ -126,7 +126,7 @@ describe("EditContactModal", () => {
     expect(screen.getByTestId("contacts-edit-modal-last-name")).toHaveValue("Malá");
 
     const phone = screen.getByTestId("contacts-edit-modal-phone");
-    await user.type(phone, "1234 567 890");
+    await user.type(phone, "123 456 789");
     const position = screen.getByTestId("contacts-edit-modal-position");
     await user.clear(position);
     await user.type(position, "Vedoucí nákupu");
@@ -136,7 +136,7 @@ describe("EditContactModal", () => {
     const [method, path, body] = mutations[0] as [string, string, unknown];
     expect(method).toBe("PUT");
     expect(path).toBe(`/api/v1/contacts/${CONTACT_ID}`);
-    expect(body).toEqual({ phone: "1234 567 890", position: "Vedoucí nákupu" });
+    expect(body).toEqual({ phone: "123 456 789", position: "Vedoucí nákupu" });
   });
 
   it("clears an optional field by sending null", async () => {
