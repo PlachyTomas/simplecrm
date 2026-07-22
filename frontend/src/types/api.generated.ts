@@ -3629,6 +3629,72 @@ export interface components {
          * @enum {string}
          */
         BlockedCompanyReason: "competitor" | "do_not_contact" | "bankrupt" | "legal_issue" | "other";
+        /**
+         * BoardDealOut
+         * @description `DealOut` plus the company name the kanban card displays. Kept
+         *     deliberately leaner than `DealListItemOut` — the board renders dozens of
+         *     cards and only ever needs the one denormalized field, so the endpoint
+         *     eager-loads just the `company` relationship.
+         */
+        BoardDealOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /**
+             * Stage Id
+             * Format: uuid
+             */
+            stage_id: string;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Primary Contact Id */
+            primary_contact_id?: string | null;
+            /** Name */
+            name: string;
+            /** Value */
+            value: string;
+            /** Currency */
+            currency: string;
+            /** Probability Override */
+            probability_override?: number | null;
+            /** Expected Close Date */
+            expected_close_date?: string | null;
+            /** Closed At */
+            closed_at?: string | null;
+            /** Lost Reason */
+            lost_reason?: string | null;
+            /**
+             * Is Paid
+             * @default false
+             */
+            is_paid: boolean;
+            /** Paid At */
+            paid_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Company Name */
+            company_name: string;
+        };
         /** BoardStage */
         BoardStage: {
             /**
@@ -3652,7 +3718,7 @@ export interface components {
             /** Currency */
             currency: string;
             /** Deals */
-            deals: components["schemas"]["DealOut"][];
+            deals: components["schemas"]["BoardDealOut"][];
         };
         /** Body_commit_import_api_v1_admin_imports_commit_post */
         Body_commit_import_api_v1_admin_imports_commit_post: {

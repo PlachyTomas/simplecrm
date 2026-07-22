@@ -20,6 +20,7 @@ from app.db.models import Deal, Organization, Pipeline, Stage, User, UserRole
 from app.db.models.enums import StageType
 from app.schemas.deal import DealOut
 from app.schemas.pipeline import (
+    BoardDealOut,
     BoardStage,
     PipelineBoard,
     PipelineSummary,
@@ -94,10 +95,16 @@ async def get_default_pipeline_board(
             cutoff = datetime.now(tz=UTC) - timedelta(days=won_window_days)
             visibility.append(and_(Deal.stage_id.in_(won_stage_ids), Deal.closed_at >= cutoff))
 
-    stmt = select(Deal).where(
-        Deal.organization_id == user.organization_id,
-        Deal.stage_id.in_([s.id for s in pipeline.stages]),
-        or_(*visibility),
+    stmt = (
+        select(Deal)
+        .where(
+            Deal.organization_id == user.organization_id,
+            Deal.stage_id.in_([s.id for s in pipeline.stages]),
+            or_(*visibility),
+        )
+        # The card shows the company name; load it with the deals instead of
+        # lazy-loading per row (which would raise MissingGreenlet in async).
+        .options(selectinload(Deal.company))
     )
     scoped = await scope_by_owner(stmt, session=session, user=user, owner_col=Deal.owner_user_id)
     deals = (await session.execute(scoped)).scalars().all()
@@ -142,7 +149,13 @@ async def get_default_pipeline_board(
             deal_count=len(grouped[str(stage.id)]),
             total_value=totals[str(stage.id)],
             currency=org.currency,
-            deals=[DealOut.model_validate(d) for d in _order_deals(stage, grouped[str(stage.id)])],
+            deals=[
+                BoardDealOut(
+                    **DealOut.model_validate(d).model_dump(),
+                    company_name=d.company.name,
+                )
+                for d in _order_deals(stage, grouped[str(stage.id)])
+            ],
         )
         for stage in sorted(pipeline.stages, key=lambda s: s.position)
     ]
