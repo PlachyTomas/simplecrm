@@ -197,6 +197,9 @@
     "saving": "Ukládám…",
     "saveChanges": "Uložit změny",
     "cancel": "Zrušit",
+    "editNameRequired": "Název obchodu nesmí být prázdný.",
+    "editValueInvalid": "Hodnota musí být číslo.",
+    "editProbabilityInvalid": "Pravděpodobnost musí být číslo od 0 do 100.",
     "fields": {
       "status": "Stav",
       "name": "Název",

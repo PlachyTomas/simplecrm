@@ -139,6 +139,40 @@ describe("EditContactModal", () => {
     expect(body).toEqual({ phone: "123 456 789", position: "Vedoucí nákupu" });
   });
 
+  it("does not touch the company when the search text is edited without picking", async () => {
+    renderContacts();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByTestId("contacts-edit-button"));
+    // The company renders as a resolved row; changing it is an explicit action.
+    await user.click(await screen.findByTestId("contacts-edit-modal-company-change"));
+    const search = await screen.findByPlaceholderText("Začněte psát název firmy…");
+    await user.type(search, "Ostrava Stee");
+    await user.click(screen.getByTestId("contacts-edit-modal-submit"));
+
+    // Unresolved pick blocks the save entirely instead of unassigning.
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Vyberte firmu ze seznamu, nebo změnu firmy zrušte.",
+    );
+    expect(mutations).toHaveLength(0);
+  });
+
+  it("removes the company only through the explicit remove action", async () => {
+    renderContacts();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByTestId("contacts-edit-button"));
+    await user.click(await screen.findByTestId("contacts-edit-modal-company-remove"));
+    expect(screen.getByText("Firma bude po uložení odebrána.")).toBeInTheDocument();
+    await user.click(screen.getByTestId("contacts-edit-modal-submit"));
+
+    await waitFor(() => expect(mutations).toHaveLength(1));
+    const [method, path, body] = mutations[0] as [string, string, unknown];
+    expect(method).toBe("PUT");
+    expect(path).toBe(`/api/v1/contacts/${CONTACT_ID}`);
+    expect(body).toEqual({ company_id: null });
+  });
+
   it("clears an optional field by sending null", async () => {
     renderContacts();
     const user = userEvent.setup();

@@ -70,6 +70,8 @@ export const testIds = {
       lastNameInput: "contacts-edit-modal-last-name",
       positionInput: "contacts-edit-modal-position",
       phoneInput: "contacts-edit-modal-phone",
+      companyChange: "contacts-edit-modal-company-change",
+      companyRemove: "contacts-edit-modal-company-remove",
       submit: "contacts-edit-modal-submit",
       cancel: "contacts-edit-modal-cancel",
     },

@@ -66,6 +66,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
   const { data: smtp } = useSmtpSettings();
   const [lostDialogOpen, setLostDialogOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const [edit, setEdit] = useState<EditState | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
   const [replyTarget, setReplyTarget] = useState<SentEmailOut | null>(null);
@@ -139,17 +140,33 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
         deal!.probability_override != null ? String(deal!.probability_override) : "",
       primary_contact_id: deal!.primary_contact_id ?? "",
     });
+    setEditError(null);
     setEditing(true);
   }
 
   async function handleSave() {
     if (!edit) return;
+    // Every invalid state must produce a visible message — a silent no-op
+    // Save reads as "saved" and the user walks away with unsaved edits.
+    setEditError(null);
+    if (edit.name.trim() === "") {
+      setEditError(t("dealDetail.editNameRequired"));
+      return;
+    }
     const numericValue = edit.value.trim() === "" ? 0 : Number(edit.value.replace(/\s/g, ""));
-    if (Number.isNaN(numericValue)) return;
+    if (Number.isNaN(numericValue)) {
+      setEditError(t("dealDetail.editValueInvalid"));
+      return;
+    }
     const probability =
       edit.probability_override.trim() === "" ? null : Number(edit.probability_override);
-    if (probability != null && (Number.isNaN(probability) || probability < 0 || probability > 100))
+    if (
+      probability != null &&
+      (Number.isNaN(probability) || probability < 0 || probability > 100)
+    ) {
+      setEditError(t("dealDetail.editProbabilityInvalid"));
       return;
+    }
     try {
       await updateDeal.mutateAsync({
         name: edit.name.trim(),
@@ -445,26 +462,34 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
         </section>
 
         {editing ? (
-          <div className="mt-4 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={updateDeal.isPending}
-              className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent disabled:opacity-60"
-            >
-              {updateDeal.isPending ? t("dealDetail.saving") : t("dealDetail.saveChanges")}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setEditing(false);
-                setEdit(null);
-              }}
-              className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary"
-            >
-              {t("dealDetail.cancel")}
-            </button>
-          </div>
+          <>
+            {editError ? (
+              <p role="alert" className="mt-4 text-sm text-danger">
+                {editError}
+              </p>
+            ) : null}
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={updateDeal.isPending}
+                className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent disabled:opacity-60"
+              >
+                {updateDeal.isPending ? t("dealDetail.saving") : t("dealDetail.saveChanges")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(false);
+                  setEdit(null);
+                  setEditError(null);
+                }}
+                className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary"
+              >
+                {t("dealDetail.cancel")}
+              </button>
+            </div>
+          </>
         ) : null}
 
         <DealEventsSection dealId={deal.id} dealName={deal.name} locale={locale} />
