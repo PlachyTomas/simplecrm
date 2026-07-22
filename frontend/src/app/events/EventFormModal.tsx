@@ -4,7 +4,10 @@ import { Link } from "react-router-dom";
 
 import { useDeals } from "@/app/deals/useDeals";
 import { type CalendarEventOut, useCreateEvent, useUpdateEvent } from "@/app/events/useEvents";
-import { useGoogleCalendarStatus } from "@/app/settings/useGoogleCalendar";
+import {
+  useGoogleCalendarConnect,
+  useGoogleCalendarStatus,
+} from "@/app/settings/useGoogleCalendar";
 import { testIds } from "@/lib/testids";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useDismissGuard } from "@/lib/useDismissGuard";
@@ -44,6 +47,11 @@ function defaultStart(): { date: string; start: string; end: string } {
   };
 }
 
+/** Local-naive `YYYY-MM-DD` for today. */
+function todayLocalDate(): string {
+  return toLocalDate(new Date().toISOString());
+}
+
 interface EventFormModalProps {
   open: boolean;
   onClose: () => void;
@@ -56,6 +64,12 @@ interface EventFormModalProps {
   dealName?: string;
   /** Edit mode: the event being edited (wins over dealId/dealName). */
   event?: CalendarEventOut | null;
+  /**
+   * Create mode: pre-select this local day (`YYYY-MM-DD`), e.g. the day
+   * clicked in the calendar. When it isn't today the slot defaults to
+   * 09:00–10:00; today (or omitted) keeps the "next full hour" default.
+   */
+  initialDate?: string;
 }
 
 interface PickedDeal {
@@ -63,16 +77,33 @@ interface PickedDeal {
   name: string;
 }
 
-export function EventFormModal({ open, onClose, dealId, dealName, event }: EventFormModalProps) {
+export function EventFormModal({
+  open,
+  onClose,
+  dealId,
+  dealName,
+  event,
+  initialDate,
+}: EventFormModalProps) {
   const { t } = useTranslation("deals");
   const dialogRef = useModalDialog<HTMLDivElement>(onClose, open);
   const toast = useToast();
-  const { data: gcal } = useGoogleCalendarStatus();
+  const { data: gcal, refetch: refetchGoogleStatus } = useGoogleCalendarStatus();
+  const connectGoogle = useGoogleCalendarConnect();
   const createEvent = useCreateEvent();
   const updateEvent = useUpdateEvent();
 
   const editing = !!event;
-  const googleAvailable = (gcal?.connected ?? false) && !(gcal?.sync_broken ?? false);
+  const googleConnected = gcal?.connected ?? false;
+  const googleSyncBroken = gcal?.sync_broken ?? false;
+  const googleAvailable = googleConnected && !googleSyncBroken;
+
+  // Force a fresh status read every time the modal opens: the query is cached
+  // for 30 s with no refocus refetch, so a long-lived tab could otherwise gate
+  // the checkbox on a stale "healthy" status after the connection broke.
+  useEffect(() => {
+    if (open) void refetchGoogleStatus();
+  }, [open, refetchGoogleStatus]);
   // Create mode without a bound deal (dashboard quick action): the user
   // must pick the deal, since events are deal-bound (`deal_id NOT NULL`).
   const needsDealPicker = !editing && !dealId;
@@ -131,7 +162,13 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
         "",
       ]);
     } else {
-      const slot = defaultStart();
+      // A calendar-driven create pre-selects its day; a non-today day gets a
+      // plain 09:00–10:00 slot, while today (or no pre-selection) keeps the
+      // "next full hour from now" default.
+      const slot =
+        initialDate && initialDate !== todayLocalDate()
+          ? { date: initialDate, start: "09:00", end: "10:00" }
+          : defaultStart();
       const defaultTitle = dealName ? t("eventFormModal.defaultTitle", { dealName }) : "";
       setTitle(defaultTitle);
       setDate(slot.date);
@@ -158,7 +195,7 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
     // server sync adopting another device's choice mid-edit), and re-running
     // the reset then would wipe the user's in-progress form.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, event, dealName, googleAvailable]);
+  }, [open, event, dealName, initialDate, googleAvailable]);
 
   if (!open) return null;
 
@@ -379,12 +416,24 @@ export function EventFormModal({ open, onClose, dealId, dealName, event }: Event
               {!googleAvailable ? (
                 <>
                   {" — "}
-                  <Link
-                    to="/app/settings?tab=integrations"
-                    className="underline hover:text-text-primary"
-                  >
-                    {t("eventFormModal.connectCalendarLink")}
-                  </Link>
+                  {googleConnected && googleSyncBroken ? (
+                    <button
+                      type="button"
+                      onClick={() => connectGoogle.mutate()}
+                      disabled={connectGoogle.isPending}
+                      data-testid={testIds.events.reconnectGoogle}
+                      className="text-warning underline hover:text-text-primary disabled:opacity-60"
+                    >
+                      {t("eventFormModal.reconnectGoogle")}
+                    </button>
+                  ) : (
+                    <Link
+                      to="/app/settings?tab=integrations"
+                      className="underline hover:text-text-primary"
+                    >
+                      {t("eventFormModal.connectCalendarLink")}
+                    </Link>
+                  )}
                 </>
               ) : null}
             </span>
