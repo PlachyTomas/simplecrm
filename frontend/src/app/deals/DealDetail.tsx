@@ -513,6 +513,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
             setReplyTarget(null);
           }}
           dealId={deal.id}
+          companyId={company?.id}
           defaultTo={primaryContact?.email ?? company?.email ?? null}
           replyTo={replyTarget}
         />

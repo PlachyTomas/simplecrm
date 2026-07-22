@@ -426,6 +426,7 @@ function DealsTab({ company, locale }: { company: CompanyOut; locale: string }) 
           open
           onClose={() => setComposeDeal(null)}
           dealId={composeDeal.id}
+          companyId={company.id}
           defaultTo={composeDeal.primary_contact_email ?? composeDeal.company_email ?? null}
         />
       ) : null}

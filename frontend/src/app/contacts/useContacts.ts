@@ -12,13 +12,20 @@ interface UseContactsOptions {
   limit?: number;
   offset?: number;
   companyId?: string;
+  /** Set false to hold the fetch (e.g. a closed modal that only sometimes needs contacts). */
+  enabled?: boolean;
 }
 
-export function useContacts({ limit = 50, offset = 0, companyId }: UseContactsOptions = {}) {
+export function useContacts({
+  limit = 50,
+  offset = 0,
+  companyId,
+  enabled = true,
+}: UseContactsOptions = {}) {
   const { accessToken } = useAuth();
   return useQuery<ContactsPage>({
     queryKey: ["contacts", { limit, offset, companyId }],
-    enabled: !!accessToken,
+    enabled: !!accessToken && enabled,
     placeholderData: keepPreviousData,
     queryFn: () => {
       const params = new URLSearchParams();

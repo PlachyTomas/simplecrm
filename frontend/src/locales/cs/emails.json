@@ -21,9 +21,18 @@
     "sendErrorToastGeneric": "E-mail se nepodařilo odeslat.",
     "unknownError": "neznámá chyba",
     "attachmentTooLarge": "Soubor „{{filename}}\" je větší než 10 MB.",
-    "attachmentUnsupportedType": "Soubor „{{filename}}\" má nepodporovaný typ. Povolené: PDF, obrázky, Word, Excel, text."
+    "attachmentUnsupportedType": "Soubor „{{filename}}\" má nepodporovaný typ. Povolené: PDF, obrázky, Word, Excel, text.",
+    "suggestionsLabel": "Návrhy kontaktů",
+    "newContactOption": "Vytvořit nový kontakt",
+    "newContactTitle": "Nový kontakt",
+    "newContactFirstName": "Jméno",
+    "newContactLastName": "Příjmení",
+    "newContactEmail": "E-mail",
+    "newContactSave": "Uložit kontakt",
+    "newContactSaving": "Ukládám…",
+    "newContactCancel": "Zrušit",
+    "newContactError": "Kontakt se nepodařilo uložit."
   },
-
   "history": {
     "title": "Odeslané e-maily",
     "loading": "Načítání…",
@@ -32,12 +41,10 @@
     "statusError": "Chyba",
     "reply": "Odpovědět"
   },
-
   "gatedMail": {
     "hint": "Nejprve nastavte a ověřte SMTP.",
     "settingsLink": "Nastavení → Integrace"
   },
-
   "campaigns": {
     "pageTitle": "Historie hromadných e-mailů",
     "backToCompanies": "Zpět na firmy",
@@ -56,7 +63,6 @@
     "statusFailed": "Selhalo",
     "statusSkipped": "Přeskočeno"
   },
-
   "wizard": {
     "title": "Hromadný e-mail",
     "close": "Zavřít",
