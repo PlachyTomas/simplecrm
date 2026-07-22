@@ -9,6 +9,7 @@ from app.api.v1 import api_router
 from app.core.config import get_settings
 from app.services.scheduler import (
     billing_info_reminder_scheduler,
+    google_calendar_keepalive_scheduler,
     integrity_check_scheduler,
     overdue_invoice_scheduler,
     recurring_charge_scheduler,
@@ -53,6 +54,7 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     overdue_invoice_scheduler.start()
     billing_info_reminder_scheduler.start()
     integrity_check_scheduler.start()
+    google_calendar_keepalive_scheduler.start()
     try:
         yield
     finally:
@@ -62,6 +64,7 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await overdue_invoice_scheduler.stop()
         await billing_info_reminder_scheduler.stop()
         await integrity_check_scheduler.stop()
+        await google_calendar_keepalive_scheduler.stop()
 
 
 def create_app() -> FastAPI:

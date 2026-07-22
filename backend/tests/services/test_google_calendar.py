@@ -35,6 +35,7 @@ from app.services.google_calendar import (
     GoogleCalendarError,
     HttpGoogleCalendarClient,
     event_payload,
+    force_refresh_access_token,
     get_valid_access_token,
 )
 
@@ -264,11 +265,109 @@ async def test_get_valid_access_token_marks_connection_broken_on_revoked_grant(
     db_session: AsyncSession,
 ) -> None:
     connection = await _seed_connection(db_session, access_token=None, expires_in=None)
+    calls = {"n": 0}
 
     def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
         return httpx.Response(400, json={"error": "invalid_grant"})
 
     client = _client_with_handler(handler)
     with pytest.raises(GoogleCalendarAuthError):
         await get_valid_access_token(db_session, connection, client)
+    # invalid_grant is retried exactly once before the connection is broken.
+    assert calls["n"] == 2
     assert connection.sync_broken is True
+
+
+async def test_get_valid_access_token_retries_once_then_succeeds(
+    db_session: AsyncSession,
+) -> None:
+    """A single transient `invalid_grant` is survived by the one retry —
+    the connection must NOT be flipped when the retry succeeds."""
+    connection = await _seed_connection(db_session, access_token=None, expires_in=None)
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return httpx.Response(400, json={"error": "invalid_grant"})
+        return httpx.Response(200, json={"access_token": "at-second", "expires_in": 3599})
+
+    client = _client_with_handler(handler)
+    token = await get_valid_access_token(db_session, connection, client)
+    assert token == "at-second"
+    assert calls["n"] == 2
+    assert connection.sync_broken is False
+
+
+async def test_get_valid_access_token_transient_error_does_not_flip(
+    db_session: AsyncSession,
+) -> None:
+    """A non-auth (5xx) failure is not retried and never flips sync_broken —
+    the grant is fine, Google is merely unavailable right now."""
+    connection = await _seed_connection(db_session, access_token=None, expires_in=None)
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(503, json={"error": "backend_error"})
+
+    client = _client_with_handler(handler)
+    with pytest.raises(GoogleCalendarError) as exc:
+        await get_valid_access_token(db_session, connection, client)
+    assert not isinstance(exc.value, GoogleCalendarAuthError)
+    assert calls["n"] == 1  # no retry for a transient error
+    assert connection.sync_broken is False
+
+
+async def test_get_valid_access_token_persists_rotated_refresh_token(
+    db_session: AsyncSession,
+) -> None:
+    """Google may hand back a new refresh token on a refresh; it must be
+    re-encrypted and persisted so the next exchange uses the live token."""
+    connection = await _seed_connection(db_session, access_token=None, expires_in=None)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "access_token": "at-new",
+                "expires_in": 3599,
+                "refresh_token": "rt-rotated",
+            },
+        )
+
+    client = _client_with_handler(handler)
+    token = await get_valid_access_token(db_session, connection, client)
+    assert token == "at-new"
+    assert decrypt_token(connection.refresh_token_encrypted) == "rt-rotated"
+
+
+async def test_get_valid_access_token_keeps_refresh_token_when_not_rotated(
+    db_session: AsyncSession,
+) -> None:
+    connection = await _seed_connection(db_session, access_token=None, expires_in=None)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"access_token": "at-new", "expires_in": 3599})
+
+    client = _client_with_handler(handler)
+    await get_valid_access_token(db_session, connection, client)
+    # No `refresh_token` in the response → the stored one is untouched.
+    assert decrypt_token(connection.refresh_token_encrypted) == "rt-1"
+
+
+async def test_force_refresh_ignores_cached_token(db_session: AsyncSession) -> None:
+    """The keep-alive path must hit Google even when a cached access token
+    is still valid, so the inactivity clock actually resets."""
+    connection = await _seed_connection(
+        db_session, access_token="at-cached", expires_in=timedelta(minutes=30)
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"access_token": "at-forced", "expires_in": 3599})
+
+    client = _client_with_handler(handler)
+    token = await force_refresh_access_token(db_session, connection, client)
+    assert token == "at-forced"
+    assert decrypt_token(connection.access_token_encrypted) == "at-forced"

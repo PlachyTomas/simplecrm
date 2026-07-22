@@ -4,8 +4,9 @@ Local-first: the `calendar_events` row is the source of truth. A Google
 API failure never loses a write — the event lands with
 `google_sync_status=error` and the UI shows a warning. Google propagation
 always runs through the **event owner's** connection (it's their calendar);
-explicitly requesting `add_to_google` without a connection is a 400, while
-propagating edits of an already-synced event degrades to `error` instead.
+requesting `add_to_google` without a usable connection (missing or
+`sync_broken`) never fails the CRM write — the event is saved and marked
+`google_sync_status=error`, and the UI prompts a reconnect.
 
 Visibility mirrors deals: `scope_by_owner` on `owner_user_id` (admins see
 the whole org). Editing/deleting is restricted to the owner or an admin.
@@ -14,7 +15,7 @@ the whole org). Editing/deleting is restricted to the owner or an admin.
 from __future__ import annotations
 
 import uuid
-from typing import Annotated
+from typing import Annotated, TypeGuard
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import AwareDatetime
@@ -199,21 +200,15 @@ async def _sync_delete(
         pass
 
 
-def _require_connection(
+def _connection_usable(
     connection: GoogleCalendarConnection | None,
-) -> GoogleCalendarConnection:
-    if connection is None or connection.sync_broken:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": "google_calendar_not_connected",
-                "detail": (
-                    "Google Calendar is not connected (or the connection "
-                    "needs to be renewed) for the event owner."
-                ),
-            },
-        )
-    return connection
+) -> TypeGuard[GoogleCalendarConnection]:
+    """A connection can carry a Google push only when it exists and its
+    grant is still live. A missing or `sync_broken` connection degrades the
+    write to `google_sync_status=error` rather than failing it — the CRM
+    record is never held hostage to Google's state. Typed as a `TypeGuard`
+    so callers get the non-`None` narrowing in the truthy branch."""
+    return connection is not None and not connection.sync_broken
 
 
 @router.get("", response_model=Page[CalendarEventOut])
@@ -294,8 +289,13 @@ async def create_event(
     )
 
     if payload.add_to_google:
-        connection = _require_connection(await _owner_connection(session, user.id))
-        await _sync_insert(session, event, connection, client)
+        connection = await _owner_connection(session, user.id)
+        if _connection_usable(connection):
+            await _sync_insert(session, event, connection, client)
+        else:
+            # No usable Google connection — save the CRM event, flag the
+            # sync so the UI can prompt a reconnect. Never a 400.
+            event.google_sync_status = GoogleSyncStatus.error
 
     await session.commit()
     await session.refresh(event)
@@ -330,8 +330,12 @@ async def update_event(
     connection = await _owner_connection(session, event.owner_user_id)
 
     if desired_synced and not currently_synced:
-        # Explicit opt-in — a missing/broken connection is a hard error.
-        await _sync_insert(session, event, _require_connection(connection), client)
+        # Explicit opt-in to add a Google copy. A missing/broken connection
+        # degrades to `error` — the CRM edit still lands.
+        if _connection_usable(connection):
+            await _sync_insert(session, event, connection, client)
+        else:
+            event.google_sync_status = GoogleSyncStatus.error
     elif desired_synced and currently_synced:
         if connection is None:
             event.google_sync_status = GoogleSyncStatus.error

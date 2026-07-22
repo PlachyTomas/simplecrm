@@ -16,6 +16,7 @@ email+password accounts that never touched Google login.
 from __future__ import annotations
 
 import contextlib
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
@@ -23,11 +24,14 @@ from urllib.parse import urlencode
 
 import httpx
 from fastapi import HTTPException, status
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.token_crypto import decrypt_token, encrypt_token
 from app.db.models import GoogleCalendarConnection
+
+logger = logging.getLogger(__name__)
 
 GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"  # noqa: S105 — URL endpoint, not a token
@@ -70,7 +74,7 @@ class GoogleCalendarClient(Protocol):
 
     async def exchange_code(self, code: str) -> GoogleTokenBundle: ...
 
-    async def refresh_access_token(self, refresh_token: str) -> tuple[str, int]: ...
+    async def refresh_access_token(self, refresh_token: str) -> tuple[str, int, str | None]: ...
 
     async def revoke_token(self, token: str) -> None: ...
 
@@ -221,14 +225,26 @@ class HttpGoogleCalendarClient:
             email=email,
         )
 
-    async def refresh_access_token(self, refresh_token: str) -> tuple[str, int]:
+    async def refresh_access_token(self, refresh_token: str) -> tuple[str, int, str | None]:
+        """Exchange the refresh token for a fresh access token.
+
+        Returns `(access_token, expires_in, rotated_refresh_token)`. Google
+        occasionally rotates the refresh token on a refresh call; when it
+        does, the third element is the new refresh token to persist,
+        otherwise it is `None`.
+        """
         token = await self._token_request(
             {"refresh_token": refresh_token, "grant_type": "refresh_token"}
         )
         access_token = token.get("access_token")
         if not access_token:
             raise GoogleCalendarError("Google refresh did not return an access token")
-        return str(access_token), int(token.get("expires_in", 3600))
+        rotated_refresh_token = token.get("refresh_token")
+        return (
+            str(access_token),
+            int(token.get("expires_in", 3600)),
+            str(rotated_refresh_token) if rotated_refresh_token else None,
+        )
 
     async def revoke_token(self, token: str) -> None:
         """Best-effort: a failed revoke must not block disconnect."""
@@ -288,6 +304,76 @@ def get_google_calendar_client() -> GoogleCalendarClient:
     return HttpGoogleCalendarClient()
 
 
+def _connection_age(connection: GoogleCalendarConnection) -> str:
+    """Human-readable age of the connection for the sync_broken log line.
+
+    Defensive: `created_at` can be unloaded on a freshly-flushed row, and
+    touching it in async would raise MissingGreenlet — report ``unknown``
+    rather than crash the refresh path just to log.
+    """
+    if "created_at" in sa_inspect(connection).unloaded:
+        return "unknown"
+    return str(datetime.now(tz=UTC) - connection.created_at)
+
+
+def _log_sync_broken(connection: GoogleCalendarConnection) -> None:
+    """One structured, greppable line every time a grant is declared dead."""
+    logger.warning(
+        "google_calendar sync_broken flipped: user_id=%s google_email=%s connection_age=%s",
+        connection.user_id,
+        connection.google_email,
+        _connection_age(connection),
+    )
+
+
+async def _refresh_with_one_retry(
+    client: GoogleCalendarClient, refresh_token: str
+) -> tuple[str, int, str | None]:
+    """Refresh once; on `invalid_grant` retry exactly once immediately.
+
+    Google's own guidance is to retry `invalid_grant` a single time (a
+    transient token-service blip can answer it) but never loop on it. A
+    transient, non-auth `GoogleCalendarError` is not retried here — it
+    propagates unchanged so the caller leaves `sync_broken` alone.
+    """
+    try:
+        return await client.refresh_access_token(refresh_token)
+    except GoogleCalendarAuthError:
+        return await client.refresh_access_token(refresh_token)
+
+
+async def _refresh_and_store(
+    session: AsyncSession,
+    connection: GoogleCalendarConnection,
+    client: GoogleCalendarClient,
+) -> str:
+    """Exchange the refresh token, persist the fresh cache, and clear
+    `sync_broken`. Only a retried `GoogleCalendarAuthError` flips the
+    connection `sync_broken` (emitting one structured log line) before it
+    propagates; a transient error leaves the flag untouched."""
+    now = datetime.now(tz=UTC)
+    refresh_token = decrypt_token(connection.refresh_token_encrypted)
+    try:
+        access_token, expires_in, rotated_refresh_token = await _refresh_with_one_retry(
+            client, refresh_token
+        )
+    except GoogleCalendarAuthError:
+        connection.sync_broken = True
+        _log_sync_broken(connection)
+        await session.flush()
+        raise
+
+    connection.access_token_encrypted = encrypt_token(access_token)
+    connection.access_token_expires_at = now + timedelta(seconds=expires_in)
+    # Google may rotate the refresh token on a refresh; persist the new one
+    # so the next exchange doesn't fail invalid_grant on a superseded token.
+    if rotated_refresh_token is not None:
+        connection.refresh_token_encrypted = encrypt_token(rotated_refresh_token)
+    connection.sync_broken = False
+    await session.flush()
+    return access_token
+
+
 async def get_valid_access_token(
     session: AsyncSession,
     connection: GoogleCalendarConnection,
@@ -295,8 +381,8 @@ async def get_valid_access_token(
 ) -> str:
     """Return a usable access token for the connection, refreshing (and
     persisting the new cache) when the stored one is missing or near
-    expiry. On a revoked grant the connection is flagged `sync_broken`
-    before `GoogleCalendarAuthError` propagates."""
+    expiry. On a grant that stays revoked across one retry the connection
+    is flagged `sync_broken` before `GoogleCalendarAuthError` propagates."""
     now = datetime.now(tz=UTC)
     if (
         connection.access_token_encrypted is not None
@@ -305,16 +391,19 @@ async def get_valid_access_token(
     ):
         return decrypt_token(connection.access_token_encrypted)
 
-    refresh_token = decrypt_token(connection.refresh_token_encrypted)
-    try:
-        access_token, expires_in = await client.refresh_access_token(refresh_token)
-    except GoogleCalendarAuthError:
-        connection.sync_broken = True
-        await session.flush()
-        raise
+    return await _refresh_and_store(session, connection, client)
 
-    connection.access_token_encrypted = encrypt_token(access_token)
-    connection.access_token_expires_at = now + timedelta(seconds=expires_in)
-    connection.sync_broken = False
-    await session.flush()
-    return access_token
+
+async def force_refresh_access_token(
+    session: AsyncSession,
+    connection: GoogleCalendarConnection,
+    client: GoogleCalendarClient,
+) -> str:
+    """Force a refresh-token exchange, ignoring any cached access token.
+
+    Used by the weekly keep-alive so Google's 6-month inactivity clock
+    resets and a revoked grant is detected proactively (flipping
+    `sync_broken`) rather than at the next event push. Shares the bounded
+    retry + `sync_broken` flip path with `get_valid_access_token`.
+    """
+    return await _refresh_and_store(session, connection, client)

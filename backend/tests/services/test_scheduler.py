@@ -10,13 +10,16 @@ import pytest
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Company, Organization, User, UserRole
+from app.core.token_crypto import decrypt_token, encrypt_token
+from app.db.models import Company, GoogleCalendarConnection, Organization, User, UserRole
 from app.db.session import AsyncSessionLocal
 from app.services.email import Email, build_freed_company_email
+from app.services.google_calendar import GoogleCalendarAuthError
 from app.services.scheduler import (
     _LOCK_FREEING,
     _seconds_until_next_run,
     run_freeing_sweep,
+    run_google_calendar_keepalive,
 )
 
 
@@ -124,6 +127,144 @@ async def test_run_freeing_sweep_frees_and_counts(
     assert by_name["Expired 1"] is None
     assert by_name["Expired 2"] is None
     assert by_name["Still Fresh"] == owner.id
+
+
+# --------------------------------------------------------------------------
+# Google Calendar weekly keep-alive
+# --------------------------------------------------------------------------
+
+
+class _KeepaliveClient:
+    """Records each refresh call; raises `invalid_grant` for revoked tokens.
+
+    Only `refresh_access_token` is exercised by `force_refresh_access_token`,
+    so the rest of the protocol is intentionally absent.
+    """
+
+    def __init__(self, revoke: set[str] | None = None) -> None:
+        self.revoke = set(revoke or set())
+        self.calls: list[str] = []
+
+    async def refresh_access_token(self, refresh_token: str) -> tuple[str, int, str | None]:
+        self.calls.append(refresh_token)
+        if refresh_token in self.revoke:
+            raise GoogleCalendarAuthError("invalid_grant")
+        return "at-new", 3599, None
+
+
+async def _seed_gcal_user(
+    session: AsyncSession, owned_cleanup: dict[str, list], org: Organization
+) -> User:
+    email = f"gk-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(email)
+    user = User(email=email, name="GK", role=UserRole.admin, organization_id=org.id)
+    session.add(user)
+    await session.flush()
+    return user
+
+
+async def _seed_connection(
+    session: AsyncSession,
+    *,
+    user: User,
+    org: Organization,
+    refresh_token: str,
+    sync_broken: bool = False,
+) -> GoogleCalendarConnection:
+    connection = GoogleCalendarConnection(
+        user_id=user.id,
+        organization_id=org.id,
+        google_email=f"{refresh_token}@gmail.com",
+        refresh_token_encrypted=encrypt_token(refresh_token),
+        sync_broken=sync_broken,
+    )
+    session.add(connection)
+    await session.flush()
+    return connection
+
+
+async def test_keepalive_refreshes_healthy_connection(
+    owned_cleanup: dict[str, list], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async with AsyncSessionLocal() as s:
+        org = Organization(name=f"KA-{uuid.uuid4().hex[:6]}")
+        s.add(org)
+        await s.flush()
+        owned_cleanup["orgs"].append(org.id)
+        user = await _seed_gcal_user(s, owned_cleanup, org)
+        rt = f"rt-good-{uuid.uuid4().hex[:8]}"
+        connection = await _seed_connection(s, user=user, org=org, refresh_token=rt)
+        await s.commit()
+        connection_id = connection.id
+
+    fake = _KeepaliveClient()
+    monkeypatch.setattr("app.services.google_calendar.get_google_calendar_client", lambda: fake)
+
+    refreshed = await run_google_calendar_keepalive()
+    assert refreshed >= 1
+    assert rt in fake.calls  # the exchange was actually forced
+
+    async with AsyncSessionLocal() as s:
+        row = await s.get(GoogleCalendarConnection, connection_id)
+        assert row is not None
+        assert row.sync_broken is False
+        assert row.access_token_encrypted is not None
+        assert decrypt_token(row.access_token_encrypted) == "at-new"
+
+
+async def test_keepalive_flips_revoked_and_isolates_failures(
+    owned_cleanup: dict[str, list], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """One revoked grant must be flipped `sync_broken` without aborting the
+    batch — a healthy sibling connection is still refreshed."""
+    async with AsyncSessionLocal() as s:
+        org = Organization(name=f"KA-{uuid.uuid4().hex[:6]}")
+        s.add(org)
+        await s.flush()
+        owned_cleanup["orgs"].append(org.id)
+        good_user = await _seed_gcal_user(s, owned_cleanup, org)
+        bad_user = await _seed_gcal_user(s, owned_cleanup, org)
+        rt_good = f"rt-good-{uuid.uuid4().hex[:8]}"
+        rt_bad = f"rt-bad-{uuid.uuid4().hex[:8]}"
+        good = await _seed_connection(s, user=good_user, org=org, refresh_token=rt_good)
+        bad = await _seed_connection(s, user=bad_user, org=org, refresh_token=rt_bad)
+        await s.commit()
+        good_id, bad_id = good.id, bad.id
+
+    fake = _KeepaliveClient(revoke={rt_bad})
+    monkeypatch.setattr("app.services.google_calendar.get_google_calendar_client", lambda: fake)
+
+    await run_google_calendar_keepalive()
+
+    # The revoked grant is retried once before giving up (2 calls), then flipped.
+    assert fake.calls.count(rt_bad) == 2
+
+    async with AsyncSessionLocal() as s:
+        good_row = await s.get(GoogleCalendarConnection, good_id)
+        bad_row = await s.get(GoogleCalendarConnection, bad_id)
+        assert good_row is not None and good_row.sync_broken is False
+        assert bad_row is not None and bad_row.sync_broken is True
+
+
+async def test_keepalive_skips_already_broken_connections(
+    owned_cleanup: dict[str, list], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async with AsyncSessionLocal() as s:
+        org = Organization(name=f"KA-{uuid.uuid4().hex[:6]}")
+        s.add(org)
+        await s.flush()
+        owned_cleanup["orgs"].append(org.id)
+        user = await _seed_gcal_user(s, owned_cleanup, org)
+        rt = f"rt-broken-{uuid.uuid4().hex[:8]}"
+        await _seed_connection(s, user=user, org=org, refresh_token=rt, sync_broken=True)
+        await s.commit()
+
+    fake = _KeepaliveClient()
+    monkeypatch.setattr("app.services.google_calendar.get_google_calendar_client", lambda: fake)
+
+    await run_google_calendar_keepalive()
+    # A connection already flagged broken is never touched by the keep-alive.
+    assert rt not in fake.calls
 
 
 async def test_freeing_sweep_skips_when_another_worker_holds_lock(

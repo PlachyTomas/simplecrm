@@ -68,8 +68,8 @@ class FakeGoogleCalendarClient:
     async def exchange_code(self, code: str) -> GoogleTokenBundle:
         raise AssertionError("not used in event tests")
 
-    async def refresh_access_token(self, refresh_token: str) -> tuple[str, int]:
-        return "at-fresh", 3599
+    async def refresh_access_token(self, refresh_token: str) -> tuple[str, int, str | None]:
+        return "at-fresh", 3599, None
 
     async def revoke_token(self, token: str) -> None: ...
 
@@ -284,22 +284,27 @@ async def test_create_event_rejects_foreign_org_deal(
     assert response.status_code == 400
 
 
-async def test_create_event_add_to_google_without_connection_400(
+async def test_create_event_add_to_google_without_connection_degrades(
     client: AsyncClient,
     db_session: AsyncSession,
     owned_cleanup: dict[str, list],
     fake_gcal: FakeGoogleCalendarClient,
 ) -> None:
+    """No connection at all: the CRM write must still succeed (201) and land
+    with `google_sync_status=error` — never a 400 that loses the event."""
     org, stage = await _seed_org(db_session, owned_cleanup)
     user = await _seed_user(db_session, owned_cleanup, org)
     deal = await _seed_deal(db_session, org, stage)
 
     response = await client.post(EVENTS, json=_body(deal, add_to_google=True), headers=_auth(user))
-    assert response.status_code == 400
-    assert response.json()["detail"]["code"] == "google_calendar_not_connected"
-    # Local-first applies to *sync* failures, not to an impossible request —
-    # nothing must be persisted here.
-    count = (
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["google_sync_status"] == "error"
+    assert body["google_event_id"] is None
+    # No Google call was attempted with a missing connection.
+    assert fake_gcal.inserted == []
+    # The event IS persisted now (degrade, not reject).
+    persisted = (
         (
             await db_session.execute(
                 select(CalendarEvent).where(CalendarEvent.organization_id == org.id)
@@ -308,7 +313,31 @@ async def test_create_event_add_to_google_without_connection_400(
         .scalars()
         .all()
     )
-    assert count == []
+    assert len(persisted) == 1
+    assert persisted[0].id == uuid.UUID(body["id"])
+
+
+async def test_create_event_add_to_google_broken_connection_degrades(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    """A `sync_broken` connection degrades identically to a missing one —
+    save + flag, no Google call, no 400."""
+    org, stage = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org)
+    connection = await _seed_connection(db_session, user)
+    connection.sync_broken = True
+    await db_session.commit()
+    deal = await _seed_deal(db_session, org, stage)
+
+    response = await client.post(EVENTS, json=_body(deal, add_to_google=True), headers=_auth(user))
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["google_sync_status"] == "error"
+    assert body["google_event_id"] is None
+    assert fake_gcal.inserted == []
 
 
 async def test_create_event_pushes_to_google(
@@ -515,6 +544,34 @@ async def test_update_event_vanished_google_copy_is_reinserted(
     body = response.json()
     assert body["google_sync_status"] == "synced"
     assert body["google_event_id"] == "gev-new"
+
+
+async def test_update_event_sync_later_without_connection_degrades(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    """Opting a not-yet-synced event into Google with no usable connection
+    degrades to `error` on update, mirroring create — never a 400."""
+    org, stage = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org)
+    connection = await _seed_connection(db_session, user)
+    connection.sync_broken = True
+    await db_session.commit()
+    deal = await _seed_deal(db_session, org, stage)
+    event = await _seed_event(db_session, org, deal, user)  # not synced
+
+    response = await client.put(
+        f"{EVENTS}/{event.id}",
+        json={"add_to_google": True},
+        headers=_auth(user),
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["google_sync_status"] == "error"
+    assert body["google_event_id"] is None
+    assert fake_gcal.inserted == []
 
 
 async def test_update_event_forbidden_for_non_owner(

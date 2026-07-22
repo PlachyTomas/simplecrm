@@ -68,8 +68,8 @@ class FakeGoogleCalendarClient:
             email="tomas@gmail.com",
         )
 
-    async def refresh_access_token(self, refresh_token: str) -> tuple[str, int]:
-        return "at-fresh", 3599
+    async def refresh_access_token(self, refresh_token: str) -> tuple[str, int, str | None]:
+        return "at-fresh", 3599, None
 
     async def revoke_token(self, token: str) -> None:
         self.revoked.append(token)
