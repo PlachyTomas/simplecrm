@@ -60,6 +60,7 @@ _LOCK_RENEWAL_DRAFT = 918_2703
 _LOCK_OVERDUE = 918_2704
 _LOCK_BILLING_REMINDER = 918_2705
 _LOCK_INTEGRITY = 918_2706
+_LOCK_GCAL_KEEPALIVE = 918_2707
 
 
 def _single_flight(
@@ -666,4 +667,78 @@ async def run_weekly_integrity_check() -> int:
 integrity_check_scheduler = _PeriodicRunner(
     interval_seconds=INTEGRITY_CHECK_INTERVAL_SECONDS,
     job=run_weekly_integrity_check,
+)
+
+
+# ---------------------------------------------------------------------------
+# Weekly Google Calendar keep-alive (Task 3 Phase 1)
+# ---------------------------------------------------------------------------
+#
+# Runs every 7 days. For every non-broken GoogleCalendarConnection it FORCES
+# a refresh-token exchange (bypassing the cached-access-token fast path), which:
+#
+#   1. resets Google's 6-month inactivity clock so idle connections never
+#      lapse just for lack of event pushes;
+#   2. detects a revoked/expired grant within a week — `invalid_grant`
+#      (after the one retry inside `force_refresh_access_token`) flips that
+#      connection's `sync_broken` so the UI can prompt a reconnect long
+#      before the user hits it while creating an event.
+#
+# Per-connection error isolation: one failing connection (bad grant or a
+# transient Google blip) must never abort the batch, so every exchange is
+# wrapped and the sweep continues to the next connection.
+
+GOOGLE_KEEPALIVE_INTERVAL_SECONDS = 7 * 24 * 3600
+
+
+@_single_flight(_LOCK_GCAL_KEEPALIVE)
+async def run_google_calendar_keepalive() -> int:
+    """Force a refresh-token exchange for every non-broken Google Calendar
+    connection. Returns the number of connections successfully refreshed
+    (useful for tests + log inspection)."""
+    from app.db.models import GoogleCalendarConnection
+    from app.services.google_calendar import (
+        GoogleCalendarError,
+        force_refresh_access_token,
+        get_google_calendar_client,
+    )
+
+    client = get_google_calendar_client()
+    refreshed = 0
+
+    async with AsyncSessionLocal() as session:
+        stmt = select(GoogleCalendarConnection).where(
+            GoogleCalendarConnection.sync_broken.is_(False)
+        )
+        connections = (await session.execute(stmt)).scalars().all()
+
+        for connection in connections:
+            try:
+                await force_refresh_access_token(session, connection, client)
+                refreshed += 1
+            except GoogleCalendarError:
+                # A revoked grant flips `sync_broken` inside the refresh (and
+                # is flushed there); a transient error leaves it intact for
+                # next week. Either way keep going — one bad connection must
+                # not abort the batch.
+                logger.warning(
+                    "gcal keep-alive: refresh failed for connection %s (user %s)",
+                    connection.id,
+                    connection.user_id,
+                )
+            except Exception:
+                # Decrypt failures / unexpected errors: isolate and continue.
+                logger.exception(
+                    "gcal keep-alive: unexpected error for connection %s", connection.id
+                )
+
+        await session.commit()
+
+    logger.info("google-calendar keep-alive completed: refreshed=%d", refreshed)
+    return refreshed
+
+
+google_calendar_keepalive_scheduler = _PeriodicRunner(
+    interval_seconds=GOOGLE_KEEPALIVE_INTERVAL_SECONDS,
+    job=run_google_calendar_keepalive,
 )

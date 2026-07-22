@@ -2,7 +2,6 @@
   "dealCount_one": "{{count}} obchod",
   "dealCount_few": "{{count}} obchody",
   "dealCount_other": "{{count}} obchodů",
-
   "pipelinePage": {
     "loading": "Načítání pipeline…",
     "loadError": "Pipeline se nepodařilo načíst.",
@@ -80,7 +79,6 @@
       "deleteError": "Obchod se nepodařilo smazat."
     }
   },
-
   "dealsList": {
     "pageTitle": "Obchody",
     "loadError": "Obchody se nepodařilo načíst.",
@@ -98,7 +96,6 @@
       "closed": "Uzavření"
     }
   },
-
   "addDealModal": {
     "title": "Přidat obchod",
     "subtitle": "Pojmenujte obchod a přiřaďte ho k firmě a fázi pipeline. Detaily můžete doplnit kdykoliv později.",
@@ -157,7 +154,6 @@
     "saving": "Ukládám…",
     "submit": "Uložit obchod"
   },
-
   "markLostDialog": {
     "title": "Označit jako neúspěch",
     "bodyPrefix": "Obchod",
@@ -176,7 +172,6 @@
     "saving": "Ukládám…",
     "submit": "Uložit"
   },
-
   "dealDetail": {
     "loading": "Načítání…",
     "loadError": "Obchod se nepodařilo načíst.",
@@ -224,11 +219,9 @@
       "loseError": "Obchod se nepodařilo označit jako neúspěšný."
     }
   },
-
   "dealDetailDialog": {
     "ariaLabel": "Detail obchodu"
   },
-
   "eventsSection": {
     "title": "Události",
     "subtitle": "Schůzky a termíny k tomuto obchodu — volitelně i ve vašem Google kalendáři.",
@@ -243,7 +236,6 @@
     "toastDeleted": "Událost smazána.",
     "toastDeleteError": "Událost se nepodařilo smazat."
   },
-
   "eventFormModal": {
     "titleCreate": "Naplánovat událost",
     "titleEdit": "Upravit událost",
@@ -257,6 +249,7 @@
     "descriptionLabel": "Popis (volitelné)",
     "addToGoogle": "Přidat do Google kalendáře",
     "connectCalendarLink": "nejprve propojte kalendář v Nastavení",
+    "reconnectGoogle": "Google kalendář odpojen — Znovu připojit",
     "errorRequired": "Vyplňte název, datum a časy.",
     "errorDealRequired": "Vyberte obchod, ke kterému událost patří.",
     "errorEndBeforeStart": "Konec musí být po začátku.",
@@ -273,9 +266,9 @@
     "submitCreate": "Vytvořit událost",
     "toast": {
       "created": "Událost vytvořena.",
-      "createdError": "Událost vytvořena, ale zápis do Google kalendáře selhal.",
+      "createdError": "Událost vytvořena, ale zápis do Google kalendáře selhal. Připojte Google kalendář znovu.",
       "updated": "Událost uložena.",
-      "updatedError": "Událost uložena, ale zápis do Google kalendáře selhal.",
+      "updatedError": "Událost uložena, ale zápis do Google kalendáře selhal. Připojte Google kalendář znovu.",
       "createError": "Událost se nepodařilo vytvořit.",
       "updateError": "Událost se nepodařilo uložit."
     }

@@ -111,6 +111,18 @@ export const testIds = {
       input: "event-form-deal-picker-input",
       option: (id: string) => `event-form-deal-picker-option-${id}`,
     },
+    reconnectGoogle: "event-form-reconnect-google",
+  },
+  calendar: {
+    newEvent: "calendar-new-event",
+    scheduleDay: "calendar-schedule-day",
+    emptySchedule: "calendar-empty-schedule",
+    prevPeriod: "calendar-prev-period",
+    nextPeriod: "calendar-next-period",
+    today: "calendar-today",
+    zoomWeek: "calendar-zoom-week",
+    zoomMonth: "calendar-zoom-month",
+    reconnect: "calendar-reconnect",
   },
   widgets: {
     picker: {

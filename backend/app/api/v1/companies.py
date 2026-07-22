@@ -502,12 +502,23 @@ async def update_company(
         )
     updates = payload.model_dump(exclude_unset=True)
     new_owner = updates.get("owner_user_id", company.owner_user_id)
-    if new_owner != company.owner_user_id and not await can_write_row(session, user, new_owner):
+    owner_change = "owner_user_id" in updates and new_owner != company.owner_user_id
+    if owner_change and user.role is UserRole.salesperson:
+        # Salespeople may only ever CLAIM a company from the shared pool for
+        # themselves. Taking a teammate's company, handing one around, or
+        # pushing one back to the pool is a manager/admin action.
+        is_pool_claim = company.owner_user_id is None and new_owner == user.id
+        if not is_pool_claim:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only managers can transfer company ownership",
+            )
+    if owner_change and not await can_write_row(session, user, new_owner):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot reassign ownership outside your scope",
         )
-    if new_owner != company.owner_user_id:
+    if owner_change:
         await _assert_owner_cap(session, new_owner, excluding_company_id=company.id)
     if "main_contact_id" in updates:
         await _validate_main_contact_id(session, user, company, updates["main_contact_id"])

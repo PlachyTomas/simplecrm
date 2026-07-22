@@ -17,8 +17,9 @@ class CalendarEventCreate(BaseModel):
     # would crash comparisons against the timestamptz columns.
     starts_at: AwareDatetime
     ends_at: AwareDatetime
-    # Mirror the event into the creator's Google Calendar. Requires a
-    # connection; the endpoint 400s with `google_calendar_not_connected`.
+    # Mirror the event into the creator's Google Calendar. When no usable
+    # connection exists (missing or `sync_broken`), the CRM event is still
+    # saved but lands with `google_sync_status=error` — the write never 400s.
     add_to_google: bool = False
 
     @model_validator(mode="after")

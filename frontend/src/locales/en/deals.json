@@ -1,7 +1,6 @@
 {
   "dealCount_one": "{{count}} deal",
   "dealCount_other": "{{count}} deals",
-
   "pipelinePage": {
     "loading": "Loading pipeline…",
     "loadError": "Failed to load the pipeline.",
@@ -78,7 +77,6 @@
       "deleteError": "Failed to delete the deal."
     }
   },
-
   "dealsList": {
     "pageTitle": "Deals",
     "loadError": "Failed to load deals.",
@@ -96,7 +94,6 @@
       "closed": "Closed"
     }
   },
-
   "addDealModal": {
     "title": "Add deal",
     "subtitle": "Name the deal and assign it to a company and pipeline stage. You can fill in details any time later.",
@@ -155,7 +152,6 @@
     "saving": "Saving…",
     "submit": "Save deal"
   },
-
   "markLostDialog": {
     "title": "Mark as lost",
     "bodyPrefix": "Deal",
@@ -174,7 +170,6 @@
     "saving": "Saving…",
     "submit": "Save"
   },
-
   "dealDetail": {
     "loading": "Loading…",
     "loadError": "Failed to load the deal.",
@@ -222,11 +217,9 @@
       "loseError": "Failed to mark the deal as lost."
     }
   },
-
   "dealDetailDialog": {
     "ariaLabel": "Deal detail"
   },
-
   "eventsSection": {
     "title": "Events",
     "subtitle": "Meetings and appointments for this deal — optionally in your Google Calendar too.",
@@ -241,7 +234,6 @@
     "toastDeleted": "Event deleted.",
     "toastDeleteError": "Failed to delete the event."
   },
-
   "eventFormModal": {
     "titleCreate": "Schedule event",
     "titleEdit": "Edit event",
@@ -255,6 +247,7 @@
     "descriptionLabel": "Description (optional)",
     "addToGoogle": "Add to Google Calendar",
     "connectCalendarLink": "connect your calendar in Settings first",
+    "reconnectGoogle": "Google Calendar disconnected — Reconnect",
     "errorRequired": "Fill in the name, date, and times.",
     "errorDealRequired": "Pick the deal this event belongs to.",
     "errorEndBeforeStart": "The end must be after the start.",
@@ -271,9 +264,9 @@
     "submitCreate": "Create event",
     "toast": {
       "created": "Event created.",
-      "createdError": "Event created, but the Google Calendar sync failed.",
+      "createdError": "Event created, but the Google Calendar sync failed. Reconnect Google Calendar.",
       "updated": "Event saved.",
-      "updatedError": "Event saved, but the Google Calendar sync failed.",
+      "updatedError": "Event saved, but the Google Calendar sync failed. Reconnect Google Calendar.",
       "createError": "Failed to create the event.",
       "updateError": "Failed to save the event."
     }

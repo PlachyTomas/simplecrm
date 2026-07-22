@@ -27,9 +27,11 @@ export function AppShell() {
   const { accessToken, clearAuth } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  // Pipeline is the only route that wants fluid full-viewport layout — the
-  // kanban needs every horizontal pixel and clamps its own scroll.
-  const fluidLayout = location.pathname.startsWith("/app/pipeline");
+  // Fluid full-viewport routes clamp their own scroll: the kanban needs
+  // every horizontal pixel, the calendar keeps its day panel scrolling
+  // internally so the page itself never scrolls.
+  const fluidLayout =
+    location.pathname.startsWith("/app/pipeline") || location.pathname.startsWith("/app/calendar");
 
   const logout = useMutation({
     mutationFn: () =>
