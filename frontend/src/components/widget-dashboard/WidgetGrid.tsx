@@ -50,6 +50,14 @@ interface WidgetGridProps<W extends WidgetGridItem> {
   isEditMode: boolean;
   onLayoutChange: (next: W[]) => void;
   renderWidget: (entry: W) => React.ReactNode;
+  /**
+   * Extra vertical row gap (px) applied only in edit mode. Pass this when
+   * `renderWidget` adds edit chrome ABOVE the card (HomeEditChrome's
+   * toolbar strip) — the strip makes every item taller than its grid box,
+   * so without the wider gap rows visually overlap. Leave unset when the
+   * edit chrome lives inside the card (WidgetFrame's header).
+   */
+  editGutter?: number;
 }
 
 /**
@@ -109,6 +117,7 @@ export function WidgetGrid<W extends WidgetGridItem>({
   isEditMode,
   onLayoutChange,
   renderWidget,
+  editGutter = 0,
 }: WidgetGridProps<W>) {
   const isMobile = useMediaQuery("(max-width: 767px)");
   const { width, containerRef } = useContainerWidth();
@@ -170,7 +179,7 @@ export function WidgetGrid<W extends WidgetGridItem>({
         breakpoints={BREAKPOINTS}
         cols={COLS}
         rowHeight={ROW_HEIGHT}
-        margin={[16, 16]}
+        margin={[16, isEditMode ? 16 + editGutter : 16]}
         containerPadding={[0, 0]}
         dragConfig={{
           enabled: isEditMode,
