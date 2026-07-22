@@ -126,7 +126,23 @@
     "createContactError": "Firma uložena, ale kontakt se nepodařilo přiřadit."
   },
 
+  "editCompanyModal": {
+    "title": "Upravit firmu",
+    "subtitle": "Změny se propíší všude, kde firmu používáte — v obchodech, kontaktech i reportech.",
+    "ownerLabel": "Vlastník",
+    "ownerPool": "— sdílený pool —",
+    "ownerHint": "Přeřazení na jiného obchodníka obnoví ochrannou lhůtu firmy.",
+    "nameRequired": "Název firmy nesmí být prázdný.",
+    "icoBadFormat": "IČO musí mít 8 číslic.",
+    "save": "Uložit změny",
+    "saving": "Ukládání…",
+    "cancel": "Zrušit",
+    "savedToast": "Firma byla upravena.",
+    "saveError": "Uložení se nepovedlo. Zkuste to prosím znovu."
+  },
+
   "companyDetail": {
+    "editButton": "Upravit firmu",
     "loading": "Načítání…",
     "loadError": "Firmu se nepodařilo načíst.",
     "backToList": "Zpět na seznam",

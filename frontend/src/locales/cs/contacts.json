@@ -36,7 +36,20 @@
     "saving": "Ukládám…"
   },
 
+  "editContactModal": {
+    "title": "Upravit kontakt",
+    "subtitle": "Změny se propíší do obchodů i e-mailů, kde kontakt vystupuje.",
+    "noteOptional": "Poznámka (volitelné)",
+    "firstNameRequired": "Jméno a příjmení nesmí být prázdné.",
+    "save": "Uložit změny",
+    "saving": "Ukládání…",
+    "cancel": "Zrušit",
+    "savedToast": "Kontakt byl upraven.",
+    "saveError": "Uložení se nepovedlo. Zkuste to prosím znovu."
+  },
+
   "contactDetail": {
+    "editButton": "Upravit kontakt",
     "selectPrompt": "Vyberte kontakt ze seznamu.",
     "loading": "Načítání…",
     "loadError": "Kontakt se nepodařilo načíst.",

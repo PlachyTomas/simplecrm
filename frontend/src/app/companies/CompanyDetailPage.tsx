@@ -1,10 +1,11 @@
-import { ArrowLeft, ExternalLink, Mail, Plus, Star } from "lucide-react";
+import { ArrowLeft, ExternalLink, Mail, Pencil, Plus, Star } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { ActivityRow } from "@/app/activities/ActivityRow";
 import { useActivities } from "@/app/activities/useActivities";
+import { EditCompanyModal } from "@/app/companies/EditCompanyModal";
 import { OwnershipBadge } from "@/app/companies/OwnershipBadge";
 import { useCompany } from "@/app/companies/useCompany";
 import type { CompanyOut } from "@/app/companies/useCompanies";
@@ -23,6 +24,7 @@ import { usePipelineBoard } from "@/app/pipeline/useBoard";
 import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useLocale } from "@/lib/i18n/useLocale";
+import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
@@ -592,6 +594,7 @@ export function CompanyDetailPage() {
   const { companyId } = useParams<{ companyId: string }>();
   const locale = useLocale();
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [editOpen, setEditOpen] = useState(false);
   const { data: company, isPending, isError } = useCompany(companyId);
   const { data: usersPage } = useOrgUsers();
   usePageTitle(company?.name ?? t("companyDetail.defaultTitle"));
@@ -640,6 +643,15 @@ export function CompanyDetailPage() {
             ownershipExpiresAt={company.ownership_expires_at}
             ownerUserId={company.owner_user_id}
           />
+          <button
+            type="button"
+            onClick={() => setEditOpen(true)}
+            data-testid={testIds.companies.editButton}
+            className="ml-auto inline-flex h-9 items-center justify-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
+          >
+            <Pencil size={14} strokeWidth={1.75} aria-hidden />
+            {t("companyDetail.editButton")}
+          </button>
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-tertiary">
           {company.ico ? (
@@ -713,6 +725,8 @@ export function CompanyDetailPage() {
           <NotesTab companyId={company.id} initialNote={company.note ?? null} />
         )}
       </div>
+
+      <EditCompanyModal open={editOpen} onClose={() => setEditOpen(false)} company={company} />
     </div>
   );
 }
