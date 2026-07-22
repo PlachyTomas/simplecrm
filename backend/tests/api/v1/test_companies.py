@@ -408,6 +408,110 @@ async def test_update_company_salesperson_cannot_edit_foreign(
     assert response.status_code == 404
 
 
+async def test_update_company_salesperson_cannot_take_teammate_owned(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """A salesperson may SEE a teammate's company but cannot grab its
+    ownership for themselves — only managers transfer ownership."""
+    org = await _seed_org(db_session, owned_cleanup)
+    team = Team(organization_id=org.id, name=f"T-{uuid.uuid4().hex[:4]}")
+    db_session.add(team)
+    await db_session.commit()
+    sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson, team_id=team.id)
+    mate = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson, team_id=team.id)
+    company = Company(organization_id=org.id, name="Mate co", owner_user_id=mate.id)
+    db_session.add(company)
+    await db_session.commit()
+
+    response = await client.put(
+        f"/api/v1/companies/{company.id}",
+        headers=_auth(sales),
+        json={"owner_user_id": str(sales.id)},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Only managers can transfer company ownership"
+
+
+async def test_update_company_salesperson_cannot_hand_own_to_teammate(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    team = Team(organization_id=org.id, name=f"T-{uuid.uuid4().hex[:4]}")
+    db_session.add(team)
+    await db_session.commit()
+    sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson, team_id=team.id)
+    mate = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson, team_id=team.id)
+    company = Company(organization_id=org.id, name="Mine", owner_user_id=sales.id)
+    db_session.add(company)
+    await db_session.commit()
+
+    response = await client.put(
+        f"/api/v1/companies/{company.id}",
+        headers=_auth(sales),
+        json={"owner_user_id": str(mate.id)},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Only managers can transfer company ownership"
+
+
+async def test_update_company_salesperson_cannot_push_own_to_pool(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    company = Company(organization_id=org.id, name="Mine", owner_user_id=sales.id)
+    db_session.add(company)
+    await db_session.commit()
+
+    response = await client.put(
+        f"/api/v1/companies/{company.id}",
+        headers=_auth(sales),
+        json={"owner_user_id": None},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Only managers can transfer company ownership"
+
+
+async def test_update_company_salesperson_can_claim_pool_company(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """The one owner change a salesperson may make: claim an unowned
+    (pool) company for themselves."""
+    org = await _seed_org(db_session, owned_cleanup)
+    sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    company = Company(organization_id=org.id, name="Pool co", owner_user_id=None)
+    db_session.add(company)
+    await db_session.commit()
+
+    response = await client.put(
+        f"/api/v1/companies/{company.id}",
+        headers=_auth(sales),
+        json={"owner_user_id": str(sales.id)},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["owner_user_id"] == str(sales.id)
+
+
+async def test_update_company_salesperson_can_edit_own_non_owner_fields(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Non-ownership edits on the salesperson's own company are untouched
+    by the ownership-transfer restriction."""
+    org = await _seed_org(db_session, owned_cleanup)
+    sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    company = Company(organization_id=org.id, name="Old name", owner_user_id=sales.id)
+    db_session.add(company)
+    await db_session.commit()
+
+    response = await client.put(
+        f"/api/v1/companies/{company.id}",
+        headers=_auth(sales),
+        json={"name": "New name", "website": "https://x.cz"},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["name"] == "New name"
+
+
 # ---------------------------------------------------------------------------
 # delete_company
 # ---------------------------------------------------------------------------
@@ -752,6 +856,26 @@ async def test_reassign_company_admin_transfers_owner(
     )
     assert response.status_code == 200
     assert response.json()["owner_user_id"] == str(b.id)
+
+
+async def test_reassign_company_salesperson_forbidden(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """POST /reassign is manager+ only — a salesperson is rejected before
+    any ownership move, the router-level counterpart to the PUT rule."""
+    org = await _seed_org(db_session, owned_cleanup)
+    sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    other = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    company = Company(organization_id=org.id, name="T", owner_user_id=None)
+    db_session.add(company)
+    await db_session.commit()
+
+    response = await client.post(
+        f"/api/v1/companies/{company.id}/reassign",
+        headers=_auth(sales),
+        json={"new_owner_user_id": str(other.id)},
+    )
+    assert response.status_code == 403
 
 
 async def test_reassign_company_cross_org_rejected(
