@@ -1,4 +1,4 @@
-import { Pencil } from "lucide-react";
+import { Building2, Pencil } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -39,16 +39,31 @@ function fromContact(contact: ContactOut): FormState {
   };
 }
 
+/**
+ * The company can only leave the contact through the explicit Remove
+ * action. "picking" with an empty id is an UNRESOLVED state (the combobox
+ * clears its value whenever the search text is edited) — it must never be
+ * read as "remove", and submit blocks on it instead.
+ */
+type CompanyEdit = { kind: "keep" } | { kind: "remove" } | { kind: "picking"; picked: string };
+
 /** Changed fields only — the PUT is exclude_unset partial; "" clears to null. */
-function buildPatch(contact: ContactOut, form: FormState, companyId: string): ContactUpdate {
+function buildPatch(contact: ContactOut, form: FormState, companyEdit: CompanyEdit): ContactUpdate {
   const patch: Record<string, string | null> = {};
   for (const key of TEXT_KEYS) {
     const next = form[key].trim() === "" ? null : form[key].trim();
     const prev = contact[key] ?? null;
     if (next !== prev) patch[key] = next;
   }
-  const nextCompany = companyId === "" ? null : companyId;
-  if (nextCompany !== (contact.company_id ?? null)) patch.company_id = nextCompany;
+  if (companyEdit.kind === "remove" && contact.company_id) {
+    patch.company_id = null;
+  } else if (
+    companyEdit.kind === "picking" &&
+    companyEdit.picked !== "" &&
+    companyEdit.picked !== (contact.company_id ?? "")
+  ) {
+    patch.company_id = companyEdit.picked;
+  }
   return patch as ContactUpdate;
 }
 
@@ -63,19 +78,19 @@ export function EditContactModal({ open, onClose, contact, companyName }: EditCo
   const update = useUpdateContact(contact.id);
 
   const [form, setForm] = useState<FormState>(() => fromContact(contact));
-  const [companyId, setCompanyId] = useState(contact.company_id ?? "");
+  const [companyEdit, setCompanyEdit] = useState<CompanyEdit>({ kind: "keep" });
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setForm(fromContact(contact));
-      setCompanyId(contact.company_id ?? "");
+      setCompanyEdit({ kind: "keep" });
       setError(null);
     }
   }, [open, contact]);
 
-  const patch = buildPatch(contact, form, companyId);
-  const dirty = Object.keys(patch).length > 0;
+  const patch = buildPatch(contact, form, companyEdit);
+  const dirty = Object.keys(patch).length > 0 || companyEdit.kind !== "keep";
   const { onBackdropClick, nudgeClass } = useDismissGuard(onClose, dirty);
 
   if (!open) return null;
@@ -91,8 +106,12 @@ export function EditContactModal({ open, onClose, contact, companyName }: EditCo
       setError(t("editContactModal.firstNameRequired"));
       return;
     }
+    if (companyEdit.kind === "picking" && companyEdit.picked === "") {
+      setError(t("editContactModal.companyUnresolved"));
+      return;
+    }
     try {
-      if (dirty) await update.mutateAsync(patch);
+      if (Object.keys(patch).length > 0) await update.mutateAsync(patch);
       toast.success(t("editContactModal.savedToast"));
       onClose();
     } catch {
@@ -155,14 +174,67 @@ export function EditContactModal({ open, onClose, contact, companyName }: EditCo
             <span className={labelCls} id="edit-contact-company-label">
               {t("addContactModal.companyLabel")}
             </span>
-            <div className="mt-2">
-              <CompanyCombobox
-                value={companyId}
-                onChange={(id) => setCompanyId(id)}
-                initialDisplayName={companyName}
-                inputId="edit-contact-company"
-              />
-            </div>
+            {companyEdit.kind === "keep" ? (
+              <div className="mt-2 flex items-center gap-2 rounded-md border border-border bg-surface-overlay px-3 py-2">
+                <Building2
+                  size={14}
+                  strokeWidth={1.75}
+                  aria-hidden
+                  className="shrink-0 text-text-tertiary"
+                />
+                <span className="min-w-0 flex-1 truncate text-sm text-text-primary">
+                  {contact.company_id ? (companyName ?? "—") : t("editContactModal.companyNone")}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCompanyEdit({ kind: "picking", picked: "" })}
+                  data-testid={testIds.contacts.editModal.companyChange}
+                  className="shrink-0 text-xs font-medium text-accent hover:text-accent-hover"
+                >
+                  {contact.company_id
+                    ? t("editContactModal.companyChange")
+                    : t("editContactModal.companyAssign")}
+                </button>
+                {contact.company_id ? (
+                  <button
+                    type="button"
+                    onClick={() => setCompanyEdit({ kind: "remove" })}
+                    data-testid={testIds.contacts.editModal.companyRemove}
+                    className="shrink-0 text-xs font-medium text-text-tertiary transition-colors duration-fast hover:text-danger"
+                  >
+                    {t("editContactModal.companyRemove")}
+                  </button>
+                ) : null}
+              </div>
+            ) : companyEdit.kind === "remove" ? (
+              <div className="mt-2 flex items-center gap-2 rounded-md border border-warning bg-warning-subtle px-3 py-2">
+                <span className="min-w-0 flex-1 truncate text-sm text-text-primary">
+                  {t("editContactModal.companyRemovePending")}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCompanyEdit({ kind: "keep" })}
+                  className="shrink-0 text-xs font-medium text-accent hover:text-accent-hover"
+                >
+                  {t("editContactModal.companyRestore")}
+                </button>
+              </div>
+            ) : (
+              <div className="mt-2 space-y-2">
+                <CompanyCombobox
+                  value={companyEdit.picked}
+                  onChange={(id) => setCompanyEdit({ kind: "picking", picked: id })}
+                  inputId="edit-contact-company"
+                />
+                <button
+                  type="button"
+                  onClick={() => setCompanyEdit({ kind: "keep" })}
+                  className="text-xs font-medium text-accent hover:text-accent-hover"
+                >
+                  {t("editContactModal.companyPickCancel")}
+                </button>
+              </div>
+            )}
             <p className="mt-2 text-xs text-text-tertiary">{t("addContactModal.companyHint")}</p>
           </div>
 

@@ -195,6 +195,9 @@
     "saving": "Saving…",
     "saveChanges": "Save changes",
     "cancel": "Cancel",
+    "editNameRequired": "The deal name cannot be empty.",
+    "editValueInvalid": "The value must be a number.",
+    "editProbabilityInvalid": "Probability must be a number between 0 and 100.",
     "fields": {
       "status": "Status",
       "name": "Name",
