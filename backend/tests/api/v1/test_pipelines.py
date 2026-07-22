@@ -119,6 +119,8 @@ async def test_pipeline_board_groups_deals_by_stage(
     assert first["deal_count"] == 2
     assert first["total_value"] == "350.00"
     assert {d["name"] for d in first["deals"]} == {"A", "B"}
+    # The kanban card renders the company name — every board deal carries it.
+    assert {d["company_name"] for d in first["deals"]} == {"Test Co"}
     second = body["stages"][1]
     assert second["deal_count"] == 1
     assert second["total_value"] == "75.00"

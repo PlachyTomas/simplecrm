@@ -248,12 +248,13 @@ function DealCard({
       )}
     >
       <p className="truncate text-sm font-medium text-text-primary">{deal.name}</p>
+      <p className="mt-1 truncate text-xs text-text-secondary">{deal.company_name}</p>
       {valueShown ? (
-        <p className="mt-1 font-mono text-xs tabular-nums text-text-secondary">
+        <p className="mt-0.5 font-mono text-xs tabular-nums text-text-secondary">
           {formatMoney(deal.value, deal.currency, locale)}
         </p>
       ) : (
-        <p className="mt-1 text-xs tabular-nums text-text-tertiary">
+        <p className="mt-0.5 text-xs tabular-nums text-text-tertiary">
           {t("pipelinePage.card.createdLabel", {
             date: formatCreatedDate(deal.created_at, locale),
           })}
@@ -361,12 +362,13 @@ function MobileDealCard({
       ) : (
         <p className="text-sm font-medium text-text-primary">{deal.name}</p>
       )}
+      <p className="mt-1 truncate text-xs text-text-secondary">{deal.company_name}</p>
       {valueShown ? (
-        <p className="mt-1 font-mono text-xs tabular-nums text-text-secondary">
+        <p className="mt-0.5 font-mono text-xs tabular-nums text-text-secondary">
           {formatMoney(deal.value, deal.currency, locale)}
         </p>
       ) : (
-        <p className="mt-1 text-xs tabular-nums text-text-tertiary">
+        <p className="mt-0.5 text-xs tabular-nums text-text-tertiary">
           {t("pipelinePage.card.createdLabel", {
             date: formatCreatedDate(deal.created_at, locale),
           })}

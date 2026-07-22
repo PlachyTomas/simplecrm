@@ -24,6 +24,15 @@ class StageOut(BaseModel):
     stage_type: StageType
 
 
+class BoardDealOut(DealOut):
+    """`DealOut` plus the company name the kanban card displays. Kept
+    deliberately leaner than `DealListItemOut` — the board renders dozens of
+    cards and only ever needs the one denormalized field, so the endpoint
+    eager-loads just the `company` relationship."""
+
+    company_name: str
+
+
 class BoardStage(BaseModel):
     id: uuid.UUID
     name: str
@@ -34,7 +43,7 @@ class BoardStage(BaseModel):
     deal_count: int
     total_value: Decimal
     currency: str
-    deals: list[DealOut]
+    deals: list[BoardDealOut]
 
 
 class PipelineBoard(BaseModel):

@@ -7,7 +7,10 @@ import type { components } from "@/types/api.generated";
 
 export type PipelineBoard = components["schemas"]["PipelineBoard"];
 export type BoardStage = components["schemas"]["BoardStage"];
-export type BoardDeal = components["schemas"]["DealOut"];
+export type BoardDeal = components["schemas"]["BoardDealOut"];
+/** move-stage returns the bare deal — the board cache keeps the enriched
+ * card object from the optimistic move, so the response is fire-and-check. */
+type MovedDeal = components["schemas"]["DealOut"];
 
 export const BOARD_QUERY_KEY = ["pipeline", "default", "board"] as const;
 
@@ -34,9 +37,9 @@ export function usePipelineBoard(wonWindow: WonWindow = 30) {
 export function useMoveDealStage() {
   const { accessToken } = useAuth();
   const queryClient = useQueryClient();
-  return useMutation<BoardDeal, Error, { dealId: string; stageId: string }>({
+  return useMutation<MovedDeal, Error, { dealId: string; stageId: string }>({
     mutationFn: ({ dealId, stageId }) =>
-      apiFetch<BoardDeal>(`/api/v1/deals/${dealId}/move-stage`, {
+      apiFetch<MovedDeal>(`/api/v1/deals/${dealId}/move-stage`, {
         method: "POST",
         token: accessToken,
         body: { stage_id: stageId },
