@@ -97,8 +97,9 @@ export const testIds = {
       toInput: "email-compose-to-input",
       ccInput: "email-compose-cc-input",
       bccInput: "email-compose-bcc-input",
-      suggestion: (contactId: string) => `email-compose-suggestion-${contactId}`,
-      newContactToggle: "email-compose-new-contact-toggle",
+      suggestion: (field: string, contactId: string) =>
+        `email-compose-${field}-suggestion-${contactId}`,
+      newContactToggle: (field: string) => `email-compose-${field}-new-contact-toggle`,
       newContact: {
         firstNameInput: "email-compose-new-contact-first-name",
         lastNameInput: "email-compose-new-contact-last-name",

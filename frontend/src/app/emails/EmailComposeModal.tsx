@@ -66,6 +66,7 @@ function fold(s: string): string {
 }
 
 function ChipsInput({
+  field,
   label,
   value,
   onChange,
@@ -74,6 +75,8 @@ function ChipsInput({
   contacts,
   onNewContact,
 }: {
+  /** Stable field key — scopes ARIA ids and testids per To/CC/BCC instance. */
+  field: "to" | "cc" | "bcc";
   label: string;
   value: string[];
   onChange: (next: string[]) => void;
@@ -88,24 +91,6 @@ function ChipsInput({
   const [listOpen, setListOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
-  const listOpenRef = useRef(listOpen);
-  listOpenRef.current = listOpen;
-
-  // Escape must close only the dropdown, but useModalDialog listens natively on
-  // the dialog node — a React (root-attached) handler would run after it. A
-  // native listener on the input fires first on the way up and can stop it.
-  useEffect(() => {
-    const el = inputRef.current;
-    if (!el) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && listOpenRef.current) {
-        e.stopPropagation();
-        setListOpen(false);
-      }
-    };
-    el.addEventListener("keydown", onKey);
-    return () => el.removeEventListener("keydown", onKey);
-  }, []);
 
   const commit = (raw: string) => {
     const parts = splitAddresses(raw);
@@ -119,9 +104,41 @@ function ChipsInput({
     .slice(0, 8);
   const rowCount = matches.length + (onNewContact ? 1 : 0);
   const showList = listOpen && contacts !== undefined && rowCount > 0;
+  // Escape keys off what the user can SEE (showList), not the armed state —
+  // otherwise the first Escape after focusing a plain field is a silent no-op.
+  const showListRef = useRef(false);
+  showListRef.current = showList;
+
+  // Escape must close only the dropdown, but useModalDialog listens natively on
+  // the dialog node — a React (root-attached) handler would run after it. A
+  // native listener on the input fires first on the way up and can stop it.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showListRef.current) {
+        e.stopPropagation();
+        setListOpen(false);
+      }
+    };
+    el.addEventListener("keydown", onKey);
+    return () => el.removeEventListener("keydown", onKey);
+  }, []);
+
+  const listboxId = `email-compose-${field}-listbox`;
+  const optionId = (i: number) => `${listboxId}-option-${i}`;
 
   const pick = (email: string) => {
     onChange([...value, email]);
+    setDraft("");
+    setHighlight(-1);
+    setListOpen(false);
+  };
+
+  // The draft must not survive into the sub-form: its autoFocus blurs this
+  // input, and commit-on-blur would chip the leftover filter text.
+  const startNewContact = () => {
+    onNewContact?.();
     setDraft("");
     setHighlight(-1);
     setListOpen(false);
@@ -152,7 +169,11 @@ function ChipsInput({
           type="text"
           value={draft}
           data-testid={inputTestId}
+          role={contacts !== undefined ? "combobox" : undefined}
           aria-expanded={contacts !== undefined ? showList : undefined}
+          aria-controls={showList ? listboxId : undefined}
+          aria-autocomplete={contacts !== undefined ? "list" : undefined}
+          aria-activedescendant={showList && highlight >= 0 ? optionId(highlight) : undefined}
           onChange={(e) => {
             setDraft(e.target.value);
             setHighlight(-1);
@@ -173,10 +194,8 @@ function ChipsInput({
                 const hit = matches[highlight];
                 if (hit) {
                   if (hit.email) pick(hit.email);
-                } else if (onNewContact) {
-                  onNewContact();
-                  setHighlight(-1);
-                  setListOpen(false);
+                } else {
+                  startNewContact();
                 }
                 return;
               }
@@ -200,6 +219,7 @@ function ChipsInput({
       </div>
       {showList ? (
         <ul
+          id={listboxId}
           role="listbox"
           aria-label={t("compose.suggestionsLabel")}
           // Keep the input focused so its commit-on-blur can't fire a junk
@@ -209,11 +229,15 @@ function ChipsInput({
         >
           {matches.map((c, i) => (
             <li key={c.id}>
+              {/* tabIndex -1: focus stays on the combobox input (ARIA 1.2);
+                  also keeps Tab from landing on a row that unmounts on blur. */}
               <button
                 type="button"
+                tabIndex={-1}
+                id={optionId(i)}
                 role="option"
                 aria-selected={highlight === i}
-                data-testid={testIds.emails.compose.suggestion(c.id)}
+                data-testid={testIds.emails.compose.suggestion(field, c.id)}
                 onClick={() => pick(c.email ?? "")}
                 className={cn(
                   "flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-text-primary transition-colors duration-fast hover:bg-surface-overlay",
@@ -231,13 +255,12 @@ function ChipsInput({
             <li>
               <button
                 type="button"
+                tabIndex={-1}
+                id={optionId(matches.length)}
                 role="option"
                 aria-selected={highlight === matches.length}
-                data-testid={testIds.emails.compose.newContactToggle}
-                onClick={() => {
-                  onNewContact();
-                  setListOpen(false);
-                }}
+                data-testid={testIds.emails.compose.newContactToggle(field)}
+                onClick={startNewContact}
                 className={cn(
                   "flex w-full items-center gap-2 border-t border-border-subtle px-3 py-2 text-left text-sm font-medium text-accent transition-colors duration-fast hover:bg-surface-overlay",
                   highlight === matches.length && "bg-surface-overlay",
@@ -291,7 +314,7 @@ function InlineNewContactForm({
   const inputClass =
     "mt-1 block h-9 w-full rounded-md border border-border bg-surface px-3 text-sm focus:border-accent focus:outline-none";
   return (
-    <div className="rounded-md border border-border bg-surface-overlay p-3">
+    <div className="rounded-md border border-border-subtle bg-surface-overlay p-3">
       <p className="text-xs font-medium text-text-secondary">{t("compose.newContactTitle")}</p>
       <div className="mt-2 grid grid-cols-2 gap-2">
         <label className="block">
@@ -327,7 +350,7 @@ function InlineNewContactForm({
         />
       </label>
       {create.isError ? (
-        <p className="mt-2 text-xs text-danger" role="alert">
+        <p className="mt-2 rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger" role="alert">
           {t("compose.newContactError")}
         </p>
       ) : null}
@@ -473,6 +496,7 @@ export function EmailComposeModal({
             value={to}
             onChange={setTo}
             placeholder={t("compose.toPlaceholder")}
+            field="to"
             inputTestId={testIds.emails.compose.toInput}
             contacts={contactOptions}
             onNewContact={companyId ? () => setNewContactFor("to") : undefined}
@@ -492,6 +516,7 @@ export function EmailComposeModal({
             value={cc}
             onChange={setCc}
             placeholder={t("compose.optionalPlaceholder")}
+            field="cc"
             inputTestId={testIds.emails.compose.ccInput}
             contacts={contactOptions}
             onNewContact={companyId ? () => setNewContactFor("cc") : undefined}
@@ -511,6 +536,7 @@ export function EmailComposeModal({
             value={bcc}
             onChange={setBcc}
             placeholder={t("compose.optionalPlaceholder")}
+            field="bcc"
             inputTestId={testIds.emails.compose.bccInput}
             contacts={contactOptions}
             onNewContact={companyId ? () => setNewContactFor("bcc") : undefined}

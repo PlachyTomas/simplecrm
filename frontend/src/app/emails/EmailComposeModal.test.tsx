@@ -171,7 +171,7 @@ describe("EmailComposeModal — company contact recipients", () => {
     wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" />);
     const to = screen.getByTestId(testIds.emails.compose.toInput);
     fireEvent.focus(to);
-    fireEvent.click(await screen.findByTestId(testIds.emails.compose.suggestion("ct1")));
+    fireEvent.click(await screen.findByTestId(testIds.emails.compose.suggestion("to", "ct1")));
     // Chip present, and the input kept empty (no junk free-text committed).
     expect(screen.getByText("jan@acme.cz")).toBeInTheDocument();
     expect((to as HTMLInputElement).value).toBe("");
@@ -182,11 +182,13 @@ describe("EmailComposeModal — company contact recipients", () => {
     wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" />);
     const to = screen.getByTestId(testIds.emails.compose.toInput);
     fireEvent.focus(to);
-    await screen.findByTestId(testIds.emails.compose.suggestion("ct1"));
+    await screen.findByTestId(testIds.emails.compose.suggestion("to", "ct1"));
     expect(screen.queryByText(/Bez Mailu/)).not.toBeInTheDocument();
     fireEvent.change(to, { target: { value: "svobodova" } });
-    expect(screen.queryByTestId(testIds.emails.compose.suggestion("ct1"))).not.toBeInTheDocument();
-    expect(screen.getByTestId(testIds.emails.compose.suggestion("ct2"))).toBeInTheDocument();
+    expect(
+      screen.queryByTestId(testIds.emails.compose.suggestion("to", "ct1")),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId(testIds.emails.compose.suggestion("to", "ct2"))).toBeInTheDocument();
   });
 
   it("does not resuggest an address that is already a chip", async () => {
@@ -194,10 +196,12 @@ describe("EmailComposeModal — company contact recipients", () => {
     wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" />);
     const to = screen.getByTestId(testIds.emails.compose.toInput);
     fireEvent.focus(to);
-    fireEvent.click(await screen.findByTestId(testIds.emails.compose.suggestion("ct1")));
+    fireEvent.click(await screen.findByTestId(testIds.emails.compose.suggestion("to", "ct1")));
     fireEvent.focus(to);
-    await screen.findByTestId(testIds.emails.compose.suggestion("ct2"));
-    expect(screen.queryByTestId(testIds.emails.compose.suggestion("ct1"))).not.toBeInTheDocument();
+    await screen.findByTestId(testIds.emails.compose.suggestion("to", "ct2"));
+    expect(
+      screen.queryByTestId(testIds.emails.compose.suggestion("to", "ct1")),
+    ).not.toBeInTheDocument();
   });
 
   it("still accepts multiple free-text addresses with Enter", async () => {
@@ -216,7 +220,7 @@ describe("EmailComposeModal — company contact recipients", () => {
     const calls = stubFetch();
     wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" />);
     fireEvent.focus(screen.getByTestId(testIds.emails.compose.toInput));
-    fireEvent.click(await screen.findByTestId(testIds.emails.compose.newContactToggle));
+    fireEvent.click(await screen.findByTestId(testIds.emails.compose.newContactToggle("to")));
     const nc = testIds.emails.compose.newContact;
     fireEvent.change(screen.getByTestId(nc.firstNameInput), { target: { value: "Nový" } });
     fireEvent.change(screen.getByTestId(nc.lastNameInput), { target: { value: "Kontakt" } });
@@ -239,7 +243,66 @@ describe("EmailComposeModal — company contact recipients", () => {
     const calls = stubFetch();
     wrap(<EmailComposeModal open onClose={vi.fn()} dealId="d1" />);
     fireEvent.focus(screen.getByTestId(testIds.emails.compose.toInput));
-    expect(screen.queryByTestId(testIds.emails.compose.newContactToggle)).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId(testIds.emails.compose.newContactToggle("to")),
+    ).not.toBeInTheDocument();
     expect(calls.some((c) => c.url.includes("/api/v1/contacts"))).toBe(false);
+  });
+
+  it("does not chip leftover filter text when opening the inline new-contact form", async () => {
+    stubFetch();
+    wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" />);
+    const to = screen.getByTestId(testIds.emails.compose.toInput) as HTMLInputElement;
+    to.focus();
+    await screen.findByTestId(testIds.emails.compose.suggestion("to", "ct1"));
+    fireEvent.change(to, { target: { value: "xyz" } });
+    fireEvent.click(screen.getByTestId(testIds.emails.compose.newContactToggle("to")));
+    // The sub-form's autoFocus genuinely blurred the chips input…
+    expect(document.activeElement).toBe(
+      screen.getByTestId(testIds.emails.compose.newContact.firstNameInput),
+    );
+    // …and the pending filter text neither became a chip nor survived as draft.
+    expect(screen.queryByText("xyz")).not.toBeInTheDocument();
+    expect(to.value).toBe("");
+  });
+
+  it("Escape closes only the dropdown first, the modal second", async () => {
+    stubFetch();
+    const onClose = vi.fn();
+    wrap(<EmailComposeModal open onClose={onClose} companyId="c1" />);
+    const to = screen.getByTestId(testIds.emails.compose.toInput);
+    to.focus();
+    await screen.findByTestId(testIds.emails.compose.suggestion("to", "ct1"));
+    fireEvent.keyDown(to, { key: "Escape" });
+    expect(
+      screen.queryByTestId(testIds.emails.compose.suggestion("to", "ct1")),
+    ).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.keyDown(to, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("Escape closes the modal on the first press when no dropdown is visible", () => {
+    stubFetch();
+    const onClose = vi.fn();
+    wrap(<EmailComposeModal open onClose={onClose} dealId="d1" />);
+    const to = screen.getByTestId(testIds.emails.compose.toInput);
+    // Focusing arms listOpen, but nothing can render without company contacts —
+    // Escape must not be swallowed by the invisible dropdown.
+    to.focus();
+    fireEvent.keyDown(to, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("picks the highlighted suggestion with ArrowDown + Enter", async () => {
+    stubFetch();
+    wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" />);
+    const to = screen.getByTestId(testIds.emails.compose.toInput) as HTMLInputElement;
+    to.focus();
+    await screen.findByTestId(testIds.emails.compose.suggestion("to", "ct1"));
+    fireEvent.keyDown(to, { key: "ArrowDown" });
+    fireEvent.keyDown(to, { key: "Enter" });
+    expect(screen.getByText("jan@acme.cz")).toBeInTheDocument();
+    expect(to.value).toBe("");
   });
 });
