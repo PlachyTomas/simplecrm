@@ -57,11 +57,11 @@ export function MobileWidgetList({ items, order, onReorder, isEditMode }: Mobile
 
   if (!isEditMode) {
     return (
+      // No min-height wrappers — content-sized cards (KPI tiles, quick
+      // actions) would leave dead gaps; charts keep their own 160px floor.
       <div className="space-y-4">
         {ordered.map((item) => (
-          <div key={item.id} className="min-h-[200px]">
-            {item.node}
-          </div>
+          <div key={item.id}>{item.node}</div>
         ))}
       </div>
     );
@@ -153,7 +153,7 @@ function SortableRow({
           <ChevronDown size={18} strokeWidth={1.75} aria-hidden />
         </button>
       </div>
-      <div className="min-h-[200px]">{item.node}</div>
+      <div>{item.node}</div>
     </li>
   );
 }

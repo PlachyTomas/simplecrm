@@ -33,8 +33,13 @@ export function QuickActionTile({
       aria-disabled={isEditMode || undefined}
       data-testid={testIds.dashboard.quickAction(type)}
       className={cn(
-        "flex h-full min-h-[44px] w-full items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3 text-left shadow-sm transition-colors duration-fast",
-        isEditMode ? "cursor-default" : "hover:border-accent hover:bg-surface-overlay",
+        "flex h-full min-h-[44px] w-full items-center gap-3 rounded-lg border bg-surface px-4 py-3 text-left shadow-sm transition-colors duration-fast",
+        isEditMode
+          ? // Dashed accent border mirrors WidgetFrame's edit look; the extra
+            // right padding keeps the truncating label clear of the overlay
+            // controls that sit in the tile's top-right corner.
+            "cursor-default border-dashed border-accent pr-20"
+          : "border-border hover:border-accent hover:bg-surface-overlay",
       )}
     >
       <span

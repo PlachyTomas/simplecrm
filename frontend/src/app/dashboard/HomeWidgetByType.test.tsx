@@ -98,6 +98,14 @@ describe("HomeWidgetByType", () => {
     expect(screen.getByText("Výnosy tento měsíc")).toBeInTheDocument();
   });
 
+  it("removes a KPI tile via the shared frame control in edit mode", async () => {
+    const onRemove = vi.fn();
+    renderWidget(entryOf("kpi_open_deals"), { isEditMode: true, onRemove });
+    // KPI tiles now carry WidgetFrame, so removal rides its header X.
+    await userEvent.click(screen.getByRole("button", { name: "Odebrat widget" }));
+    expect(onRemove).toHaveBeenCalledTimes(1);
+  });
+
   it("renders a quick-action tile that fires onAction", async () => {
     const onAction = vi.fn();
     renderWidget(entryOf("action_new_company"), { onAction });

@@ -52,10 +52,10 @@ interface WidgetGridProps<W extends WidgetGridItem> {
   renderWidget: (entry: W) => React.ReactNode;
   /**
    * Extra vertical row gap (px) applied only in edit mode. Pass this when
-   * `renderWidget` adds edit chrome ABOVE the card (HomeEditChrome's
-   * toolbar strip) — the strip makes every item taller than its grid box,
-   * so without the wider gap rows visually overlap. Leave unset when the
-   * edit chrome lives inside the card (WidgetFrame's header).
+   * `renderWidget` adds edit chrome ABOVE the card, making every item taller
+   * than its grid box so rows would otherwise visually overlap. Leave unset
+   * when the edit chrome lives inside the card (e.g. `WidgetFrame`'s header
+   * or an in-tile overlay) and each item still fits its grid box exactly.
    */
   editGutter?: number;
 }
@@ -156,11 +156,12 @@ export function WidgetGrid<W extends WidgetGridItem>({
       return a.position.x - b.position.x;
     });
     return (
+      // No min-height on the wrappers: content-sized cards (KPI tiles,
+      // quick actions) would leave dead gaps below them. Chart widgets
+      // keep their own 160px first-paint floor inside BarChartWidget.
       <div className="space-y-4">
         {sorted.map((entry) => (
-          <div key={entry.id} className="min-h-[200px]">
-            {renderWidget(entry)}
-          </div>
+          <div key={entry.id}>{renderWidget(entry)}</div>
         ))}
       </div>
     );

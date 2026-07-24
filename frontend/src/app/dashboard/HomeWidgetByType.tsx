@@ -3,9 +3,10 @@
  *
  * Home-native widgets (KPI tiles, quick actions, invite card, velocity)
  * render their own components; the 12 Reports analytics types delegate to
- * the shared `WidgetByType` via `HomeReportWidget`. Bare-card widgets (KPI
- * tiles, quick actions) get their edit affordances from `HomeEditChrome`;
- * the framed widgets (velocity, reports) carry their own `WidgetFrame`.
+ * the shared `WidgetByType` via `HomeReportWidget`. Framed widgets (KPI
+ * tiles, invite, velocity, reports) carry their own `WidgetFrame` and get
+ * their edit affordances from its header; quick-action tiles keep a bare
+ * card and get theirs from `HomeEditChrome`.
  */
 
 import { useTranslation } from "react-i18next";
@@ -54,11 +55,7 @@ export function HomeWidgetByType({ entry, isEditMode, onRemove, onConfigOpen, on
   const label = homeWidgetLabel(type, t, tReports);
 
   if (KPI_TYPES.has(type)) {
-    return (
-      <HomeEditChrome isEditMode={isEditMode} widgetId={entry.id} label={label} onRemove={onRemove}>
-        <HomeKpiWidget type={type as HomeKpiType} />
-      </HomeEditChrome>
-    );
+    return <HomeKpiWidget type={type as HomeKpiType} isEditMode={isEditMode} onRemove={onRemove} />;
   }
 
   if (ACTION_TYPES.has(type)) {
@@ -76,7 +73,7 @@ export function HomeWidgetByType({ entry, isEditMode, onRemove, onConfigOpen, on
   }
 
   if (type === "invite_teammates") {
-    return <HomeInviteWidget entry={entry} isEditMode={isEditMode} onRemove={onRemove} />;
+    return <HomeInviteWidget isEditMode={isEditMode} onRemove={onRemove} />;
   }
 
   if (type === "velocity") {

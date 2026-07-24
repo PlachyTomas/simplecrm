@@ -3,16 +3,6 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { testIds } from "@/lib/testids";
-import { cn } from "@/lib/utils";
-
-/**
- * Vertical space the edit-mode toolbar strip needs, passed to WidgetGrid's
- * `editGutter` so rows spread apart instead of overlapping: the 32px strip
- * (h-7 buttons + pb-1) plus 4px for the KPI card's intrinsic min-height
- * overshoot of its h=2 grid box. With it, the common KPI tile's ring sits
- * exactly on its grid box in edit mode.
- */
-export const HOME_EDIT_CHROME_GUTTER = 36;
 
 interface HomeEditChromeProps {
   isEditMode: boolean;
@@ -27,11 +17,13 @@ interface HomeEditChromeProps {
 }
 
 /**
- * Minimal edit affordance for widgets that carry their own card chrome
- * (KPI tiles, quick actions, the invite card). In view mode it renders
- * the child untouched — the bare `KpiCard`/tile keeps its own look. In
- * edit mode it adds an accent ring plus a floating toolbar (drag handle,
- * optional gear, remove) without introducing a second card border.
+ * Edit affordance for widgets that keep their own card chrome (quick actions
+ * and any future bare tile — framed widgets carry `WidgetFrame` instead). In
+ * view mode the child renders untouched. In edit mode the controls (drag
+ * handle, optional gear, remove) sit as an absolute overlay inside the tile's
+ * top-right corner so no extra height is added — the tile still fits its grid
+ * box exactly. The overlay buttons get a translucent backdrop since they sit
+ * over the card's own content.
  */
 export function HomeEditChrome({
   isEditMode,
@@ -45,14 +37,9 @@ export function HomeEditChrome({
   if (!isEditMode) return <>{children}</>;
 
   return (
-    // min-h-full (not h-full): the h=1 quick-action cell is shorter than
-    // strip + button, and a fixed height left the card's bottom edge
-    // poking out below the ring. Growing with the content keeps the ring
-    // around everything; the few px of overflow land in the row gap.
-    <div className="flex min-h-full flex-col rounded-lg ring-1 ring-accent">
-      {/* Reserved strip instead of a floating overlay so the controls can
-          never cover the card's own top-right content (KPI icon, badges). */}
-      <div className="flex shrink-0 items-center justify-end gap-1 px-1 pb-1">
+    <div className="relative h-full">
+      {children}
+      <div className="absolute right-1.5 top-1.5 flex items-center gap-1 rounded-md bg-surface-elevated/90 p-0.5 shadow-sm">
         <button
           type="button"
           aria-label={t("widgetFrame.moveWidget")}
@@ -83,7 +70,6 @@ export function HomeEditChrome({
           </button>
         ) : null}
       </div>
-      <div className={cn("min-h-0 flex-1")}>{children}</div>
     </div>
   );
 }

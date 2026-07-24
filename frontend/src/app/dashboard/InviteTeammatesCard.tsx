@@ -21,6 +21,7 @@ import { useCurrentUser } from "@/auth/useCurrentUser";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
 import { ApiError, apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 import type { components } from "@/types/api.generated";
 
 type InvitationOut = components["schemas"]["InvitationOut"];
@@ -68,15 +69,82 @@ function useRevokeInvitation() {
   });
 }
 
-export function InviteTeammatesCard() {
-  const { t } = useTranslation("dashboard");
+/**
+ * Self-gating result for the invite flow: whether the card should show
+ * (admin/`can_invite`, seat count known, org not yet full) plus the derived
+ * seat math the card body renders. Exported so wrappers (e.g. the home
+ * invite widget) can decide whether to render a frame at all without
+ * re-implementing the gate — React Query dedupes the shared queries.
+ */
+export interface InviteTeammatesGate {
+  /** True when the caller can manage invites and there are seats to fill. */
+  visible: boolean;
+  /** Admin or `can_invite`, regardless of seat availability. */
+  canManage: boolean;
+  seatCount: number | undefined;
+  activeMembers: number | undefined;
+  pendingInvites: InvitationOut[];
+  remainingSeats: number;
+  defaultTeamId: string | null;
+}
+
+export function useInviteTeammatesGate(): InviteTeammatesGate {
   const { data: user } = useCurrentUser();
   const subscription = useCurrentSubscription();
   const users = useOrgUsers();
   const teams = useOrgTeams();
-
   const canManage = !!(user && (user.role === "admin" || user.can_invite));
   const invites = useInvitations(canManage);
+
+  const seatCount = subscription.data?.seat_count;
+  const userItems = users.data?.items;
+  const activeMembers = userItems ? userItems.filter((u) => u.is_active).length : undefined;
+  const pendingInvites = invites.data?.items ?? [];
+  const defaultTeamId = teams.data?.items.find((t) => t.is_default)?.id ?? null;
+
+  // Hide until we know the seat count, then hide once the org is full.
+  let visible = canManage;
+  if (!canManage) {
+    visible = false;
+  } else if (subscription.isPending || users.isPending || invites.isPending) {
+    visible = false;
+  } else if (seatCount == null || activeMembers == null) {
+    visible = false;
+  } else if (activeMembers + pendingInvites.length >= seatCount && pendingInvites.length === 0) {
+    visible = false;
+  } else if (activeMembers >= seatCount) {
+    visible = false;
+  }
+
+  const remainingSeats =
+    seatCount != null && activeMembers != null
+      ? Math.max(0, seatCount - activeMembers - pendingInvites.length)
+      : 0;
+
+  return {
+    visible,
+    canManage,
+    seatCount,
+    activeMembers,
+    pendingInvites,
+    remainingSeats,
+    defaultTeamId,
+  };
+}
+
+interface InviteTeammatesCardProps {
+  /**
+   * `embedded` drops the outer section chrome and the big title so the card
+   * can sit inside a `WidgetFrame` (which supplies the border and the widget
+   * label); the icon box, seat subtitle and badge stay. Defaults to the
+   * standalone card with its own border and heading.
+   */
+  variant?: "standalone" | "embedded";
+}
+
+export function InviteTeammatesCard({ variant = "standalone" }: InviteTeammatesCardProps = {}) {
+  const { t } = useTranslation("dashboard");
+  const gate = useInviteTeammatesGate();
   const create = useCreateInvitation();
   const revoke = useRevokeInvitation();
   const toast = useToast();
@@ -84,22 +152,12 @@ export function InviteTeammatesCard() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  if (!canManage) return null;
+  if (!gate.visible || gate.seatCount == null || gate.activeMembers == null) return null;
 
-  const seatCount = subscription.data?.seat_count;
-  const userItems = users.data?.items;
-  const activeMembers = userItems ? userItems.filter((u) => u.is_active).length : undefined;
-  const pendingInvites = invites.data?.items ?? [];
-
-  // Hide until we know the seat count, then hide once the org is full.
-  if (subscription.isPending || users.isPending || invites.isPending) return null;
-  if (seatCount == null || activeMembers == null) return null;
-  if (activeMembers + pendingInvites.length >= seatCount && pendingInvites.length === 0)
-    return null;
-  if (activeMembers >= seatCount) return null;
-
-  const remainingSeats = Math.max(0, seatCount - activeMembers - pendingInvites.length);
-  const defaultTeamId = teams.data?.items.find((t) => t.is_default)?.id ?? null;
+  const embedded = variant === "embedded";
+  const seatCount = gate.seatCount;
+  const activeMembers = gate.activeMembers;
+  const { pendingInvites, remainingSeats, defaultTeamId } = gate;
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -148,7 +206,7 @@ export function InviteTeammatesCard() {
   return (
     <section
       aria-labelledby="invite-teammates-title"
-      className="rounded-lg border border-border bg-surface p-6"
+      className={cn(!embedded && "rounded-lg border border-border bg-surface p-6")}
     >
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
@@ -159,10 +217,16 @@ export function InviteTeammatesCard() {
             <Users size={20} strokeWidth={1.75} />
           </div>
           <div>
-            <h2 id="invite-teammates-title" className="text-lg font-semibold">
+            {/* The frame header already shows the widget label in embedded
+                mode, so the visible title collapses to an sr-only heading the
+                section's aria-labelledby still resolves to. */}
+            <h2
+              id="invite-teammates-title"
+              className={embedded ? "sr-only" : "text-lg font-semibold"}
+            >
               {t("inviteTeammatesCard.title")}
             </h2>
-            <p className="mt-1 text-sm text-text-secondary">
+            <p className={cn("text-sm text-text-secondary", !embedded && "mt-1")}>
               {t("inviteTeammatesCard.orgSeatCount", { count: seatCount })}{" "}
               {t("inviteTeammatesCard.inviteesSentPhrase", {
                 sent: activeMembers + pendingInvites.length,
