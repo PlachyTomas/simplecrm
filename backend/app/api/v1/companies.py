@@ -19,6 +19,9 @@ from app.db.models import (
     BlockedCompany,
     Company,
     Contact,
+    Deal,
+    Stage,
+    StageType,
     User,
     UserRole,
 )
@@ -170,7 +173,14 @@ async def _resolve_main_contacts(
 
 def _to_out(company: Company, main_contact: Contact | None) -> CompanyOut:
     out = CompanyOut.model_validate(company)
-    out.main_contact = ContactOut.model_validate(main_contact) if main_contact else None
+    if main_contact is not None:
+        contact_out = ContactOut.model_validate(main_contact)
+        # The resolved main contact always belongs to this company, so its
+        # company name is the company we're serialising.
+        contact_out.company_name = company.name
+        out.main_contact = contact_out
+    else:
+        out.main_contact = None
     return out
 
 
@@ -246,6 +256,13 @@ async def list_companies(
     city: str | None = Query(
         default=None, max_length=120, description="Exact registered-seat city match."
     ),
+    has_open_deals: bool | None = Query(
+        default=None,
+        description=(
+            "When true, keep only companies with at least one deal in an "
+            "open-type stage. False/omitted applies no filter."
+        ),
+    ),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Page[CompanyOut]:
@@ -273,6 +290,22 @@ async def list_companies(
         base = base.where(Company.industry == industry)
     if city:
         base = base.where(Company.address_city == city)
+    if has_open_deals:
+        # An "open deal" is one still in play: an open-type stage AND not yet
+        # closed. Lost deals live in an open-type stage with closed_at set (see
+        # pipelines.py / deals.py), so closed_at IS NULL is required to exclude
+        # them — matching the pipeline board's own visibility rule.
+        open_deal_exists = (
+            select(Deal.id)
+            .join(Stage, Deal.stage_id == Stage.id)
+            .where(
+                Deal.company_id == Company.id,
+                Stage.stage_type == StageType.open,
+                Deal.closed_at.is_(None),
+            )
+            .exists()
+        )
+        base = base.where(open_deal_exists)
 
     scoped = await scope_by_owner(base, session=session, user=user, owner_col=Company.owner_user_id)
     count_stmt = select(func.count()).select_from(scoped.subquery())

@@ -212,12 +212,17 @@ async def resolve_recipients(
             emailable, skip_reason = False, "no_email"
         else:
             emailable, skip_reason = True, None
+        contact_outs: list[ContactOut] = []
+        for c in cts:
+            contact_out = ContactOut.model_validate(c)
+            contact_out.company_name = company.name
+            contact_outs.append(contact_out)
         out.append(
             RecipientCandidate(
                 company_id=company.id,
                 company_name=company.name,
                 default_email=_default_email(company, cts),
-                contacts=[ContactOut.model_validate(c) for c in cts],
+                contacts=contact_outs,
                 emailable=emailable,
                 skip_reason=skip_reason,
             )

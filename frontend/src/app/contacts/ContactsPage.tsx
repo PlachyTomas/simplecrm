@@ -1,4 +1,4 @@
-import { Plus, Search, Users } from "lucide-react";
+import { CircleDollarSign, Plus, Search, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -7,6 +7,7 @@ import { AddContactModal } from "@/app/contacts/AddContactModal";
 import { ContactDetailPanel } from "@/app/contacts/ContactDetailPanel";
 import { type ContactOut, useContacts } from "@/app/contacts/useContacts";
 import { EmptyState } from "@/components/ui/empty-state";
+import { testIds } from "@/lib/testids";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,9 @@ function ContactRow({
           >
             {contact.first_name} {contact.last_name}
           </p>
+          {contact.company_name ? (
+            <p className="truncate text-xs text-text-tertiary">{contact.company_name}</p>
+          ) : null}
           {contact.email ? (
             <p className="truncate text-xs text-text-tertiary">{contact.email}</p>
           ) : null}
@@ -67,9 +71,12 @@ export function ContactsPage() {
   const navigate = useNavigate();
   const [modalOpen, setModalOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
+  const [openDeals, setOpenDeals] = useState(false);
   const debouncedSearch = useDebouncedValue(searchInput, 250);
 
-  const { data: contacts, isPending, isError } = useContacts();
+  // The open-deals filter is applied server-side (contacts whose company has an
+  // open deal); the search box filters the returned page client-side.
+  const { data: contacts, isPending, isError } = useContacts({ hasOpenDeals: openDeals });
 
   const handleSelect = (id: string) => {
     navigate(`/app/contacts/${id}`);
@@ -77,6 +84,11 @@ export function ContactsPage() {
 
   const handleCreated = (id: string) => {
     navigate(`/app/contacts/${id}`);
+  };
+
+  const clearFilters = () => {
+    setSearchInput("");
+    setOpenDeals(false);
   };
 
   // Memoize allItems so the dependent filter useMemo's dependencies are
@@ -90,10 +102,17 @@ export function ContactsPage() {
       return (
         name.includes(q) ||
         (c.email?.toLowerCase().includes(q) ?? false) ||
-        (c.phone?.toLowerCase().includes(q) ?? false)
+        (c.phone?.toLowerCase().includes(q) ?? false) ||
+        (c.company_name?.toLowerCase().includes(q) ?? false)
       );
     });
   }, [allItems, debouncedSearch]);
+  // A filter is active when the open-deals toggle is on or the user is
+  // searching. When active but zero rows match, the "filtered empty" state
+  // (whose CTA clears both) is shown instead of the "create your first
+  // contact" prompt — even when the server-side toggle returned nothing.
+  const filtersActive = openDeals || debouncedSearch.trim() !== "";
+  const showControls = allItems.length > 0 || filtersActive;
   const showSplitOnDesktop = true;
   const detailVisibleOnMobile = !!contactId;
 
@@ -117,23 +136,42 @@ export function ContactsPage() {
               <Plus size={14} strokeWidth={1.75} aria-hidden /> {t("contactsPage.addButton")}
             </button>
           </div>
-          {allItems.length > 0 ? (
-            <label className="relative block">
-              <span className="sr-only">{t("contactsPage.searchLabel")}</span>
-              <Search
-                size={14}
-                strokeWidth={1.75}
-                aria-hidden
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
-              />
-              <input
-                type="search"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder={t("contactsPage.searchPlaceholder")}
-                className="h-9 w-full rounded-md border border-border bg-surface-overlay pl-8 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
-              />
-            </label>
+          {showControls ? (
+            <>
+              {allItems.length > 0 ? (
+                <label className="relative block">
+                  <span className="sr-only">{t("contactsPage.searchLabel")}</span>
+                  <Search
+                    size={14}
+                    strokeWidth={1.75}
+                    aria-hidden
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+                  />
+                  <input
+                    type="search"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    placeholder={t("contactsPage.searchPlaceholder")}
+                    className="h-9 w-full rounded-md border border-border bg-surface-overlay pl-8 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
+                  />
+                </label>
+              ) : null}
+              <button
+                type="button"
+                data-testid={testIds.contacts.openDealsFilter}
+                aria-pressed={openDeals}
+                onClick={() => setOpenDeals((v) => !v)}
+                className={cn(
+                  "inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors duration-fast",
+                  openDeals
+                    ? "border-accent bg-accent-subtle text-accent"
+                    : "border-border bg-surface-overlay text-text-secondary hover:text-text-primary",
+                )}
+              >
+                <CircleDollarSign size={14} strokeWidth={1.75} aria-hidden />{" "}
+                {t("contactsPage.openDealsFilter")}
+              </button>
+            </>
           ) : null}
         </div>
 
@@ -145,27 +183,29 @@ export function ContactsPage() {
           <div className="px-4 py-6 text-sm text-text-tertiary" role="status">
             {t("contactsPage.loading")}
           </div>
-        ) : allItems.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            title={t("contactsPage.emptyState.title")}
-            body={t("contactsPage.emptyState.body")}
-            primary={{
-              label: t("contactsPage.emptyState.cta"),
-              onClick: () => setModalOpen(true),
-            }}
-          />
         ) : items.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            tone="filtered"
-            title={t("contactsPage.emptyFiltered.title")}
-            body={t("contactsPage.emptyFiltered.body")}
-            primary={{
-              label: t("contactsPage.emptyFiltered.cta"),
-              onClick: () => setSearchInput(""),
-            }}
-          />
+          filtersActive ? (
+            <EmptyState
+              icon={Users}
+              tone="filtered"
+              title={t("contactsPage.emptyFiltered.title")}
+              body={t("contactsPage.emptyFiltered.body")}
+              primary={{
+                label: t("contactsPage.emptyFiltered.cta"),
+                onClick: clearFilters,
+              }}
+            />
+          ) : (
+            <EmptyState
+              icon={Users}
+              title={t("contactsPage.emptyState.title")}
+              body={t("contactsPage.emptyState.body")}
+              primary={{
+                label: t("contactsPage.emptyState.cta"),
+                onClick: () => setModalOpen(true),
+              }}
+            />
+          )
         ) : (
           <ul role="list" className="flex-1 overflow-y-auto">
             {items.map((contact) => (

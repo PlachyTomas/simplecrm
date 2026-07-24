@@ -34,6 +34,10 @@ class ContactOut(BaseModel):
     id: uuid.UUID
     organization_id: uuid.UUID
     company_id: uuid.UUID | None = None
+    # Resolved name of the linked company (NULL when the contact has no
+    # company). Populated by the endpoint layer, not a mapped attribute, so
+    # it defaults to None when constructed straight from a Contact row.
+    company_name: str | None = None
     first_name: str
     last_name: str
     position: str | None = None

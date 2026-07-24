@@ -27,6 +27,7 @@ interface UseCompaniesOptions {
   ownerUserId?: string;
   industry?: string;
   city?: string;
+  hasOpenDeals?: boolean;
 }
 
 export function useCompanies({
@@ -39,6 +40,7 @@ export function useCompanies({
   ownerUserId,
   industry,
   city,
+  hasOpenDeals,
 }: UseCompaniesOptions = {}) {
   const { accessToken } = useAuth();
   const trimmed = search.trim();
@@ -52,11 +54,23 @@ export function useCompanies({
   if (ownerUserId) query.set("owner_user_id", ownerUserId);
   if (industry) query.set("industry", industry);
   if (city) query.set("city", city);
+  if (hasOpenDeals) query.set("has_open_deals", "true");
 
   return useQuery<CompaniesPage>({
     queryKey: [
       "companies",
-      { limit, offset, search: trimmed, sort, order, ownership, ownerUserId, industry, city },
+      {
+        limit,
+        offset,
+        search: trimmed,
+        sort,
+        order,
+        ownership,
+        ownerUserId,
+        industry,
+        city,
+        hasOpenDeals,
+      },
     ],
     enabled: !!accessToken,
     placeholderData: keepPreviousData,

@@ -4289,6 +4289,8 @@ export interface components {
             organization_id: string;
             /** Company Id */
             company_id?: string | null;
+            /** Company Name */
+            company_name?: string | null;
             /** First Name */
             first_name: string;
             /** Last Name */
@@ -7964,6 +7966,8 @@ export interface operations {
                 industry?: string | null;
                 /** @description Exact registered-seat city match. */
                 city?: string | null;
+                /** @description When true, keep only companies with at least one deal in an open-type stage. False/omitted applies no filter. */
+                has_open_deals?: boolean | null;
                 limit?: number;
                 offset?: number;
             };
@@ -8245,6 +8249,8 @@ export interface operations {
         parameters: {
             query?: {
                 company_id?: string | null;
+                /** @description When true, keep only contacts whose linked company has at least one deal in an open-type stage. Contacts with no company are excluded. False/omitted applies no filter. */
+                has_open_deals?: boolean | null;
                 limit?: number;
                 offset?: number;
             };

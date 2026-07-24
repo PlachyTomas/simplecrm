@@ -13,6 +13,7 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  CircleDollarSign,
   History,
   LayoutGrid,
   Mail,
@@ -39,6 +40,7 @@ import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings"
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
+import { testIds } from "@/lib/testids";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
@@ -93,6 +95,7 @@ export function CompaniesListPage() {
   const ownerFilter = searchParams.get("owner") ?? "all";
   const industry = searchParams.get("industry") ?? "";
   const city = searchParams.get("city") ?? "";
+  const openDeals = searchParams.get("openDeals") === "1";
   const page = Math.max(0, Number(searchParams.get("page") ?? "0") || 0);
   const sorting: SortingState = [
     { id: searchParams.get("sort") ?? "name", desc: searchParams.get("dir") === "desc" },
@@ -137,10 +140,10 @@ export function CompaniesListPage() {
 
   const clearFilters = () => {
     setSearchInput("");
-    patchParams({ owner: null, industry: null, city: null, q: null });
+    patchParams({ owner: null, industry: null, city: null, q: null, openDeals: null });
   };
   const hasActiveFilters =
-    ownerFilter !== "all" || industry !== "" || city !== "" || searchInput !== "";
+    ownerFilter !== "all" || industry !== "" || city !== "" || openDeals || searchInput !== "";
 
   useEffect(() => {
     try {
@@ -204,6 +207,7 @@ export function CompaniesListPage() {
     ownerUserId,
     industry: industry || undefined,
     city: city || undefined,
+    hasOpenDeals: openDeals || undefined,
   });
 
   const locale = user?.organization?.locale;
@@ -640,6 +644,21 @@ export function CompaniesListPage() {
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            data-testid={testIds.companies.openDealsFilter}
+            aria-pressed={openDeals}
+            onClick={() => patchParams({ openDeals: openDeals ? null : "1" })}
+            className={cn(
+              "inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors duration-fast",
+              openDeals
+                ? "border-accent bg-accent-subtle text-accent"
+                : "border-border bg-surface-overlay text-text-secondary hover:text-text-primary",
+            )}
+          >
+            <CircleDollarSign size={14} strokeWidth={1.75} aria-hidden />{" "}
+            {t("companiesList.openDealsFilter")}
+          </button>
           {hasActiveFilters ? (
             <button
               type="button"

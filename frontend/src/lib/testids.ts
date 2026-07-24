@@ -37,6 +37,8 @@ export const testIds = {
   },
   companies: {
     addButton: "companies-add-button",
+    openDealsFilter: "companies-open-deals-filter",
+    deleteButton: "companies-delete-button",
     addModal: {
       icoInput: "companies-add-modal-ico",
       nameInput: "companies-add-modal-name",
@@ -57,6 +59,8 @@ export const testIds = {
   },
   contacts: {
     addButton: "contacts-add-button",
+    openDealsFilter: "contacts-open-deals-filter",
+    deleteButton: "contacts-delete-button",
     addModal: {
       firstNameInput: "contacts-add-modal-first-name",
       lastNameInput: "contacts-add-modal-last-name",

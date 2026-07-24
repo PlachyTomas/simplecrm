@@ -12,12 +12,18 @@ interface UseContactsOptions {
   limit?: number;
   offset?: number;
   companyId?: string;
+  hasOpenDeals?: boolean;
 }
 
-export function useContacts({ limit = 50, offset = 0, companyId }: UseContactsOptions = {}) {
+export function useContacts({
+  limit = 50,
+  offset = 0,
+  companyId,
+  hasOpenDeals,
+}: UseContactsOptions = {}) {
   const { accessToken } = useAuth();
   return useQuery<ContactsPage>({
-    queryKey: ["contacts", { limit, offset, companyId }],
+    queryKey: ["contacts", { limit, offset, companyId, hasOpenDeals }],
     enabled: !!accessToken,
     placeholderData: keepPreviousData,
     queryFn: () => {
@@ -25,6 +31,7 @@ export function useContacts({ limit = 50, offset = 0, companyId }: UseContactsOp
       params.set("limit", String(limit));
       params.set("offset", String(offset));
       if (companyId) params.set("company_id", companyId);
+      if (hasOpenDeals) params.set("has_open_deals", "true");
       return apiFetch<ContactsPage>(`/api/v1/contacts?${params}`, { token: accessToken });
     },
   });
@@ -52,6 +59,25 @@ export function useUpdateContact(contactId: string | undefined) {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["contacts"] });
       void qc.invalidateQueries({ queryKey: ["contact", contactId] });
+    },
+  });
+}
+
+export function useDeleteContact(contactId: string | undefined) {
+  const { accessToken } = useAuth();
+  const qc = useQueryClient();
+  return useMutation<void, Error, void>({
+    mutationFn: () =>
+      apiFetch<void>(`/api/v1/contacts/${contactId}`, {
+        method: "DELETE",
+        token: accessToken,
+      }),
+    onSuccess: () => {
+      // Refresh the list, but do NOT invalidate the deleted contact's own
+      // detail query: its observer is still mounted (the caller navigates away
+      // right after this) and invalidating would refetch a now-404 row. The
+      // stale cache entry is harmless and gets garbage-collected once inactive.
+      void qc.invalidateQueries({ queryKey: ["contacts"] });
     },
   });
 }

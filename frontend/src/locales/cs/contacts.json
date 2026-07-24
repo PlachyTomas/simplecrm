@@ -6,6 +6,7 @@
     "addButton": "Přidat kontakt",
     "searchLabel": "Hledat kontakt",
     "searchPlaceholder": "Jméno, e-mail, telefon…",
+    "openDealsFilter": "Jen s otevřeným obchodem",
     "loading": "Načítání…",
     "loadError": "Kontakty se nepodařilo načíst.",
     "emptyState": {
@@ -59,6 +60,13 @@
 
   "contactDetail": {
     "editButton": "Upravit kontakt",
+    "deleteButton": "Smazat kontakt",
+    "deleting": "Mažu…",
+    "deleteConfirm": "Opravdu smazat kontakt {{name}}? Tuto akci nelze vzít zpět.",
+    "deleteSuccess": "Kontakt byl smazán.",
+    "deleteForbidden": "Na smazání tohoto kontaktu nemáte oprávnění.",
+    "deleteConflict": "Kontakt nelze smazat, protože je navázán na další záznamy.",
+    "deleteError": "Kontakt se nepodařilo smazat. Zkuste to prosím znovu.",
     "selectPrompt": "Vyberte kontakt ze seznamu.",
     "loading": "Načítání…",
     "loadError": "Kontakt se nepodařilo načíst.",

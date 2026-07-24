@@ -6,6 +6,7 @@
     "addButton": "Add contact",
     "searchLabel": "Search contacts",
     "searchPlaceholder": "Name, email, phone…",
+    "openDealsFilter": "Open deals only",
     "loading": "Loading…",
     "loadError": "Failed to load contacts.",
     "emptyState": {
@@ -59,6 +60,13 @@
 
   "contactDetail": {
     "editButton": "Edit contact",
+    "deleteButton": "Delete contact",
+    "deleting": "Deleting…",
+    "deleteConfirm": "Delete contact {{name}}? This cannot be undone.",
+    "deleteSuccess": "Contact deleted.",
+    "deleteForbidden": "You don't have permission to delete this contact.",
+    "deleteConflict": "The contact can't be deleted because it's linked to other records.",
+    "deleteError": "Failed to delete the contact. Please try again.",
     "selectPrompt": "Select a contact from the list.",
     "loading": "Loading…",
     "loadError": "Failed to load the contact.",

@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
+from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
@@ -15,8 +17,19 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.db.models import Company, Contact, Organization, Team, User, UserRole
+from app.db.models import (
+    Company,
+    Contact,
+    Deal,
+    Organization,
+    Stage,
+    StageType,
+    Team,
+    User,
+    UserRole,
+)
 from app.db.session import AsyncSessionLocal
+from app.services.pipeline import create_default_pipeline
 
 
 @pytest.fixture
@@ -71,6 +84,16 @@ async def _seed_user(
 def _auth(user: User) -> dict[str, str]:
     token = create_access_token(user.id, user.organization_id, user.role)
     return {"Authorization": f"Bearer {token}"}
+
+
+async def _seed_stages(session: AsyncSession, org: Organization) -> tuple[Stage, Stage]:
+    """Provision the org's default pipeline and return (open_stage, won_stage)."""
+    pipeline = await create_default_pipeline(session, org.id)
+    await session.commit()
+    await session.refresh(pipeline, attribute_names=["stages"])
+    open_stage = next(s for s in pipeline.stages if s.stage_type == StageType.open)
+    won_stage = next(s for s in pipeline.stages if s.stage_type == StageType.won)
+    return open_stage, won_stage
 
 
 # ---------------------------------------------------------------------------
@@ -211,6 +234,64 @@ async def test_list_companies_filters_by_owner_industry_city(
 
     unowned = await client.get("/api/v1/companies?ownership=unowned", headers=_auth(admin))
     assert {c["name"] for c in unowned.json()["items"]} == {"C"}
+
+
+async def test_list_companies_has_open_deals_filter(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    open_stage, won_stage = await _seed_stages(db_session, org)
+
+    open_co = Company(organization_id=org.id, name="HasOpen", owner_user_id=admin.id)
+    won_co = Company(organization_id=org.id, name="OnlyWon", owner_user_id=admin.id)
+    lost_co = Company(organization_id=org.id, name="OnlyLost", owner_user_id=admin.id)
+    none_co = Company(organization_id=org.id, name="NoDeals", owner_user_id=admin.id)
+    db_session.add_all([open_co, won_co, lost_co, none_co])
+    await db_session.commit()
+
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=open_co.id,
+                stage_id=open_stage.id,
+                name="o",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=won_co.id,
+                stage_id=won_stage.id,
+                name="w",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+            # Lost deal: stays in an open-type stage but is closed (closed_at +
+            # lost_reason set). Must NOT count as an open deal.
+            Deal(
+                organization_id=org.id,
+                company_id=lost_co.id,
+                stage_id=open_stage.id,
+                name="l",
+                value=Decimal("1"),
+                currency="CZK",
+                closed_at=datetime.now(tz=UTC),
+                lost_reason="Konkurence",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    filtered = await client.get("/api/v1/companies?has_open_deals=true", headers=_auth(admin))
+    assert filtered.status_code == 200
+    assert {it["name"] for it in filtered.json()["items"]} == {"HasOpen"}
+
+    # Omitted filter -> all four companies visible.
+    unfiltered = await client.get("/api/v1/companies", headers=_auth(admin))
+    names = {it["name"] for it in unfiltered.json()["items"]}
+    assert {"HasOpen", "OnlyWon", "OnlyLost", "NoDeals"} <= names
 
 
 async def test_filter_options_returns_distinct_scoped_values(

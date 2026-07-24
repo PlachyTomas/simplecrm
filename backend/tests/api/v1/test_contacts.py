@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
+from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
@@ -11,8 +13,9 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.db.models import Company, Contact, Organization, User, UserRole
+from app.db.models import Company, Contact, Deal, Organization, Stage, StageType, User, UserRole
 from app.db.session import AsyncSessionLocal
+from app.services.pipeline import create_default_pipeline
 
 
 @pytest.fixture
@@ -55,6 +58,16 @@ def _auth(user: User) -> dict[str, str]:
     return {
         "Authorization": f"Bearer {create_access_token(user.id, user.organization_id, user.role)}"
     }
+
+
+async def _seed_stages(session: AsyncSession, org: Organization) -> tuple[Stage, Stage]:
+    """Provision the org's default pipeline and return (open_stage, won_stage)."""
+    pipeline = await create_default_pipeline(session, org.id)
+    await session.commit()
+    await session.refresh(pipeline, attribute_names=["stages"])
+    open_stage = next(s for s in pipeline.stages if s.stage_type == StageType.open)
+    won_stage = next(s for s in pipeline.stages if s.stage_type == StageType.won)
+    return open_stage, won_stage
 
 
 # list_contacts ------------------------------------------------------------
@@ -347,3 +360,243 @@ async def test_delete_contact_rejects_missing_token(
     await db_session.commit()
     response = await client.delete(f"/api/v1/contacts/{contact.id}")
     assert response.status_code == 401
+
+
+async def test_delete_contact_company_owner_salesperson_ok(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """A salesperson who owns the contact's company may delete it."""
+    org = await _seed_org(db_session, owned_cleanup)
+    owner = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    company = Company(organization_id=org.id, name="Owned", owner_user_id=owner.id)
+    db_session.add(company)
+    await db_session.commit()
+    contact = Contact(
+        organization_id=org.id,
+        company_id=company.id,
+        first_name="X",
+        last_name="Y",
+        email=f"co-{uuid.uuid4().hex[:6]}@ex.cz",
+    )
+    db_session.add(contact)
+    await db_session.commit()
+    response = await client.delete(f"/api/v1/contacts/{contact.id}", headers=_auth(owner))
+    assert response.status_code == 204
+
+
+async def test_delete_contact_non_owner_salesperson_forbidden(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """A salesperson who does NOT own the contact's company is rejected."""
+    org = await _seed_org(db_session, owned_cleanup)
+    owner = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    other = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    company = Company(organization_id=org.id, name="Owned", owner_user_id=owner.id)
+    db_session.add(company)
+    await db_session.commit()
+    contact = Contact(
+        organization_id=org.id,
+        company_id=company.id,
+        first_name="X",
+        last_name="Y",
+        email=f"no-{uuid.uuid4().hex[:6]}@ex.cz",
+    )
+    db_session.add(contact)
+    await db_session.commit()
+    response = await client.delete(f"/api/v1/contacts/{contact.id}", headers=_auth(other))
+    assert response.status_code == 403
+    assert "owner of the contact's company" in response.json()["detail"]
+
+
+async def test_delete_contact_company_less_salesperson_forbidden(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """A company-less contact is admin-only — a salesperson cannot delete it."""
+    org = await _seed_org(db_session, owned_cleanup)
+    sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    contact = Contact(
+        organization_id=org.id,
+        company_id=None,
+        first_name="Or",
+        last_name="Phan",
+        email=f"orph-{uuid.uuid4().hex[:6]}@ex.cz",
+    )
+    db_session.add(contact)
+    await db_session.commit()
+    response = await client.delete(f"/api/v1/contacts/{contact.id}", headers=_auth(sales))
+    assert response.status_code == 403
+
+
+# has_open_deals filter + company_name -------------------------------------
+
+
+async def test_list_contacts_has_open_deals_filter(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    open_stage, won_stage = await _seed_stages(db_session, org)
+
+    open_co = Company(organization_id=org.id, name="OpenCo", owner_user_id=admin.id)
+    won_co = Company(organization_id=org.id, name="WonCo", owner_user_id=admin.id)
+    lost_co = Company(organization_id=org.id, name="LostCo", owner_user_id=admin.id)
+    none_co = Company(organization_id=org.id, name="NoneCo", owner_user_id=admin.id)
+    db_session.add_all([open_co, won_co, lost_co, none_co])
+    await db_session.commit()
+
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=open_co.id,
+                stage_id=open_stage.id,
+                name="D-open",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=won_co.id,
+                stage_id=won_stage.id,
+                name="D-won",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+            # Lost deal: open-type stage but closed (closed_at + lost_reason).
+            # Its contact must NOT surface under the open-deals filter.
+            Deal(
+                organization_id=org.id,
+                company_id=lost_co.id,
+                stage_id=open_stage.id,
+                name="D-lost",
+                value=Decimal("1"),
+                currency="CZK",
+                closed_at=datetime.now(tz=UTC),
+                lost_reason="Konkurence",
+            ),
+        ]
+    )
+    db_session.add_all(
+        [
+            Contact(
+                organization_id=org.id,
+                company_id=open_co.id,
+                first_name="A",
+                last_name="Open",
+                email=f"open-{uuid.uuid4().hex[:6]}@ex.cz",
+            ),
+            Contact(
+                organization_id=org.id,
+                company_id=won_co.id,
+                first_name="B",
+                last_name="Won",
+                email=f"won-{uuid.uuid4().hex[:6]}@ex.cz",
+            ),
+            Contact(
+                organization_id=org.id,
+                company_id=lost_co.id,
+                first_name="E",
+                last_name="Lost",
+                email=f"lost-{uuid.uuid4().hex[:6]}@ex.cz",
+            ),
+            Contact(
+                organization_id=org.id,
+                company_id=none_co.id,
+                first_name="C",
+                last_name="None",
+                email=f"none-{uuid.uuid4().hex[:6]}@ex.cz",
+            ),
+            Contact(
+                organization_id=org.id,
+                company_id=None,
+                first_name="D",
+                last_name="Orphan",
+                email=f"orphan-{uuid.uuid4().hex[:6]}@ex.cz",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    filtered = await client.get("/api/v1/contacts?has_open_deals=true", headers=_auth(admin))
+    assert filtered.status_code == 200
+    body = filtered.json()
+    assert body["total"] == 1
+    assert {it["last_name"] for it in body["items"]} == {"Open"}
+    # The surfaced contact carries its company name.
+    assert body["items"][0]["company_name"] == "OpenCo"
+
+    # Omitted filter -> all five contacts visible.
+    unfiltered = await client.get("/api/v1/contacts", headers=_auth(admin))
+    assert unfiltered.json()["total"] == 5
+
+
+async def test_contact_company_name_in_list_and_detail(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = Company(organization_id=org.id, name="Acme s.r.o.", owner_user_id=admin.id)
+    db_session.add(company)
+    await db_session.commit()
+    linked = Contact(
+        organization_id=org.id,
+        company_id=company.id,
+        first_name="Lin",
+        last_name="Ked",
+        email=f"lin-{uuid.uuid4().hex[:6]}@ex.cz",
+    )
+    orphan = Contact(
+        organization_id=org.id,
+        company_id=None,
+        first_name="Or",
+        last_name="Phan",
+        email=f"orph-{uuid.uuid4().hex[:6]}@ex.cz",
+    )
+    db_session.add_all([linked, orphan])
+    await db_session.commit()
+
+    listed = await client.get("/api/v1/contacts", headers=_auth(admin))
+    assert listed.status_code == 200
+    rows = {it["id"]: it for it in listed.json()["items"]}
+    assert rows[str(linked.id)]["company_name"] == "Acme s.r.o."
+    assert rows[str(orphan.id)]["company_name"] is None
+
+    detail = await client.get(f"/api/v1/contacts/{linked.id}", headers=_auth(admin))
+    assert detail.status_code == 200
+    assert detail.json()["company_name"] == "Acme s.r.o."
+
+    detail_orphan = await client.get(f"/api/v1/contacts/{orphan.id}", headers=_auth(admin))
+    assert detail_orphan.status_code == 200
+    assert detail_orphan.json()["company_name"] is None
+
+
+async def test_create_and_update_contact_return_company_name(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = Company(organization_id=org.id, name="Globex", owner_user_id=admin.id)
+    db_session.add(company)
+    await db_session.commit()
+
+    created = await client.post(
+        "/api/v1/contacts",
+        headers=_auth(admin),
+        json={
+            "first_name": "New",
+            "last_name": "Person",
+            "email": f"np-{uuid.uuid4().hex[:6]}@ex.cz",
+            "company_id": str(company.id),
+        },
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["company_name"] == "Globex"
+
+    contact_id = created.json()["id"]
+    updated = await client.put(
+        f"/api/v1/contacts/{contact_id}",
+        headers=_auth(admin),
+        json={"company_id": None},
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["company_name"] is None

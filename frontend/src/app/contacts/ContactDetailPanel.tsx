@@ -1,12 +1,14 @@
-import { Building2, Mail, Pencil, Phone, Users } from "lucide-react";
+import { Building2, Mail, Pencil, Phone, Trash2, Users } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { useCompany } from "@/app/companies/useCompany";
 import { EditContactModal } from "@/app/contacts/EditContactModal";
-import { useContact, useUpdateContact } from "@/app/contacts/useContacts";
+import { useContact, useDeleteContact, useUpdateContact } from "@/app/contacts/useContacts";
+import { useCurrentUser } from "@/auth/useCurrentUser";
 import { CompanyCombobox } from "@/components/ui/CompanyCombobox";
+import { ApiError } from "@/lib/api";
 import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
 
@@ -18,8 +20,11 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
   const { t } = useTranslation("contacts");
   const { data: contact, isPending, isError } = useContact(contactId);
   const { data: company } = useCompany(contact?.company_id ?? undefined);
+  const { data: currentUser } = useCurrentUser();
   const updateContact = useUpdateContact(contactId);
+  const deleteContact = useDeleteContact(contactId);
   const toast = useToast();
+  const navigate = useNavigate();
   const [editingCompany, setEditingCompany] = useState(false);
   const [pendingCompanyId, setPendingCompanyId] = useState("");
   const [editOpen, setEditOpen] = useState(false);
@@ -64,6 +69,31 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
       setPendingCompanyId("");
     } catch {
       toast.error(t("contactDetail.assignCompanyError"));
+    }
+  }
+
+  // A contact may be deleted by an admin, or by the owner of the company the
+  // contact is linked to (the backend enforces the same rule). The owner check
+  // needs the loaded company, so it stays hidden until that resolves.
+  const canDelete =
+    currentUser?.role === "admin" ||
+    (!!contact.company_id && !!company && company.owner_user_id === currentUser?.id);
+
+  async function handleDelete() {
+    if (!window.confirm(t("contactDetail.deleteConfirm", { name: fullName }))) return;
+    try {
+      await deleteContact.mutateAsync();
+      toast.success(t("contactDetail.deleteSuccess"));
+      navigate("/app/contacts");
+    } catch (err) {
+      const status = err instanceof ApiError ? err.status : 0;
+      toast.error(
+        status === 403
+          ? t("contactDetail.deleteForbidden")
+          : status === 409
+            ? t("contactDetail.deleteConflict")
+            : t("contactDetail.deleteError"),
+      );
     }
   }
 
@@ -178,6 +208,23 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
             {t("contactDetail.noteTitle")}
           </h3>
           <p className="mt-2 whitespace-pre-wrap text-sm text-text-primary">{contact.note}</p>
+        </section>
+      ) : null}
+
+      {canDelete ? (
+        <section className="mt-auto border-t border-border-subtle pt-4">
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleteContact.isPending}
+            data-testid={testIds.contacts.deleteButton}
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger disabled:opacity-60"
+          >
+            <Trash2 size={14} strokeWidth={1.75} aria-hidden />
+            {deleteContact.isPending
+              ? t("contactDetail.deleting")
+              : t("contactDetail.deleteButton")}
+          </button>
         </section>
       ) : null}
 

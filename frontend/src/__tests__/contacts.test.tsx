@@ -187,4 +187,76 @@ describe("Contacts split-view", () => {
       expect(screen.queryByRole("dialog", { name: /přidat kontakt/i })).toBeNull(),
     );
   });
+
+  it("shows the company name in the list row when present", async () => {
+    const withCompany = [
+      { ...CONTACTS[0], company_id: "co-1", company_name: "Asseco Central Europe" },
+    ];
+    fetchMock.mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
+      if (url.includes("/api/v1/contacts?")) {
+        return jsonResponse({ items: withCompany, total: 1, limit: 50, offset: 0 });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    renderAt("/app/contacts");
+    expect(await screen.findByText(/Asseco Central Europe/)).toBeInTheDocument();
+  });
+
+  it("sends has_open_deals=true when the open-deals toggle is switched on", async () => {
+    fetchMock.mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
+      if (url.includes("/api/v1/contacts?")) {
+        return jsonResponse({ items: CONTACTS, total: CONTACTS.length, limit: 50, offset: 0 });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    renderAt("/app/contacts");
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId("contacts-open-deals-filter"));
+
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([i]) => {
+          const u = typeof i === "string" ? i : (i as Request).url;
+          return u.includes("/api/v1/contacts?") && u.includes("has_open_deals=true");
+        }),
+      ).toBe(true),
+    );
+  });
+
+  it("lets an admin delete a contact", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    fetchMock.mockImplementation(async (input, init) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
+      if (url.includes("/api/v1/contacts?")) {
+        return jsonResponse({ items: CONTACTS, total: CONTACTS.length, limit: 50, offset: 0 });
+      }
+      if (url.endsWith("/api/v1/contacts/c1") && method === "DELETE") {
+        return new Response(null, { status: 204 });
+      }
+      if (url.endsWith("/api/v1/contacts/c1")) return jsonResponse(CONTACTS[0]);
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
+    });
+
+    renderAt("/app/contacts/c1");
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId("contacts-delete-button"));
+
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([i, init]) => {
+          const u = typeof i === "string" ? i : (i as Request).url;
+          return u.endsWith("/api/v1/contacts/c1") && init?.method === "DELETE";
+        }),
+      ).toBe(true),
+    );
+    confirmSpy.mockRestore();
+  });
 });

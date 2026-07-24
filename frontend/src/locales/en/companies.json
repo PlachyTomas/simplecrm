@@ -26,6 +26,7 @@
     "industryAll": "Industry: all",
     "cityFilterLabel": "Filter by location",
     "cityAll": "Location: all",
+    "openDealsFilter": "Open deals only",
     "clearFilters": "Clear filters",
     "viewModeGroupLabel": "View mode",
     "viewCards": "Cards",
@@ -140,6 +141,13 @@
 
   "companyDetail": {
     "editButton": "Edit company",
+    "deleteButton": "Delete company",
+    "deleting": "Deleting…",
+    "deleteHint": "Deleting the company permanently removes all of its deals too.",
+    "deleteConfirm": "Delete company {{name}}? All of its deals will be removed too. This cannot be undone.",
+    "deleteSuccess": "Company deleted.",
+    "deleteError": "Failed to delete the company. Please try again.",
+    "deleteConflict": "The company can't be deleted because it's linked to other records.",
     "loading": "Loading…",
     "loadError": "Failed to load the company.",
     "backToList": "Back to list",

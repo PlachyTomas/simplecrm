@@ -155,4 +155,66 @@ describe("Companies screens", () => {
     // IČO rendered in a mono label on the detail header.
     expect(screen.getAllByText(/27082440/).length).toBeGreaterThan(0);
   });
+
+  it("sends has_open_deals=true when the open-deals toggle is switched on", async () => {
+    fetchMock.mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME_RESPONSE);
+      if (url.includes("/api/v1/companies?")) {
+        return jsonResponse({ items: [makeCompany()], total: 1, limit: 25, offset: 0 });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    renderAt("/app/companies", { token: "fake" });
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: /^firmy$/i })).toBeInTheDocument(),
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("companies-open-deals-filter"));
+
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([i]) => {
+          const u = typeof i === "string" ? i : (i as Request).url;
+          return u.includes("/api/v1/companies?") && u.includes("has_open_deals=true");
+        }),
+      ).toBe(true),
+    );
+  });
+
+  it("lets an admin delete a company from the detail page", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const company = makeCompany();
+    fetchMock.mockImplementation(async (input, init) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME_RESPONSE);
+      if (url.includes("/api/v1/users")) {
+        return jsonResponse({ items: [], total: 0, limit: 100, offset: 0 });
+      }
+      if (url.endsWith(`/api/v1/companies/${company.id}`) && method === "DELETE") {
+        return new Response(null, { status: 204 });
+      }
+      if (url.endsWith(`/api/v1/companies/${company.id}`)) return jsonResponse(company);
+      if (url.includes("/api/v1/companies?")) {
+        return jsonResponse({ items: [company], total: 1, limit: 25, offset: 0 });
+      }
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
+    });
+
+    renderAt(`/app/companies/${company.id}`, { token: "fake" });
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId("companies-delete-button"));
+
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([i, init]) => {
+          const u = typeof i === "string" ? i : (i as Request).url;
+          return u.endsWith(`/api/v1/companies/${company.id}`) && init?.method === "DELETE";
+        }),
+      ).toBe(true),
+    );
+    confirmSpy.mockRestore();
+  });
 });

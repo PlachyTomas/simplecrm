@@ -1,7 +1,7 @@
-import { ArrowLeft, ExternalLink, Mail, Pencil, Plus, Star } from "lucide-react";
+import { ArrowLeft, ExternalLink, Mail, Pencil, Plus, Star, Trash2 } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { ActivityRow } from "@/app/activities/ActivityRow";
 import { useActivities } from "@/app/activities/useActivities";
@@ -9,7 +9,10 @@ import { EditCompanyModal } from "@/app/companies/EditCompanyModal";
 import { OwnershipBadge } from "@/app/companies/OwnershipBadge";
 import { useCompany } from "@/app/companies/useCompany";
 import type { CompanyOut } from "@/app/companies/useCompanies";
+import { useDeleteCompany } from "@/app/companies/useDeleteCompany";
 import { useUpdateCompany } from "@/app/companies/useUpdateCompany";
+import { useCurrentUser } from "@/auth/useCurrentUser";
+import { ApiError } from "@/lib/api";
 import { AddContactModal } from "@/app/contacts/AddContactModal";
 import { useContacts } from "@/app/contacts/useContacts";
 import { AddDealModal } from "@/app/deals/AddDealModal";
@@ -595,6 +598,8 @@ export function CompanyDetailPage() {
   const { t } = useTranslation("companies");
   const { companyId } = useParams<{ companyId: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
+  const toast = useToast();
   // The list passes its full URL (page + filters in the query string) when
   // opening a detail; going back must land on that exact state, not page one.
   const backTo = (location.state as { from?: string } | null)?.from ?? "/app/companies";
@@ -602,12 +607,34 @@ export function CompanyDetailPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [editOpen, setEditOpen] = useState(false);
   const { data: company, isPending, isError } = useCompany(companyId);
+  const { data: currentUser } = useCurrentUser();
   const { data: usersPage } = useOrgUsers();
+  const deleteCompany = useDeleteCompany(companyId);
   usePageTitle(company?.name ?? t("companyDetail.defaultTitle"));
   const ownerName = useMemo(() => {
     if (!company?.owner_user_id) return null;
     return usersPage?.items.find((u) => u.id === company.owner_user_id)?.name ?? null;
   }, [company, usersPage]);
+
+  // Deleting a company cascades to its deals, so it's admin-only (the backend
+  // enforces the same restriction).
+  const canDelete = currentUser?.role === "admin";
+
+  async function handleDelete() {
+    if (!window.confirm(t("companyDetail.deleteConfirm", { name: company!.name }))) return;
+    try {
+      await deleteCompany.mutateAsync();
+      toast.success(t("companyDetail.deleteSuccess"));
+      navigate("/app/companies");
+    } catch (err) {
+      let message = t("companyDetail.deleteError");
+      if (err instanceof ApiError && err.status === 409) {
+        const detail = (err.body as { detail?: unknown } | null)?.detail;
+        message = typeof detail === "string" ? detail : t("companyDetail.deleteConflict");
+      }
+      toast.error(message);
+    }
+  }
 
   if (isPending) {
     return (
@@ -731,6 +758,26 @@ export function CompanyDetailPage() {
           <NotesTab companyId={company.id} initialNote={company.note ?? null} />
         )}
       </div>
+
+      {canDelete ? (
+        <div className="mt-8 border-t border-border-subtle pt-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-text-tertiary">{t("companyDetail.deleteHint")}</p>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleteCompany.isPending}
+              data-testid={testIds.companies.deleteButton}
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger disabled:opacity-60"
+            >
+              <Trash2 size={14} strokeWidth={1.75} aria-hidden />
+              {deleteCompany.isPending
+                ? t("companyDetail.deleting")
+                : t("companyDetail.deleteButton")}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <EditCompanyModal open={editOpen} onClose={() => setEditOpen(false)} company={company} />
     </div>

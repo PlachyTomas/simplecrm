@@ -29,6 +29,7 @@
     "industryAll": "Obor: vše",
     "cityFilterLabel": "Filtr podle sídla",
     "cityAll": "Sídlo: vše",
+    "openDealsFilter": "Jen s otevřeným obchodem",
     "clearFilters": "Vymazat filtry",
     "viewModeGroupLabel": "Režim zobrazení",
     "viewCards": "Karty",
@@ -143,6 +144,13 @@
 
   "companyDetail": {
     "editButton": "Upravit firmu",
+    "deleteButton": "Smazat firmu",
+    "deleting": "Mažu…",
+    "deleteHint": "Smazáním firmy nenávratně odstraníte i všechny její obchody.",
+    "deleteConfirm": "Opravdu smazat firmu {{name}}? Odstraní se i všechny její obchody. Tuto akci nelze vzít zpět.",
+    "deleteSuccess": "Firma byla smazána.",
+    "deleteError": "Firmu se nepodařilo smazat. Zkuste to prosím znovu.",
+    "deleteConflict": "Firmu nelze smazat, protože je navázána na další záznamy.",
     "loading": "Načítání…",
     "loadError": "Firmu se nepodařilo načíst.",
     "backToList": "Zpět na seznam",
