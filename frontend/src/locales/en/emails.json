@@ -21,9 +21,18 @@
     "sendErrorToastGeneric": "Failed to send email.",
     "unknownError": "unknown error",
     "attachmentTooLarge": "File \"{{filename}}\" is larger than 10 MB.",
-    "attachmentUnsupportedType": "File \"{{filename}}\" has an unsupported type. Allowed: PDF, images, Word, Excel, text."
+    "attachmentUnsupportedType": "File \"{{filename}}\" has an unsupported type. Allowed: PDF, images, Word, Excel, text.",
+    "suggestionsLabel": "Contact suggestions",
+    "newContactOption": "Create new contact",
+    "newContactTitle": "New contact",
+    "newContactFirstName": "First name",
+    "newContactLastName": "Last name",
+    "newContactEmail": "Email",
+    "newContactSave": "Save contact",
+    "newContactSaving": "Saving…",
+    "newContactCancel": "Cancel",
+    "newContactError": "Could not save the contact."
   },
-
   "history": {
     "title": "Sent emails",
     "loading": "Loading…",
@@ -32,12 +41,10 @@
     "statusError": "Error",
     "reply": "Reply"
   },
-
   "gatedMail": {
     "hint": "Set up and verify SMTP first.",
     "settingsLink": "Settings → Integrations"
   },
-
   "campaigns": {
     "pageTitle": "Bulk email history",
     "backToCompanies": "Back to companies",
@@ -56,7 +63,6 @@
     "statusFailed": "Failed",
     "statusSkipped": "Skipped"
   },
-
   "wizard": {
     "title": "Bulk email",
     "close": "Close",

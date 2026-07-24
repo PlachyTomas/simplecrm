@@ -96,6 +96,23 @@ export const testIds = {
     stage: (stageId: string) => `pipeline-stage-${stageId}`,
     deal: (dealId: string) => `pipeline-deal-${dealId}`,
   },
+  emails: {
+    compose: {
+      toInput: "email-compose-to-input",
+      ccInput: "email-compose-cc-input",
+      bccInput: "email-compose-bcc-input",
+      suggestion: (field: string, contactId: string) =>
+        `email-compose-${field}-suggestion-${contactId}`,
+      newContactToggle: (field: string) => `email-compose-${field}-new-contact-toggle`,
+      newContact: {
+        firstNameInput: "email-compose-new-contact-first-name",
+        lastNameInput: "email-compose-new-contact-last-name",
+        emailInput: "email-compose-new-contact-email",
+        save: "email-compose-new-contact-save",
+        cancel: "email-compose-new-contact-cancel",
+      },
+    },
+  },
   reports: {
     addWidget: "reports-add-widget",
   },

@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { EmailComposeModal } from "@/app/emails/EmailComposeModal";
 import type { SentEmailOut } from "@/app/emails/useEmails";
 import { AuthProvider } from "@/auth/AuthContext";
+import { testIds } from "@/lib/testids";
 import { ToastProvider } from "@/lib/toast";
 
 function wrap(ui: React.ReactNode) {
@@ -95,5 +96,213 @@ describe("EmailComposeModal", () => {
     fireEvent.change(fileInput, { target: { files: [ok] } });
     expect(screen.queryByText(/nepodporovaný typ|větší než 10 MB/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Odeslat/ })).toBeEnabled();
+  });
+});
+
+const contact = (
+  id: string,
+  first: string,
+  last: string,
+  email: string | null,
+): Record<string, unknown> => ({
+  id,
+  organization_id: "o1",
+  company_id: "c1",
+  first_name: first,
+  last_name: last,
+  position: null,
+  email,
+  phone: null,
+  linkedin_url: null,
+  note: null,
+  created_at: "2026-07-01T10:00:00Z",
+  updated_at: "2026-07-01T10:00:00Z",
+});
+
+const CONTACTS_PAGE = {
+  items: [
+    contact("ct1", "Jan", "Novák", "jan@acme.cz"),
+    contact("ct2", "Petra", "Svobodová", "petra@acme.cz"),
+    contact("ct3", "Bez", "Mailu", null),
+  ],
+  total: 3,
+  limit: 100,
+  offset: 0,
+};
+
+const jsonResponse = (data: unknown, status = 200) =>
+  new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+
+/** Stub fetch for the contacts list + contact create; records every call. */
+function stubFetch() {
+  const calls: { url: string; init?: RequestInit }[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(url);
+      calls.push({ url: u, init });
+      if (u.includes("/api/v1/contacts") && init?.method === "POST") {
+        const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+        return jsonResponse(
+          contact(
+            "ct-new",
+            String(body.first_name),
+            String(body.last_name),
+            body.email as string | null,
+          ),
+          201,
+        );
+      }
+      if (u.includes("/api/v1/contacts")) return jsonResponse(CONTACTS_PAGE);
+      return jsonResponse({});
+    }),
+  );
+  return calls;
+}
+
+describe("EmailComposeModal — company contact recipients", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("suggests the company's contacts on focus and picking one adds a chip", async () => {
+    stubFetch();
+    wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" />);
+    const to = screen.getByTestId(testIds.emails.compose.toInput);
+    fireEvent.focus(to);
+    fireEvent.click(await screen.findByTestId(testIds.emails.compose.suggestion("to", "ct1")));
+    // Chip present, and the input kept empty (no junk free-text committed).
+    expect(screen.getByText("jan@acme.cz")).toBeInTheDocument();
+    expect((to as HTMLInputElement).value).toBe("");
+  });
+
+  it("filters diacritics-insensitively and never offers email-less contacts", async () => {
+    stubFetch();
+    wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" />);
+    const to = screen.getByTestId(testIds.emails.compose.toInput);
+    fireEvent.focus(to);
+    await screen.findByTestId(testIds.emails.compose.suggestion("to", "ct1"));
+    expect(screen.queryByText(/Bez Mailu/)).not.toBeInTheDocument();
+    fireEvent.change(to, { target: { value: "svobodova" } });
+    expect(
+      screen.queryByTestId(testIds.emails.compose.suggestion("to", "ct1")),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId(testIds.emails.compose.suggestion("to", "ct2"))).toBeInTheDocument();
+  });
+
+  it("does not resuggest an address that is already a chip", async () => {
+    stubFetch();
+    wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" />);
+    const to = screen.getByTestId(testIds.emails.compose.toInput);
+    fireEvent.focus(to);
+    fireEvent.click(await screen.findByTestId(testIds.emails.compose.suggestion("to", "ct1")));
+    fireEvent.focus(to);
+    await screen.findByTestId(testIds.emails.compose.suggestion("to", "ct2"));
+    expect(
+      screen.queryByTestId(testIds.emails.compose.suggestion("to", "ct1")),
+    ).not.toBeInTheDocument();
+  });
+
+  it("still accepts multiple free-text addresses with Enter", async () => {
+    stubFetch();
+    wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" />);
+    const to = screen.getByTestId(testIds.emails.compose.toInput);
+    fireEvent.change(to, { target: { value: "kdokoli@jinde.cz" } });
+    fireEvent.keyDown(to, { key: "Enter" });
+    fireEvent.change(to, { target: { value: "dalsi@jinde.cz" } });
+    fireEvent.keyDown(to, { key: "Enter" });
+    expect(screen.getByText("kdokoli@jinde.cz")).toBeInTheDocument();
+    expect(screen.getByText("dalsi@jinde.cz")).toBeInTheDocument();
+  });
+
+  it("creates a contact inline with the company prefilled and chips its email", async () => {
+    const calls = stubFetch();
+    wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" />);
+    fireEvent.focus(screen.getByTestId(testIds.emails.compose.toInput));
+    fireEvent.click(await screen.findByTestId(testIds.emails.compose.newContactToggle("to")));
+    const nc = testIds.emails.compose.newContact;
+    fireEvent.change(screen.getByTestId(nc.firstNameInput), { target: { value: "Nový" } });
+    fireEvent.change(screen.getByTestId(nc.lastNameInput), { target: { value: "Kontakt" } });
+    fireEvent.change(screen.getByTestId(nc.emailInput), { target: { value: "novy@acme.cz" } });
+    fireEvent.click(screen.getByTestId(nc.save));
+    expect(await screen.findByText("novy@acme.cz")).toBeInTheDocument();
+    const post = calls.find((c) => c.url.includes("/api/v1/contacts") && c.init?.method === "POST");
+    expect(post).toBeTruthy();
+    expect(JSON.parse(String(post!.init!.body))).toMatchObject({
+      company_id: "c1",
+      first_name: "Nový",
+      last_name: "Kontakt",
+      email: "novy@acme.cz",
+    });
+    // The sub-form collapsed after saving.
+    expect(screen.queryByTestId(nc.save)).not.toBeInTheDocument();
+  });
+
+  it("offers no suggestions or contact creation without a company context", () => {
+    const calls = stubFetch();
+    wrap(<EmailComposeModal open onClose={vi.fn()} dealId="d1" />);
+    fireEvent.focus(screen.getByTestId(testIds.emails.compose.toInput));
+    expect(
+      screen.queryByTestId(testIds.emails.compose.newContactToggle("to")),
+    ).not.toBeInTheDocument();
+    expect(calls.some((c) => c.url.includes("/api/v1/contacts"))).toBe(false);
+  });
+
+  it("does not chip leftover filter text when opening the inline new-contact form", async () => {
+    stubFetch();
+    wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" />);
+    const to = screen.getByTestId(testIds.emails.compose.toInput) as HTMLInputElement;
+    to.focus();
+    await screen.findByTestId(testIds.emails.compose.suggestion("to", "ct1"));
+    fireEvent.change(to, { target: { value: "xyz" } });
+    fireEvent.click(screen.getByTestId(testIds.emails.compose.newContactToggle("to")));
+    // The sub-form's autoFocus genuinely blurred the chips input…
+    expect(document.activeElement).toBe(
+      screen.getByTestId(testIds.emails.compose.newContact.firstNameInput),
+    );
+    // …and the pending filter text neither became a chip nor survived as draft.
+    expect(screen.queryByText("xyz")).not.toBeInTheDocument();
+    expect(to.value).toBe("");
+  });
+
+  it("Escape closes only the dropdown first, the modal second", async () => {
+    stubFetch();
+    const onClose = vi.fn();
+    wrap(<EmailComposeModal open onClose={onClose} companyId="c1" />);
+    const to = screen.getByTestId(testIds.emails.compose.toInput);
+    to.focus();
+    await screen.findByTestId(testIds.emails.compose.suggestion("to", "ct1"));
+    fireEvent.keyDown(to, { key: "Escape" });
+    expect(
+      screen.queryByTestId(testIds.emails.compose.suggestion("to", "ct1")),
+    ).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.keyDown(to, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("Escape closes the modal on the first press when no dropdown is visible", () => {
+    stubFetch();
+    const onClose = vi.fn();
+    wrap(<EmailComposeModal open onClose={onClose} dealId="d1" />);
+    const to = screen.getByTestId(testIds.emails.compose.toInput);
+    // Focusing arms listOpen, but nothing can render without company contacts —
+    // Escape must not be swallowed by the invisible dropdown.
+    to.focus();
+    fireEvent.keyDown(to, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("picks the highlighted suggestion with ArrowDown + Enter", async () => {
+    stubFetch();
+    wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" />);
+    const to = screen.getByTestId(testIds.emails.compose.toInput) as HTMLInputElement;
+    to.focus();
+    await screen.findByTestId(testIds.emails.compose.suggestion("to", "ct1"));
+    fireEvent.keyDown(to, { key: "ArrowDown" });
+    fireEvent.keyDown(to, { key: "Enter" });
+    expect(screen.getByText("jan@acme.cz")).toBeInTheDocument();
+    expect(to.value).toBe("");
   });
 });

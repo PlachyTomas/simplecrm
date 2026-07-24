@@ -41,11 +41,11 @@ export function useSendEmail() {
         body: form,
       });
     },
-    onSuccess: (_data, { payload }) => {
-      if (payload.deal_id)
-        void qc.invalidateQueries({ queryKey: ["emails", { dealId: payload.deal_id }] });
-      if (payload.company_id)
-        void qc.invalidateQueries({ queryKey: ["emails", { companyId: payload.company_id }] });
+    onSuccess: () => {
+      // Replies omit deal_id/company_id (the server anchors them to the reply
+      // parent), so the payload can't tell us which lists changed — refresh
+      // every email list.
+      void qc.invalidateQueries({ queryKey: ["emails"] });
       // The send logs an `email_sent` activity — refresh timelines too.
       void qc.invalidateQueries({ queryKey: ["activities"] });
     },
