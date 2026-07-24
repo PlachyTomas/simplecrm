@@ -15,7 +15,7 @@ concurrency:
 # TeamPCP (2026) campaigns did exactly that. Bump by moving the SHA + comment.
 env:
   PYTHON_VERSION: "3.12"
-  NODE_VERSION: "20"
+  NODE_VERSION: "22" # pnpm 11 requires Node >= 22.13 — Node 20 here breaks setup-node's `cache: pnpm` (runs pnpm under the freshly installed Node)
   PNPM_VERSION: "11" # keep in sync with local dev — pnpm 11 owns pnpm-workspace.yaml settings (allowBuilds, minimumReleaseAge)
 
 jobs:
