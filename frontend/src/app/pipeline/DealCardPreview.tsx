@@ -49,6 +49,11 @@ function anchorFrom(rect: DOMRect): Anchor {
 export function useDealCardPreview(ref: React.RefObject<HTMLElement>) {
   const [anchor, setAnchor] = useState<Anchor | null>(null);
   const timer = useRef<number | undefined>(undefined);
+  // True while the current touch press has opened the preview — the release
+  // of that press must NOT also count as a tap on the card (the browser
+  // still synthesizes a click after touchend, which opened the deal detail
+  // dialog on top of the preview).
+  const longPressFired = useRef(false);
   const tooltipId = useId();
 
   const clearTimer = useCallback(() => window.clearTimeout(timer.current), []);
@@ -106,13 +111,39 @@ export function useDealCardPreview(ref: React.RefObject<HTMLElement>) {
     /**
      * Touch long-press, for the (non-draggable) mobile card only. Releasing
      * the finger leaves an opened panel on screen so it can be read; the next
-     * tap or scroll dismisses it.
+     * tap or scroll dismisses it. A press that opened the preview swallows
+     * its own release (preventDefault on touchend + a click-capture guard) so
+     * the ghost click can't also open the deal detail underneath.
      */
     longPressHandlers: {
-      onTouchStart: () => openAfter(LONG_PRESS_MS),
+      onTouchStart: () => {
+        longPressFired.current = false;
+        clearTimer();
+        timer.current = window.setTimeout(() => {
+          const rect = ref.current?.getBoundingClientRect();
+          if (rect) {
+            longPressFired.current = true;
+            setAnchor(anchorFrom(rect));
+          }
+        }, LONG_PRESS_MS);
+      },
       onTouchMove: close,
-      onTouchEnd: clearTimer,
+      onTouchEnd: (e: React.TouchEvent) => {
+        clearTimer();
+        // touchend is not on React's passive-listener list, so this reliably
+        // cancels the synthesized click on browsers that honor it…
+        if (longPressFired.current) e.preventDefault();
+      },
       onTouchCancel: close,
+      // …and this capture-phase guard catches the click on browsers that
+      // synthesize it anyway, before it reaches the deal-name button.
+      onClickCapture: (e: React.MouseEvent) => {
+        if (longPressFired.current) {
+          e.preventDefault();
+          e.stopPropagation();
+          longPressFired.current = false;
+        }
+      },
     },
   };
 }
