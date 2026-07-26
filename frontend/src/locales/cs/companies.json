@@ -2,7 +2,6 @@
   "companyCount_one": "{{count}} firma",
   "companyCount_few": "{{count}} firmy",
   "companyCount_other": "{{count}} firem",
-
   "ownershipBadge": {
     "releasing": "K uvolnění",
     "daysRemaining_one": "{{count}} den",
@@ -13,7 +12,6 @@
     "expiresTitle_few": "Zbývá {{count}} dny do automatického uvolnění",
     "expiresTitle_other": "Zbývá {{count}} dní do automatického uvolnění"
   },
-
   "companiesList": {
     "pageTitle": "Firmy",
     "historyLinkTitle": "Historie hromadných e-mailů",
@@ -71,7 +69,6 @@
       "rownum": "#"
     }
   },
-
   "addCompanyModal": {
     "title": "Přidat firmu",
     "subtitle": "Zadejte IČO a údaje se doplní z ARES. Pokud firmu v registru nenajdeme, můžete údaje zadat ručně.",
@@ -126,7 +123,6 @@
     "createWithContactSuccess": "Firma a kontakt uloženy.",
     "createContactError": "Firma uložena, ale kontakt se nepodařilo přiřadit."
   },
-
   "editCompanyModal": {
     "title": "Upravit firmu",
     "subtitle": "Změny se propíší všude, kde firmu používáte — v obchodech, kontaktech i reportech.",
@@ -141,7 +137,6 @@
     "savedToast": "Firma byla upravena.",
     "saveError": "Uložení se nepovedlo. Zkuste to prosím znovu."
   },
-
   "companyDetail": {
     "editButton": "Upravit firmu",
     "deleteButton": "Smazat firmu",
@@ -191,7 +186,9 @@
       "setMainError": "Hlavní kontakt se nepodařilo nastavit.",
       "mainContact": "Hlavní kontakt",
       "setAsMain": "Nastavit jako hlavní kontakt",
-      "autoTag": "automaticky"
+      "autoTag": "automaticky",
+      "editContact": "Upravit kontakt {{name}}",
+      "deleteContact": "Smazat kontakt {{name}}"
     },
     "dealStatus": {
       "open": "Otevřeno",

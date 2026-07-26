@@ -39,6 +39,8 @@ export const testIds = {
     addButton: "companies-add-button",
     openDealsFilter: "companies-open-deals-filter",
     deleteButton: "companies-delete-button",
+    contactRowEdit: (id: string) => `company-contact-edit-${id}`,
+    contactRowDelete: (id: string) => `company-contact-delete-${id}`,
     addModal: {
       icoInput: "companies-add-modal-ico",
       nameInput: "companies-add-modal-name",

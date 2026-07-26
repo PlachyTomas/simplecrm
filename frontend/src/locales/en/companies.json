@@ -1,7 +1,6 @@
 {
   "companyCount_one": "{{count}} company",
   "companyCount_other": "{{count}} companies",
-
   "ownershipBadge": {
     "releasing": "Pending release",
     "daysRemaining_one": "{{count}} day",
@@ -10,7 +9,6 @@
     "expiresTitle_one": "{{count}} day left until automatic release",
     "expiresTitle_other": "{{count}} days left until automatic release"
   },
-
   "companiesList": {
     "pageTitle": "Companies",
     "historyLinkTitle": "Bulk email history",
@@ -68,7 +66,6 @@
       "rownum": "#"
     }
   },
-
   "addCompanyModal": {
     "title": "Add company",
     "subtitle": "Enter the Company ID and we'll fill in the details from ARES. If we can't find the company in the registry, you can enter the details manually.",
@@ -123,7 +120,6 @@
     "createWithContactSuccess": "Company and contact saved.",
     "createContactError": "Company saved, but the contact could not be assigned."
   },
-
   "editCompanyModal": {
     "title": "Edit company",
     "subtitle": "Changes propagate everywhere the company is used — deals, contacts, and reports.",
@@ -138,7 +134,6 @@
     "savedToast": "Company updated.",
     "saveError": "Saving failed. Please try again."
   },
-
   "companyDetail": {
     "editButton": "Edit company",
     "deleteButton": "Delete company",
@@ -188,7 +183,9 @@
       "setMainError": "Failed to set the main contact.",
       "mainContact": "Main contact",
       "setAsMain": "Set as main contact",
-      "autoTag": "auto"
+      "autoTag": "auto",
+      "editContact": "Edit contact {{name}}",
+      "deleteContact": "Delete contact {{name}}"
     },
     "dealStatus": {
       "open": "Open",

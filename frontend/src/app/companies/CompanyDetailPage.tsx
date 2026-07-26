@@ -14,7 +14,8 @@ import { useUpdateCompany } from "@/app/companies/useUpdateCompany";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { ApiError } from "@/lib/api";
 import { AddContactModal } from "@/app/contacts/AddContactModal";
-import { useContacts } from "@/app/contacts/useContacts";
+import { EditContactModal } from "@/app/contacts/EditContactModal";
+import { useContacts, useDeleteContact, type ContactOut } from "@/app/contacts/useContacts";
 import { AddDealModal } from "@/app/deals/AddDealModal";
 import { DealDetailDialog } from "@/app/deals/DealDetailDialog";
 import { useDealDialog } from "@/app/deals/useDealDialog";
@@ -136,9 +137,16 @@ function OverviewTab({ company, locale }: { company: CompanyOut; locale: string 
 function ContactsTab({ company }: { company: CompanyOut }) {
   const { t } = useTranslation("companies");
   const [adding, setAdding] = useState(false);
+  const [editingContact, setEditingContact] = useState<ContactOut | null>(null);
   const toast = useToast();
   const { data, isPending, isError } = useContacts({ companyId: company.id, limit: 100 });
   const update = useUpdateCompany(company.id);
+  const { data: currentUser } = useCurrentUser();
+
+  // Same rule as the backend: contacts here are manageable by an admin or
+  // by the owner of this company. Everyone else gets a read-only list.
+  const canManageContacts =
+    currentUser?.role === "admin" || company.owner_user_id === currentUser?.id;
 
   // The auto-fallback main_contact (set when main_contact_id is null but
   // the company has at least one contact). We tag this row with an "auto"
@@ -177,72 +185,18 @@ function ContactsTab({ company }: { company: CompanyOut }) {
         <p className="mt-4 text-sm text-text-secondary">{t("companyDetail.contactsTab.empty")}</p>
       ) : (
         <ul className="mt-4 divide-y divide-border-subtle">
-          {data.items.map((c) => {
-            const fullName = `${c.first_name} ${c.last_name}`.trim();
-            const isMain = company.main_contact_id === c.id;
-            const isAutoMain = !isMain && autoMainContactId === c.id;
-            const isHighlighted = isMain || isAutoMain;
-            return (
-              <li key={c.id} className="flex items-center gap-2 py-3">
-                <button
-                  type="button"
-                  aria-label={
-                    isHighlighted
-                      ? t("companyDetail.contactsTab.mainContact")
-                      : t("companyDetail.contactsTab.setAsMain")
-                  }
-                  aria-pressed={isHighlighted}
-                  title={
-                    isHighlighted
-                      ? t("companyDetail.contactsTab.mainContact")
-                      : t("companyDetail.contactsTab.setAsMain")
-                  }
-                  onClick={() => setMain(c.id)}
-                  disabled={update.isPending || isMain}
-                  className={cn(
-                    "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors duration-fast",
-                    isHighlighted
-                      ? "text-accent"
-                      : "text-text-tertiary hover:bg-surface-overlay hover:text-text-primary",
-                    update.isPending && "opacity-60",
-                  )}
-                >
-                  <Star
-                    size={16}
-                    strokeWidth={1.75}
-                    aria-hidden
-                    className={cn(isHighlighted && "fill-accent")}
-                  />
-                </button>
-                <Link
-                  to={`/app/contacts/${c.id}`}
-                  className="flex flex-1 items-center gap-3 text-sm text-text-primary hover:text-accent"
-                >
-                  <span
-                    aria-hidden
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-surface-overlay text-sm font-semibold"
-                  >
-                    {fullName.slice(0, 1).toUpperCase()}
-                  </span>
-                  <span className="flex-1">
-                    <span className="flex items-center gap-2">
-                      <span className="font-medium">{fullName}</span>
-                      {isAutoMain ? (
-                        <span className="text-[11px] uppercase tracking-wider text-text-tertiary">
-                          {t("companyDetail.contactsTab.autoTag")}
-                        </span>
-                      ) : null}
-                    </span>
-                    {c.position || c.email ? (
-                      <span className="block text-xs text-text-tertiary">
-                        {[c.position, c.email].filter(Boolean).join(" · ")}
-                      </span>
-                    ) : null}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
+          {data.items.map((c) => (
+            <CompanyContactRow
+              key={c.id}
+              contact={c}
+              isMain={company.main_contact_id === c.id}
+              isAutoMain={company.main_contact_id !== c.id && autoMainContactId === c.id}
+              setMainPending={update.isPending}
+              onSetMain={() => setMain(c.id)}
+              canManage={canManageContacts}
+              onEdit={() => setEditingContact(c)}
+            />
+          ))}
         </ul>
       )}
       <AddContactModal
@@ -254,7 +208,149 @@ function ContactsTab({ company }: { company: CompanyOut }) {
         onCreated={() => setAdding(false)}
         forCompanyId={company.id}
       />
+      {editingContact ? (
+        <EditContactModal
+          open
+          onClose={() => setEditingContact(null)}
+          contact={editingContact}
+          companyName={company.name}
+        />
+      ) : null}
     </section>
+  );
+}
+
+/**
+ * One row of the company-detail contacts list. Edit/delete happen IN PLACE —
+ * the list refreshes via ["contacts"] invalidation and the user never leaves
+ * the company page (this list is the primary way contacts get managed; the
+ * standalone contacts page is for lookups).
+ */
+function CompanyContactRow({
+  contact,
+  isMain,
+  isAutoMain,
+  setMainPending,
+  onSetMain,
+  canManage,
+  onEdit,
+}: {
+  contact: ContactOut;
+  isMain: boolean;
+  isAutoMain: boolean;
+  setMainPending: boolean;
+  onSetMain: () => void;
+  canManage: boolean;
+  onEdit: () => void;
+}) {
+  const { t } = useTranslation("companies");
+  const { t: tContacts } = useTranslation("contacts");
+  const toast = useToast();
+  const deleteContact = useDeleteContact(contact.id);
+  const fullName = `${contact.first_name} ${contact.last_name}`.trim();
+  const isHighlighted = isMain || isAutoMain;
+
+  async function handleDelete() {
+    if (!window.confirm(tContacts("contactDetail.deleteConfirm", { name: fullName }))) return;
+    try {
+      await deleteContact.mutateAsync();
+      toast.success(tContacts("contactDetail.deleteSuccess"));
+    } catch (err) {
+      const status = err instanceof ApiError ? err.status : 0;
+      toast.error(
+        status === 403
+          ? tContacts("contactDetail.deleteForbidden")
+          : status === 409
+            ? tContacts("contactDetail.deleteConflict")
+            : tContacts("contactDetail.deleteError"),
+      );
+    }
+  }
+
+  return (
+    <li className="flex items-center gap-2 py-3">
+      <button
+        type="button"
+        aria-label={
+          isHighlighted
+            ? t("companyDetail.contactsTab.mainContact")
+            : t("companyDetail.contactsTab.setAsMain")
+        }
+        aria-pressed={isHighlighted}
+        title={
+          isHighlighted
+            ? t("companyDetail.contactsTab.mainContact")
+            : t("companyDetail.contactsTab.setAsMain")
+        }
+        onClick={onSetMain}
+        disabled={setMainPending || isMain}
+        className={cn(
+          "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors duration-fast",
+          isHighlighted
+            ? "text-accent"
+            : "text-text-tertiary hover:bg-surface-overlay hover:text-text-primary",
+          setMainPending && "opacity-60",
+        )}
+      >
+        <Star
+          size={16}
+          strokeWidth={1.75}
+          aria-hidden
+          className={cn(isHighlighted && "fill-accent")}
+        />
+      </button>
+      <Link
+        to={`/app/contacts/${contact.id}`}
+        className="flex min-w-0 flex-1 items-center gap-3 text-sm text-text-primary hover:text-accent"
+      >
+        <span
+          aria-hidden
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-surface-overlay text-sm font-semibold"
+        >
+          {fullName.slice(0, 1).toUpperCase()}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2">
+            <span className="truncate font-medium">{fullName}</span>
+            {isAutoMain ? (
+              <span className="text-[11px] uppercase tracking-wider text-text-tertiary">
+                {t("companyDetail.contactsTab.autoTag")}
+              </span>
+            ) : null}
+          </span>
+          {contact.position || contact.email ? (
+            <span className="block truncate text-xs text-text-tertiary">
+              {[contact.position, contact.email].filter(Boolean).join(" · ")}
+            </span>
+          ) : null}
+        </span>
+      </Link>
+      {canManage ? (
+        <span className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label={t("companyDetail.contactsTab.editContact", { name: fullName })}
+            title={t("companyDetail.contactsTab.editContact", { name: fullName })}
+            data-testid={testIds.companies.contactRowEdit(contact.id)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-tertiary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary"
+          >
+            <Pencil size={14} strokeWidth={1.75} aria-hidden />
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleDelete()}
+            disabled={deleteContact.isPending}
+            aria-label={t("companyDetail.contactsTab.deleteContact", { name: fullName })}
+            title={t("companyDetail.contactsTab.deleteContact", { name: fullName })}
+            data-testid={testIds.companies.contactRowDelete(contact.id)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-tertiary transition-colors duration-fast hover:bg-danger-subtle hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Trash2 size={14} strokeWidth={1.75} aria-hidden />
+          </button>
+        </span>
+      ) : null}
+    </li>
   );
 }
 
