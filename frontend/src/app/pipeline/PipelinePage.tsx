@@ -10,7 +10,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { createPortal } from "react-dom";
-import { Crown, Plus, Trash2, Workflow, X } from "lucide-react";
+import { Crown, Plus, Trash2, Workflow, X, Zap } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -25,6 +25,8 @@ import {
 import { useDealDialog } from "@/app/deals/useDealDialog";
 import { useDeleteAnyDeal } from "@/app/deals/useDeals";
 import { stageColor } from "@/app/pipeline/colors";
+import { DealCardPreview, useDealCardPreview } from "@/app/pipeline/DealCardPreview";
+import { DealQuickActionsModal } from "@/app/pipeline/DealQuickActionsModal";
 import {
   type BoardDeal,
   type BoardStage,
@@ -38,6 +40,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { celebrateWin } from "@/lib/celebrate";
 import { formatMoney } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
+import { testIds } from "@/lib/testids";
 import { useModalDialog } from "@/lib/useModalDialog";
 import { useToast } from "@/lib/toast";
 import { usePageTitle } from "@/lib/usePageTitle";
@@ -93,6 +96,7 @@ interface CardActionButtonProps {
   /** Receives the button element so callers can anchor effects (confetti). */
   onActivate: (el: HTMLButtonElement | null) => void;
   className?: string;
+  testId?: string;
   children: ReactNode;
 }
 
@@ -105,6 +109,7 @@ function CardActionButton({
   disabled,
   onActivate,
   className,
+  testId,
   children,
 }: CardActionButtonProps) {
   const tooltipId = useId();
@@ -129,14 +134,19 @@ function CardActionButton({
           hide();
           onActivate(btnRef.current);
         }}
-        // Stop dnd-kit from starting a drag from the button.
+        // Stop dnd-kit from starting a drag from the button. The board's
+        // sensors activate on mousedown (MouseSensor) / touchstart
+        // (TouchSensor), so stopping pointerdown alone is not enough.
         onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
         onMouseEnter={show}
         onMouseLeave={hide}
         onFocus={show}
         onBlur={hide}
         disabled={disabled}
         aria-label={ariaLabel}
+        data-testid={testId}
         className={cn(
           "inline-flex h-6 w-6 items-center justify-center rounded-md shadow-sm transition-colors duration-fast disabled:cursor-not-allowed disabled:opacity-50",
           className,
@@ -174,6 +184,8 @@ interface DealCardProps {
   onTogglePaid?: (next: boolean) => void;
   /** Open the deal detail dialog. Fires on a click/Enter that isn't a drag. */
   onOpen?: (id: string) => void;
+  /** Open the quick-actions modal (e-mail / event / note) for this deal. */
+  onQuickActions?: (deal: BoardDeal) => void;
   winning?: boolean;
   losing?: boolean;
   paymentPending?: boolean;
@@ -187,6 +199,7 @@ function DealCard({
   onLose,
   onTogglePaid,
   onOpen,
+  onQuickActions,
   winning,
   losing,
   paymentPending,
@@ -196,6 +209,17 @@ function DealCard({
     id: deal.id,
     data: { type: "deal", stageId: deal.stage_id },
   });
+  // dnd-kit owns the node via a callback ref; keep our own handle too so the
+  // hover preview can measure the card's rect.
+  const cardRef = useRef<HTMLElement | null>(null);
+  const setRefs = useCallback(
+    (node: HTMLElement | null) => {
+      setNodeRef(node);
+      cardRef.current = node;
+    },
+    [setNodeRef],
+  );
+  const preview = useDealCardPreview(cardRef);
   // Distinguish a click (open the dialog) from a drag. dnd-kit starts a drag
   // after 6px of movement, so we record where the pointer went down (in the
   // capture phase, to avoid clobbering dnd-kit's own onPointerDown) and only
@@ -210,10 +234,12 @@ function DealCard({
 
   return (
     <article
-      ref={setNodeRef}
+      ref={setRefs}
       style={style}
       {...listeners}
       {...attributes}
+      {...preview.hoverHandlers}
+      aria-describedby={preview.open ? preview.tooltipId : undefined}
       role="button"
       tabIndex={0}
       onPointerDownCapture={(e) => {
@@ -247,8 +273,9 @@ function DealCard({
         dragging && "opacity-0",
       )}
     >
-      <p className="truncate text-sm font-medium text-text-primary">{deal.name}</p>
-      <p className="mt-1 truncate text-xs text-text-secondary">{deal.company_name}</p>
+      {/* pr-7 keeps a long name clear of the always-visible quick-action trigger. */}
+      <p className="truncate pr-7 text-sm font-medium text-text-primary">{deal.name}</p>
+      <p className="mt-1 truncate pr-7 text-xs text-text-secondary">{deal.company_name}</p>
       {valueShown ? (
         <p className="mt-0.5 font-mono text-xs tabular-nums text-text-secondary">
           {formatMoney(deal.value, deal.currency, locale)}
@@ -277,34 +304,56 @@ function DealCard({
           {t("pipelinePage.card.paid")}
         </label>
       ) : null}
-      {onWin || onLose ? (
-        // Quick actions overlay the card's right edge instead of taking a
-        // row of their own — hidden until hover/focus so resting cards stay
-        // compact, with no blank strip reserved for them.
-        <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity duration-fast focus-within:opacity-100 group-hover/card:opacity-100">
-          {onWin ? (
-            <CardActionButton
-              label={t("pipelinePage.card.winTooltip")}
-              ariaLabel={t("pipelinePage.card.winAriaLabel", { name: deal.name })}
-              disabled={winning}
-              onActivate={(el) => onWin(el)}
-              className="bg-brand-accent text-text-on-brand-accent hover:bg-brand-accent-hover"
-            >
-              <Crown size={13} strokeWidth={2} aria-hidden />
-            </CardActionButton>
+      {onWin || onLose || onQuickActions ? (
+        // Card actions overlay the right edge instead of taking a row of
+        // their own. Win/lose stay hidden until hover/focus so resting cards
+        // are quiet; the quick-actions trigger is always visible because it's
+        // the card's only entry point to e-mail/event/note.
+        <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-1">
+          {onWin || onLose ? (
+            <span className="flex items-center gap-1 opacity-0 transition-opacity duration-fast focus-within:opacity-100 group-hover/card:opacity-100">
+              {onWin ? (
+                <CardActionButton
+                  label={t("pipelinePage.card.winTooltip")}
+                  ariaLabel={t("pipelinePage.card.winAriaLabel", { name: deal.name })}
+                  disabled={winning}
+                  onActivate={(el) => onWin(el)}
+                  className="bg-brand-accent text-text-on-brand-accent hover:bg-brand-accent-hover"
+                >
+                  <Crown size={13} strokeWidth={2} aria-hidden />
+                </CardActionButton>
+              ) : null}
+              {onLose ? (
+                <CardActionButton
+                  label={t("pipelinePage.card.loseTooltip")}
+                  ariaLabel={t("pipelinePage.card.loseAriaLabel", { name: deal.name })}
+                  disabled={losing}
+                  onActivate={() => onLose()}
+                  className="border border-border bg-surface-overlay text-text-secondary hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger"
+                >
+                  <X size={13} strokeWidth={2} aria-hidden />
+                </CardActionButton>
+              ) : null}
+            </span>
           ) : null}
-          {onLose ? (
+          {onQuickActions ? (
             <CardActionButton
-              label={t("pipelinePage.card.loseTooltip")}
-              ariaLabel={t("pipelinePage.card.loseAriaLabel", { name: deal.name })}
-              disabled={losing}
-              onActivate={() => onLose()}
-              className="border border-border bg-surface-overlay text-text-secondary hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger"
+              label={t("pipelinePage.card.quickActionsTooltip")}
+              ariaLabel={t("pipelinePage.card.quickActionsAriaLabel", { name: deal.name })}
+              testId={testIds.pipeline.quickActions.trigger(deal.id)}
+              onActivate={() => {
+                preview.close();
+                onQuickActions(deal);
+              }}
+              className="border border-border bg-surface-overlay text-text-tertiary hover:bg-surface-elevated hover:text-text-primary"
             >
-              <X size={13} strokeWidth={2} aria-hidden />
+              <Zap size={14} strokeWidth={1.75} aria-hidden />
             </CardActionButton>
           ) : null}
         </div>
+      ) : null}
+      {preview.open && preview.anchor ? (
+        <DealCardPreview dealId={deal.id} anchor={preview.anchor} tooltipId={preview.tooltipId} />
       ) : null}
     </article>
   );
@@ -323,6 +372,7 @@ function MobileDealCard({
   onTogglePaid,
   onMove,
   onOpen,
+  onQuickActions,
   winning,
   losing,
   paymentPending,
@@ -336,14 +386,20 @@ function MobileDealCard({
   onTogglePaid?: (next: boolean) => void;
   onMove: (dealId: string, stageId: string) => void;
   onOpen?: (id: string) => void;
+  onQuickActions?: (deal: BoardDeal) => void;
   winning?: boolean;
   losing?: boolean;
   paymentPending?: boolean;
 }) {
   const { t } = useTranslation("deals");
   const valueShown = hasValue(deal.value);
+  const cardRef = useRef<HTMLElement | null>(null);
+  const preview = useDealCardPreview(cardRef);
   return (
     <article
+      ref={cardRef}
+      {...preview.longPressHandlers}
+      aria-describedby={preview.open ? preview.tooltipId : undefined}
       className={cn(
         "rounded-md border px-3 py-2.5 shadow-sm",
         deal.is_paid
@@ -351,17 +407,35 @@ function MobileDealCard({
           : "border-border bg-surface",
       )}
     >
-      {onOpen ? (
-        <button
-          type="button"
-          onClick={() => onOpen(deal.id)}
-          className="block w-full text-left text-sm font-medium text-text-primary hover:text-accent"
-        >
-          {deal.name}
-        </button>
-      ) : (
-        <p className="text-sm font-medium text-text-primary">{deal.name}</p>
-      )}
+      <div className="flex items-start justify-between gap-2">
+        {onOpen ? (
+          <button
+            type="button"
+            onClick={() => onOpen(deal.id)}
+            className="block min-w-0 flex-1 truncate text-left text-sm font-medium text-text-primary hover:text-accent"
+          >
+            {deal.name}
+          </button>
+        ) : (
+          <p className="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
+            {deal.name}
+          </p>
+        )}
+        {onQuickActions ? (
+          <button
+            type="button"
+            onClick={() => {
+              preview.close();
+              onQuickActions(deal);
+            }}
+            aria-label={t("pipelinePage.card.quickActionsAriaLabel", { name: deal.name })}
+            data-testid={testIds.pipeline.quickActions.trigger(deal.id)}
+            className="-mr-1 -mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-tertiary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary"
+          >
+            <Zap size={14} strokeWidth={1.75} aria-hidden />
+          </button>
+        ) : null}
+      </div>
       <p className="mt-1 truncate text-xs text-text-secondary">{deal.company_name}</p>
       {valueShown ? (
         <p className="mt-0.5 font-mono text-xs tabular-nums text-text-secondary">
@@ -421,6 +495,9 @@ function MobileDealCard({
           ))}
         </select>
       </label>
+      {preview.open && preview.anchor ? (
+        <DealCardPreview dealId={deal.id} anchor={preview.anchor} tooltipId={preview.tooltipId} />
+      ) : null}
     </article>
   );
 }
@@ -436,6 +513,7 @@ interface MobileBoardProps {
   onTogglePayment: (deal: BoardDeal, next: boolean) => void;
   onMoveDeal: (dealId: string, stageId: string) => void;
   onOpenDeal: (id: string) => void;
+  onQuickActions: (deal: BoardDeal) => void;
   winningDealId: string | null;
   losingDealId: string | null;
   payingDealId: string | null;
@@ -455,6 +533,7 @@ function MobileBoard({
   onTogglePayment,
   onMoveDeal,
   onOpenDeal,
+  onQuickActions,
   winningDealId,
   losingDealId,
   payingDealId,
@@ -520,6 +599,7 @@ function MobileBoard({
                     }
                     onMove={onMoveDeal}
                     onOpen={onOpenDeal}
+                    onQuickActions={onQuickActions}
                     winning={winningDealId === deal.id}
                     losing={losingDealId === deal.id}
                     paymentPending={payingDealId === deal.id}
@@ -544,6 +624,7 @@ interface StageColumnProps {
   onLoseDeal: (deal: BoardDeal) => void;
   onTogglePayment: (deal: BoardDeal, next: boolean) => void;
   onOpenDeal: (id: string) => void;
+  onQuickActions: (deal: BoardDeal) => void;
   winningDealId: string | null;
   losingDealId: string | null;
   payingDealId: string | null;
@@ -559,6 +640,7 @@ function StageColumn({
   onLoseDeal,
   onTogglePayment,
   onOpenDeal,
+  onQuickActions,
   winningDealId,
   losingDealId,
   payingDealId,
@@ -632,6 +714,7 @@ function StageColumn({
               locale={locale}
               dragging={draggingId === deal.id}
               onOpen={onOpenDeal}
+              onQuickActions={onQuickActions}
               onWin={stage.stage_type === "won" ? undefined : (anchor) => onWinDeal(deal, anchor)}
               onLose={stage.stage_type === "won" ? undefined : () => onLoseDeal(deal)}
               onTogglePaid={
@@ -680,6 +763,8 @@ export function PipelinePage() {
   const [losingDealTarget, setLosingDealTarget] = useState<BoardDeal | null>(null);
   const [payingDealId, setPayingDealId] = useState<string | null>(null);
   const [deletingDealTarget, setDeletingDealTarget] = useState<BoardDeal | null>(null);
+  // The deal whose quick actions (e-mail / event / note) are open, if any.
+  const [quickActionsDeal, setQuickActionsDeal] = useState<BoardDeal | null>(null);
 
   // Mouse: drag activates on a small movement (distance:6) so power users
   // get instant feedback. Touch: drag requires a 250ms long-press, so a
@@ -740,6 +825,10 @@ export function PipelinePage() {
 
   const handleLoseDeal = useCallback((deal: BoardDeal) => {
     setLosingDealTarget(deal);
+  }, []);
+
+  const handleQuickActions = useCallback((deal: BoardDeal) => {
+    setQuickActionsDeal(deal);
   }, []);
 
   const handleTogglePayment = useCallback(
@@ -1051,6 +1140,7 @@ export function PipelinePage() {
                   onLoseDeal={handleLoseDeal}
                   onTogglePayment={handleTogglePayment}
                   onOpenDeal={openDeal}
+                  onQuickActions={handleQuickActions}
                   winningDealId={winningDealId}
                   losingDealId={losingDealTarget?.id ?? null}
                   payingDealId={payingDealId}
@@ -1075,6 +1165,7 @@ export function PipelinePage() {
             onTogglePayment={handleTogglePayment}
             onMoveDeal={handleMoveDeal}
             onOpenDeal={openDeal}
+            onQuickActions={handleQuickActions}
             winningDealId={winningDealId}
             losingDealId={losingDealTarget?.id ?? null}
             payingDealId={payingDealId}
@@ -1127,6 +1218,12 @@ export function PipelinePage() {
         onCancel={() => setDeletingDealTarget(null)}
         onConfirm={handleConfirmDelete}
         moneyFmt={moneyFmt}
+      />
+
+      <DealQuickActionsModal
+        deal={quickActionsDeal}
+        open={quickActionsDeal !== null}
+        onClose={() => setQuickActionsDeal(null)}
       />
 
       {dialogDealId ? <DealDetailDialog dealId={dialogDealId} onClose={closeDeal} /> : null}

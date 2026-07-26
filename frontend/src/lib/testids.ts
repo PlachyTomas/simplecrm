@@ -97,6 +97,20 @@ export const testIds = {
   pipeline: {
     stage: (stageId: string) => `pipeline-stage-${stageId}`,
     deal: (dealId: string) => `pipeline-deal-${dealId}`,
+    quickActions: {
+      trigger: (dealId: string) => `pipeline-quick-actions-${dealId}`,
+      modal: "pipeline-quick-actions-modal",
+      email: "pipeline-quick-actions-email",
+      event: "pipeline-quick-actions-event",
+      note: "pipeline-quick-actions-note",
+      noteInput: "pipeline-quick-actions-note-input",
+      noteSave: "pipeline-quick-actions-note-save",
+      noteCancel: "pipeline-quick-actions-note-cancel",
+      close: "pipeline-quick-actions-close",
+    },
+    preview: {
+      popover: "pipeline-deal-preview",
+    },
   },
   emails: {
     compose: {

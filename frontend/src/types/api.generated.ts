@@ -981,6 +981,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/deals/{deal_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Deal Note
+         * @description Log a free-text note on a deal.
+         *
+         *     Notes live in the activity log (`ActivityType.note`) rather than a table of
+         *     their own, so `GET /activities?entity_type=deal&entity_id=…` and the
+         *     company timeline pick them up with no extra join. Writing is scoped like
+         *     every other deal write — you can only note a deal you may edit.
+         */
+        post: operations["create_deal_note_api_v1_deals__deal_id__notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/emails": {
         parameters: {
             query?: never;
@@ -4533,6 +4558,18 @@ export interface components {
         DealMarkLost: {
             /** Lost Reason */
             lost_reason: string;
+        };
+        /**
+         * DealNoteCreate
+         * @description Free-text note logged against a deal.
+         *
+         *     Notes are not their own table — they are `ActivityType.note` rows in the
+         *     activity log, so they show up in the deal/company timelines next to stage
+         *     changes and sent emails without a second read model.
+         */
+        DealNoteCreate: {
+            /** Body */
+            body: string;
         };
         /** DealOut */
         DealOut: {
@@ -8692,6 +8729,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_deal_note_api_v1_deals__deal_id__notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealNoteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityOut"];
                 };
             };
             /** @description Validation Error */

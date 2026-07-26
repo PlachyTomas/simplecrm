@@ -112,6 +112,11 @@ export function activityDetail(
   const p = (a.payload ?? {}) as Record<string, unknown>;
   const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v : null);
   switch (a.activity_type) {
+    case "note": {
+      // Free-text note written from the pipeline card / deal detail.
+      const note = str(p.note);
+      return note ? { kind: "text", value: note } : null;
+    }
     case "stage_change": {
       // Names only — never the raw stage UUIDs the payload also carries (#6).
       const from = str(p.from_stage_name);

@@ -38,7 +38,9 @@
       "winTooltip": "Označit jako vyhráno",
       "winAriaLabel": "Označit obchod {{name}} jako vyhraný",
       "loseTooltip": "Označit jako neúspěch",
-      "loseAriaLabel": "Označit obchod {{name}} jako neúspěch"
+      "loseAriaLabel": "Označit obchod {{name}} jako neúspěch",
+      "quickActionsTooltip": "Rychlé akce",
+      "quickActionsAriaLabel": "Rychlé akce pro obchod {{name}}"
     },
     "mobileCard": {
       "won": "Vyhráno",
@@ -272,5 +274,39 @@
       "createError": "Událost se nepodařilo vytvořit.",
       "updateError": "Událost se nepodařilo uložit."
     }
+  },
+  "quickActions": {
+    "title": "Rychlé akce — {{name}}",
+    "subtitle": "Vyberte akci pro tento obchod.",
+    "close": "Zavřít rychlé akce",
+    "email": {
+      "label": "Poslat e-mail",
+      "description": "Napište zprávu kontaktům firmy.",
+      "smtpHint": "Nejprve nastavte a ověřte SMTP v Nastavení → Integrace."
+    },
+    "event": {
+      "label": "Naplánovat událost",
+      "description": "Schůzka nebo hovor s předvyplněným obchodem."
+    },
+    "note": {
+      "label": "Přidat poznámku",
+      "description": "Zapište poznámku bez opuštění pipeline.",
+      "fieldLabel": "Poznámka",
+      "placeholder": "Co je k obchodu potřeba si zapamatovat?",
+      "cancel": "Zrušit",
+      "submit": "Uložit poznámku",
+      "saving": "Ukládám…",
+      "toastSaved": "Poznámka uložena.",
+      "toastError": "Poznámku se nepodařilo uložit."
+    }
+  },
+  "cardPreview": {
+    "loading": "Načítání…",
+    "empty": "Žádné události ani poznámky.",
+    "eventsTitle": "Události",
+    "notesTitle": "Poznámky",
+    "more_one": "…a další {{count}}",
+    "more_few": "…a další {{count}}",
+    "more_other": "…a dalších {{count}}"
   }
 }

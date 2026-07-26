@@ -36,7 +36,9 @@
       "winTooltip": "Mark as won",
       "winAriaLabel": "Mark deal {{name}} as won",
       "loseTooltip": "Mark as lost",
-      "loseAriaLabel": "Mark deal {{name}} as lost"
+      "loseAriaLabel": "Mark deal {{name}} as lost",
+      "quickActionsTooltip": "Quick actions",
+      "quickActionsAriaLabel": "Quick actions for deal {{name}}"
     },
     "mobileCard": {
       "won": "Won",
@@ -270,5 +272,38 @@
       "createError": "Failed to create the event.",
       "updateError": "Failed to save the event."
     }
+  },
+  "quickActions": {
+    "title": "Quick actions — {{name}}",
+    "subtitle": "Pick an action for this deal.",
+    "close": "Close quick actions",
+    "email": {
+      "label": "Send an email",
+      "description": "Write a message to the company's contacts.",
+      "smtpHint": "Set up and verify SMTP in Settings → Integrations first."
+    },
+    "event": {
+      "label": "Schedule an event",
+      "description": "A meeting or call with the deal preselected."
+    },
+    "note": {
+      "label": "Add a note",
+      "description": "Jot a note without leaving the pipeline.",
+      "fieldLabel": "Note",
+      "placeholder": "What should you remember about this deal?",
+      "cancel": "Cancel",
+      "submit": "Save note",
+      "saving": "Saving…",
+      "toastSaved": "Note saved.",
+      "toastError": "Failed to save the note."
+    }
+  },
+  "cardPreview": {
+    "loading": "Loading…",
+    "empty": "No events or notes.",
+    "eventsTitle": "Events",
+    "notesTitle": "Notes",
+    "more_one": "…and {{count}} more",
+    "more_other": "…and {{count}} more"
   }
 }

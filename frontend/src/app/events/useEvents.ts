@@ -15,13 +15,21 @@ export interface UseEventsOptions {
   to?: string;
   dealId?: string;
   limit?: number;
+  /** Defer the request (lazy consumers such as the card hover preview). */
+  enabled?: boolean;
 }
 
-export function useEvents({ from, to, dealId, limit = 200 }: UseEventsOptions = {}) {
+export function useEvents({
+  from,
+  to,
+  dealId,
+  limit = 200,
+  enabled = true,
+}: UseEventsOptions = {}) {
   const { accessToken } = useAuth();
   return useQuery<EventsPage>({
     queryKey: ["events", { from, to, dealId, limit }],
-    enabled: !!accessToken,
+    enabled: enabled && !!accessToken,
     placeholderData: keepPreviousData,
     queryFn: () => {
       const params = new URLSearchParams();

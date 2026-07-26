@@ -879,3 +879,105 @@ async def test_payment_toggle_blocked_for_foreign_deal(
         f"/api/v1/deals/{deal.id}/payment", headers=_auth(sales), json={"paid": True}
     )
     assert resp.status_code == 404
+
+
+# notes -------------------------------------------------------------------
+
+
+async def test_create_deal_note_writes_activity(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    from sqlalchemy import select as sql_select
+
+    from app.db.models import Activity, ActivityType
+
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=admin.id,
+        name="Noted",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    resp = await client.post(
+        f"/api/v1/deals/{deal.id}/notes",
+        headers=_auth(admin),
+        json={"body": "Zavolat ve čtvrtek."},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["activity_type"] == "note"
+    assert body["payload"]["note"] == "Zavolat ve čtvrtek."
+    assert body["user_name"] == admin.name
+
+    rows = (
+        (
+            await db_session.execute(
+                sql_select(Activity).where(
+                    Activity.entity_id == deal.id,
+                    Activity.activity_type == ActivityType.note,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 1
+    # The company fan-up is what makes the note show on the company timeline.
+    assert rows[0].company_id == company.id
+
+
+async def test_create_deal_note_rejects_empty_body(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=admin.id,
+        name="Noted",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    resp = await client.post(
+        f"/api/v1/deals/{deal.id}/notes", headers=_auth(admin), json={"body": ""}
+    )
+    assert resp.status_code == 422
+
+
+async def test_create_deal_note_blocked_for_foreign_deal(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    sales = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    other = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    company = await _seed_company(db_session, org)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=other.id,
+        name="Theirs",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    resp = await client.post(
+        f"/api/v1/deals/{deal.id}/notes", headers=_auth(sales), json={"body": "Ahoj"}
+    )
+    assert resp.status_code == 404

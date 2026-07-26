@@ -25,10 +25,12 @@ from app.db.models import (
     UserRole,
 )
 from app.db.models.enums import StageType
+from app.schemas.activity import ActivityOut
 from app.schemas.deal import (
     DealCreate,
     DealListItemOut,
     DealMarkLost,
+    DealNoteCreate,
     DealOut,
     DealPaymentUpdate,
     DealStageMove,
@@ -532,6 +534,48 @@ async def update_deal_payment(
     await session.commit()
     await session.refresh(deal)
     return deal
+
+
+@router.post(
+    "/{deal_id}/notes",
+    response_model=ActivityOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_deal_note(
+    deal_id: uuid.UUID,
+    payload: DealNoteCreate,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ActivityOut:
+    """Log a free-text note on a deal.
+
+    Notes live in the activity log (`ActivityType.note`) rather than a table of
+    their own, so `GET /activities?entity_type=deal&entity_id=…` and the
+    company timeline pick them up with no extra join. Writing is scoped like
+    every other deal write — you can only note a deal you may edit.
+    """
+    deal = await _get_scoped(session, user, deal_id)
+    if not await can_write_row(session, user, deal.owner_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot add notes to deals outside your visibility scope",
+        )
+
+    activity = record_activity(
+        session,
+        organization_id=deal.organization_id,
+        entity_type=ActivityEntityType.deal,
+        entity_id=deal.id,
+        company_id=deal.company_id,
+        user_id=user.id,
+        activity_type=ActivityType.note,
+        payload={"deal_name": deal.name, "note": payload.body},
+    )
+    await session.commit()
+    await session.refresh(activity)
+    out = ActivityOut.model_validate(activity)
+    out.user_name = user.name
+    return out
 
 
 @router.delete("/{deal_id}", status_code=status.HTTP_204_NO_CONTENT)

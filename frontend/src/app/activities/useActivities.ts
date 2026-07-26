@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/auth/useAuth";
 import { apiFetch } from "@/lib/api";
@@ -17,6 +17,8 @@ interface UseActivitiesOptions {
    */
   companyId?: string;
   limit?: number;
+  /** Defer the request (lazy consumers such as the card hover preview). */
+  enabled?: boolean;
 }
 
 export function useActivities({
@@ -24,11 +26,12 @@ export function useActivities({
   entityId,
   companyId,
   limit = 50,
+  enabled = true,
 }: UseActivitiesOptions = {}) {
   const { accessToken } = useAuth();
   return useQuery<ActivitiesPage>({
     queryKey: ["activities", { entityType, entityId, companyId, limit }],
-    enabled: !!accessToken,
+    enabled: enabled && !!accessToken,
     queryFn: () => {
       const params = new URLSearchParams();
       params.set("limit", String(limit));
@@ -38,6 +41,28 @@ export function useActivities({
       return apiFetch<ActivitiesPage>(`/api/v1/activities?${params}`, {
         token: accessToken,
       });
+    },
+  });
+}
+
+/**
+ * Log a free-text note on a deal. Notes are activity rows
+ * (`activity_type: "note"`), so a successful write invalidates the whole
+ * `["activities"]` prefix — the deal card preview, the deal timeline and the
+ * company timeline all read from it.
+ */
+export function useCreateDealNote(dealId: string | undefined) {
+  const { accessToken } = useAuth();
+  const qc = useQueryClient();
+  return useMutation<ActivityOut, Error, string>({
+    mutationFn: (body) =>
+      apiFetch<ActivityOut>(`/api/v1/deals/${dealId}/notes`, {
+        method: "POST",
+        token: accessToken,
+        body: { body },
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["activities"] });
     },
   });
 }

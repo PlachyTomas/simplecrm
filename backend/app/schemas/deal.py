@@ -48,6 +48,17 @@ class DealPaymentUpdate(BaseModel):
     paid: bool
 
 
+class DealNoteCreate(BaseModel):
+    """Free-text note logged against a deal.
+
+    Notes are not their own table — they are `ActivityType.note` rows in the
+    activity log, so they show up in the deal/company timelines next to stage
+    changes and sent emails without a second read model.
+    """
+
+    body: str = Field(min_length=1, max_length=2000)
+
+
 class DealOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
