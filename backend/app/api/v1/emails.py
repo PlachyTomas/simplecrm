@@ -169,7 +169,16 @@ async def list_emails(
     items = (
         (
             await session.execute(
-                base.order_by(SentEmail.created_at.desc())
+                # Ordered by the message's own timestamp, falling back to when
+                # the row was written. Before Smart BCC the two were minutes
+                # apart at worst; a captured mail can be days older than its
+                # capture, and the history renders `sent_at`, so sorting on
+                # `created_at` would show a timeline out of its own order.
+                # `created_at` stays as the tiebreaker to keep paging stable.
+                base.order_by(
+                    func.coalesce(SentEmail.sent_at, SentEmail.created_at).desc(),
+                    SentEmail.created_at.desc(),
+                )
                 .limit(pagination.limit)
                 .offset(pagination.offset)
             )

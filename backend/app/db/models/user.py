@@ -13,6 +13,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    Text,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -32,6 +33,7 @@ class User(Base):
     __table_args__ = (
         Index("ix_users_organization_id", "organization_id"),
         Index("ix_users_team_id", "team_id"),
+        Index("ix_users_inbound_token", "inbound_token", unique=True),
         CheckConstraint(
             "max_owned_companies IS NULL OR max_owned_companies >= 0",
             name="ck_users_max_owned_companies_nonneg",
@@ -139,6 +141,14 @@ class User(Base):
     preferences: Mapped[dict[str, Any]] = mapped_column(
         JSONB, default=dict, server_default="{}", nullable=False
     )
+
+    # Smart BCC (feature F3). The random half of the user's magic address
+    # `{prefix}+{inbound_token}@{inbound_email_domain}`; anyone who BCCs it
+    # writes into THIS user's timeline, so it is a credential, not an id.
+    # NULL until first read of `/me/inbound-address` (minted lazily) and
+    # after a rotate that hasn't been re-read; the unique index tolerates
+    # many NULLs by design, same as `sent_emails.tracking_token`.
+    inbound_token: Mapped[str | None] = mapped_column(Text)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

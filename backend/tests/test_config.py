@@ -22,12 +22,13 @@ def test_prod_rejects_empty_secret() -> None:
         Settings(app_env="production", jwt_secret="")
 
 
-def test_prod_accepts_strong_secret() -> None:
-    s = Settings(app_env="production", jwt_secret="a-strong-random-production-secret-1234567890")
-    assert s.app_env == "production"
-
-
 _STRONG = "a-strong-random-production-secret-1234567890"
+_INBOUND = "an-inbound-shared-secret-1234567890"
+
+
+def test_prod_accepts_strong_secret() -> None:
+    s = Settings(app_env="production", jwt_secret=_STRONG, inbound_shared_secret=_INBOUND)
+    assert s.app_env == "production"
 
 
 def test_prod_rejects_empty_public_api_base_url() -> None:
@@ -43,6 +44,20 @@ def test_prod_rejects_relative_public_api_base_url() -> None:
 
 def test_prod_accepts_absolute_public_api_base_url() -> None:
     s = Settings(
-        app_env="production", jwt_secret=_STRONG, public_api_base_url="https://api.simplecrm.cz"
+        app_env="production",
+        jwt_secret=_STRONG,
+        inbound_shared_secret=_INBOUND,
+        public_api_base_url="https://api.simplecrm.cz",
     )
     assert s.public_api_base_url == "https://api.simplecrm.cz"
+
+
+def test_dev_allows_empty_inbound_shared_secret() -> None:
+    """No secret in dev is fine — the endpoint then rejects every request."""
+    assert Settings(app_env="dev").inbound_shared_secret == ""
+
+
+def test_prod_rejects_empty_inbound_shared_secret() -> None:
+    """It is the ONLY credential on a public write endpoint (feature F3)."""
+    with pytest.raises(ValueError, match="INBOUND_SHARED_SECRET"):
+        Settings(app_env="production", jwt_secret=_STRONG, inbound_shared_secret="   ")

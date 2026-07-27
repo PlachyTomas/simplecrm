@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { type SentEmailOut, useCompanyEmails, useDealEmails } from "@/app/emails/useEmails";
 import { formatDate } from "@/lib/format";
+import { testIds } from "@/lib/testids";
 
 interface EmailHistorySectionProps {
   dealId?: string;
@@ -12,8 +13,25 @@ interface EmailHistorySectionProps {
   onReply: (email: SentEmailOut) => void;
 }
 
+/** Smart-BCC capture — the row was received, not sent from the CRM. */
+function isInboundEmail(email: SentEmailOut): boolean {
+  return email.direction === "inbound";
+}
+
 function StatusBadge({ email }: { email: SentEmailOut }) {
   const { t } = useTranslation("emails");
+  if (isInboundEmail(email)) {
+    // Inbound rows have no delivery outcome — `status` is always `sent`
+    // ("recorded") server-side, so the badge states the direction instead.
+    return (
+      <span
+        data-testid={testIds.emails.history.inboundBadge(email.id)}
+        className="inline-flex items-center rounded-full bg-info-subtle px-2 py-0.5 text-xs font-medium text-info"
+      >
+        {t("history.statusReceived")}
+      </span>
+    );
+  }
   if (email.status === "sent") {
     return (
       <span className="inline-flex items-center rounded-full bg-success-subtle px-2 py-0.5 text-xs font-medium text-success">
@@ -36,9 +54,11 @@ const CHIP = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-med
 /**
  * Opened/clicked pills. An unopened mail shows nothing on purpose — most sends
  * are never opened, and a permanent "unopened" chip would be pure noise.
+ * Inbound rows carry no pixel and no rewritten links, so they never get chips.
  */
 function EngagementChips({ email, locale }: { email: SentEmailOut; locale: string }) {
   const { t } = useTranslation("emails");
+  if (isInboundEmail(email)) return null;
   if (!email.opened_at && !email.clicked_at) return null;
   const at = (iso: string) => formatDate(iso, locale, { dateStyle: "medium", timeStyle: "short" });
   return (
@@ -95,7 +115,11 @@ export function EmailHistorySection({
       ) : (
         <ul className="mt-3 divide-y divide-border-subtle rounded-md border border-border">
           {items.map((email) => (
-            <li key={email.id} className="flex items-start justify-between gap-3 px-3 py-2.5">
+            <li
+              key={email.id}
+              data-testid={testIds.emails.history.row(email.id)}
+              className="flex items-start justify-between gap-3 px-3 py-2.5"
+            >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="truncate text-sm font-medium text-text-primary">{email.subject}</p>
@@ -103,7 +127,17 @@ export function EmailHistorySection({
                   <EngagementChips email={email} locale={locale} />
                 </div>
                 <p className="mt-0.5 truncate text-xs text-text-tertiary">
-                  {email.to_emails.join(", ")} · {dt.format(new Date(email.created_at))}
+                  {/* Inbound rows show the correspondent (From); on outbound
+                      rows the addresses are our recipients (To). */}
+                  {isInboundEmail(email)
+                    ? t("history.fromPrefix", { address: email.from_email ?? t("history.unknown") })
+                    : t("history.toPrefix", { address: email.to_emails.join(", ") })}{" "}
+                  {/* When the message itself carries a time, show that: an
+                      inbound row's `created_at` is when we captured it, which
+                      can be days after the mail was written (a user BCCing an
+                      old thread). Outbound rows set both within milliseconds,
+                      so nothing changes for them. */}
+                  · {dt.format(new Date(email.sent_at ?? email.created_at))}
                 </p>
               </div>
               <button

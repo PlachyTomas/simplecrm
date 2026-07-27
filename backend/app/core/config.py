@@ -106,6 +106,23 @@ class Settings(BaseSettings):
     # improvement suggestions to.
     feedback_recipient_email: str = "podpora@simplecrm.cz"
 
+    # Smart BCC — inbound email logging (feature F3). The user BCCs
+    # `{prefix}+{token}@{domain}` from their normal mail client; an MTA-side
+    # worker (Cloudflare Email Routing) POSTs the raw MIME to
+    # `/api/v1/inbound-email`, which parses it and files it on the matching
+    # company/contact/deal timeline. Ops walkthrough + worker script:
+    # docs/inbound-email-setup.md.
+    inbound_email_domain: str = "in.simplecrm.cz"
+    inbound_email_local_prefix: str = "bcc"
+    # Shared secret the forwarding worker sends as `X-Inbound-Secret`. The
+    # endpoint takes no session (the caller is an MTA, not a browser), so this
+    # header is its ONLY credential — see the validator below.
+    inbound_shared_secret: str = ""
+    # Hard cap on one forwarded message. Checked against Content-Length before
+    # the body is read, then again after, so an oversized mail can't be used to
+    # exhaust memory.
+    inbound_max_bytes: int = 10 * 1024 * 1024
+
     # Tax-invoice archival storage (commit #4 of INVOICES_TASK.md).
     # When `s3_endpoint_url` is set, the storage layer writes invoice
     # PDFs/ISDOCs to a Hetzner Object Storage bucket via the S3 API.
@@ -142,6 +159,21 @@ class Settings(BaseSettings):
             raise ValueError(
                 "PUBLIC_API_BASE_URL must be an absolute http(s) URL when APP_ENV != 'dev' "
                 "— it is embedded in outbound email as the open pixel and click links."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _require_inbound_shared_secret(self) -> "Settings":
+        """`POST /api/v1/inbound-email` is public by necessity — the caller is an
+        MTA-side worker with no session — so `X-Inbound-Secret` is the only thing
+        standing between the internet and "write arbitrary email into any org's
+        timeline". An unset compose var would leave it empty, and `compare_digest`
+        against "" accepts a missing header's stand-in. Refuse to boot instead."""
+        if self.app_env != "dev" and not self.inbound_shared_secret.strip():
+            raise ValueError(
+                "INBOUND_SHARED_SECRET must be set to a strong random value when "
+                "APP_ENV != 'dev' — it is the only credential guarding the public "
+                "inbound-email endpoint."
             )
         return self
 

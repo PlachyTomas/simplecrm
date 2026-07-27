@@ -133,9 +133,18 @@ export const testIds = {
     bulkWizard: {
       templateSelect: "bulk-email-template-select",
     },
+    history: {
+      row: (id: string) => `email-history-row-${id}`,
+      inboundBadge: (id: string) => `email-history-inbound-badge-${id}`,
+    },
   },
   settings: {
     smtpSignature: "settings-smtp-signature",
+    inboundAddress: {
+      value: "settings-inbound-address-value",
+      copy: "settings-inbound-address-copy",
+      rotate: "settings-inbound-address-rotate",
+    },
     emailTrackingToggle: "settings-email-tracking-toggle",
     emailTemplates: {
       add: "settings-email-templates-add",

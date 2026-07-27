@@ -21,6 +21,7 @@ export const ACTIVITY_LABEL_KEY: Record<ActivityType, CommonKey> = {
   ownership_reassigned: "activities.types.ownership_reassigned",
   subscription_change: "activities.types.subscription_change",
   email_sent: "activities.types.email_sent",
+  email_received: "activities.types.email_received",
   deal_created: "activities.types.deal_created",
   deal_updated: "activities.types.deal_updated",
   company_updated: "activities.types.company_updated",
@@ -133,7 +134,8 @@ export function activityDetail(
       const title = str(p.title);
       return title ? { kind: "text", value: title } : null;
     }
-    case "email_sent": {
+    case "email_sent":
+    case "email_received": {
       const subject = str(p.subject);
       return subject ? { kind: "text", value: subject } : null;
     }

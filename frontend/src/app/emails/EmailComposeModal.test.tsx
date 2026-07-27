@@ -25,6 +25,8 @@ const PARENT: SentEmailOut = {
   sender_user_id: null,
   deal_id: "d1",
   company_id: "c1",
+  direction: "outbound",
+  from_email: null,
   to_emails: ["jan@acme.cz"],
   cc_emails: ["sef@acme.cz"],
   bcc_emails: [],
@@ -52,6 +54,22 @@ describe("EmailComposeModal", () => {
     // Prefilled To/CC chips.
     expect(screen.getByText("jan@acme.cz")).toBeInTheDocument();
     expect(screen.getByText("sef@acme.cz")).toBeInTheDocument();
+  });
+
+  it("replies to an inbound row back to the sender, not to the captured recipients", () => {
+    const inbound: SentEmailOut = {
+      ...PARENT,
+      id: "e2",
+      direction: "inbound",
+      from_email: "petr@zakaznik.cz",
+      // What the captured message was addressed to — our own mailbox.
+      to_emails: ["jan@vasefirma.cz"],
+      cc_emails: ["asistentka@vasefirma.cz"],
+    };
+    wrap(<EmailComposeModal open onClose={vi.fn()} dealId="d1" replyTo={inbound} />);
+    expect(screen.getByText("petr@zakaznik.cz")).toBeInTheDocument();
+    expect(screen.queryByText("jan@vasefirma.cz")).not.toBeInTheDocument();
+    expect(screen.queryByText("asistentka@vasefirma.cz")).not.toBeInTheDocument();
   });
 
   it("disables Odeslat until there is a recipient and subject", () => {

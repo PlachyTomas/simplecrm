@@ -2506,6 +2506,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inbound-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Capture a BCC'd email (public, shared-secret auth) */
+        post: operations["receive_inbound_email_api_v1_inbound_email_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/inbound-address": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Inbound Address */
+        get: operations["get_inbound_address_api_v1_me_inbound_address_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/inbound-address/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate Inbound Address
+         * @description Issue a fresh token; anything BCC'd to the old address stops being filed.
+         */
+        post: operations["rotate_inbound_address_api_v1_me_inbound_address_rotate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/organizations": {
         parameters: {
             query?: never;
@@ -3080,7 +3134,7 @@ export interface components {
          * ActivityType
          * @enum {string}
          */
-        ActivityType: "note" | "stage_change" | "owner_change" | "deal_won" | "deal_lost" | "company_freed" | "ownership_reassigned" | "subscription_change" | "email_sent" | "deal_created" | "deal_updated" | "company_updated" | "event_created";
+        ActivityType: "note" | "stage_change" | "owner_change" | "deal_won" | "deal_lost" | "company_freed" | "ownership_reassigned" | "subscription_change" | "email_sent" | "email_received" | "deal_created" | "deal_updated" | "company_updated" | "event_created";
         /** AdminAccessLogList */
         AdminAccessLogList: {
             /** Items */
@@ -4892,6 +4946,17 @@ export interface components {
             currency: string;
         };
         /**
+         * EmailDirection
+         * @description Which way a `sent_emails` row travelled.
+         *
+         *     `outbound` — composed and sent from the CRM (the original meaning of the
+         *     table; every pre-F3 row backfills to this).
+         *     `inbound`  — captured via Smart BCC: the user BCC'd their magic address
+         *     from their own mail client and the MTA worker POSTed us the raw MIME.
+         * @enum {string}
+         */
+        EmailDirection: "outbound" | "inbound";
+        /**
          * EmailRecipientStatus
          * @enum {string}
          */
@@ -5149,6 +5214,50 @@ export interface components {
              */
             update_diffs_truncated: boolean;
         };
+        /**
+         * InboundAddressOut
+         * @description The caller's personal Smart-BCC address.
+         */
+        InboundAddressOut: {
+            /** Address */
+            address: string;
+            /** Local Part */
+            local_part: string;
+        };
+        /**
+         * InboundEmailResult
+         * @description What we did, echoed back so the worker can log it.
+         */
+        InboundEmailResult: {
+            outcome: components["schemas"]["InboundOutcome"];
+            /** Email Id */
+            email_id?: string | null;
+            /** Company Id */
+            company_id?: string | null;
+            /** Deal Id */
+            deal_id?: string | null;
+            /** Contact Id */
+            contact_id?: string | null;
+        };
+        /**
+         * InboundOutcome
+         * @description What the inbound endpoint did with one forwarded message.
+         *
+         *     Every value is a **2xx** answer: the caller is an MTA-side worker, and a
+         *     4xx/5xx there means the mail server retries (or bounces to the user) over
+         *     something we already decided not to store. Only auth and the size cap are
+         *     hard failures.
+         *
+         *     `no_token`   — no magic address in any recipient header; not ours to file.
+         *     `no_org`     — the token resolved, but that user has no organization yet,
+         *                    so there is no timeline to write to.
+         *     `duplicate`  — this `Message-ID` is already recorded for the org.
+         *     `matched`    — stored and linked to at least a company.
+         *     `unmatched`  — stored, but the correspondent matched no contact/company;
+         *                    kept anyway so the user is never silently ignored.
+         * @enum {string}
+         */
+        InboundOutcome: "no_token" | "no_org" | "duplicate" | "matched" | "unmatched";
         /**
          * InitialPaymentInitIn
          * @description Body for `POST /payments/initial-payment-init`.
@@ -6280,6 +6389,10 @@ export interface components {
             deal_id?: string | null;
             /** Company Id */
             company_id?: string | null;
+            /** @default outbound */
+            direction: components["schemas"]["EmailDirection"];
+            /** From Email */
+            from_email?: string | null;
             /** To Emails */
             to_emails: string[];
             /** Cc Emails */
@@ -6346,6 +6459,10 @@ export interface components {
             deal_id?: string | null;
             /** Company Id */
             company_id?: string | null;
+            /** @default outbound */
+            direction: components["schemas"]["EmailDirection"];
+            /** From Email */
+            from_email?: string | null;
             /** To Emails */
             to_emails: string[];
             /** Cc Emails */
@@ -6395,6 +6512,10 @@ export interface components {
         /**
          * SentEmailStatus
          * @description Outcome of a single user-composed email send (send-only mail client).
+         *
+         *     Inbound (Smart-BCC) rows reuse `sent` to mean "recorded successfully" —
+         *     there is no delivery attempt to fail. `EmailDirection` is what separates
+         *     the two kinds of row.
          * @enum {string}
          */
         SentEmailStatus: "sent" | "failed";
@@ -11770,6 +11891,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    receive_inbound_email_api_v1_inbound_email_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-inbound-secret"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboundEmailResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_inbound_address_api_v1_me_inbound_address_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboundAddressOut"];
+                };
+            };
+        };
+    };
+    rotate_inbound_address_api_v1_me_inbound_address_rotate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboundAddressOut"];
                 };
             };
         };

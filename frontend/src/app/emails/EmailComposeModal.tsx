@@ -407,6 +407,15 @@ export function EmailComposeModal({
   const initial = useMemo(() => {
     if (replyTo) {
       const subj = replyTo.subject.startsWith("Re:") ? replyTo.subject : `Re: ${replyTo.subject}`;
+      // A reply to an inbound (Smart-BCC) row goes back to the correspondent —
+      // its `to_emails` are the *original* recipients, i.e. usually us.
+      if (replyTo.direction === "inbound") {
+        return {
+          to: replyTo.from_email ? [replyTo.from_email] : [],
+          cc: [] as string[],
+          subject: subj,
+        };
+      }
       return { to: replyTo.to_emails, cc: replyTo.cc_emails, subject: subj };
     }
     return { to: defaultTo ? [defaultTo] : [], cc: [] as string[], subject: "" };

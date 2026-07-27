@@ -154,6 +154,9 @@ Production env checklist (matches `docs/comgate-setup.md` §7):
 - [ ] `SMTP_HOST` + `SMTP_USERNAME` + `SMTP_PASSWORD` set per the Zoho
       block above
 - [ ] DNS for `simplecrm.cz` includes MX/SPF/DKIM/DMARC for Zoho EU
+- [ ] `INBOUND_SHARED_SECRET` set — **the app refuses to boot without it
+      outside dev** (it is the only credential on the public Smart-BCC
+      endpoint). Full walkthrough: `docs/inbound-email-setup.md`
 - [ ] BillingSettings row has issuer details populated (IČO, IBAN,
       address) — without these the auto-issuance skips with a warning
 - [ ] Run an end-to-end smoke test with sandbox creds first, then a

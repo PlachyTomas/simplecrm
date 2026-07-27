@@ -36,11 +36,15 @@
     "trackingOffByOrg": "Open and click tracking is switched off for your organization."
   },
   "history": {
-    "title": "Sent emails",
+    "title": "Email history",
     "loading": "Loading…",
-    "empty": "No emails sent yet.",
+    "empty": "No emails yet.",
     "statusSent": "Sent",
+    "statusReceived": "Received",
     "statusError": "Error",
+    "toPrefix": "To: {{address}}",
+    "fromPrefix": "From: {{address}}",
+    "unknown": "unknown sender",
     "reply": "Reply",
     "opened": "Opened",
     "openedWithCount": "Opened {{n}}×",

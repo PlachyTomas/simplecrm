@@ -312,6 +312,22 @@
     "testError": "The test failed, please try again.",
     "signatureHint": "The signature is appended to outgoing emails after the “-- ” delimiter that mail clients can collapse. You can use merge fields in it, e.g. {vlastnik}."
   },
+  "inboundAddress": {
+    "title": "Log emails via BCC",
+    "intro": "Add this address to the blind copy (BCC) of emails you write from your normal mailbox. We file the message on the company, contact and deal it belongs to, so it shows up in the email history without you retyping anything into the CRM. Forwarding a received message the same way works too.",
+    "loading": "Loading…",
+    "loadError": "Could not load the address, please try again.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyPrompt": "Copy the address:",
+    "unmatchedHint": "If the other party's email address matches no contact or company, we still store the message but it appears on no company page. Add the address to a contact and the next messages will file themselves.",
+    "rotate": "Generate a new address",
+    "rotating": "Generating…",
+    "rotateHint": "The address is a password — anyone who knows it can write into your history.",
+    "rotateConfirm": "The old address stops working immediately and emails sent to it will no longer be stored. Generate a new one?",
+    "rotateSuccess": "New address generated. Remember to update it in your mail client.",
+    "rotateError": "Could not generate a new address, please try again."
+  },
   "invoiceDetails": {
     "title": "Invoice details",
     "subtitle": "This information appears on your tax documents. Enter your company ID (IČO) and we'll fill in the rest from ARES — every field can then be edited.",

@@ -312,6 +312,22 @@
     "testError": "Test se nezdařil, zkuste to prosím znovu.",
     "signatureHint": "Podpis se připojí na konec odchozích e-mailů za oddělovač „-- “, který poštovní klienti umí sbalit. Můžete v něm použít slučovací pole, např. {vlastnik}."
   },
+  "inboundAddress": {
+    "title": "Ukládání e-mailů přes skrytou kopii",
+    "intro": "Přidejte tuto adresu do skryté kopie (BCC) e-mailů, které píšete ze své běžné pošty. Zprávu uložíme k firmě, kontaktu i obchodu, kterých se týká, takže ji uvidíte v historii e-mailů, aniž byste cokoli přepisovali do CRM. Funguje to i pro přijaté zprávy, které nám takto přepošlete.",
+    "loading": "Načítání…",
+    "loadError": "Adresu se nepodařilo načíst, zkuste to prosím znovu.",
+    "copy": "Kopírovat",
+    "copied": "Zkopírováno",
+    "copyPrompt": "Zkopírujte adresu:",
+    "unmatchedHint": "Pokud e-mailovou adresu protistrany nenajdeme u žádného kontaktu ani firmy, zprávu sice uložíme, ale neobjeví se u žádné firmy. Doplňte adresu ke kontaktu a další zprávy se už přiřadí samy.",
+    "rotate": "Vygenerovat novou adresu",
+    "rotating": "Generuji…",
+    "rotateHint": "Adresa je heslo — kdo ji zná, může Vám zapisovat do historie.",
+    "rotateConfirm": "Původní adresa okamžitě přestane fungovat a e-maily poslané na ni se už neuloží. Opravdu chcete vygenerovat novou?",
+    "rotateSuccess": "Nová adresa vygenerována. Nezapomeňte si ji upravit v poštovním klientovi.",
+    "rotateError": "Novou adresu se nepodařilo vygenerovat, zkuste to prosím znovu."
+  },
   "invoiceDetails": {
     "title": "Fakturační údaje",
     "subtitle": "Tyto údaje se objeví na vašich daňových dokladech. Zadejte IČO a zbytek doplníme z ARES — každé pole pak můžete upravit.",

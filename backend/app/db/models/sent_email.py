@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.db.models.enums import SentEmailStatus
+from app.db.models.enums import EmailDirection, SentEmailStatus
 
 if TYPE_CHECKING:
     from app.db.models.company import Company
@@ -20,14 +20,19 @@ if TYPE_CHECKING:
 
 
 class SentEmail(Base):
-    """A single email the user composed and sent from the CRM (send-only mail
-    client). Recipient addresses are snapshotted as JSONB arrays; attachment
-    *bytes* are not persisted (filenames only, consistent with bulk email).
+    """One email on a company/deal timeline — sent from the CRM, or captured
+    inbound via Smart BCC. Recipient addresses are snapshotted as JSONB arrays;
+    attachment *bytes* are never persisted (filenames only, consistent with
+    bulk email).
 
     Threading: a fresh send starts a new `thread_id`; a follow-up ("Odpovědět")
-    copies the parent's `thread_id` and links via `in_reply_to_message_id`. A
-    "thread" is the chain of mails *we* sent — there is no inbox, so inbound
-    replies are never captured.
+    copies the parent's `thread_id` and links via `in_reply_to_message_id`. An
+    inbound message whose `In-Reply-To` matches a mail we sent joins that same
+    thread, so a BCC'd reply lands under its original.
+
+    Despite the table name, `direction` is what says which way a row travelled
+    (see :class:`EmailDirection`). The name is kept because renaming it would
+    churn every history endpoint, index and migration for no user-visible gain.
     """
 
     __tablename__ = "sent_emails"
@@ -37,6 +42,16 @@ class SentEmail(Base):
         Index("ix_sent_emails_thread_id", "thread_id"),
         Index("ix_sent_emails_organization_id_created_at", "organization_id", "created_at"),
         Index("ix_sent_emails_tracking_token", "tracking_token", unique=True),
+        # Idempotency for the inbound pipeline: an MTA worker that retries
+        # (or a user who BCCs twice) must not duplicate the timeline entry.
+        # Scoped to the org because two orgs can legitimately capture the same
+        # broadcast message.
+        Index(
+            "uq_sent_emails_organization_id_message_id",
+            "organization_id",
+            "message_id",
+            unique=True,
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -59,6 +74,18 @@ class SentEmail(Base):
         PgUUID(as_uuid=True),
         ForeignKey("companies.id", ondelete="SET NULL"),
     )
+
+    direction: Mapped[EmailDirection] = mapped_column(
+        Enum(EmailDirection, name="email_direction"),
+        nullable=False,
+        default=EmailDirection.outbound,
+        server_default=EmailDirection.outbound.value,
+    )
+
+    # Who the mail came FROM. NULL on outbound rows (the sender is
+    # `sender_user_id`'s configured SMTP identity); on inbound rows it is the
+    # correspondent's address, which is what the timeline shows.
+    from_email: Mapped[str | None] = mapped_column(String(320))
 
     # Recipient snapshots — lists of raw address strings.
     to_emails: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)

@@ -19,6 +19,7 @@ from app.api.v1 import (
     health,
     home_dashboard,
     imports,
+    inbound_email,
     invitations,
     invoices,
     onboarding,
@@ -118,6 +119,12 @@ api_router.include_router(plans.router)
 # carry no session. The random per-send token is the only credential, and
 # the click target is HMAC-signed so the redirect can't be abused.
 api_router.include_router(tracking.router)
+# Smart BCC capture (`POST /inbound-email`). Public for the same reason as
+# tracking: the caller is an MTA-side worker with no session. Its only
+# credential is the `X-Inbound-Secret` header, checked in the handler.
+api_router.include_router(inbound_email.router)
+# The authenticated half — the user reading/rotating their magic address.
+api_router.include_router(inbound_email.me_router, dependencies=PROTECTED_DEPS)
 # Super-admin surface — gated per-route by `require_super_admin`. Not under
 # PROTECTED_DEPS because the trial gate is per-org and super-admins operate
 # across orgs (and may themselves belong to a freshly-trialing test org).

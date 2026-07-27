@@ -36,11 +36,15 @@
     "trackingOffByOrg": "Sledování otevření a prokliků je pro Vaši organizaci vypnuté."
   },
   "history": {
-    "title": "Odeslané e-maily",
+    "title": "Historie e-mailů",
     "loading": "Načítání…",
-    "empty": "Zatím žádné odeslané e-maily.",
+    "empty": "Zatím žádné e-maily.",
     "statusSent": "Odesláno",
+    "statusReceived": "Přijato",
     "statusError": "Chyba",
+    "toPrefix": "Komu: {{address}}",
+    "fromPrefix": "Od: {{address}}",
+    "unknown": "neznámý odesílatel",
     "reply": "Odpovědět",
     "opened": "Otevřeno",
     "openedWithCount": "Otevřeno {{n}}×",

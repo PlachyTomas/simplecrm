@@ -69,6 +69,9 @@ class ActivityType(StrEnum):
     ownership_reassigned = "ownership_reassigned"
     subscription_change = "subscription_change"
     email_sent = "email_sent"
+    # Written by the Smart-BCC inbound pipeline (services/inbound_email.py)
+    # when a forwarded message is filed on a company/deal.
+    email_received = "email_received"
     deal_created = "deal_created"
     deal_updated = "deal_updated"
     company_updated = "company_updated"
@@ -82,7 +85,25 @@ class EmailRecipientStatus(StrEnum):
 
 
 class SentEmailStatus(StrEnum):
-    """Outcome of a single user-composed email send (send-only mail client)."""
+    """Outcome of a single user-composed email send (send-only mail client).
+
+    Inbound (Smart-BCC) rows reuse `sent` to mean "recorded successfully" —
+    there is no delivery attempt to fail. `EmailDirection` is what separates
+    the two kinds of row.
+    """
 
     sent = "sent"
     failed = "failed"
+
+
+class EmailDirection(StrEnum):
+    """Which way a `sent_emails` row travelled.
+
+    `outbound` — composed and sent from the CRM (the original meaning of the
+    table; every pre-F3 row backfills to this).
+    `inbound`  — captured via Smart BCC: the user BCC'd their magic address
+    from their own mail client and the MTA worker POSTed us the raw MIME.
+    """
+
+    outbound = "outbound"
+    inbound = "inbound"

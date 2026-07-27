@@ -5,7 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from app.db.models.enums import SentEmailStatus
+from app.db.models.enums import EmailDirection, SentEmailStatus
 
 
 class SentEmailCreate(BaseModel):
@@ -44,6 +44,10 @@ class SentEmailOut(BaseModel):
     sender_user_id: uuid.UUID | None = None
     deal_id: uuid.UUID | None = None
     company_id: uuid.UUID | None = None
+    # `inbound` rows come from Smart BCC (the user BCC'd their magic address);
+    # `from_email` is the correspondent on those, NULL on outbound sends.
+    direction: EmailDirection = EmailDirection.outbound
+    from_email: str | None = None
     to_emails: list[str]
     cc_emails: list[str]
     bcc_emails: list[str]

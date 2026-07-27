@@ -1,6 +1,7 @@
 import { Calendar } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { InboundAddressCard } from "@/app/settings/InboundAddressCard";
 import { SmtpSettingsCard } from "@/app/settings/SmtpSettingsCard";
 import {
   useGoogleCalendarConnect,
@@ -129,6 +130,7 @@ export function IntegrationsSection() {
       </header>
       <ul className="space-y-3">
         <SmtpSettingsCard />
+        <InboundAddressCard />
         <GoogleCalendarCard />
         {integrations.map((i) => (
           <li

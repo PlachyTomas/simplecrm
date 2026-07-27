@@ -21,6 +21,7 @@ const ALL_ACTIVITY_TYPES = [
   "ownership_reassigned",
   "subscription_change",
   "email_sent",
+  "email_received",
   "deal_created",
   "deal_updated",
   "company_updated",
