@@ -12,6 +12,9 @@ import io
 import json
 import uuid
 from collections.abc import AsyncIterator
+from datetime import date
+from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
@@ -19,8 +22,23 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.db.models import BlockedCompany, Company, Contact, Organization, User, UserRole
+from app.db.models import (
+    Activity,
+    BlockedCompany,
+    Company,
+    Contact,
+    Deal,
+    Organization,
+    Pipeline,
+    Stage,
+    StageType,
+    User,
+    UserRole,
+)
 from app.db.session import AsyncSessionLocal
+from app.services.pipeline import create_default_pipeline
+
+FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "pipedrive"
 
 
 @pytest.fixture
@@ -32,6 +50,10 @@ async def owned_cleanup() -> AsyncIterator[dict[str, list[uuid.UUID | str]]]:
             await session.execute(delete(User).where(User.email.in_(tracked["emails"])))
         if tracked["orgs"]:
             org_ids = tracked["orgs"]
+            # FK-safe order: deals reference companies, contacts and stages;
+            # deleting pipelines cascades their stages at the DB level.
+            await session.execute(delete(Deal).where(Deal.organization_id.in_(org_ids)))
+            await session.execute(delete(Pipeline).where(Pipeline.organization_id.in_(org_ids)))
             await session.execute(delete(Contact).where(Contact.organization_id.in_(org_ids)))
             await session.execute(delete(Company).where(Company.organization_id.in_(org_ids)))
             await session.execute(
@@ -603,3 +625,523 @@ async def test_file_specs_length_mismatch_returns_400(
     )
     assert r.status_code == 400
     assert "2 entries" in r.json()["detail"]
+
+
+# --------------------------------------------------------------------------
+# Deals (phase 1 of the Pipedrive migration). The synthetic Pipedrive
+# fixtures under tests/fixtures/pipedrive/ are the inputs; they double as
+# the phase-4 regression corpus.
+# --------------------------------------------------------------------------
+
+
+def _fixture_upload(name: str) -> tuple[str, io.BytesIO, str]:
+    return (name, io.BytesIO(FIXTURES.joinpath(name).read_bytes()), "text/csv")
+
+
+async def _seed_pipeline(org: Organization) -> dict[str, uuid.UUID]:
+    """Default pipeline (3 open stages + 1 won) → `{stage name: id}`."""
+    async with AsyncSessionLocal() as s:
+        pipeline = await create_default_pipeline(s, org.id)
+        await s.commit()
+        stages = (
+            (await s.execute(select(Stage).where(Stage.pipeline_id == pipeline.id))).scalars().all()
+        )
+        return {stage.name: stage.id for stage in stages}
+
+
+_DEAL_MAPPING_EN = {
+    "Deal - Title*": "name",
+    "Deal - Value": "value",
+    "Deal - Currency of value": "currency",
+    "Deal - Status": "status",
+    "Deal - Stage (pipeline)": "stage",
+    "Deal - Expected close date": "expected_close_date",
+    "Deal - Won time": "won_time",
+    "Deal - Lost time": "lost_time",
+    "Deal - Closed on": "closed_on",
+    "Deal - Lost reason": "lost_reason",
+    "Organization": "company",
+    "Contact person": "contact",
+    "Deal - Owner": "owner",
+    "Deal - Pipedrive System ID": "external_id",
+}
+
+
+def _deals_form(
+    stage_mapping: dict[str, uuid.UUID],
+    *,
+    mapping: dict[str, str] | None = None,
+) -> dict[str, str]:
+    return {
+        "file_specs_json": json.dumps(
+            [{"role": "deals", "mapping_deal": mapping or _DEAL_MAPPING_EN}]
+        ),
+        "stage_mapping_json": json.dumps({k: str(v) for k, v in stage_mapping.items()}),
+    }
+
+
+async def test_fields_catalog_includes_the_deal_side(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+
+    r = await client.get("/api/v1/admin/imports/fields", headers=_auth(admin))
+    assert r.status_code == 200
+    keys = {f["key"] for f in r.json()["deal"]}
+    assert {
+        "name",
+        "value",
+        "currency",
+        "expected_close_date",
+        "stage",
+        "status",
+        "lost_reason",
+        "company",
+        "contact",
+        "owner",
+        "external_id",
+    }.issubset(keys)
+    # note_append is offered where there is a note column, and only there.
+    assert "note_append" in {f["key"] for f in r.json()["company"]}
+    assert "note_append" not in keys
+
+
+async def test_providers_endpoint_lists_pipedrive_and_generic(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+
+    r = await client.get("/api/v1/admin/imports/providers", headers=_auth(admin))
+    assert r.status_code == 200
+    providers = {p["key"]: p for p in r.json()["providers"]}
+    assert providers["pipedrive"]["label"] == "Pipedrive"
+    assert "deals" in providers["pipedrive"]["roles"]
+    assert "generic" in providers
+
+
+async def test_analyze_detects_role_and_prefills_mapping(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    await _seed_pipeline(org)
+
+    r = await client.post(
+        "/api/v1/admin/imports/analyze",
+        headers=_auth(admin),
+        files=[("files", _fixture_upload("deals_cs.csv"))],
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["provider"] == "pipedrive"
+    (file_out,) = body["files"]
+    assert file_out["detected_role"] == "deals"
+    assert file_out["suggested_mappings"]["deal"]["Obchod - Název*"] == "name"
+    assert file_out["stage_header"] == "Obchod - Fáze"
+    assert set(file_out["stage_values"]) == {"Kvalifikace", "Jednání"}
+    # "Jednání" is a default stage name, so it is pre-guessed; "Kvalifikace"
+    # is not, so the wizard must make the admin pick.
+    suggestions = body["stage_suggestions"]
+    assert suggestions["Jednání"] is not None
+    assert {s["name"] for s in body["stages"]} >= {"Nový lead", "Jednání", "Vyhráno"}
+
+
+async def test_stage_suggestions_endpoint_matches_by_name(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    stages = await _seed_pipeline(org)
+
+    r = await client.post(
+        "/api/v1/admin/imports/stage-suggestions",
+        headers=_auth(admin),
+        json={"values": ["novy lead", "Won", "Zcela neznámá fáze"]},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["suggestions"]["novy lead"] == str(stages["Nový lead"])
+    assert body["suggestions"]["Won"] == str(stages["Vyhráno"])
+    assert body["suggestions"]["Zcela neznámá fáze"] is None
+
+
+async def test_deal_status_semantics_land_in_the_database(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """The regression the spec singles out: a LOST deal must keep an
+    open-type stage and carry closed_at + lost_reason, or `status=lost`
+    filtering, the forecast and the funnel all silently break."""
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    stages = await _seed_pipeline(org)
+
+    data = _deals_form({"Qualified": stages["Nový lead"], "Negotiation": stages["Jednání"]})
+    r = await client.post(
+        "/api/v1/admin/imports/commit",
+        headers=_auth(admin),
+        files=[("files", _fixture_upload("deals_en.csv"))],
+        data=data,
+    )
+    assert r.status_code == 200, r.text
+    assert len(r.json()["created_deal_ids"]) == 3
+
+    async with AsyncSessionLocal() as s:
+        rows = (
+            (
+                await s.execute(
+                    select(Deal).where(Deal.organization_id == org.id).order_by(Deal.name)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        by_name = {d.name: d for d in rows}
+        stage_types = {}
+        for deal in rows:
+            stage = await s.get(Stage, deal.stage_id)
+            assert stage is not None
+            stage_types[deal.name] = stage.stage_type
+
+        open_deal = by_name["New website"]
+        assert stage_types["New website"] is StageType.open
+        assert open_deal.closed_at is None
+        assert open_deal.lost_reason is None
+        assert open_deal.stage_id == stages["Nový lead"]
+        assert open_deal.value == Decimal("120000.00")
+        assert open_deal.expected_close_date == date(2026, 9, 30)
+
+        won = by_name["Rollout phase 2"]
+        # Mapped to an OPEN stage in the file; the Won status wins.
+        assert stage_types["Rollout phase 2"] is StageType.won
+        assert won.stage_id == stages["Vyhráno"]
+        assert won.closed_at is not None
+        assert won.closed_at.date() == date(2026, 6, 15)
+        assert won.lost_reason is None
+
+        lost = by_name["Support renewal"]
+        assert stage_types["Support renewal"] is StageType.open
+        assert lost.stage_id == stages["Nový lead"]
+        assert lost.closed_at is not None
+        assert lost.closed_at.date() == date(2026, 5, 20)
+        assert lost.lost_reason == "Too expensive"
+
+        # No fabricated timeline entries for imported deals — an import
+        # deliberately does NOT mirror mark-won/mark-lost activity writes.
+        activities = (
+            (await s.execute(select(Activity).where(Activity.organization_id == org.id)))
+            .scalars()
+            .all()
+        )
+        assert activities == []
+
+
+async def test_unmapped_stage_blocks_the_row_and_is_reported(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    stages = await _seed_pipeline(org)
+
+    # "Qualified" deliberately left out of the mapping.
+    data = _deals_form({"Negotiation": stages["Jednání"]})
+    r = await client.post(
+        "/api/v1/admin/imports/preview",
+        headers=_auth(admin),
+        files=[("files", _fixture_upload("deals_en.csv"))],
+        data=data,
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["unmapped_stage_values"] == ["Qualified"]
+    assert body["counts"]["invalid_rows"] == 2
+    assert body["counts"]["deals_to_create"] == 1
+    assert {e["code"] for e in body["errors"] if e["side"] == "deal"} == {"stage_unmapped"}
+    # Only the surviving deal's company is invented; a blocked row must not
+    # leave an orphan company behind ("Gamma GmbH" belongs to a blocked row).
+    assert body["counts"]["companies_from_deals_to_create"] == 1
+
+
+async def test_deal_creates_the_company_it_names(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """A deals-only export must not fail because nobody exported the
+    organizations file — `deals.company_id` is NOT NULL."""
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    stages = await _seed_pipeline(org)
+    db_session.add(Company(organization_id=org.id, name="Acme Ltd"))
+    await db_session.commit()
+
+    data = _deals_form({"Qualified": stages["Nový lead"], "Negotiation": stages["Jednání"]})
+    preview = await client.post(
+        "/api/v1/admin/imports/preview",
+        headers=_auth(admin),
+        files=[("files", _fixture_upload("deals_en.csv"))],
+        data=data,
+    )
+    assert preview.status_code == 200, preview.text
+    # Acme Ltd already exists; only Gamma GmbH is invented from a deal row.
+    assert preview.json()["counts"]["companies_from_deals_to_create"] == 1
+
+    commit = await client.post(
+        "/api/v1/admin/imports/commit",
+        headers=_auth(admin),
+        files=[("files", _fixture_upload("deals_en.csv"))],
+        data=data,
+    )
+    assert commit.status_code == 200, commit.text
+
+    async with AsyncSessionLocal() as s:
+        names = set(
+            (await s.execute(select(Company.name).where(Company.organization_id == org.id)))
+            .scalars()
+            .all()
+        )
+        assert names == {"Acme Ltd", "Gamma GmbH"}
+        gamma = (
+            (
+                await s.execute(
+                    select(Company).where(
+                        Company.organization_id == org.id, Company.name == "Gamma GmbH"
+                    )
+                )
+            )
+            .scalars()
+            .one()
+        )
+        # Auto-created companies stay unowned — the per-user cap arithmetic
+        # runs on the company phase, before deals are resolved.
+        assert gamma.owner_user_id is None
+        lost = (
+            (
+                await s.execute(
+                    select(Deal).where(
+                        Deal.organization_id == org.id, Deal.name == "Support renewal"
+                    )
+                )
+            )
+            .scalars()
+            .one()
+        )
+        assert lost.company_id == gamma.id
+
+
+async def test_currency_mismatch_warns_once_with_a_count(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    stages = await _seed_pipeline(org)
+
+    csv_text = "Title,Value,Currency,Company\nA,100,USD,Acme\nB,200,USD,Acme\nC,300,CZK,Acme\n"
+    data = {
+        "file_specs_json": json.dumps(
+            [
+                {
+                    "role": "deals",
+                    "mapping_deal": {
+                        "Title": "name",
+                        "Value": "value",
+                        "Currency": "currency",
+                        "Company": "company",
+                    },
+                }
+            ]
+        ),
+        "stage_mapping_json": json.dumps({}),
+    }
+    assert stages  # pipeline must exist for the default open stage
+    r = await client.post(
+        "/api/v1/admin/imports/preview",
+        headers=_auth(admin),
+        files=[("files", _csv(csv_text, "deals.csv"))],
+        data=data,
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["org_currency"] == "CZK"
+    assert body["currency_mismatches"] == [{"currency": "USD", "count": 2}]
+    assert body["counts"]["deals_to_create"] == 3
+
+
+async def test_deal_contact_link_is_optional_and_only_warns(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    stages = await _seed_pipeline(org)
+    company = Company(organization_id=org.id, name="Acme Ltd")
+    db_session.add(company)
+    await db_session.commit()
+    await db_session.refresh(company)
+    db_session.add(
+        Contact(
+            organization_id=org.id,
+            company_id=company.id,
+            first_name="Anna",
+            last_name="Novakova",
+            email="anna@acme.cz",
+        )
+    )
+    await db_session.commit()
+
+    data = _deals_form({"Qualified": stages["Nový lead"], "Negotiation": stages["Jednání"]})
+    r = await client.post(
+        "/api/v1/admin/imports/commit",
+        headers=_auth(admin),
+        files=[("files", _fixture_upload("deals_en.csv"))],
+        data=data,
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    # All three deals land even though two name no contact at all.
+    assert len(body["created_deal_ids"]) == 3
+
+    async with AsyncSessionLocal() as s:
+        website = (
+            (
+                await s.execute(
+                    select(Deal).where(Deal.organization_id == org.id, Deal.name == "New website")
+                )
+            )
+            .scalars()
+            .one()
+        )
+        assert website.primary_contact_id is not None
+        rollout = (
+            (
+                await s.execute(
+                    select(Deal).where(
+                        Deal.organization_id == org.id, Deal.name == "Rollout phase 2"
+                    )
+                )
+            )
+            .scalars()
+            .one()
+        )
+        assert rollout.primary_contact_id is None
+
+
+async def test_unknown_deal_contact_is_a_warning_not_a_blocked_row(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    stages = await _seed_pipeline(org)
+    assert stages
+
+    csv_text = "Title,Company,Contact\nA,Acme,nikdo@nikde.cz\n"
+    data = {
+        "file_specs_json": json.dumps(
+            [
+                {
+                    "role": "deals",
+                    "mapping_deal": {"Title": "name", "Company": "company", "Contact": "contact"},
+                }
+            ]
+        ),
+    }
+    r = await client.post(
+        "/api/v1/admin/imports/preview",
+        headers=_auth(admin),
+        files=[("files", _csv(csv_text, "deals.csv"))],
+        data=data,
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["counts"]["deals_to_create"] == 1
+    assert body["counts"]["invalid_rows"] == 0
+    assert [e["code"] for e in body["errors"]] == ["contact_unmatched"]
+
+
+async def test_deal_without_a_company_is_blocked(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    assert await _seed_pipeline(org)
+
+    csv_text = "Title,Company\nA,\n"
+    data = {
+        "file_specs_json": json.dumps(
+            [{"role": "deals", "mapping_deal": {"Title": "name", "Company": "company"}}]
+        ),
+    }
+    r = await client.post(
+        "/api/v1/admin/imports/preview",
+        headers=_auth(admin),
+        files=[("files", _csv(csv_text, "deals.csv"))],
+        data=data,
+    )
+    body = r.json()
+    assert body["counts"]["deals_to_create"] == 0
+    assert body["counts"]["invalid_rows"] == 1
+    assert [e["code"] for e in body["errors"]] == ["company_missing"]
+
+
+async def test_stage_mapping_pointing_outside_the_org_is_a_400(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    assert await _seed_pipeline(org)
+
+    data = _deals_form({"Qualified": uuid.uuid4(), "Negotiation": uuid.uuid4()})
+    r = await client.post(
+        "/api/v1/admin/imports/preview",
+        headers=_auth(admin),
+        files=[("files", _fixture_upload("deals_en.csv"))],
+        data=data,
+    )
+    assert r.status_code == 400
+    assert "outside this organization" in r.json()["detail"]
+
+
+async def test_note_append_lands_on_the_imported_company(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+
+    data = {
+        "file_specs_json": json.dumps(
+            [
+                {
+                    "role": "companies",
+                    "mapping_company": {
+                        "Organization - Name*": "name",
+                        "Organization - Address": "address_street",
+                        "Organization - Label": "note_append",
+                        "Organization - Pipedrive System ID": "note_append",
+                    },
+                }
+            ]
+        ),
+    }
+    r = await client.post(
+        "/api/v1/admin/imports/commit",
+        headers=_auth(admin),
+        files=[("files", _fixture_upload("organizations_en.csv"))],
+        data=data,
+    )
+    assert r.status_code == 200, r.text
+
+    async with AsyncSessionLocal() as s:
+        acme = (
+            (
+                await s.execute(
+                    select(Company).where(
+                        Company.organization_id == org.id, Company.name == "Acme Ltd"
+                    )
+                )
+            )
+            .scalars()
+            .one()
+        )
+        assert acme.note is not None
+        assert acme.note.splitlines() == [
+            "Organization - Label: Customer",
+            "Organization - Pipedrive System ID: 101",
+        ]

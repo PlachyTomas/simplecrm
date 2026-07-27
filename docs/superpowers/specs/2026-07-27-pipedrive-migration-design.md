@@ -79,6 +79,25 @@ obchodů"). A migration must not fail because someone exported deals but not org
 number as-is and warn once in the preview with the count. No FX conversion — inventing
 exchange rates is worse than a visible warning.
 
+## Corrections found when the spec met the code (2026-07-27, phase 1)
+
+- The deal column is `primary_contact_id`, not `contact_id` (nullable — optional
+  linking stands).
+- **Deals have no `note` column**, so the "custom fields append to the note" fallback
+  works for companies and contacts only. Pipedrive *deal* custom fields are dropped in
+  v1; a caller asking for `note_append` on the deal side raises.
+- Pipedrive's persons export carries `Person - Name` (one full name) while our
+  `first_name`/`last_name` are both required — a persons export is unimportable without
+  a `full_name` split target, so one was added. Single-token names fail loudly rather
+  than have a given name invented for them.
+- No activity rows are written on import: a 500-deal migration would otherwise fabricate
+  500 timeline entries all stamped at import time. `Company.last_order_at` /
+  `ownership_expires_at` are likewise left alone, so historical deals can't silently
+  extend or expire ownership.
+- Auto-created companies are left unowned, because owner assignment feeds the
+  `max_owned_companies` cap arithmetic and silently busting a business cap is worse
+  than a later bulk-assign.
+
 ## Undo
 
 New table `import_runs` (id, organization_id, user_id, provider, created_at, counts

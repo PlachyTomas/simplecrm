@@ -1,0 +1,4 @@
+Obchod - Název*,Obchod - Hodnota,Obchod - Měna hodnoty,Obchod - Stav,Obchod - Fáze,Obchod - Očekávané datum uzavření,Obchod - Datum výhry,Obchod - Datum prohry,Obchod - Uzavřeno dne,Obchod - Důvod prohry,Organizace,Kontaktní osoba,Obchod - Vlastník
+Nový web,120 000,CZK,Otevřený,Kvalifikace,30.09.2026,,,,,Acme s.r.o.,Anna Nováková,
+Rozšíření,50000,CZK,Vyhráno,Jednání,01.06.2026,15.06.2026,,,,Acme s.r.o.,,
+Údržba,9000,EUR,Prohráno,Kvalifikace,01.05.2026,,20.05.2026,,Příliš drahé,Gamma s.r.o.,,

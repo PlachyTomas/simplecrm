@@ -1,0 +1,3 @@
+Person - Name*,Person - First name,Person - Last name,Person - Email,Person - Phone,Person - Job title,Organization name
+Anna Novakova,Anna,Novakova,anna@acme.cz,+420111222333,CEO,Acme Ltd
+Bob Black,,,"bob@acme.cz, bob.private@example.com",+420999888777,CTO,Acme Ltd

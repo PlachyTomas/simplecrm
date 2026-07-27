@@ -2122,6 +2122,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/imports/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Providers
+         * @description The wizard's "Odkud migrujete?" list. Per-file alias resolution is
+         *     served by `POST /analyze`, which needs the header row.
+         */
+        get: operations["list_providers_api_v1_admin_imports_providers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/imports/preview": {
         parameters: {
             query?: never;
@@ -2150,6 +2171,54 @@ export interface paths {
         put?: never;
         /** Commit Import */
         post: operations["commit_import_api_v1_admin_imports_commit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/imports/stage-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stage Suggestions
+         * @description Fuzzy-match source stage names against the org's stages.
+         *
+         *     Pure convenience for pre-filling the wizard's stage-mapping step — a
+         *     `null` suggestion is not a default, it is "you must pick". Anything left
+         *     unmapped blocks its rows at preview time.
+         */
+        post: operations["stage_suggestions_api_v1_admin_imports_stage_suggestions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/imports/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Analyze Files
+         * @description Read only the header row (plus the stage column) of each upload and
+         *     return everything the wizard needs to pre-fill its steps.
+         *
+         *     Writes nothing and is not rate-limited: the admin will bounce between
+         *     this and the mapping UI several times before ever calling `/preview`.
+         */
+        post: operations["analyze_files_api_v1_admin_imports_analyze_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3718,6 +3787,40 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** AnalyzeOut */
+        AnalyzeOut: {
+            /** Provider */
+            provider: string;
+            /** Files */
+            files: components["schemas"]["AnalyzedFileOut"][];
+            /** Stages */
+            stages: components["schemas"]["ImportStageOut"][];
+            /** Stage Suggestions */
+            stage_suggestions?: {
+                [key: string]: string | null;
+            };
+        };
+        /** AnalyzedFileOut */
+        AnalyzedFileOut: {
+            /** Filename */
+            filename: string | null;
+            /** Headers */
+            headers: string[];
+            /** Detected Role */
+            detected_role: ("companies" | "contacts" | "combined" | "deals") | null;
+            /** Suggested Mappings */
+            suggested_mappings: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+            /** Suggested Match Key Contact */
+            suggested_match_key_contact?: string | null;
+            /** Stage Header */
+            stage_header?: string | null;
+            /** Stage Values */
+            stage_values?: string[];
+        };
         /**
          * AuthSuccessResponse
          * @description Returned by signup-verify, login, password-reset-confirm — the same
@@ -4013,6 +4116,13 @@ export interface components {
             /** Deals */
             deals: components["schemas"]["BoardDealOut"][];
         };
+        /** Body_analyze_files_api_v1_admin_imports_analyze_post */
+        Body_analyze_files_api_v1_admin_imports_analyze_post: {
+            /** Files */
+            files: string[];
+            /** Provider */
+            provider?: string | null;
+        };
         /** Body_commit_import_api_v1_admin_imports_commit_post */
         Body_commit_import_api_v1_admin_imports_commit_post: {
             /** Files */
@@ -4028,6 +4138,8 @@ export interface components {
             skip_unmatched: boolean;
             /** Bulk Owner User Id */
             bulk_owner_user_id?: string | null;
+            /** Stage Mapping Json */
+            stage_mapping_json?: string | null;
         };
         /** Body_preview_import_api_v1_admin_imports_preview_post */
         Body_preview_import_api_v1_admin_imports_preview_post: {
@@ -4039,6 +4151,8 @@ export interface components {
             match_source?: ("ico" | "name" | "email") | null;
             /** Bulk Owner User Id */
             bulk_owner_user_id?: string | null;
+            /** Stage Mapping Json */
+            stage_mapping_json?: string | null;
         };
         /** Body_send_api_v1_companies_bulk_email_send_post */
         Body_send_api_v1_companies_bulk_email_send_post: {
@@ -4700,6 +4814,13 @@ export interface components {
             /** Ico */
             ico?: string | null;
         };
+        /** CurrencyMismatchOut */
+        CurrencyMismatchOut: {
+            /** Currency */
+            currency: string;
+            /** Count */
+            count: number;
+        };
         /** CurrentUser */
         CurrentUser: {
             /**
@@ -5157,6 +5278,8 @@ export interface components {
             company: components["schemas"]["FieldDescriptor"][];
             /** Contact */
             contact: components["schemas"]["FieldDescriptor"][];
+            /** Deal */
+            deal: components["schemas"]["FieldDescriptor"][];
         };
         /** ForecastBucket */
         ForecastBucket: {
@@ -5311,6 +5434,8 @@ export interface components {
             created_contact_ids?: string[];
             /** Updated Contact Ids */
             updated_contact_ids?: string[];
+            /** Created Deal Ids */
+            created_deal_ids?: string[];
         };
         /** ImportCountsOut */
         ImportCountsOut: {
@@ -5326,6 +5451,16 @@ export interface components {
             invalid_rows: number;
             /** Unmatched Contacts */
             unmatched_contacts: number;
+            /**
+             * Deals To Create
+             * @default 0
+             */
+            deals_to_create: number;
+            /**
+             * Companies From Deals To Create
+             * @default 0
+             */
+            companies_from_deals_to_create: number;
         };
         /**
          * ImportPreviewOut
@@ -5344,6 +5479,38 @@ export interface components {
              * @default false
              */
             update_diffs_truncated: boolean;
+            /** Unmapped Stage Values */
+            unmapped_stage_values?: string[];
+            /** Currency Mismatches */
+            currency_mismatches?: components["schemas"]["CurrencyMismatchOut"][];
+            /** Org Currency */
+            org_currency?: string | null;
+        };
+        /** ImportStageOut */
+        ImportStageOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Stage Type
+             * @enum {string}
+             */
+            stage_type: "open" | "won" | "lost";
+            /** Position */
+            position: number;
+            /**
+             * Pipeline Id
+             * Format: uuid
+             */
+            pipeline_id: string;
+            /** Pipeline Name */
+            pipeline_name: string;
+            /** Is Default Pipeline */
+            is_default_pipeline: boolean;
         };
         /**
          * InboundAddressOut
@@ -6221,6 +6388,23 @@ export interface components {
             tutorial_step_index?: number | null;
         };
         /**
+         * ProviderOut
+         * @description One entry of the wizard's "Odkud migrujete?" picker.
+         */
+        ProviderOut: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Roles */
+            roles: ("companies" | "contacts" | "combined" | "deals")[];
+        };
+        /** ProvidersOut */
+        ProvidersOut: {
+            /** Providers */
+            providers: components["schemas"]["ProviderOut"][];
+        };
+        /**
          * PublicPlanOut
          * @description A public-pricing-page entry. Includes derived savings vs monthly so the
          *     frontend doesn't recompute the math.
@@ -6354,7 +6538,7 @@ export interface components {
              * Side
              * @enum {string}
              */
-            side: "company" | "contact";
+            side: "company" | "contact" | "deal";
             /** Field */
             field?: string | null;
             /** Code */
@@ -6873,6 +7057,23 @@ export interface components {
         StageReorder: {
             /** Stage Ids */
             stage_ids: string[];
+        };
+        /**
+         * StageSuggestionsIn
+         * @description Distinct source stage values, straight from the deals column.
+         */
+        StageSuggestionsIn: {
+            /** Values */
+            values?: string[];
+        };
+        /** StageSuggestionsOut */
+        StageSuggestionsOut: {
+            /** Stages */
+            stages: components["schemas"]["ImportStageOut"][];
+            /** Suggestions */
+            suggestions: {
+                [key: string]: string | null;
+            };
         };
         /**
          * StageType
@@ -11827,6 +12028,26 @@ export interface operations {
             };
         };
     };
+    list_providers_api_v1_admin_imports_providers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProvidersOut"];
+                };
+            };
+        };
+    };
     preview_import_api_v1_admin_imports_preview_post: {
         parameters: {
             query?: never;
@@ -11880,6 +12101,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportCommitOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stage_suggestions_api_v1_admin_imports_stage_suggestions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StageSuggestionsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageSuggestionsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyze_files_api_v1_admin_imports_analyze_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_analyze_files_api_v1_admin_imports_analyze_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyzeOut"];
                 };
             };
             /** @description Validation Error */

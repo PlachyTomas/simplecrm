@@ -45,13 +45,17 @@ class MatcherResult:
     errors: list[RowError] = field(default_factory=list)
 
 
-def _normalize(value: str, *, source: MatchSource) -> str:
+def normalize_match_key(value: str, *, source: MatchSource) -> str:
     """Canonical form of a match key cell.
 
     IČO comparison is exact (8 digits). E-mails and names are
     lower-cased — e-mail wire format is technically case-sensitive in
     the local part but no CRM in practice treats it that way, and name
     matches in real imports are never carefully cased.
+
+    Public because the deal→company link in :mod:`runner` matches company
+    *names* and must fold them identically; two normalizations that drift
+    apart would link a contact and its deal to two different rows.
     """
     value = value.strip()
     if source in ("email", "name"):
@@ -86,7 +90,7 @@ def _build_index(
         raw = cand.fields.get(source)
         if raw is None:
             continue
-        key = _normalize(raw, source=source)
+        key = normalize_match_key(raw, source=source)
         if not key:
             continue
         raw_index.setdefault(key, []).append(
@@ -102,7 +106,7 @@ def _build_index(
 
     existing_map = existing_by_ico if source == "ico" else existing_by_name
     for raw_key, existing_id in existing_map.items():
-        key = _normalize(raw_key, source=source)
+        key = normalize_match_key(raw_key, source=source)
         if not key:
             continue
         raw_index.setdefault(key, []).append(
@@ -183,7 +187,7 @@ def match_contacts_to_companies(
                 )
             )
             continue
-        key = _normalize(raw, source=match_source)
+        key = normalize_match_key(raw, source=match_source)
         hits = index.get(key, [])
         if not hits:
             result.matches[contact.row_index] = None
