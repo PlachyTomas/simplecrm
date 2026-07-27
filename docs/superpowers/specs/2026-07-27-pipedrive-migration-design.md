@@ -83,11 +83,16 @@ exchange rates is worse than a visible warning.
 
 - The deal column is `primary_contact_id`, not `contact_id` (nullable — optional
   linking stands).
-- **Deals have no `note` column** — but they do have notes, as `ActivityType.note`
-  activity rows (`POST /deals/{id}/notes`, the pipeline quick action). So deal custom
-  fields are NOT dropped: a deal with unmapped columns gets ONE note activity holding
-  them as `Label: value` lines. That is content the customer exported, not fabricated
-  history, so it is the one exception to "no activity rows on import" below.
+- **Deals had no `note` column — so we add one** (phase 2b), matching companies and
+  contacts. "Note" covers two different things and only one of them is the activity
+  log: a running commentary ("volal jsem, chtějí nabídku do pátku") is a timestamped,
+  attributed event and belongs in `ActivityType.note`; a static record attribute
+  ("Region: Morava") is a field. Pipedrive custom fields are the second kind, so
+  writing them into the event log would dress up attributes as things that happened at
+  migration time. `deals.note` also stands on its own as a deal description, and is the
+  parking spot for custom values until gap #7 lands.
+  **Split for any future import of Pipedrive's Notes entity:** those ARE timestamped
+  events and belong in the activity log.
   **Status: pending — phase 2b, after undo lands** (phase 1 shipped with them dropped).
 - Pipedrive's persons export carries `Person - Name` (one full name) while our
   `first_name`/`last_name` are both required — a persons export is unimportable without
@@ -114,6 +119,27 @@ importu upraveny — ponecháme je beze změny." Admin only; refuses if already 
 
 Skipping edited rows is what makes undo trustworthy rather than a second destructive
 button.
+
+### Corrections found when the spec met the code (2026-07-27, phase 2)
+
+- `updated_at > created_at` works, but only because **nothing else in the app writes
+  to those tables outside the ORM** — no Core `update()`, no raw SQL. Both columns are
+  `server_default now()` and Postgres' `now()` is the transaction timestamp, so an
+  imported row starts with the two exactly equal and any later write bumps
+  `updated_at` via `onupdate`. The signal is conservative in the right direction:
+  background writers (the nightly auto-freeing sweep clearing `owner_user_id`) can mark
+  a row "modified" that a human never touched, which costs a skipped delete, not data.
+- `updated_at` is **not enough on its own**, because work can accrue against a row
+  without rewriting it. Three more signals had to join it, all reported with their own
+  code: a deal with `calendar_events` (ON DELETE CASCADE — undo would silently destroy
+  real meetings), an entity with an `activities` row (polymorphic `entity_id`, no FK to
+  protect it, so the logged call would dangle), and a company that still has contacts
+  or deals undo is not deleting (`deals.company_id` is CASCADE).
+- **Undo does not revert updates**, and cannot: no before-image is stored. The response
+  carries `updates_not_reverted` (read off the run's own `counts`) so the UI says it out
+  loud instead of implying the import was erased.
+- `partially_undone` is terminal in v1 — a second pass would have to guess whether the
+  surviving stamped rows were kept on purpose.
 
 ## Custom fields
 
