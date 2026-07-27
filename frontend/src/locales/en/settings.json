@@ -66,6 +66,10 @@
       "email-templates": {
         "label": "Email templates",
         "description": "Shared subject and body templates for single and bulk emails."
+      },
+      "sales-goals": {
+        "label": "Sales goals",
+        "description": "Monthly targets for salespeople and the whole company."
       }
     },
     "importItem": {
@@ -647,6 +651,54 @@
       "save": "Save",
       "saving": "Saving…",
       "cancel": "Cancel"
+    }
+  },
+  "dealRotting": {
+    "title": "Stalled deals",
+    "subtitle": "When the pipeline board should flag that nothing is happening on a deal.",
+    "label": "Stall threshold (days)",
+    "inputSubtitle": "An open deal with no stage change for longer than this many days gets a warning on its card. At twice the threshold it turns red. 0 turns the warning off.",
+    "save": "Save",
+    "saving": "Saving…",
+    "savedFlash": "Saved",
+    "error": {
+      "range": "Enter a number between 0 and 3650.",
+      "generic": "The setting could not be saved. Please try again."
+    }
+  },
+  "salesGoals": {
+    "title": "Goals for this month",
+    "subtitle": "One goal per person (or the whole company), month and metric. Progress is computed from deals won and closed in that month.",
+    "addButton": "Add goal",
+    "readOnlyNote": "Goals can be set by an admin or a manager.",
+    "loading": "Loading…",
+    "empty": "No goal has been set for this month yet.",
+    "monthLabel": "Month",
+    "wholeCompany": "Whole company",
+    "progress": "{{actual}} of {{target}}",
+    "progressPct": "{{pct}}%",
+    "editAriaLabel": "Edit goal {{name}}",
+    "deleteAriaLabel": "Delete goal {{name}}",
+    "deleteConfirm": "Really delete the goal {{name}}?",
+    "metric": {
+      "won_value": "Value of deals won",
+      "won_count": "Number of deals won"
+    },
+    "editor": {
+      "newTitle": "New goal",
+      "editTitle": "Edit goal",
+      "userLabel": "Who for",
+      "metricLabel": "Metric",
+      "targetLabel": "Target",
+      "monthLabel": "Month",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel"
+    },
+    "errors": {
+      "required": "Please enter a target greater than zero.",
+      "duplicate": "A goal for this person, month and metric already exists.",
+      "generic": "The goal could not be saved. Please try again."
     }
   }
 }

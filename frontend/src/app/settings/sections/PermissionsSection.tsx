@@ -109,12 +109,38 @@ function EmailTrackingToggle() {
   );
 }
 
-function OwnershipWindowSetting() {
+/**
+ * Numeric org setting expressed in days, with explicit save + range check.
+ *
+ * Shared by the company auto-release window (min 1) and the pipeline rotting
+ * threshold (min 0 — zero switches that indicator off), so the two can't
+ * drift apart in behaviour: same optimistic-free submit, same saved-flash,
+ * same "Save is disabled while the value is unchanged" no-op guard.
+ */
+function OrgDaysSetting({
+  field,
+  initial,
+  min,
+  inputId,
+  label,
+  subtitle,
+  rangeError,
+  genericError,
+  testId,
+}: {
+  field: "ownership_window_days" | "deal_rotting_days";
+  initial: number;
+  min: number;
+  inputId: string;
+  label: string;
+  subtitle: string;
+  rangeError: string;
+  genericError: string;
+  testId?: string;
+}) {
   const { t } = useTranslation("settings");
-  const { data: user } = useCurrentUser();
   const { accessToken } = useAuth();
   const qc = useQueryClient();
-  const initial = user?.organization?.ownership_window_days ?? 365;
   const [days, setDays] = useState<string>(String(initial));
   const [savedFlash, setSavedFlash] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -130,22 +156,25 @@ function OwnershipWindowSetting() {
       apiFetch<OrganizationOut>("/api/v1/organizations/current", {
         method: "PUT",
         token: accessToken,
-        body: { ownership_window_days: next },
+        body: { [field]: next },
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["auth", "me"] });
+      // The board reads the threshold off /auth/me, but its own cache holds
+      // the day counts — drop it so a changed threshold shows immediately.
+      void qc.invalidateQueries({ queryKey: ["pipeline", "default", "board"] });
       setSavedFlash(true);
       window.setTimeout(() => setSavedFlash(false), 2500);
     },
-    onError: () => setError(t("permissions.ownershipWindow.error.generic")),
+    onError: () => setError(genericError),
   });
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     const n = Number(days);
-    if (!Number.isFinite(n) || n < 1 || n > 3650) {
-      setError(t("permissions.ownershipWindow.error.range"));
+    if (!Number.isFinite(n) || n < min || n > 3650) {
+      setError(rangeError);
       return;
     }
     if (n === initial) return; // no-op
@@ -158,23 +187,19 @@ function OwnershipWindowSetting() {
       className="space-y-3 rounded-md border border-border-subtle bg-surface-overlay p-4"
     >
       <div>
-        <label
-          htmlFor="ownership-window-days"
-          className="block text-sm font-medium text-text-primary"
-        >
-          {t("permissions.ownershipWindow.label")}
+        <label htmlFor={inputId} className="block text-sm font-medium text-text-primary">
+          {label}
         </label>
-        <p className="mt-1 text-xs text-text-tertiary">
-          {t("permissions.ownershipWindow.subtitle")}
-        </p>
+        <p className="mt-1 text-xs text-text-tertiary">{subtitle}</p>
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <input
-          id="ownership-window-days"
+          id={inputId}
           type="number"
-          min={1}
+          min={min}
           max={3650}
           value={days}
+          data-testid={testId}
           onChange={(e) => setDays(e.target.value)}
           disabled={mutation.isPending}
           className="block h-10 w-32 rounded-md border border-border bg-bg px-3 text-sm tabular-nums text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
@@ -203,6 +228,43 @@ function OwnershipWindowSetting() {
         </p>
       ) : null}
     </form>
+  );
+}
+
+function OwnershipWindowSetting() {
+  const { t } = useTranslation("settings");
+  const { data: user } = useCurrentUser();
+  return (
+    <OrgDaysSetting
+      field="ownership_window_days"
+      initial={user?.organization?.ownership_window_days ?? 365}
+      min={1}
+      inputId="ownership-window-days"
+      label={t("permissions.ownershipWindow.label")}
+      subtitle={t("permissions.ownershipWindow.subtitle")}
+      rangeError={t("permissions.ownershipWindow.error.range")}
+      genericError={t("permissions.ownershipWindow.error.generic")}
+    />
+  );
+}
+
+function DealRottingSetting() {
+  const { t } = useTranslation("settings");
+  const { data: user } = useCurrentUser();
+  return (
+    <OrgDaysSetting
+      field="deal_rotting_days"
+      // Absent = a stale /auth/me payload; render the server default rather
+      // than 0, which would claim the indicator is switched off.
+      initial={user?.organization?.deal_rotting_days ?? 14}
+      min={0}
+      inputId="deal-rotting-days"
+      label={t("dealRotting.label")}
+      subtitle={t("dealRotting.inputSubtitle")}
+      rangeError={t("dealRotting.error.range")}
+      genericError={t("dealRotting.error.generic")}
+      testId={testIds.settings.dealRottingDaysInput}
+    />
   );
 }
 
@@ -249,6 +311,13 @@ export function PermissionsSection() {
         <p className="mt-1 text-sm text-text-tertiary">{t("permissions.companyRules.subtitle")}</p>
         <div className="mt-4">
           <OwnershipWindowSetting />
+        </div>
+      </div>
+      <div className="rounded-lg border border-border bg-surface p-6">
+        <h2 className="text-lg font-semibold">{t("dealRotting.title")}</h2>
+        <p className="mt-1 text-sm text-text-tertiary">{t("dealRotting.subtitle")}</p>
+        <div className="mt-4">
+          <DealRottingSetting />
         </div>
       </div>
       <div className="rounded-lg border border-border bg-surface p-6">

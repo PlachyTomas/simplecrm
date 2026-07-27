@@ -29,6 +29,7 @@ from app.schemas.pipeline import (
     StageReorder,
     StageUpdate,
 )
+from app.services.deal_staleness import days_since_last_move, last_stage_change_subquery
 
 router = APIRouter(prefix="/pipelines", tags=["pipelines"])
 
@@ -95,8 +96,14 @@ async def get_default_pipeline_board(
             cutoff = datetime.now(tz=UTC) - timedelta(days=won_window_days)
             visibility.append(and_(Deal.stage_id.in_(won_stage_ids), Deal.closed_at >= cutoff))
 
+    # "Rotting" data for the card badge. One grouped subquery LEFT JOINed into
+    # the board query — never a per-card lookup. Same helper the `stale_deals`
+    # report uses, so the board and the report can't drift apart.
+    last_change_subq = last_stage_change_subquery()
+
     stmt = (
-        select(Deal)
+        select(Deal, last_change_subq.c.last_change_at)
+        .join(last_change_subq, last_change_subq.c.deal_id == Deal.id, isouter=True)
         .where(
             Deal.organization_id == user.organization_id,
             Deal.stage_id.in_([s.id for s in pipeline.stages]),
@@ -107,13 +114,16 @@ async def get_default_pipeline_board(
         .options(selectinload(Deal.company))
     )
     scoped = await scope_by_owner(stmt, session=session, user=user, owner_col=Deal.owner_user_id)
-    deals = (await session.execute(scoped)).scalars().all()
+    rows = (await session.execute(scoped)).all()
 
+    now = datetime.now(tz=UTC)
     grouped: dict[str, list[Deal]] = defaultdict(list)
     totals: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
-    for deal in deals:
+    rotting_days: dict[uuid.UUID, int] = {}
+    for deal, last_change_at in rows:
         key = str(deal.stage_id)
         grouped[key].append(deal)
+        rotting_days[deal.id] = days_since_last_move(last_change_at, deal.updated_at, now=now)
         # Only add to the stage total if the deal is in the org's currency;
         # cross-currency deals contribute to the list but not the total.
         if deal.currency == org.currency:
@@ -153,6 +163,13 @@ async def get_default_pipeline_board(
                 BoardDealOut(
                     **DealOut.model_validate(d).model_dump(),
                     company_name=d.company.name,
+                    # A closed deal (won or lost) can't rot — it's finished.
+                    # Only open-stage, still-open deals carry a day count.
+                    days_since_last_move=(
+                        rotting_days.get(d.id)
+                        if stage.stage_type is StageType.open and d.closed_at is None
+                        else None
+                    ),
                 )
                 for d in _order_deals(stage, grouped[str(stage.id)])
             ],

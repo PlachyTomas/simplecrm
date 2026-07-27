@@ -94,6 +94,15 @@ class Organization(Base):
         Integer, default=365, server_default="365", nullable=False
     )
 
+    # "Rotting" threshold (days) for the pipeline board. An OPEN deal whose
+    # last stage change is at least this old gets a visible badge on its card
+    # so it doesn't die quietly; at 2× the threshold the badge escalates from
+    # warning to danger. 0 switches the whole indicator off for the org.
+    # Bounded 0..3650 at the API edge. Admins flip this in Settings → Oprávnění.
+    deal_rotting_days: Mapped[int] = mapped_column(
+        Integer, default=14, server_default="14", nullable=False
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

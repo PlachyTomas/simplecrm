@@ -22,12 +22,12 @@ from app.services.reports._common import compute_previous_period
 
 
 @dataclass(frozen=True)
-class _Won:
+class Won:
     count: int
     value: Decimal
 
 
-async def _won_in_window(
+async def won_in_window(
     session: AsyncSession,
     *,
     organization_id: UUID,
@@ -36,7 +36,16 @@ async def _won_in_window(
     to_dt: datetime,
     team_id: UUID | None,
     owner_user_id: UUID | None,
-) -> _Won:
+) -> Won:
+    """Count + value of deals *won* inside `[from_dt, to_dt]`.
+
+    The single definition of "won" for the whole app: a deal sitting in a
+    `won`-type stage whose `closed_at` (not `paid_at` — collection is a
+    separate question, see the `won_vs_paid` widget) falls in the window, and
+    whose currency matches the org's. Sales goals read their actuals through
+    this same function so a goal and the `deals_won` report can never disagree.
+    """
+
     stmt = (
         select(
             func.count(Deal.id),
@@ -57,7 +66,7 @@ async def _won_in_window(
 
         stmt = stmt.join(_User, _User.id == Deal.owner_user_id).where(_User.team_id == team_id)
     count, value = (await session.execute(stmt)).one()
-    return _Won(int(count or 0), Decimal(str(value or 0)))
+    return Won(int(count or 0), Decimal(str(value or 0)))
 
 
 async def compute_deals_won(
@@ -76,7 +85,7 @@ async def compute_deals_won(
 
     from_dt = datetime.combine(from_, time.min, tzinfo=UTC)
     to_dt = datetime.combine(to, time.max, tzinfo=UTC)
-    cur = await _won_in_window(
+    cur = await won_in_window(
         session,
         organization_id=organization_id,
         org_currency=org.currency,
@@ -89,7 +98,7 @@ async def compute_deals_won(
     prev = compute_previous_period(from_, to)
     prev_from_dt = datetime.combine(prev.from_, time.min, tzinfo=UTC)
     prev_to_dt = datetime.combine(prev.to, time.max, tzinfo=UTC)
-    prev_w = await _won_in_window(
+    prev_w = await won_in_window(
         session,
         organization_id=organization_id,
         org_currency=org.currency,

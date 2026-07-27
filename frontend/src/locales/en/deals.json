@@ -38,7 +38,9 @@
       "loseTooltip": "Mark as lost",
       "loseAriaLabel": "Mark deal {{name}} as lost",
       "quickActionsTooltip": "Quick actions",
-      "quickActionsAriaLabel": "Quick actions for deal {{name}}"
+      "quickActionsAriaLabel": "Quick actions for deal {{name}}",
+      "rotting_one": "{{count}} day without movement",
+      "rotting_other": "{{count}} days without movement"
     },
     "mobileCard": {
       "won": "Won",

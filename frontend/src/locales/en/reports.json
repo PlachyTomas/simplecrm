@@ -41,7 +41,8 @@
     "sales_leaderboard": "Sales leaderboard",
     "rep_activity": "Rep activity",
     "stale_deals": "Stale deals",
-    "companies_at_risk": "Companies at risk"
+    "companies_at_risk": "Companies at risk",
+    "sales_goal": "Goal progress"
   },
   "widgetDescriptions": {
     "pipeline_value": "Total value of open deals.",
@@ -58,7 +59,8 @@
     "sales_leaderboard": "Ranking of salespeople by results.",
     "rep_activity": "New deals created per salesperson.",
     "stale_deals": "Deals with no movement for a while.",
-    "companies_at_risk": "Companies with ownership ending soon."
+    "companies_at_risk": "Companies with ownership ending soon.",
+    "sales_goal": "Progress toward this month's sales goal."
   },
   "widgetPicker": {
     "groupKpi": "Metrics",
@@ -146,5 +148,17 @@
     }
   },
   "days_one": "{{value}} day",
-  "days_other": "{{value}} days"
+  "days_other": "{{value}} days",
+  "salesGoal": {
+    "targetLabel": "Target",
+    "ofTarget": "of target",
+    "scopeMine": "My goal",
+    "scopeOrganization": "Whole company",
+    "empty": "No goal is set for this month.",
+    "emptyCta": "Set a goal",
+    "metric": {
+      "won_value": "Value of deals won",
+      "won_count": "Number of deals won"
+    }
+  }
 }

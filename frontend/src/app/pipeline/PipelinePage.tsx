@@ -27,6 +27,7 @@ import { useDeleteAnyDeal } from "@/app/deals/useDeals";
 import { stageColor } from "@/app/pipeline/colors";
 import { DealCardPreview, useDealCardPreview } from "@/app/pipeline/DealCardPreview";
 import { DealQuickActionsModal } from "@/app/pipeline/DealQuickActionsModal";
+import { RottingBadge } from "@/app/pipeline/RottingBadge";
 import {
   type BoardDeal,
   type BoardStage,
@@ -176,6 +177,8 @@ function CardActionButton({
 interface DealCardProps {
   deal: BoardDeal;
   locale: string;
+  /** Org's `deal_rotting_days`; 0 hides the rotting indicator entirely. */
+  rottingThreshold: number;
   dragging?: boolean;
   /** When this stage is "won" the win button hides — the deal is already there. */
   onWin?: (anchor: HTMLElement | null) => void;
@@ -194,6 +197,7 @@ interface DealCardProps {
 function DealCard({
   deal,
   locale,
+  rottingThreshold,
   dragging,
   onWin,
   onLose,
@@ -287,6 +291,11 @@ function DealCard({
           })}
         </p>
       )}
+      <RottingBadge
+        dealId={deal.id}
+        days={deal.days_since_last_move}
+        threshold={rottingThreshold}
+      />
       {onTogglePaid ? (
         <label
           // Stop dnd-kit from kicking in when the user clicks the checkbox.
@@ -365,6 +374,7 @@ function DealCard({
 function MobileDealCard({
   deal,
   locale,
+  rottingThreshold,
   stageType,
   stages,
   onWin,
@@ -379,6 +389,7 @@ function MobileDealCard({
 }: {
   deal: BoardDeal;
   locale: string;
+  rottingThreshold: number;
   stageType: BoardStage["stage_type"];
   stages: BoardStage[];
   onWin?: () => void;
@@ -448,6 +459,11 @@ function MobileDealCard({
           })}
         </p>
       )}
+      <RottingBadge
+        dealId={deal.id}
+        days={deal.days_since_last_move}
+        threshold={rottingThreshold}
+      />
       {stageType === "won" ? (
         <label className="mt-2 inline-flex select-none items-center gap-2 text-xs text-text-secondary">
           <input
@@ -507,6 +523,7 @@ interface MobileBoardProps {
   activeIndex: number;
   onSelectStage: (index: number) => void;
   locale: string;
+  rottingThreshold: number;
   boardCurrency: string;
   onWinDeal: (deal: BoardDeal, anchor: HTMLElement | null) => void;
   onLoseDeal: (deal: BoardDeal) => void;
@@ -527,6 +544,7 @@ function MobileBoard({
   activeIndex,
   onSelectStage,
   locale,
+  rottingThreshold,
   boardCurrency,
   onWinDeal,
   onLoseDeal,
@@ -588,6 +606,7 @@ function MobileBoard({
                   <MobileDealCard
                     deal={deal}
                     locale={locale}
+                    rottingThreshold={rottingThreshold}
                     stageType={active.stage_type}
                     stages={stages}
                     onWin={active.stage_type === "won" ? undefined : () => onWinDeal(deal, null)}
@@ -617,6 +636,7 @@ function MobileBoard({
 interface StageColumnProps {
   stage: BoardStage;
   locale: string;
+  rottingThreshold: number;
   boardCurrency: string;
   draggingId: string | null;
   onAddDeal: (stageId: string) => void;
@@ -633,6 +653,7 @@ interface StageColumnProps {
 function StageColumn({
   stage,
   locale,
+  rottingThreshold,
   boardCurrency,
   draggingId,
   onAddDeal,
@@ -712,6 +733,7 @@ function StageColumn({
               key={deal.id}
               deal={deal}
               locale={locale}
+              rottingThreshold={rottingThreshold}
               dragging={draggingId === deal.id}
               onOpen={onOpenDeal}
               onQuickActions={onQuickActions}
@@ -776,6 +798,9 @@ export function PipelinePage() {
   );
 
   const locale = useLocale();
+  // Org-wide rotting policy. An absent flag means a stale /auth/me payload —
+  // fall back to the server default rather than silently hiding the badge.
+  const rottingThreshold = user?.organization?.deal_rotting_days ?? 14;
 
   const wonWindowOptions = useMemo(
     () =>
@@ -1130,6 +1155,7 @@ export function PipelinePage() {
                   key={stage.id}
                   stage={stage}
                   locale={locale}
+                  rottingThreshold={rottingThreshold}
                   boardCurrency={board.currency}
                   draggingId={activeDealId}
                   onAddDeal={(stageId) => {
@@ -1149,7 +1175,9 @@ export function PipelinePage() {
             </div>
             <TrashDropZone visible={activeDealId !== null} />
             <DragOverlay dropAnimation={dropWillMove ? null : undefined}>
-              {activeDeal ? <DealCard deal={activeDeal} locale={locale} /> : null}
+              {activeDeal ? (
+                <DealCard deal={activeDeal} locale={locale} rottingThreshold={rottingThreshold} />
+              ) : null}
             </DragOverlay>
           </DndContext>
 
@@ -1159,6 +1187,7 @@ export function PipelinePage() {
             activeIndex={Math.min(mobileStageIndex, Math.max(0, filteredStages.length - 1))}
             onSelectStage={setMobileStageIndex}
             locale={locale}
+            rottingThreshold={rottingThreshold}
             boardCurrency={board.currency}
             onWinDeal={handleWinDeal}
             onLoseDeal={handleLoseDeal}

@@ -28,6 +28,7 @@ from app.schemas.reports.widgets import (
     RepActivityConfig,
     SalesCycleLengthConfig,
     SalesForecastConfig,
+    SalesGoalConfig,
     SalesLeaderboardConfig,
     StaleDealsConfig,
     WeightedPipelineConfig,
@@ -53,7 +54,8 @@ WidgetConfig = Annotated[
     | SalesForecastConfig
     | RepActivityConfig
     | StaleDealsConfig
-    | CompaniesAtRiskConfig,
+    | CompaniesAtRiskConfig
+    | SalesGoalConfig,
     Field(discriminator="type"),
 ]
 

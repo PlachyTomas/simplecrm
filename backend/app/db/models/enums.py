@@ -96,6 +96,20 @@ class SentEmailStatus(StrEnum):
     failed = "failed"
 
 
+class SalesGoalMetric(StrEnum):
+    """What a monthly sales goal counts.
+
+    `won_value` — summed value of deals won in the month (org currency).
+    `won_count` — how many deals were won in the month.
+
+    Both read "won" exactly as the `deals_won` report widget does: a deal in
+    a `won`-type stage whose `closed_at` falls inside the month.
+    """
+
+    won_value = "won_value"
+    won_count = "won_count"
+
+
 class EmailDirection(StrEnum):
     """Which way a `sent_emails` row travelled.
 

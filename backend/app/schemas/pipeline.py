@@ -31,6 +31,12 @@ class BoardDealOut(DealOut):
     eager-loads just the `company` relationship."""
 
     company_name: str
+    # Whole days since the deal's last stage change (falling back to
+    # `updated_at` for a deal that has never moved) — the same number the
+    # `stale_deals` report shows. NULL for closed deals: a won or lost deal
+    # is finished, not rotting. The card compares this against the org's
+    # `deal_rotting_days` to decide whether to show the badge.
+    days_since_last_move: int | None = None
 
 
 class BoardStage(BaseModel):

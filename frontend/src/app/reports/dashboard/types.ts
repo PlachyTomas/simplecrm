@@ -29,7 +29,8 @@ export type WidgetType =
   | "sales_forecast"
   | "rep_activity"
   | "stale_deals"
-  | "companies_at_risk";
+  | "companies_at_risk"
+  | "sales_goal";
 
 /**
  * Each widget type has its own display label per REPORTS_TASK §4,
@@ -53,6 +54,7 @@ export const WIDGET_LABEL_KEY: Record<WidgetType, ParseKeys<"reports">> = {
   rep_activity: "widgetLabels.rep_activity",
   stale_deals: "widgetLabels.stale_deals",
   companies_at_risk: "widgetLabels.companies_at_risk",
+  sales_goal: "widgetLabels.sales_goal",
 };
 
 export const WIDGET_TYPES: WidgetType[] = Object.keys(WIDGET_LABEL_KEY) as WidgetType[];

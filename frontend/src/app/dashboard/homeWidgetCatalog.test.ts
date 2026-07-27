@@ -80,8 +80,8 @@ describe("buildHomePickerGroups", () => {
     expect(types).not.toContain("velocity");
     expect(types).not.toContain("sales_leaderboard");
     expect(types).not.toContain("rep_activity");
-    // 8 home types + 15 reports − 2 gated reports types.
-    expect(types).toHaveLength(21);
+    // 8 home types + 16 reports − 2 gated reports types.
+    expect(types).toHaveLength(22);
   });
 
   it("shows the full catalog to admins", () => {
@@ -89,7 +89,7 @@ describe("buildHomePickerGroups", () => {
     expect(types).toContain("invite_teammates");
     expect(types).toContain("velocity");
     expect(types).toContain("sales_leaderboard");
-    expect(types).toHaveLength(25);
+    expect(types).toHaveLength(26);
   });
 
   it("marks home-native widgets unique and present types as added", () => {

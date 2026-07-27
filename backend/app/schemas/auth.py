@@ -24,6 +24,11 @@ class OrganizationSummary(BaseModel):
     # visible checkbox would be a lie.
     email_tracking_enabled: bool = True
     ownership_window_days: int
+    # Rotting threshold (days) the pipeline board reads to decide when a card
+    # gets a "X days without movement" badge. 0 = the org switched it off.
+    # Defaulted so a stale /auth/me payload renders the server default rather
+    # than silently disabling the indicator.
+    deal_rotting_days: int = 14
 
 
 class CurrentUser(BaseModel):

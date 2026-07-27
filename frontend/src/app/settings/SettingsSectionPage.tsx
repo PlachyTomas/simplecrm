@@ -13,6 +13,7 @@ import { IntegrationsSection } from "@/app/settings/sections/IntegrationsSection
 import { OrganizationSection } from "@/app/settings/sections/OrganizationSection";
 import { PermissionsSection } from "@/app/settings/sections/PermissionsSection";
 import { PipelineSection } from "@/app/settings/sections/PipelineSection";
+import { SalesGoalsSection } from "@/app/settings/sections/SalesGoalsSection";
 import {
   defaultSectionKey,
   isSettingsSectionKey,
@@ -34,6 +35,7 @@ const SECTION_COMPONENTS: Record<SettingsSectionKey, ComponentType> = {
   permissions: PermissionsSection,
   "blocked-companies": BlockedCompaniesSection,
   "email-templates": EmailTemplatesSection,
+  "sales-goals": SalesGoalsSection,
   organization: OrganizationSection,
   billing: BillingSection,
   integrations: IntegrationsSection,

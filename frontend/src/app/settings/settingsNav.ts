@@ -9,6 +9,7 @@ import {
   Mails,
   Palette,
   Plug,
+  Target,
   ShieldCheck,
   Upload,
   UserRound,
@@ -25,6 +26,7 @@ export type SettingsSectionKey =
   | "permissions"
   | "blocked-companies"
   | "email-templates"
+  | "sales-goals"
   | "organization"
   | "billing"
   | "integrations"
@@ -128,6 +130,16 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
     icon: Mails,
     // Salespeople pick templates when composing, so they must be able to read
     // the list; create/edit/delete stay admin/manager (backend-gated).
+    sharedRead: true,
+  },
+  {
+    key: "sales-goals",
+    labelKey: "nav.sections.sales-goals.label",
+    descriptionKey: "nav.sections.sales-goals.description",
+    group: "sales",
+    icon: Target,
+    // A salesperson has to be able to see the number they're being measured
+    // against; create/edit/delete stay admin/manager (backend-gated).
     sharedRead: true,
   },
   {

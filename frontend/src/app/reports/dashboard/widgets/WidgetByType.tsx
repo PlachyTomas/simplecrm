@@ -32,6 +32,7 @@ import {
   CompaniesAtRiskWidget,
   StaleDealsWidget,
 } from "@/app/reports/dashboard/widgets/list-widgets";
+import { SalesGoalWidget } from "@/app/reports/dashboard/widgets/SalesGoalWidget";
 
 interface Props {
   entry: WidgetEntry;
@@ -75,5 +76,7 @@ export function WidgetByType(props: Props) {
       return <StaleDealsWidget {...props} />;
     case "companies_at_risk":
       return <CompaniesAtRiskWidget {...props} />;
+    case "sales_goal":
+      return <SalesGoalWidget {...props} />;
   }
 }

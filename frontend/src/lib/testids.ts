@@ -125,6 +125,7 @@ export const testIds = {
     preview: {
       popover: "pipeline-deal-preview",
     },
+    rottingBadge: (dealId: string) => `pipeline-rotting-${dealId}`,
   },
   emails: {
     compose: {
@@ -160,6 +161,18 @@ export const testIds = {
       rotate: "settings-inbound-address-rotate",
     },
     emailTrackingToggle: "settings-email-tracking-toggle",
+    dealRottingDaysInput: "settings-deal-rotting-days",
+    salesGoals: {
+      add: "settings-sales-goals-add",
+      row: (id: string) => `settings-sales-goal-row-${id}`,
+      edit: (id: string) => `settings-sales-goal-edit-${id}`,
+      remove: (id: string) => `settings-sales-goal-delete-${id}`,
+      userSelect: "settings-sales-goal-user",
+      metricSelect: "settings-sales-goal-metric",
+      targetInput: "settings-sales-goal-target",
+      save: "settings-sales-goal-save",
+      cancel: "settings-sales-goal-cancel",
+    },
     emailTemplates: {
       add: "settings-email-templates-add",
       row: (id: string) => `settings-email-template-row-${id}`,

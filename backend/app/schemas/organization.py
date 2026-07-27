@@ -36,6 +36,10 @@ class OrganizationUpdate(BaseModel):
     # years) — anything wider than ten years would render the auto-release
     # functionally useless.
     ownership_window_days: int | None = Field(default=None, ge=1, le=3650)
+    # Rotting threshold for the pipeline board, in days. 0 turns the
+    # indicator off entirely; anything past ten years is indistinguishable
+    # from off, so the same 3650 ceiling applies.
+    deal_rotting_days: int | None = Field(default=None, ge=0, le=3650)
 
 
 class OrganizationOut(BaseModel):
@@ -59,6 +63,7 @@ class OrganizationOut(BaseModel):
     show_leaderboard_to_salespeople: bool
     email_tracking_enabled: bool
     ownership_window_days: int
+    deal_rotting_days: int
 
 
 SuperAdminActionLiteral = Literal[

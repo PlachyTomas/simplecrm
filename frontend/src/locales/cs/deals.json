@@ -40,7 +40,11 @@
       "loseTooltip": "Označit jako neúspěch",
       "loseAriaLabel": "Označit obchod {{name}} jako neúspěch",
       "quickActionsTooltip": "Rychlé akce",
-      "quickActionsAriaLabel": "Rychlé akce pro obchod {{name}}"
+      "quickActionsAriaLabel": "Rychlé akce pro obchod {{name}}",
+      "rotting_one": "{{count}} den bez pohybu",
+      "rotting_few": "{{count}} dny bez pohybu",
+      "rotting_many": "{{count}} dní bez pohybu",
+      "rotting_other": "{{count}} dní bez pohybu"
     },
     "mobileCard": {
       "won": "Vyhráno",

@@ -18,6 +18,7 @@ import {
   Percent,
   PieChart,
   Scale,
+  Target,
   Timer,
   TrendingUp,
   Trophy,
@@ -48,6 +49,7 @@ const ANALYTICS_TYPES = [
   "lost_reasons_breakdown",
   "stale_deals",
   "companies_at_risk",
+  "sales_goal",
 ] as const satisfies readonly WidgetType[];
 
 export const REPORTS_KPI_TYPES: readonly WidgetType[] = KPI_TYPES;
@@ -61,6 +63,9 @@ export function isKpiWidget(type: WidgetType): boolean {
 
 /** Default footprint for a freshly added widget of this type. */
 export function defaultWidgetSize(type: WidgetType): { w: number; h: number } {
+  // The goal tile is a headline number plus a progress bar — wider than a KPI
+  // tile so the "X of Y" line fits, but nothing like a 20-row list's height.
+  if (type === "sales_goal") return { w: 4, h: 3 };
   return isKpiWidget(type) ? { w: 3, h: 2 } : { w: 6, h: 4 };
 }
 
@@ -85,6 +90,7 @@ export const WIDGET_ICONS: Record<WidgetType, LucideIcon> = {
   rep_activity: Activity,
   stale_deals: Clock,
   companies_at_risk: AlertTriangle,
+  sales_goal: Target,
 };
 
 export const WIDGET_DESCRIPTION_KEY: Record<WidgetType, ParseKeys<"reports">> = {
@@ -103,4 +109,5 @@ export const WIDGET_DESCRIPTION_KEY: Record<WidgetType, ParseKeys<"reports">> = 
   rep_activity: "widgetDescriptions.rep_activity",
   stale_deals: "widgetDescriptions.stale_deals",
   companies_at_risk: "widgetDescriptions.companies_at_risk",
+  sales_goal: "widgetDescriptions.sales_goal",
 };

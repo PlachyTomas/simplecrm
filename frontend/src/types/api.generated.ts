@@ -1788,6 +1788,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales-goals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Sales Goals
+         * @description Goals for one month, with live progress attached.
+         *
+         *     Salespeople get their own goals plus org-wide ones; managers and admins
+         *     get every goal in the org. Not paginated — one month of goals is at most
+         *     one row per member per metric.
+         */
+        get: operations["list_sales_goals_api_v1_sales_goals_get"];
+        put?: never;
+        /** Create Sales Goal */
+        post: operations["create_sales_goal_api_v1_sales_goals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales-goals/{goal_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Sales Goal */
+        put: operations["update_sales_goal_api_v1_sales_goals__goal_id__put"];
+        post?: never;
+        /** Delete Sales Goal */
+        delete: operations["delete_sales_goal_api_v1_sales_goals__goal_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/search": {
         parameters: {
             query?: never;
@@ -3942,6 +3985,8 @@ export interface components {
             updated_at: string;
             /** Company Name */
             company_name: string;
+            /** Days Since Last Move */
+            days_since_last_move?: number | null;
         };
         /** BoardStage */
         BoardStage: {
@@ -5233,7 +5278,7 @@ export interface components {
             id: string;
             position: components["schemas"]["WidgetPosition"];
             /** Config */
-            config: components["schemas"]["PipelineValueConfig"] | components["schemas"]["WeightedPipelineConfig"] | components["schemas"]["NewCompaniesConfig"] | components["schemas"]["DealsWonConfig"] | components["schemas"]["WonVsPaidConfig"] | components["schemas"]["SalesForecastConfig"] | components["schemas"]["WinRateConfig"] | components["schemas"]["AvgDealSizeConfig"] | components["schemas"]["SalesCycleLengthConfig"] | components["schemas"]["LeadToDealConversionConfig"] | components["schemas"]["LostReasonsBreakdownConfig"] | components["schemas"]["SalesLeaderboardConfig"] | components["schemas"]["RepActivityConfig"] | components["schemas"]["StaleDealsConfig"] | components["schemas"]["CompaniesAtRiskConfig"] | components["schemas"]["KpiOpenDealsConfig"] | components["schemas"]["KpiPipelineValueConfig"] | components["schemas"]["KpiWonMonthConfig"] | components["schemas"]["KpiRevenueMonthConfig"] | components["schemas"]["ActionNewDealConfig"] | components["schemas"]["ActionNewCompanyConfig"] | components["schemas"]["ActionNewContactConfig"] | components["schemas"]["ActionNewActivityConfig"] | components["schemas"]["InviteTeammatesConfig"] | components["schemas"]["VelocityConfig"];
+            config: components["schemas"]["PipelineValueConfig"] | components["schemas"]["WeightedPipelineConfig"] | components["schemas"]["NewCompaniesConfig"] | components["schemas"]["DealsWonConfig"] | components["schemas"]["WonVsPaidConfig"] | components["schemas"]["SalesForecastConfig"] | components["schemas"]["WinRateConfig"] | components["schemas"]["AvgDealSizeConfig"] | components["schemas"]["SalesCycleLengthConfig"] | components["schemas"]["LeadToDealConversionConfig"] | components["schemas"]["LostReasonsBreakdownConfig"] | components["schemas"]["SalesLeaderboardConfig"] | components["schemas"]["RepActivityConfig"] | components["schemas"]["StaleDealsConfig"] | components["schemas"]["CompaniesAtRiskConfig"] | components["schemas"]["SalesGoalConfig"] | components["schemas"]["KpiOpenDealsConfig"] | components["schemas"]["KpiPipelineValueConfig"] | components["schemas"]["KpiWonMonthConfig"] | components["schemas"]["KpiRevenueMonthConfig"] | components["schemas"]["ActionNewDealConfig"] | components["schemas"]["ActionNewCompanyConfig"] | components["schemas"]["ActionNewContactConfig"] | components["schemas"]["ActionNewActivityConfig"] | components["schemas"]["InviteTeammatesConfig"] | components["schemas"]["VelocityConfig"];
         };
         /**
          * ImpersonateOut
@@ -5837,6 +5882,8 @@ export interface components {
             email_tracking_enabled: boolean;
             /** Ownership Window Days */
             ownership_window_days: number;
+            /** Deal Rotting Days */
+            deal_rotting_days: number;
         };
         /** OrganizationSummary */
         OrganizationSummary: {
@@ -5867,6 +5914,11 @@ export interface components {
             email_tracking_enabled: boolean;
             /** Ownership Window Days */
             ownership_window_days: number;
+            /**
+             * Deal Rotting Days
+             * @default 14
+             */
+            deal_rotting_days: number;
         };
         /**
          * OrganizationUpdate
@@ -5903,6 +5955,8 @@ export interface components {
             email_tracking_enabled?: boolean | null;
             /** Ownership Window Days */
             ownership_window_days?: number | null;
+            /** Deal Rotting Days */
+            deal_rotting_days?: number | null;
         };
         /** Page[ActivityOut] */
         Page_ActivityOut_: {
@@ -6378,6 +6432,112 @@ export interface components {
             total_value: string;
             /** Total Weighted Value */
             total_weighted_value: string;
+        };
+        /**
+         * SalesGoalConfig
+         * @description This month's progress toward a sales goal.
+         *
+         *     Always the *current* month — a goal is a monthly commitment, so the
+         *     dashboard's global date filter deliberately doesn't apply. `scope` picks
+         *     which goal the tile follows: the viewer's own, or the org-wide one.
+         */
+        SalesGoalConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "sales_goal";
+            /**
+             * Scope
+             * @default mine
+             * @enum {string}
+             */
+            scope: "mine" | "organization";
+            /**
+             * Metric
+             * @default won_value
+             * @enum {string}
+             */
+            metric: "won_value" | "won_count";
+        };
+        /**
+         * SalesGoalIn
+         * @description Create/update body. `user_id = None` means an org-wide goal.
+         */
+        SalesGoalIn: {
+            /** User Id */
+            user_id?: string | null;
+            /**
+             * Period Month
+             * Format: date
+             */
+            period_month: string;
+            metric: components["schemas"]["SalesGoalMetric"];
+            /** Target Value */
+            target_value: number | string;
+        };
+        /** SalesGoalList */
+        SalesGoalList: {
+            /** Items */
+            items: components["schemas"]["SalesGoalProgress"][];
+        };
+        /**
+         * SalesGoalMetric
+         * @description What a monthly sales goal counts.
+         *
+         *     `won_value` — summed value of deals won in the month (org currency).
+         *     `won_count` — how many deals were won in the month.
+         *
+         *     Both read "won" exactly as the `deals_won` report widget does: a deal in
+         *     a `won`-type stage whose `closed_at` falls inside the month.
+         * @enum {string}
+         */
+        SalesGoalMetric: "won_value" | "won_count";
+        /**
+         * SalesGoalProgress
+         * @description A goal plus what has actually happened this month.
+         *
+         *     `actual` is never stored — it is computed from the same `won_in_window`
+         *     helper the `deals_won` report widget uses, so goal and report agree by
+         *     construction. For `won_count` it is a whole number carried in the same
+         *     Decimal field as `won_value`.
+         */
+        SalesGoalProgress: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** User Id */
+            user_id?: string | null;
+            /** User Name */
+            user_name?: string | null;
+            /**
+             * Period Month
+             * Format: date
+             */
+            period_month: string;
+            metric: components["schemas"]["SalesGoalMetric"];
+            /** Target Value */
+            target_value: string;
+            /** Actual Value */
+            actual_value: string;
+            /** Progress Pct */
+            progress_pct: number;
+            /** Currency */
+            currency: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /**
          * SalesLeaderboardConfig
@@ -7361,7 +7521,7 @@ export interface components {
             id: string;
             position: components["schemas"]["WidgetPosition"];
             /** Config */
-            config: components["schemas"]["PipelineValueConfig"] | components["schemas"]["WeightedPipelineConfig"] | components["schemas"]["NewCompaniesConfig"] | components["schemas"]["DealsWonConfig"] | components["schemas"]["WonVsPaidConfig"] | components["schemas"]["WinRateConfig"] | components["schemas"]["AvgDealSizeConfig"] | components["schemas"]["SalesCycleLengthConfig"] | components["schemas"]["LeadToDealConversionConfig"] | components["schemas"]["LostReasonsBreakdownConfig"] | components["schemas"]["SalesLeaderboardConfig"] | components["schemas"]["SalesForecastConfig"] | components["schemas"]["RepActivityConfig"] | components["schemas"]["StaleDealsConfig"] | components["schemas"]["CompaniesAtRiskConfig"];
+            config: components["schemas"]["PipelineValueConfig"] | components["schemas"]["WeightedPipelineConfig"] | components["schemas"]["NewCompaniesConfig"] | components["schemas"]["DealsWonConfig"] | components["schemas"]["WonVsPaidConfig"] | components["schemas"]["WinRateConfig"] | components["schemas"]["AvgDealSizeConfig"] | components["schemas"]["SalesCycleLengthConfig"] | components["schemas"]["LeadToDealConversionConfig"] | components["schemas"]["LostReasonsBreakdownConfig"] | components["schemas"]["SalesLeaderboardConfig"] | components["schemas"]["SalesForecastConfig"] | components["schemas"]["RepActivityConfig"] | components["schemas"]["StaleDealsConfig"] | components["schemas"]["CompaniesAtRiskConfig"] | components["schemas"]["SalesGoalConfig"];
         };
         /** WidgetPosition */
         WidgetPosition: {
@@ -10844,6 +11004,135 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CompaniesAtRiskResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sales_goals_api_v1_sales_goals_get: {
+        parameters: {
+            query?: {
+                /** @description Any date in the month to list; defaults to the current month. */
+                month?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesGoalList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_sales_goal_api_v1_sales_goals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesGoalIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesGoalProgress"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_sales_goal_api_v1_sales_goals__goal_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                goal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesGoalIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesGoalProgress"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_sales_goal_api_v1_sales_goals__goal_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                goal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

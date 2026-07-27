@@ -12,13 +12,10 @@ from __future__ import annotations
 from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import (
-    Activity,
-    ActivityEntityType,
-    ActivityType,
     Company,
     Deal,
     Organization,
@@ -28,6 +25,7 @@ from app.db.models import (
 from app.db.models.enums import StageType
 from app.schemas.reports import StaleDealItem, StaleDealsResponse
 from app.schemas.reports.widgets import StaleDealsConfig
+from app.services.deal_staleness import days_since_last_move, last_stage_change_subquery
 
 MAX_ROWS = 20
 
@@ -49,18 +47,9 @@ async def compute_stale_deals(
     threshold = config.threshold
     cutoff = datetime.now(tz=UTC) - timedelta(days=threshold)
 
-    # Per-deal "last stage change" timestamp: max(Activity.created_at)
-    # where activity_type='stage_change' for that deal.
-    last_change_subq = (
-        select(
-            Activity.entity_id.label("deal_id"),
-            func.max(Activity.created_at).label("last_change_at"),
-        )
-        .where(Activity.entity_type == ActivityEntityType.deal)
-        .where(Activity.activity_type == ActivityType.stage_change)
-        .group_by(Activity.entity_id)
-        .subquery()
-    )
+    # Per-deal "last stage change" timestamp — shared with the pipeline
+    # board's rotting badge so the two never disagree.
+    last_change_subq = last_stage_change_subquery()
 
     stmt = (
         select(
@@ -103,9 +92,8 @@ async def compute_stale_deals(
     now = datetime.now(tz=UTC)
     for deal, stage, company, owner, last_change_at in rows:
         # Days since the most recent signal (last_change_at if present,
-        # else updated_at).
-        anchor = last_change_at or deal.updated_at
-        days = (now - anchor).days
+        # else updated_at) — same helper the board badge uses.
+        days = days_since_last_move(last_change_at, deal.updated_at, now=now)
         items.append(
             StaleDealItem(
                 deal_id=deal.id,

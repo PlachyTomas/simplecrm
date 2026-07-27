@@ -66,6 +66,10 @@
       "email-templates": {
         "label": "Šablony e-mailů",
         "description": "Sdílené šablony předmětu a textu pro jednotlivé i hromadné e-maily."
+      },
+      "sales-goals": {
+        "label": "Prodejní cíle",
+        "description": "Měsíční cíle pro obchodníky i celou firmu."
       }
     },
     "importItem": {
@@ -652,6 +656,54 @@
       "save": "Uložit",
       "saving": "Ukládání…",
       "cancel": "Zrušit"
+    }
+  },
+  "dealRotting": {
+    "title": "Stagnující obchody",
+    "subtitle": "Kdy má tabule pipeline upozornit, že se s obchodem nic neděje.",
+    "label": "Práh stagnace (dny)",
+    "inputSubtitle": "Otevřený obchod bez změny fáze déle než tento počet dní dostane na kartě upozornění. Při dvojnásobku se zbarví červeně. 0 upozornění vypne.",
+    "save": "Uložit",
+    "saving": "Ukládám…",
+    "savedFlash": "Uloženo",
+    "error": {
+      "range": "Zadejte číslo od 0 do 3650.",
+      "generic": "Nastavení se nepodařilo uložit. Zkuste to prosím znovu."
+    }
+  },
+  "salesGoals": {
+    "title": "Cíle na tento měsíc",
+    "subtitle": "Jeden cíl na osobu (nebo celou firmu), měsíc a metriku. Plnění se počítá z vyhraných obchodů uzavřených v daném měsíci.",
+    "addButton": "Přidat cíl",
+    "readOnlyNote": "Cíle může nastavovat správce nebo manažer.",
+    "loading": "Načítám…",
+    "empty": "Pro tento měsíc zatím není nastavený žádný cíl.",
+    "monthLabel": "Měsíc",
+    "wholeCompany": "Celá firma",
+    "progress": "{{actual}} z {{target}}",
+    "progressPct": "{{pct}} %",
+    "editAriaLabel": "Upravit cíl {{name}}",
+    "deleteAriaLabel": "Smazat cíl {{name}}",
+    "deleteConfirm": "Opravdu smazat cíl {{name}}?",
+    "metric": {
+      "won_value": "Hodnota vyhraných obchodů",
+      "won_count": "Počet vyhraných obchodů"
+    },
+    "editor": {
+      "newTitle": "Nový cíl",
+      "editTitle": "Upravit cíl",
+      "userLabel": "Pro koho",
+      "metricLabel": "Metrika",
+      "targetLabel": "Cíl",
+      "monthLabel": "Měsíc",
+      "save": "Uložit",
+      "saving": "Ukládám…",
+      "cancel": "Zrušit"
+    },
+    "errors": {
+      "required": "Vyplňte prosím cílovou hodnotu větší než nula.",
+      "duplicate": "Cíl pro tuto osobu, měsíc a metriku už existuje.",
+      "generic": "Cíl se nepodařilo uložit. Zkuste to prosím znovu."
     }
   }
 }

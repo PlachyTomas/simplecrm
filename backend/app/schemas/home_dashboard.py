@@ -2,7 +2,7 @@
 
 Mirrors `app.schemas.reports.dashboard.DashboardConfig`, sharing its grid
 primitives (`WidgetPosition`, the overlap check, the 12-col / 20-widget
-caps). The home catalog is the 12 report widget configs plus 10 home-only
+caps). The home catalog is the 16 report widget configs plus 10 home-only
 configs (4 KPI tiles, 4 quick actions, invite card, velocity), unioned on
 the `type` discriminator.
 
@@ -40,6 +40,7 @@ from app.schemas.reports.widgets import (
     RepActivityConfig,
     SalesCycleLengthConfig,
     SalesForecastConfig,
+    SalesGoalConfig,
     SalesLeaderboardConfig,
     StaleDealsConfig,
     WeightedPipelineConfig,
@@ -95,7 +96,7 @@ class VelocityConfig(WidgetConfigBase):
     type: Literal["velocity"] = "velocity"
 
 
-# Discriminated union: the 12 report configs + the 10 home-only configs.
+# Discriminated union: the 16 report configs + the 10 home-only configs.
 # Pydantic picks the right subclass off `type`; unknown types fail
 # validation instead of silently coercing.
 HomeWidgetConfig = Annotated[
@@ -114,6 +115,7 @@ HomeWidgetConfig = Annotated[
     | RepActivityConfig
     | StaleDealsConfig
     | CompaniesAtRiskConfig
+    | SalesGoalConfig
     | KpiOpenDealsConfig
     | KpiPipelineValueConfig
     | KpiWonMonthConfig

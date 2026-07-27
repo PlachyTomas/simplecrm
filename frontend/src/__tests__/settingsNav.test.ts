@@ -8,17 +8,19 @@ import {
 } from "@/app/settings/settingsNav";
 
 describe("settingsNav", () => {
-  it("admins see all 12 sections", () => {
-    expect(visibleSectionKeys("admin", false)).toHaveLength(12);
+  it("admins see all 13 sections", () => {
+    expect(visibleSectionKeys("admin", false)).toHaveLength(13);
   });
 
   it("salespeople see personal sections plus the read-for-all ones", () => {
     // Email templates are readable by every role (they pick one when
-    // composing); the section itself hides the write controls.
+    // composing) and so are sales goals (a rep has to see the number they
+    // are measured against); both sections hide their write controls.
     expect(visibleSectionKeys("salesperson", false)).toEqual([
       "appearance",
       "integrations",
       "email-templates",
+      "sales-goals",
     ]);
   });
 
@@ -27,6 +29,7 @@ describe("settingsNav", () => {
       "appearance",
       "integrations",
       "email-templates",
+      "sales-goals",
       "invitations",
     ]);
   });
@@ -40,6 +43,7 @@ describe("settingsNav", () => {
     expect(isSettingsSectionKey("billing")).toBe(true);
     expect(isSettingsSectionKey("blocked-companies")).toBe(true);
     expect(isSettingsSectionKey("email-templates")).toBe(true);
+    expect(isSettingsSectionKey("sales-goals")).toBe(true);
     expect(isSettingsSectionKey("nonsense")).toBe(false);
     expect(isSettingsSectionKey(null)).toBe(false);
   });

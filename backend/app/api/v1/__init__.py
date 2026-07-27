@@ -29,6 +29,7 @@ from app.api.v1 import (
     plans,
     reports,
     reports_widgets,
+    sales_goals,
     search,
     subscription,
     teams,
@@ -89,6 +90,9 @@ api_router.include_router(invoices.router, dependencies=[Depends(require_org_mem
 api_router.include_router(pipelines.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(reports.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(reports_widgets.router, dependencies=PROTECTED_DEPS)
+# Monthly sales goals. Everyone reads (scoped to what they may see);
+# admins/managers write (gated per-route inside the router).
+api_router.include_router(sales_goals.router, dependencies=PROTECTED_DEPS)
 # Global top-bar search across companies/contacts/deals. Each entity keeps its
 # own visibility rules inside the handler.
 api_router.include_router(search.router, dependencies=PROTECTED_DEPS)

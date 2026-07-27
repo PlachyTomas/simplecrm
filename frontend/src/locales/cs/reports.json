@@ -41,7 +41,8 @@
     "sales_leaderboard": "Žebříček obchodníků",
     "rep_activity": "Aktivita obchodníků",
     "stale_deals": "Stagnující obchody",
-    "companies_at_risk": "Firmy ohrožené uvolněním"
+    "companies_at_risk": "Firmy ohrožené uvolněním",
+    "sales_goal": "Plnění cíle"
   },
   "widgetDescriptions": {
     "pipeline_value": "Součet hodnoty otevřených obchodů.",
@@ -58,7 +59,8 @@
     "sales_leaderboard": "Žebříček obchodníků podle výsledků.",
     "rep_activity": "Počet nových obchodů podle obchodníka.",
     "stale_deals": "Obchody bez pohybu delší dobu.",
-    "companies_at_risk": "Firmy s blížícím se koncem vlastnictví."
+    "companies_at_risk": "Firmy s blížícím se koncem vlastnictví.",
+    "sales_goal": "Postup k měsíčnímu prodejnímu cíli."
   },
   "widgetPicker": {
     "groupKpi": "Ukazatele",
@@ -152,5 +154,17 @@
   "days_one": "{{value}} den",
   "days_few": "{{value}} dny",
   "days_many": "{{value}} dní",
-  "days_other": "{{value}} dní"
+  "days_other": "{{value}} dní",
+  "salesGoal": {
+    "targetLabel": "Cíl",
+    "ofTarget": "z cíle",
+    "scopeMine": "Můj cíl",
+    "scopeOrganization": "Celá firma",
+    "empty": "Pro tento měsíc není nastavený žádný cíl.",
+    "emptyCta": "Nastavit cíl",
+    "metric": {
+      "won_value": "Hodnota vyhraných obchodů",
+      "won_count": "Počet vyhraných obchodů"
+    }
+  }
 }

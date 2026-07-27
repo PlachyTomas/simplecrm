@@ -22,6 +22,7 @@ from app.schemas.reports.widgets.pipeline_value import PipelineValueConfig
 from app.schemas.reports.widgets.rep_activity import RepActivityConfig
 from app.schemas.reports.widgets.sales_cycle_length import SalesCycleLengthConfig
 from app.schemas.reports.widgets.sales_forecast import SalesForecastConfig
+from app.schemas.reports.widgets.sales_goal import SalesGoalConfig
 from app.schemas.reports.widgets.sales_leaderboard import SalesLeaderboardConfig
 from app.schemas.reports.widgets.stale_deals import StaleDealsConfig
 from app.schemas.reports.widgets.weighted_pipeline import WeightedPipelineConfig
@@ -44,6 +45,7 @@ WidgetType = Literal[
     "rep_activity",
     "stale_deals",
     "companies_at_risk",
+    "sales_goal",
 ]
 
 __all__ = [
@@ -57,6 +59,7 @@ __all__ = [
     "RepActivityConfig",
     "SalesCycleLengthConfig",
     "SalesForecastConfig",
+    "SalesGoalConfig",
     "SalesLeaderboardConfig",
     "StaleDealsConfig",
     "WeightedPipelineConfig",
