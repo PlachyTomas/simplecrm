@@ -31,7 +31,10 @@
         "label": "Organizace",
         "description": "Smluvní počet uživatelů a způsob fakturace."
       },
-      "teams": { "label": "Týmy", "description": "Sdružujte obchodníky pod manažery." },
+      "teams": {
+        "label": "Týmy",
+        "description": "Sdružujte obchodníky pod manažery."
+      },
       "users": {
         "label": "Uživatelé",
         "description": "Spravujte role, týmovou příslušnost a aktivitu členů."
@@ -59,6 +62,10 @@
       "billing": {
         "label": "Fakturace",
         "description": "Detaily plánu, faktur a způsobu platby."
+      },
+      "email-templates": {
+        "label": "Šablony e-mailů",
+        "description": "Sdílené šablony předmětu a textu pro jednotlivé i hromadné e-maily."
       }
     },
     "importItem": {
@@ -276,7 +283,8 @@
       "username": "Uživatel",
       "password": "Heslo",
       "fromEmail": "Odesílatel (e-mail)",
-      "fromName": "Jméno odesílatele (volitelné)"
+      "fromName": "Jméno odesílatele (volitelné)",
+      "signature": "Podpis (volitelné)"
     },
     "placeholders": {
       "host": "smtp.vasefirma.cz",
@@ -284,7 +292,8 @@
       "fromEmail": "jan@vasefirma.cz",
       "fromName": "Jan Novák",
       "passwordStored": "•••••••• (beze změny)",
-      "passwordNew": "heslo nebo app password"
+      "passwordNew": "heslo nebo app password",
+      "signature": "Jan Novák\nObchodní ředitel\n+420 123 456 789"
     },
     "securityOptions": {
       "ssl": "SSL/TLS (obvykle port 465)",
@@ -300,7 +309,8 @@
     "testSuccess": "Připojení k SMTP ověřeno ✓",
     "testFailPrefix": "Test selhal:",
     "testUnknownError": "neznámá chyba",
-    "testError": "Test se nezdařil, zkuste to prosím znovu."
+    "testError": "Test se nezdařil, zkuste to prosím znovu.",
+    "signatureHint": "Podpis se připojí na konec odchozích e-mailů za oddělovač „-- “, který poštovní klienti umí sbalit. Můžete v něm použít slučovací pole, např. {vlastnik}."
   },
   "invoiceDetails": {
     "title": "Fakturační údaje",
@@ -488,6 +498,13 @@
       "team": "Tým",
       "all": "Vše",
       "yes": "Ano"
+    },
+    "emailTracking": {
+      "title": "Sledování e-mailů",
+      "subtitleCard": "Měření otevření a prokliků u e-mailů odeslaných z aplikace.",
+      "label": "Měřit otevření a prokliky e-mailů",
+      "subtitle": "Když je vypnuto, aplikace nevkládá do e-mailů sledovací pixel ani nepřepisuje odkazy — a to pro celou organizaci, včetně hromadných kampaní. Vypněte, pokud podle Vašeho výkladu GDPR a ePrivacy vyžaduje sledování souhlas příjemce.",
+      "error": "Uložení se nezdařilo."
     }
   },
   "import": {
@@ -591,6 +608,34 @@
       "doneToast": "Hotovo. Vytvořeno: {{companies}}, {{contacts}}.",
       "previewFailed": "Náhled selhal.",
       "importFailed": "Import selhal."
+    }
+  },
+  "emailTemplates": {
+    "title": "Šablony e-mailů",
+    "subtitle": "Šablony sdílí celá organizace. Vyberete je při psaní e-mailu i v hromadné kampani.",
+    "addButton": "Nová šablona",
+    "readOnlyNote": "Šablony spravují administrátoři a manažeři.",
+    "loading": "Načítání…",
+    "empty": "Zatím žádné šablony.",
+    "updatedAt": "Upraveno {{date}}",
+    "editAriaLabel": "Upravit šablonu {{name}}",
+    "deleteAriaLabel": "Smazat šablonu {{name}}",
+    "deleteConfirm": "Opravdu smazat šablonu „{{name}}“?",
+    "errors": {
+      "required": "Vyplňte prosím název a předmět.",
+      "duplicate": "Šablona s tímto názvem už existuje.",
+      "generic": "Šablonu se nepodařilo uložit, zkuste to prosím znovu."
+    },
+    "editor": {
+      "newTitle": "Nová šablona",
+      "editTitle": "Upravit šablonu",
+      "nameLabel": "Název šablony",
+      "namePlaceholder": "Např. První oslovení",
+      "subjectLabel": "Předmět",
+      "bodyLabel": "Text e-mailu",
+      "save": "Uložit",
+      "saving": "Ukládání…",
+      "cancel": "Zrušit"
     }
   }
 }

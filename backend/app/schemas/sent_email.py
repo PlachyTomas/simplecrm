@@ -28,7 +28,12 @@ class SentEmailCreate(BaseModel):
     # Embed the open pixel + rewrite links through the click tracker. On by
     # default; the composer can opt out per send (no token is issued then,
     # and the mail goes out plain-text-only exactly as before tracking).
+    # An org-level opt-out (`Organization.email_tracking_enabled=false`)
+    # overrides this — tracking is then off regardless of what is sent here.
     track: bool = True
+    # Append the sender's stored signature (Nastavení → SMTP) behind the
+    # RFC 3676 "-- " delimiter, after merge fields resolve. On by default.
+    append_signature: bool = True
 
 
 class SentEmailOut(BaseModel):

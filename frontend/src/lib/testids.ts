@@ -118,6 +118,7 @@ export const testIds = {
       ccInput: "email-compose-cc-input",
       bccInput: "email-compose-bcc-input",
       trackToggle: "email-compose-track-toggle",
+      templateSelect: "email-compose-template-select",
       suggestion: (field: string, contactId: string) =>
         `email-compose-${field}-suggestion-${contactId}`,
       newContactToggle: (field: string) => `email-compose-${field}-new-contact-toggle`,
@@ -128,6 +129,25 @@ export const testIds = {
         save: "email-compose-new-contact-save",
         cancel: "email-compose-new-contact-cancel",
       },
+    },
+    bulkWizard: {
+      templateSelect: "bulk-email-template-select",
+    },
+  },
+  settings: {
+    smtpSignature: "settings-smtp-signature",
+    emailTrackingToggle: "settings-email-tracking-toggle",
+    emailTemplates: {
+      add: "settings-email-templates-add",
+      row: (id: string) => `settings-email-template-row-${id}`,
+      edit: (id: string) => `settings-email-template-edit-${id}`,
+      remove: (id: string) => `settings-email-template-delete-${id}`,
+      nameInput: "settings-email-template-name",
+      subjectInput: "settings-email-template-subject",
+      bodyInput: "settings-email-template-body",
+      save: "settings-email-template-save",
+      cancel: "settings-email-template-cancel",
+      mergeChip: (key: string) => `settings-email-template-merge-${key}`,
     },
   },
   reports: {

@@ -11,6 +11,7 @@ from app.api.v1 import (
     contacts,
     data_export,
     deals,
+    email_templates,
     emails,
     events,
     feedback,
@@ -74,6 +75,9 @@ api_router.include_router(companies.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(contacts.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(deals.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(emails.router, dependencies=PROTECTED_DEPS)
+# Org-shared email templates. Everyone reads; admins/managers write (gated
+# per-route inside the router).
+api_router.include_router(email_templates.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(events.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(invitations.router, dependencies=PROTECTED_DEPS)
 # Customer-facing tax-invoice surfaces. Org-membership gated; not trial-

@@ -77,6 +77,15 @@ class Organization(Base):
         Boolean, default=False, server_default="false", nullable=False
     )
 
+    # Org-wide kill switch for email open/click tracking. Default True keeps
+    # the F1 behavior; an admin who reads ePrivacy/GDPR as requiring consent
+    # for the pixel flips it off in Settings → Oprávnění and *both* send paths
+    # (composer + campaigns) stop minting tokens — no pixel, no link
+    # rewriting, whatever the per-send `track` flag says.
+    email_tracking_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true", nullable=False
+    )
+
     # Auto-release window (days). When a Company has had no won-deal activity
     # for this many days, the freeing job releases its ownership back to the
     # pool so a manager can reassign. Default 365; bounded 1..3650 at the API

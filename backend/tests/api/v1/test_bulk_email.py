@@ -82,7 +82,7 @@ def _auth(user: User) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _fake_loop(config, subject, body, sender_name, units, attachments):
+def _fake_loop(config, subject, body, context, signature, units, attachments):
     return [
         {
             "company_id": u.company_id,

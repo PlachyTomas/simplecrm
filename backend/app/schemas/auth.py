@@ -19,6 +19,10 @@ class OrganizationSummary(BaseModel):
     currency: str
     trial_ends_at: datetime
     show_leaderboard_to_salespeople: bool
+    # Lets the composer hide its per-send tracking toggle when the org has
+    # tracking switched off — the server ignores the flag in that case, so a
+    # visible checkbox would be a lie.
+    email_tracking_enabled: bool = True
     ownership_window_days: int
 
 

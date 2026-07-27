@@ -29,6 +29,9 @@ class OrganizationUpdate(BaseModel):
     billing_email: str | None = Field(default=None, max_length=320)
     billing_kind: Literal["business", "individual"] | None = None
     show_leaderboard_to_salespeople: bool | None = None
+    # Org-wide switch for email open/click tracking. False disables the pixel
+    # and link rewriting on every send path, whatever the per-send flag says.
+    email_tracking_enabled: bool | None = None
     # Auto-release window for companies. Bounded to 1..3650 (one day to ten
     # years) — anything wider than ten years would render the auto-release
     # functionally useless.
@@ -54,6 +57,7 @@ class OrganizationOut(BaseModel):
     trial_ends_at: datetime
     stripe_customer_id: str | None = None
     show_leaderboard_to_salespeople: bool
+    email_tracking_enabled: bool
     ownership_window_days: int
 
 

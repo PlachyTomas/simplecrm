@@ -5,16 +5,29 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { apiFetch } from "@/lib/api";
+import { testIds } from "@/lib/testids";
 import type { components } from "@/types/api.generated";
 
 type OrganizationOut = components["schemas"]["OrganizationOut"];
 
-function LeaderboardVisibilityToggle() {
-  const { t } = useTranslation("settings");
-  const { data: user } = useCurrentUser();
+/** Boolean org flag with optimistic local state and rollback on failure. */
+function OrgFlagToggle({
+  field,
+  initial,
+  label,
+  subtitle,
+  errorLabel,
+  testId,
+}: {
+  field: "show_leaderboard_to_salespeople" | "email_tracking_enabled";
+  initial: boolean;
+  label: string;
+  subtitle: string;
+  errorLabel: string;
+  testId?: string;
+}) {
   const { accessToken } = useAuth();
   const qc = useQueryClient();
-  const initial = !!user?.organization?.show_leaderboard_to_salespeople;
   const [checked, setChecked] = useState(initial);
 
   // Keep local state in sync if /auth/me re-resolves with a different value
@@ -28,7 +41,7 @@ function LeaderboardVisibilityToggle() {
       apiFetch<OrganizationOut>("/api/v1/organizations/current", {
         method: "PUT",
         token: accessToken,
-        body: { show_leaderboard_to_salespeople: next },
+        body: { [field]: next },
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["auth", "me"] });
@@ -48,23 +61,51 @@ function LeaderboardVisibilityToggle() {
         type="checkbox"
         checked={checked}
         disabled={mutation.isPending}
+        data-testid={testId}
         onChange={(e) => onToggle(e.target.checked)}
         className="mt-0.5 h-4 w-4 rounded border-border accent-accent"
       />
       <span>
-        <span className="block text-sm font-medium text-text-primary">
-          {t("permissions.leaderboard.label")}
-        </span>
-        <span className="mt-0.5 block text-xs text-text-tertiary">
-          {t("permissions.leaderboard.subtitle")}
-        </span>
+        <span className="block text-sm font-medium text-text-primary">{label}</span>
+        <span className="mt-0.5 block text-xs text-text-tertiary">{subtitle}</span>
         {mutation.isError ? (
           <span className="mt-1 block text-xs text-danger" role="alert">
-            {t("permissions.leaderboard.error")}
+            {errorLabel}
           </span>
         ) : null}
       </span>
     </label>
+  );
+}
+
+function LeaderboardVisibilityToggle() {
+  const { t } = useTranslation("settings");
+  const { data: user } = useCurrentUser();
+  return (
+    <OrgFlagToggle
+      field="show_leaderboard_to_salespeople"
+      initial={!!user?.organization?.show_leaderboard_to_salespeople}
+      label={t("permissions.leaderboard.label")}
+      subtitle={t("permissions.leaderboard.subtitle")}
+      errorLabel={t("permissions.leaderboard.error")}
+    />
+  );
+}
+
+function EmailTrackingToggle() {
+  const { t } = useTranslation("settings");
+  const { data: user } = useCurrentUser();
+  return (
+    <OrgFlagToggle
+      field="email_tracking_enabled"
+      // Absent flag = server default (tracking on) — never render "off" for a
+      // stale /auth/me payload, that would misrepresent what is being sent.
+      initial={user?.organization?.email_tracking_enabled !== false}
+      label={t("permissions.emailTracking.label")}
+      subtitle={t("permissions.emailTracking.subtitle")}
+      errorLabel={t("permissions.emailTracking.error")}
+      testId={testIds.settings.emailTrackingToggle}
+    />
   );
 }
 
@@ -192,6 +233,15 @@ export function PermissionsSection() {
         <p className="mt-1 text-sm text-text-tertiary">{t("permissions.visibility.subtitle")}</p>
         <div className="mt-4">
           <LeaderboardVisibilityToggle />
+        </div>
+      </div>
+      <div className="rounded-lg border border-border bg-surface p-6">
+        <h2 className="text-lg font-semibold">{t("permissions.emailTracking.title")}</h2>
+        <p className="mt-1 text-sm text-text-tertiary">
+          {t("permissions.emailTracking.subtitleCard")}
+        </p>
+        <div className="mt-4">
+          <EmailTrackingToggle />
         </div>
       </div>
       <div className="rounded-lg border border-border bg-surface p-6">

@@ -32,7 +32,8 @@
     "newContactSaving": "Saving…",
     "newContactCancel": "Cancel",
     "newContactError": "Could not save the contact.",
-    "trackLabel": "Track opens and clicks"
+    "trackLabel": "Track opens and clicks",
+    "trackingOffByOrg": "Open and click tracking is switched off for your organization."
   },
   "history": {
     "title": "Sent emails",
@@ -107,8 +108,6 @@
     "subjectPlaceholder": "New offer for {firma}",
     "bodyLabel": "Email text",
     "bodyPlaceholder": "Hello {kontakt},\n\nwe'd like to introduce…",
-    "placeholdersHintPrefix": "Use the placeholders",
-    "placeholdersHintSuffix": "— filled in for each recipient.",
     "attachmentLabel": "Attachment (optional)",
     "sendSummaryPrefix": "The email will be sent to",
     "sendSummarySuffix": "recipients from your own mailbox.",
@@ -132,5 +131,21 @@
     "resultSkipped": "Skipped: {{count}}",
     "resultNote": "\"Sent\" means your mail server accepted the message. Check the history for inbox delivery.",
     "viewHistory": "View history"
+  },
+  "templates": {
+    "pickerLabel": "Template",
+    "pickerPlaceholder": "No template",
+    "overwriteConfirm": "The template will overwrite the subject and body you started. Continue?",
+    "mergeHint": "These fields are filled in when the email is sent:",
+    "mergeHintEditor": "Click to insert a field at the cursor. Filled in when the email is sent:",
+    "fields": {
+      "firma": "Company name",
+      "kontakt": "Contact name",
+      "kontakt_jmeno": "Contact first name",
+      "vlastnik": "Your name",
+      "obchod": "Deal name",
+      "hodnota": "Deal value",
+      "muj_email": "Your email address"
+    }
   }
 }

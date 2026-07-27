@@ -42,6 +42,7 @@ def _to_out(row: UserSmtpSettings) -> UserSmtpSettingsOut:
         username=row.username,
         from_email=row.from_email,
         from_name=row.from_name,
+        signature=row.signature,
         has_password=bool(row.password_encrypted),
         verified=row.verified_at is not None,
         verified_at=row.verified_at,
@@ -95,6 +96,18 @@ async def put_smtp(
     elif payload.password:
         row.password_encrypted = encrypt_token(payload.password)
 
+    # Any credential/host/identity change invalidates a prior verification —
+    # the user must re-test before the bulk-email gate opens again. Decided
+    # *before* the assignments below, while `row` still holds the old values.
+    #
+    # `signature` is deliberately not in this set: it never reaches the SMTP
+    # conversation, and treating a sign-off edit as a credential change would
+    # silently un-verify the mailbox and close the bulk-email gate.
+    connection_changed = bool(payload.password) or any(
+        getattr(row, field) != getattr(payload, field)
+        for field in ("host", "port", "use_ssl", "use_starttls", "username", "from_email")
+    )
+
     row.host = payload.host
     row.port = payload.port
     row.use_ssl = payload.use_ssl
@@ -102,9 +115,9 @@ async def put_smtp(
     row.username = payload.username
     row.from_email = payload.from_email
     row.from_name = payload.from_name
-    # Any credential/host change invalidates a prior verification — the user
-    # must re-test before the bulk-email gate opens again.
-    row.verified_at = None
+    row.signature = payload.signature
+    if connection_changed:
+        row.verified_at = None
 
     await session.commit()
     await session.refresh(row)

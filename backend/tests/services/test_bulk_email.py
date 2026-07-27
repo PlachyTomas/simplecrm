@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
+from email.message import EmailMessage
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +13,7 @@ from app.db.models import (
     BlockedCompany,
     BlockedCompanyReason,
     Company,
+    Contact,
     Deal,
     EmailRecipientStatus,
     Organization,
@@ -25,7 +27,6 @@ from app.schemas.bulk_email import (
 )
 from app.services.bulk_email import (
     BulkEmailError,
-    render_message,
     resolve_recipients,
     send_campaign,
 )
@@ -49,25 +50,6 @@ async def _user(db_session: AsyncSession, org: Organization, role: UserRole) -> 
     db_session.add(u)
     await db_session.flush()
     return u
-
-
-def test_render_message_merges_fields() -> None:
-    subj, body = render_message(
-        "Nabídka pro {firma}",
-        "Dobrý den {kontakt}, posílá {vlastnik}.",
-        company_name="ACME",
-        contact_name="Jan",
-        sender_name="Petr",
-    )
-    assert subj == "Nabídka pro ACME"
-    assert body == "Dobrý den Jan, posílá Petr."
-
-
-def test_render_message_blank_contact() -> None:
-    _subj, body = render_message(
-        "x", "Dobrý den {kontakt}.", company_name="ACME", contact_name="", sender_name="Petr"
-    )
-    assert body == "Dobrý den ."
 
 
 async def test_resolve_only_own_book_for_salesperson(db_session: AsyncSession) -> None:
@@ -217,7 +199,9 @@ async def test_send_requires_verified_smtp(db_session: AsyncSession) -> None:
         await send_campaign(db_session, sales, payload, None)
 
 
-async def _verified_smtp(db_session: AsyncSession, user: User, org: Organization) -> None:
+async def _verified_smtp(
+    db_session: AsyncSession, user: User, org: Organization, *, signature: str | None = None
+) -> None:
     from app.core.token_crypto import encrypt_token
     from app.db.models import UserSmtpSettings
 
@@ -233,6 +217,7 @@ async def _verified_smtp(db_session: AsyncSession, user: User, org: Organization
             password_encrypted=encrypt_token("pw"),
             from_email="petr@firma.cz",
             from_name="Petr Prodejce",
+            signature=signature,
             verified_at=datetime.now(tz=UTC),
         )
     )
@@ -251,7 +236,7 @@ async def test_send_campaign_records_status_and_creates_deal(
     await db_session.flush()
 
     # Mock the synchronous send loop so no real SMTP happens; mark all sent.
-    def fake_loop(config, subject, body, sender_name, units, attachments):
+    def fake_loop(config, subject, body, context, signature, units, attachments):
         return [
             {
                 "company_id": u.company_id,
@@ -294,7 +279,7 @@ async def test_send_campaign_skips_unknown_email(
     db_session.add(co)
     await db_session.flush()
 
-    def fake_loop(config, subject, body, sender_name, units, attachments):
+    def fake_loop(config, subject, body, context, signature, units, attachments):
         return [
             {
                 "company_id": u.company_id,
@@ -320,3 +305,155 @@ async def test_send_campaign_skips_unknown_email(
     assert campaign.sent_count == 0
     assert campaign.skipped_count == 1
     assert campaign.recipients[0].status == EmailRecipientStatus.skipped
+
+
+# ---------------------------------------------------------------------------
+# Signature + merge fields + org-level tracking opt-out (feature F2)
+# ---------------------------------------------------------------------------
+
+
+class _FakeSmtp:
+    """Stands in for the authenticated `smtplib.SMTP` the send loop opens, so
+    the *real* `_run_send_loop` (rendering, signature, tracking) runs."""
+
+    def __init__(self) -> None:
+        self.messages: list[EmailMessage] = []
+
+    def send_message(self, mime: EmailMessage) -> None:
+        self.messages.append(mime)
+
+    def quit(self) -> None:  # pragma: no cover — nothing to tear down
+        pass
+
+
+async def _campaign_fixture(
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    signature: str | None = None,
+    tracking_enabled: bool = True,
+) -> tuple[User, Company, _FakeSmtp]:
+    org = await _seed_org(db_session)
+    org.email_tracking_enabled = tracking_enabled
+    await create_default_pipeline(db_session, org.id)
+    sales = await _user(db_session, org, UserRole.salesperson)
+    await _verified_smtp(db_session, sales, org, signature=signature)
+    co = Company(organization_id=org.id, name="ACME", owner_user_id=sales.id)
+    db_session.add(co)
+    await db_session.flush()
+    db_session.add(
+        Contact(
+            organization_id=org.id,
+            company_id=co.id,
+            first_name="Jan",
+            last_name="Novák",
+            email="jan@acme.cz",
+        )
+    )
+    await db_session.flush()
+
+    fake = _FakeSmtp()
+    monkeypatch.setattr("app.services.bulk_email._open_smtp", lambda _config: fake)
+    return sales, co, fake
+
+
+def _plain_part(mime: EmailMessage) -> str:
+    body = mime.get_body(preferencelist=("plain",))
+    assert body is not None
+    return str(body.get_content())
+
+
+async def test_campaign_renders_merge_fields_and_appends_signature(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sales, co, fake = await _campaign_fixture(
+        db_session, monkeypatch, signature="S pozdravem\n{vlastnik}\n{muj_email}"
+    )
+    payload = BulkEmailSendIn(
+        subject="Nabídka pro {firma}",
+        body="Dobrý den {kontakt} ({kontakt_jmeno}), {neznamy}",
+        recipients=[BulkEmailRecipientIn(company_id=co.id, emails=["jan@acme.cz"])],
+    )
+    campaign = await send_campaign(db_session, sales, payload, None)
+    assert campaign.sent_count == 1
+
+    mime = fake.messages[0]
+    assert mime["Subject"] == "Nabídka pro ACME"
+    plain = _plain_part(mime)
+    # `{kontakt}` is the full name and `{kontakt_jmeno}` the first name here
+    # exactly as in the composer — a shared org template must greet the same
+    # person the same way whichever surface sends it (review F2 P2).
+    assert plain.startswith("Dobrý den Jan Novák (Jan), {neznamy}")
+    assert "\n-- \nS pozdravem\nPetr Prodejce\npetr@firma.cz" in plain
+    assert plain.count("\n-- \n") == 1
+    # The stored campaign body stays the raw template — merge fields differ
+    # per recipient, so a rendered copy would be a lie for everyone else.
+    assert campaign.body == "Dobrý den {kontakt} ({kontakt_jmeno}), {neznamy}"
+
+
+async def test_campaign_without_signature_appends_nothing(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sales, co, fake = await _campaign_fixture(db_session, monkeypatch, signature=None)
+    payload = BulkEmailSendIn(
+        subject="Hi",
+        body="Tělo",
+        recipients=[BulkEmailRecipientIn(company_id=co.id, emails=["jan@acme.cz"])],
+    )
+    await send_campaign(db_session, sales, payload, None)
+    assert "-- " not in _plain_part(fake.messages[0])
+
+
+async def test_campaign_send_can_opt_out_of_the_signature(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sales, co, fake = await _campaign_fixture(db_session, monkeypatch, signature="Petr")
+    payload = BulkEmailSendIn(
+        subject="Hi",
+        body="Tělo",
+        recipients=[BulkEmailRecipientIn(company_id=co.id, emails=["jan@acme.cz"])],
+        append_signature=False,
+    )
+    await send_campaign(db_session, sales, payload, None)
+    assert _plain_part(fake.messages[0]).rstrip("\n") == "Tělo"
+
+
+async def test_campaign_tracks_by_default(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sales, co, fake = await _campaign_fixture(db_session, monkeypatch)
+    payload = BulkEmailSendIn(
+        subject="Hi",
+        body="Odkaz https://example.com/x",
+        recipients=[BulkEmailRecipientIn(company_id=co.id, emails=["jan@acme.cz"])],
+    )
+    campaign = await send_campaign(db_session, sales, payload, None)
+    token = campaign.recipients[0].tracking_token
+    assert token
+    mime = fake.messages[0]
+    assert mime.get_content_type() == "multipart/alternative"
+    html = mime.get_body(preferencelist=("html",))
+    assert html is not None
+    assert f"/t/o/{token}" in str(html.get_content())
+
+
+async def test_org_tracking_opt_out_disables_campaign_tracking(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Campaigns normally always track; `email_tracking_enabled=false` on the
+    org turns it off wholesale — no token, no pixel, no rewritten links."""
+    sales, co, fake = await _campaign_fixture(db_session, monkeypatch, tracking_enabled=False)
+    payload = BulkEmailSendIn(
+        subject="Hi",
+        body="Odkaz https://example.com/x",
+        recipients=[BulkEmailRecipientIn(company_id=co.id, emails=["jan@acme.cz"])],
+    )
+    campaign = await send_campaign(db_session, sales, payload, None)
+    assert campaign.sent_count == 1
+    assert not campaign.recipients[0].tracking_token
+
+    mime = fake.messages[0]
+    assert mime.get_content_type() == "text/plain"
+    plain = _plain_part(mime)
+    assert plain.rstrip("\n") == "Odkaz https://example.com/x"
+    assert "/t/o/" not in plain and "/t/c/" not in plain

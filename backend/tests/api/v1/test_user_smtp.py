@@ -171,6 +171,53 @@ async def test_changing_credentials_clears_verification(
     assert g.json()["verified"] is False
 
 
+async def test_changing_only_the_signature_keeps_verification(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A sign-off is not a credential: editing it must not close the
+    bulk-email gate by knocking the mailbox out of verified state."""
+    monkeypatch.setattr("app.api.v1.user_smtp.verify_smtp", lambda cfg: None)
+    user = await _seed_user(db_session, owned_cleanup)
+    await client.put("/api/v1/me/smtp", json=_payload(), headers=_auth(user))
+    await client.post("/api/v1/me/smtp/test", headers=_auth(user))
+
+    r = await client.put(
+        "/api/v1/me/smtp",
+        json=_payload(password=None, signature="S pozdravem\n{vlastnik}"),
+        headers=_auth(user),
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["signature"] == "S pozdravem\n{vlastnik}"
+    assert r.json()["verified"] is True
+
+    g = await client.get("/api/v1/me/smtp", headers=_auth(user))
+    assert g.json()["verified"] is True
+
+
+async def test_changing_the_host_still_clears_verification(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The narrower reset must not let a genuine connection change through."""
+    monkeypatch.setattr("app.api.v1.user_smtp.verify_smtp", lambda cfg: None)
+    user = await _seed_user(db_session, owned_cleanup)
+    await client.put("/api/v1/me/smtp", json=_payload(), headers=_auth(user))
+    await client.post("/api/v1/me/smtp/test", headers=_auth(user))
+
+    await client.put(
+        "/api/v1/me/smtp",
+        json=_payload(password=None, host="mail.elsewhere.cz"),
+        headers=_auth(user),
+    )
+    g = await client.get("/api/v1/me/smtp", headers=_auth(user))
+    assert g.json()["verified"] is False
+
+
 async def test_delete(
     client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
 ) -> None:

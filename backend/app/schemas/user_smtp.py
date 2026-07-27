@@ -18,6 +18,10 @@ class UserSmtpSettingsIn(BaseModel):
     password: str | None = Field(default=None, max_length=512)
     from_email: EmailStr = Field(max_length=320)
     from_name: str | None = Field(default=None, max_length=200)
+    # Plain-text sign-off appended behind the RFC 3676 "-- " delimiter on
+    # composer sends and campaigns. Empty/None = nothing appended. May contain
+    # merge fields; they resolve per recipient at send time.
+    signature: str | None = Field(default=None, max_length=2000)
 
 
 class UserSmtpSettingsOut(BaseModel):
@@ -30,6 +34,7 @@ class UserSmtpSettingsOut(BaseModel):
     username: str
     from_email: str
     from_name: str | None = None
+    signature: str | None = None
     # The password itself is never returned — only whether one is stored.
     has_password: bool
     verified: bool

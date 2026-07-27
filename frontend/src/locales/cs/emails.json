@@ -32,7 +32,8 @@
     "newContactSaving": "Ukládám…",
     "newContactCancel": "Zrušit",
     "newContactError": "Kontakt se nepodařilo uložit.",
-    "trackLabel": "Sledovat otevření a prokliky"
+    "trackLabel": "Sledovat otevření a prokliky",
+    "trackingOffByOrg": "Sledování otevření a prokliků je pro Vaši organizaci vypnuté."
   },
   "history": {
     "title": "Odeslané e-maily",
@@ -109,8 +110,6 @@
     "subjectPlaceholder": "Nová nabídka pro {firma}",
     "bodyLabel": "Text e-mailu",
     "bodyPlaceholder": "Dobrý den {kontakt},\n\nrádi bychom Vám představili…",
-    "placeholdersHintPrefix": "Použijte zástupné výrazy",
-    "placeholdersHintSuffix": "— doplní se u každého příjemce.",
     "attachmentLabel": "Příloha (volitelné)",
     "sendSummaryPrefix": "E-mail bude odeslán",
     "sendSummarySuffix": "příjemcům z vaší vlastní schránky.",
@@ -134,5 +133,21 @@
     "resultSkipped": "Přeskočeno: {{count}}",
     "resultNote": "„Odesláno\" znamená, že váš poštovní server zprávu přijal. Doručení do schránky najdete v historii.",
     "viewHistory": "Zobrazit historii"
+  },
+  "templates": {
+    "pickerLabel": "Šablona",
+    "pickerPlaceholder": "Bez šablony",
+    "overwriteConfirm": "Šablona přepíše rozepsaný předmět i text. Pokračovat?",
+    "mergeHint": "Tato pole se doplní až při odeslání:",
+    "mergeHintEditor": "Kliknutím vložíte pole na pozici kurzoru. Doplní se při odeslání:",
+    "fields": {
+      "firma": "Název firmy",
+      "kontakt": "Jméno kontaktu",
+      "kontakt_jmeno": "Křestní jméno kontaktu",
+      "vlastnik": "Vaše jméno",
+      "obchod": "Název obchodu",
+      "hodnota": "Hodnota obchodu",
+      "muj_email": "Vaše e-mailová adresa"
+    }
   }
 }

@@ -362,4 +362,120 @@ describe("EmailComposeModal — open/click tracking", () => {
     await waitFor(() => expect(calls.some((c) => c.url.includes("/api/v1/emails"))).toBe(true));
     expect(await sentPayload(calls)).toMatchObject({ track: false });
   });
+
+  it("hides the toggle and sends track: false when the org opted out", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+        const u = String(url);
+        calls.push({ url: u, init });
+        if (u.endsWith("/api/v1/auth/me")) {
+          return jsonResponse({
+            id: "u1",
+            role: "salesperson",
+            organization: { id: "o1", email_tracking_enabled: false },
+          });
+        }
+        if (u.includes("/api/v1/emails")) return jsonResponse({ ...PARENT, id: "e2" }, 201);
+        return jsonResponse({});
+      }),
+    );
+    wrap(<EmailComposeModal open onClose={vi.fn()} dealId="d1" replyTo={PARENT} />);
+    await screen.findByText(/vypnuté/i);
+    expect(screen.queryByTestId(testIds.emails.compose.trackToggle)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Odeslat/ }));
+    await waitFor(() => expect(calls.some((c) => c.url.includes("/api/v1/emails"))).toBe(true));
+    expect(await sentPayload(calls)).toMatchObject({ track: false });
+  });
+});
+
+const TEMPLATES = [
+  {
+    id: "tpl1",
+    name: "První oslovení",
+    subject: "Nabídka pro {firma}",
+    body: "Dobrý den,\nposílám nabídku.",
+    created_by_user_id: null,
+    created_at: "2026-07-20T10:00:00Z",
+    updated_at: "2026-07-20T10:00:00Z",
+  },
+];
+
+describe("EmailComposeModal — template picker", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  function stubTemplates() {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+        const u = String(url);
+        calls.push({ url: u, init });
+        if (u.includes("/api/v1/email-templates/merge-fields")) {
+          return jsonResponse({ keys: ["firma", "kontakt", "vlastnik"] });
+        }
+        if (u.includes("/api/v1/email-templates")) return jsonResponse(TEMPLATES);
+        return jsonResponse({});
+      }),
+    );
+    return calls;
+  }
+
+  it("fills subject and body silently when nothing was typed", async () => {
+    stubTemplates();
+    const { container } = wrap(<EmailComposeModal open onClose={vi.fn()} dealId="d1" />);
+    const confirmSpy = vi.spyOn(window, "confirm");
+    const select = await screen.findByTestId(testIds.emails.compose.templateSelect);
+    fireEvent.change(select, { target: { value: "tpl1" } });
+    expect(screen.getByDisplayValue("Nabídka pro {firma}")).toBeInTheDocument();
+    // Raw value, not getByDisplayValue: the matcher collapses the newline.
+    expect((container.querySelector("textarea") as HTMLTextAreaElement).value).toBe(
+      "Dobrý den,\nposílám nabídku.",
+    );
+    expect(confirmSpy).not.toHaveBeenCalled();
+  });
+
+  it("asks before overwriting existing text and keeps it on cancel", async () => {
+    stubTemplates();
+    // Reply mode prefills the subject → the picker must confirm first.
+    wrap(<EmailComposeModal open onClose={vi.fn()} dealId="d1" replyTo={PARENT} />);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const select = await screen.findByTestId(testIds.emails.compose.templateSelect);
+    fireEvent.change(select, { target: { value: "tpl1" } });
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(screen.getByDisplayValue("Re: Nabídka")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Nabídka pro {firma}")).not.toBeInTheDocument();
+
+    confirmSpy.mockReturnValue(true);
+    fireEvent.change(select, { target: { value: "tpl1" } });
+    expect(screen.getByDisplayValue("Nabídka pro {firma}")).toBeInTheDocument();
+  });
+
+  it("lists the server's merge fields as a hint", async () => {
+    stubTemplates();
+    wrap(<EmailComposeModal open onClose={vi.fn()} dealId="d1" />);
+    expect(await screen.findByText("{firma}")).toBeInTheDocument();
+    expect(screen.getByText("{vlastnik}")).toBeInTheDocument();
+  });
+
+  it("renders no picker when the org has no templates", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: RequestInfo | URL) => {
+        const u = String(url);
+        if (u.includes("/api/v1/email-templates/merge-fields")) {
+          return jsonResponse({ keys: ["firma"] });
+        }
+        if (u.includes("/api/v1/email-templates")) return jsonResponse([]);
+        return jsonResponse({});
+      }),
+    );
+    wrap(<EmailComposeModal open onClose={vi.fn()} dealId="d1" />);
+    await screen.findByText("{firma}");
+    expect(screen.queryByTestId(testIds.emails.compose.templateSelect)).not.toBeInTheDocument();
+  });
 });

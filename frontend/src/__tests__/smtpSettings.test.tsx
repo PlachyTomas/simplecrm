@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SmtpSettingsCard } from "@/app/settings/SmtpSettingsCard";
 import { AuthProvider } from "@/auth/AuthContext";
+import { testIds } from "@/lib/testids";
+import { ToastProvider } from "@/lib/toast";
 
 function jsonResponse(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), {
@@ -17,9 +19,11 @@ function renderCard() {
   return render(
     <QueryClientProvider client={qc}>
       <AuthProvider initialToken="fake">
-        <ul>
-          <SmtpSettingsCard />
-        </ul>
+        <ToastProvider>
+          <ul>
+            <SmtpSettingsCard />
+          </ul>
+        </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>,
   );
@@ -79,5 +83,88 @@ describe("SmtpSettingsCard", () => {
     );
     expect(screen.getByText(/^Ověřeno$/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /otestovat připojení/i })).toBeEnabled();
+  });
+
+  it("prefills the stored signature and saves an edited one", async () => {
+    const puts: string[] = [];
+    fetchMock.mockImplementation(async (input, init) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me")) return jsonResponse({ id: "1", role: "admin" });
+      if (url.includes("/api/v1/me/smtp")) {
+        if (init?.method === "PUT") {
+          puts.push(String(init.body));
+          return jsonResponse({});
+        }
+        return jsonResponse({
+          host: "mail.firma.cz",
+          port: 587,
+          use_ssl: false,
+          use_starttls: true,
+          username: "jan@firma.cz",
+          from_email: "jan@firma.cz",
+          from_name: "Jan",
+          signature: "Jan Novák\nObchodník",
+          has_password: true,
+          verified: true,
+          verified_at: "2026-06-15T10:00:00+00:00",
+        });
+      }
+      throw new Error(`Unexpected: ${url}`);
+    });
+
+    renderCard();
+    const signature = (await screen.findByTestId(
+      testIds.settings.smtpSignature,
+    )) as HTMLTextAreaElement;
+    await waitFor(() => expect(signature.value).toBe("Jan Novák\nObchodník"));
+
+    fireEvent.change(signature, { target: { value: "  Jan Novák\nCEO  " } });
+    fireEvent.click(screen.getByRole("button", { name: /^uložit$/i }));
+
+    await waitFor(() => expect(puts).toHaveLength(1));
+    // Trimmed, and sent with the rest of the SMTP settings in one PUT.
+    expect(JSON.parse(puts[0]!)).toMatchObject({
+      host: "mail.firma.cz",
+      signature: "Jan Novák\nCEO",
+    });
+  });
+
+  it("sends signature: null when the field is cleared", async () => {
+    const puts: string[] = [];
+    fetchMock.mockImplementation(async (input, init) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me")) return jsonResponse({ id: "1", role: "admin" });
+      if (url.includes("/api/v1/me/smtp")) {
+        if (init?.method === "PUT") {
+          puts.push(String(init.body));
+          return jsonResponse({});
+        }
+        return jsonResponse({
+          host: "mail.firma.cz",
+          port: 587,
+          use_ssl: false,
+          use_starttls: true,
+          username: "jan@firma.cz",
+          from_email: "jan@firma.cz",
+          from_name: null,
+          signature: "Jan Novák",
+          has_password: true,
+          verified: false,
+          verified_at: null,
+        });
+      }
+      throw new Error(`Unexpected: ${url}`);
+    });
+
+    renderCard();
+    const signature = (await screen.findByTestId(
+      testIds.settings.smtpSignature,
+    )) as HTMLTextAreaElement;
+    await waitFor(() => expect(signature.value).toBe("Jan Novák"));
+    fireEvent.change(signature, { target: { value: "   " } });
+    fireEvent.click(screen.getByRole("button", { name: /^uložit$/i }));
+
+    await waitFor(() => expect(puts).toHaveLength(1));
+    expect(JSON.parse(puts[0]!).signature).toBeNull();
   });
 });

@@ -31,7 +31,10 @@
         "label": "Organization",
         "description": "Contracted user count and billing method."
       },
-      "teams": { "label": "Teams", "description": "Group salespeople under managers." },
+      "teams": {
+        "label": "Teams",
+        "description": "Group salespeople under managers."
+      },
       "users": {
         "label": "Users",
         "description": "Manage roles, team membership, and member activity."
@@ -59,6 +62,10 @@
       "billing": {
         "label": "Billing",
         "description": "Plan, invoice, and payment method details."
+      },
+      "email-templates": {
+        "label": "Email templates",
+        "description": "Shared subject and body templates for single and bulk emails."
       }
     },
     "importItem": {
@@ -276,7 +283,8 @@
       "username": "Username",
       "password": "Password",
       "fromEmail": "Sender (email)",
-      "fromName": "Sender name (optional)"
+      "fromName": "Sender name (optional)",
+      "signature": "Signature (optional)"
     },
     "placeholders": {
       "host": "smtp.yourcompany.com",
@@ -284,7 +292,8 @@
       "fromEmail": "jan@yourcompany.com",
       "fromName": "Jan Novák",
       "passwordStored": "•••••••• (unchanged)",
-      "passwordNew": "password or app password"
+      "passwordNew": "password or app password",
+      "signature": "Jan Novák\nSales Director\n+420 123 456 789"
     },
     "securityOptions": {
       "ssl": "SSL/TLS (usually port 465)",
@@ -300,7 +309,8 @@
     "testSuccess": "SMTP connection verified ✓",
     "testFailPrefix": "Test failed:",
     "testUnknownError": "unknown error",
-    "testError": "The test failed, please try again."
+    "testError": "The test failed, please try again.",
+    "signatureHint": "The signature is appended to outgoing emails after the “-- ” delimiter that mail clients can collapse. You can use merge fields in it, e.g. {vlastnik}."
   },
   "invoiceDetails": {
     "title": "Invoice details",
@@ -487,6 +497,13 @@
       "team": "Team",
       "all": "All",
       "yes": "Yes"
+    },
+    "emailTracking": {
+      "title": "Email tracking",
+      "subtitleCard": "Measuring opens and clicks on emails sent from the app.",
+      "label": "Measure email opens and clicks",
+      "subtitle": "When off, the app embeds no tracking pixel and rewrites no links — for the whole organization, bulk campaigns included. Switch it off if your reading of GDPR and ePrivacy requires recipient consent for tracking.",
+      "error": "Saving failed."
     }
   },
   "import": {
@@ -586,6 +603,34 @@
       "doneToast": "Done. Created: {{companies}}, {{contacts}}.",
       "previewFailed": "Preview failed.",
       "importFailed": "Import failed."
+    }
+  },
+  "emailTemplates": {
+    "title": "Email templates",
+    "subtitle": "Templates are shared across the organization. Pick one when writing an email or a bulk campaign.",
+    "addButton": "New template",
+    "readOnlyNote": "Templates are managed by administrators and managers.",
+    "loading": "Loading…",
+    "empty": "No templates yet.",
+    "updatedAt": "Updated {{date}}",
+    "editAriaLabel": "Edit template {{name}}",
+    "deleteAriaLabel": "Delete template {{name}}",
+    "deleteConfirm": "Really delete the template “{{name}}”?",
+    "errors": {
+      "required": "Please fill in a name and a subject.",
+      "duplicate": "A template with this name already exists.",
+      "generic": "The template could not be saved, please try again."
+    },
+    "editor": {
+      "newTitle": "New template",
+      "editTitle": "Edit template",
+      "nameLabel": "Template name",
+      "namePlaceholder": "E.g. First outreach",
+      "subjectLabel": "Subject",
+      "bodyLabel": "Email body",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel"
     }
   }
 }

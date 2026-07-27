@@ -61,6 +61,14 @@ class UserSmtpSettings(Base):
     from_email: Mapped[str] = mapped_column(String(320), nullable=False)
     from_name: Mapped[str | None] = mapped_column(String(200))
 
+    # Plain-text signature appended to outbound mail (composer + campaigns)
+    # behind the RFC 3676 "-- " delimiter. Lives with the sending identity
+    # rather than on `users` because that's what it is: part of how this
+    # mailbox signs off. NULL/blank = nothing appended. Merge fields
+    # (`{vlastnik}`, `{muj_email}`, …) resolve inside it. Capped at 2000
+    # chars at the API edge.
+    signature: Mapped[str | None] = mapped_column(Text)
+
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     created_at: Mapped[datetime] = mapped_column(

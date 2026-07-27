@@ -6,6 +6,7 @@ import {
   Kanban,
   Lock,
   MailPlus,
+  Mails,
   Palette,
   Plug,
   ShieldCheck,
@@ -23,6 +24,7 @@ export type SettingsSectionKey =
   | "appearance"
   | "permissions"
   | "blocked-companies"
+  | "email-templates"
   | "organization"
   | "billing"
   | "integrations"
@@ -47,6 +49,9 @@ export interface SettingsSectionMeta {
   icon: LucideIcon;
   /** Per-user setting reachable by any role (not just admins). */
   personal?: boolean;
+  /** Org-level setting every role may *read* (the section itself hides the
+   * write controls for roles the backend rejects). */
+  sharedRead?: boolean;
 }
 
 export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
@@ -116,6 +121,16 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
     icon: Ban,
   },
   {
+    key: "email-templates",
+    labelKey: "nav.sections.email-templates.label",
+    descriptionKey: "nav.sections.email-templates.description",
+    group: "sales",
+    icon: Mails,
+    // Salespeople pick templates when composing, so they must be able to read
+    // the list; create/edit/delete stay admin/manager (backend-gated).
+    sharedRead: true,
+  },
+  {
     key: "privacy",
     labelKey: "nav.sections.privacy.label",
     descriptionKey: "nav.sections.privacy.description",
@@ -145,11 +160,12 @@ export function isSettingsSectionKey(
   return !!value && SETTINGS_SECTIONS.some((s) => s.key === value);
 }
 
-/** Admins get everything; everyone else gets their personal settings, plus
- * the invitations section when they hold the invite privilege. */
+/** Admins get everything; everyone else gets their personal settings and the
+ * read-for-all org sections, plus the invitations section when they hold the
+ * invite privilege. */
 export function visibleSectionKeys(role: string, canInvite: boolean): SettingsSectionKey[] {
   if (role === "admin") return SETTINGS_SECTIONS.map((s) => s.key);
-  const keys = SETTINGS_SECTIONS.filter((s) => s.personal).map((s) => s.key);
+  const keys = SETTINGS_SECTIONS.filter((s) => s.personal || s.sharedRead).map((s) => s.key);
   if (canInvite) keys.push("invitations");
   return keys;
 }

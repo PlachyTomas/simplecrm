@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link, Navigate, useParams } from "react-router-dom";
 
 import { BlockedCompaniesSection } from "@/app/settings/BlockedCompaniesSection";
+import { EmailTemplatesSection } from "@/app/settings/EmailTemplatesSection";
 import { InvitationsSection } from "@/app/settings/InvitationsSection";
 import { PrivacySection } from "@/app/settings/PrivacySection";
 import { AppearanceSection } from "@/app/settings/sections/AppearanceSection";
@@ -32,6 +33,7 @@ const SECTION_COMPONENTS: Record<SettingsSectionKey, ComponentType> = {
   appearance: AppearanceSection,
   permissions: PermissionsSection,
   "blocked-companies": BlockedCompaniesSection,
+  "email-templates": EmailTemplatesSection,
   organization: OrganizationSection,
   billing: BillingSection,
   integrations: IntegrationsSection,

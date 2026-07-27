@@ -5,7 +5,9 @@ import { useTranslation } from "react-i18next";
 
 import { type ContactOut, useContacts } from "@/app/contacts/useContacts";
 import { useCreateContact } from "@/app/contacts/useCreateContact";
+import { EmailTemplatePicker, MergeFieldHint } from "@/app/emails/EmailTemplatePicker";
 import { type SentEmailOut, useSendEmail } from "@/app/emails/useEmails";
+import { useCurrentUser } from "@/auth/useCurrentUser";
 import { testIds } from "@/lib/testids";
 import { useDismissGuard } from "@/lib/useDismissGuard";
 import { useModalDialog } from "@/lib/useModalDialog";
@@ -389,6 +391,10 @@ export function EmailComposeModal({
   const dialogRef = useModalDialog<HTMLDivElement>(onClose, open);
   const send = useSendEmail();
   const toast = useToast();
+  const { data: currentUser } = useCurrentUser();
+  // Org-level opt-out wins over the per-send flag server-side, so a visible
+  // checkbox would be a lie once an admin switches tracking off.
+  const trackingAllowed = currentUser?.organization?.email_tracking_enabled !== false;
 
   // Company context makes the recipient fields contact-aware: suggestions from
   // the company's contacts plus an inline create-contact path.
@@ -451,7 +457,7 @@ export function EmailComposeModal({
           deal_id: replyTo ? null : (dealId ?? null),
           company_id: replyTo ? null : (companyId ?? null),
           reply_to_email_id: replyTo?.id ?? null,
-          track,
+          track: track && trackingAllowed,
         },
         attachments: files,
       });
@@ -556,6 +562,15 @@ export function EmailComposeModal({
               onCancel={() => setNewContactFor(null)}
             />
           ) : null}
+          <EmailTemplatePicker
+            enabled={open}
+            hasDraft={subject.trim() !== "" || body.trim() !== ""}
+            onApply={(tpl) => {
+              setSubject(tpl.subject);
+              setBody(tpl.body);
+            }}
+            selectTestId={testIds.emails.compose.templateSelect}
+          />
           <label className="block">
             <span className="text-xs font-medium text-text-secondary">
               {t("compose.subjectLabel")}
@@ -579,6 +594,9 @@ export function EmailComposeModal({
               className="mt-1 block w-full rounded-md border border-border bg-surface-overlay p-3 text-sm focus:border-accent focus:outline-none"
             />
           </label>
+          {/* The server resolves merge fields on this path too (services/mailer
+              renders subject+body before sending), so the hint can promise it. */}
+          <MergeFieldHint enabled={open} />
 
           <div>
             <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-text-secondary hover:text-text-primary">
@@ -627,16 +645,20 @@ export function EmailComposeModal({
             ) : null}
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-text-secondary">
-            <input
-              type="checkbox"
-              checked={track}
-              data-testid={testIds.emails.compose.trackToggle}
-              onChange={(e) => setTrack(e.target.checked)}
-              className="h-4 w-4 rounded border-border accent-accent"
-            />
-            {t("compose.trackLabel")}
-          </label>
+          {trackingAllowed ? (
+            <label className="flex items-center gap-2 text-sm text-text-secondary">
+              <input
+                type="checkbox"
+                checked={track}
+                data-testid={testIds.emails.compose.trackToggle}
+                onChange={(e) => setTrack(e.target.checked)}
+                className="h-4 w-4 rounded border-border accent-accent"
+              />
+              {t("compose.trackLabel")}
+            </label>
+          ) : (
+            <p className="text-xs text-text-tertiary">{t("compose.trackingOffByOrg")}</p>
+          )}
         </div>
 
         <div className="mt-6 flex items-center justify-end gap-3">

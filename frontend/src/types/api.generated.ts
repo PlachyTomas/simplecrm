@@ -1041,6 +1041,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/email-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Email Templates
+         * @description Every template in the caller's org, alphabetically. Not paginated:
+         *     the list is a picker, and an org with hundreds of templates isn't a
+         *     scenario this feature is for.
+         */
+        get: operations["list_email_templates_api_v1_email_templates_get"];
+        put?: never;
+        /** Create Email Template */
+        post: operations["create_email_template_api_v1_email_templates_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-templates/merge-fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Merge Fields
+         * @description The `{token}` vocabulary the template editor may offer.
+         */
+        get: operations["list_merge_fields_api_v1_email_templates_merge_fields_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-templates/{template_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Email Template */
+        put: operations["update_email_template_api_v1_email_templates__template_id__put"];
+        post?: never;
+        /** Delete Email Template */
+        delete: operations["delete_email_template_api_v1_email_templates__template_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/events": {
         parameters: {
             query?: never;
@@ -4835,6 +4896,48 @@ export interface components {
          * @enum {string}
          */
         EmailRecipientStatus: "sent" | "failed" | "skipped";
+        /**
+         * EmailTemplateIn
+         * @description Create/update payload. PUT replaces the whole row — templates are
+         *     three fields, so a partial patch would buy nothing.
+         */
+        EmailTemplateIn: {
+            /** Name */
+            name: string;
+            /** Subject */
+            subject: string;
+            /**
+             * Body
+             * @default
+             */
+            body: string;
+        };
+        /** EmailTemplateOut */
+        EmailTemplateOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Subject */
+            subject: string;
+            /** Body */
+            body: string;
+            /** Created By User Id */
+            created_by_user_id?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** ExtendTrialIn */
         ExtendTrialIn: {
             /** Days */
@@ -5383,6 +5486,21 @@ export interface components {
             currency: string;
         };
         /**
+         * MergeFieldsOut
+         * @description The merge-field vocabulary, for the composer/template editor's hint
+         *     list. Served from `services/merge_fields.MERGE_FIELD_KEYS` so the UI never
+         *     hardcodes a second copy; labels live in the frontend i18n catalogs.
+         */
+        MergeFieldsOut: {
+            /** Keys */
+            keys: string[];
+            /**
+             * Deal Keys
+             * @default []
+             */
+            deal_keys: string[];
+        };
+        /**
          * MySummary
          * @description Personal salesperson rollup for the date window.
          *
@@ -5520,6 +5638,8 @@ export interface components {
             stripe_customer_id?: string | null;
             /** Show Leaderboard To Salespeople */
             show_leaderboard_to_salespeople: boolean;
+            /** Email Tracking Enabled */
+            email_tracking_enabled: boolean;
             /** Ownership Window Days */
             ownership_window_days: number;
         };
@@ -5545,6 +5665,11 @@ export interface components {
             trial_ends_at: string;
             /** Show Leaderboard To Salespeople */
             show_leaderboard_to_salespeople: boolean;
+            /**
+             * Email Tracking Enabled
+             * @default true
+             */
+            email_tracking_enabled: boolean;
             /** Ownership Window Days */
             ownership_window_days: number;
         };
@@ -5579,6 +5704,8 @@ export interface components {
             billing_kind?: ("business" | "individual") | null;
             /** Show Leaderboard To Salespeople */
             show_leaderboard_to_salespeople?: boolean | null;
+            /** Email Tracking Enabled */
+            email_tracking_enabled?: boolean | null;
             /** Ownership Window Days */
             ownership_window_days?: number | null;
         };
@@ -6869,6 +6996,8 @@ export interface components {
             from_email: string;
             /** From Name */
             from_name?: string | null;
+            /** Signature */
+            signature?: string | null;
         };
         /** UserSmtpSettingsOut */
         UserSmtpSettingsOut: {
@@ -6886,6 +7015,8 @@ export interface components {
             from_email: string;
             /** From Name */
             from_name?: string | null;
+            /** Signature */
+            signature?: string | null;
             /** Has Password */
             has_password: boolean;
             /** Verified */
@@ -8985,6 +9116,143 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SentEmailDetail"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_email_templates_api_v1_email_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailTemplateOut"][];
+                };
+            };
+        };
+    };
+    create_email_template_api_v1_email_templates_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailTemplateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailTemplateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_merge_fields_api_v1_email_templates_merge_fields_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MergeFieldsOut"];
+                };
+            };
+        };
+    };
+    update_email_template_api_v1_email_templates__template_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailTemplateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailTemplateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_email_template_api_v1_email_templates__template_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

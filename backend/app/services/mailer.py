@@ -16,15 +16,18 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.user_smtp import smtp_config_for
+from app.core.i18n import language_for_locale
 from app.db.models import (
     ActivityEntityType,
     ActivityType,
     Company,
+    Contact,
     Deal,
+    Organization,
     SentEmail,
     SentEmailStatus,
     User,
@@ -34,6 +37,12 @@ from app.schemas.sent_email import SentEmailCreate
 from app.services.activity_log import record_activity
 from app.services.email import Email, EmailAttachment, send_email_via
 from app.services.email_tracking import build_tracked_html, new_tracking_token
+from app.services.merge_fields import (
+    MergeContext,
+    apply_merge_fields,
+    apply_signature,
+    render_message,
+)
 
 
 class SmtpNotVerifiedError(Exception):
@@ -43,6 +52,58 @@ class SmtpNotVerifiedError(Exception):
 def _message_id(from_email: str) -> str:
     domain = from_email.rpartition("@")[2] or "simplecrm.cz"
     return f"<{uuid.uuid4().hex}@{domain}>"
+
+
+async def _merge_context(
+    session: AsyncSession,
+    *,
+    user: User,
+    smtp_row: UserSmtpSettings,
+    payload: SentEmailCreate,
+    deal: Deal | None,
+    company: Company | None,
+) -> MergeContext:
+    """Resolve the merge vocabulary for this one send.
+
+    The contact is looked up from the first `To:` address inside the caller's
+    org — the composer addresses people, not contact IDs, so that's the only
+    handle we have. No match just leaves `{kontakt}` empty.
+    """
+    target_company = company
+    if target_company is None and deal is not None and deal.company_id is not None:
+        target_company = await session.get(Company, deal.company_id)
+
+    contact: Contact | None = None
+    if payload.to:
+        contact = (
+            await session.execute(
+                select(Contact)
+                .where(
+                    Contact.organization_id == user.organization_id,
+                    func.lower(Contact.email) == str(payload.to[0]).lower(),
+                )
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+
+    org = await session.get(Organization, user.organization_id) if user.organization_id else None
+    contact_full_name = (
+        " ".join(part for part in (contact.first_name, contact.last_name) if part)
+        if contact is not None
+        else ""
+    )
+    return MergeContext(
+        company_name=target_company.name if target_company is not None else "",
+        contact_name=contact_full_name,
+        contact_first_name=contact.first_name if contact is not None else "",
+        sender_name=user.name,
+        sender_email=smtp_row.from_email,
+        deal_name=deal.name if deal is not None else "",
+        deal_value=deal.value if deal is not None else None,
+        currency=(deal.currency if deal is not None else None)
+        or (org.currency if org is not None else "CZK"),
+        language=language_for_locale(org.locale if org is not None else None),
+    )
 
 
 async def send_user_email(
@@ -99,15 +160,28 @@ async def send_user_email(
             chain.append(in_reply_to)
         references = " ".join(chain) if chain else in_reply_to
 
-    # Tracking is opt-out per send. Without a token the mail stays exactly as
-    # it was before tracking existed: plain text only, original URLs, no pixel.
-    tracking_token = new_tracking_token() if payload.track else None
-    html_body = build_tracked_html(payload.body, tracking_token) if tracking_token else None
+    # Merge fields + signature resolve before anything else touches the text,
+    # so tracking rewrites the *final* body and the recorded `SentEmail.body`
+    # is what the recipient actually received.
+    context = await _merge_context(
+        session, user=user, smtp_row=row, payload=payload, deal=deal, company=company
+    )
+    subject, body = render_message(payload.subject, payload.body, context)
+    if payload.append_signature:
+        body = apply_signature(body, apply_merge_fields(row.signature or "", context))
+
+    # Tracking is opt-out per send *and* per organization; the org switch wins
+    # (EU/ePrivacy). Without a token the mail stays exactly as it was before
+    # tracking existed: plain text only, original URLs, no pixel.
+    org = await session.get(Organization, user.organization_id) if user.organization_id else None
+    tracking_allowed = org is None or org.email_tracking_enabled
+    tracking_token = new_tracking_token() if (payload.track and tracking_allowed) else None
+    html_body = build_tracked_html(body, tracking_token) if tracking_token else None
 
     message = Email(
         to=", ".join(str(addr) for addr in payload.to),
-        subject=payload.subject,
-        body=payload.body,
+        subject=subject,
+        body=body,
         html_body=html_body,
         cc=tuple(str(a) for a in payload.cc),
         bcc=tuple(str(a) for a in payload.bcc),
@@ -147,8 +221,10 @@ async def send_user_email(
         to_emails=[str(a) for a in payload.to],
         cc_emails=[str(a) for a in payload.cc],
         bcc_emails=[str(a) for a in payload.bcc],
-        subject=payload.subject,
-        body=payload.body,
+        # The rendered text, not the template — history should show what the
+        # recipient got, signature and merged fields included.
+        subject=subject,
+        body=body,
         attachment_filenames=[a.filename for a in attachments],
         status=status,
         error=error,
@@ -161,7 +237,7 @@ async def send_user_email(
     session.add(sent)
 
     if status is SentEmailStatus.sent and company_id is not None:
-        email_payload: dict[str, Any] = {"subject": payload.subject}
+        email_payload: dict[str, Any] = {"subject": subject}
         if deal is not None:
             entity_type, entity_id = ActivityEntityType.deal, deal.id
             email_payload["deal_name"] = deal.name

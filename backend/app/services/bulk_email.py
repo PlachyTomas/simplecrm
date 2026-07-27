@@ -17,7 +17,7 @@ import smtplib
 import ssl
 import uuid
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import cast
@@ -26,6 +26,7 @@ from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.i18n import language_for_locale
 from app.core.scoping import scope_by_owner
 from app.core.token_crypto import decrypt_token
 from app.db.models import (
@@ -56,6 +57,12 @@ from app.schemas.bulk_email import (
 from app.schemas.contact import ContactOut
 from app.services.email import Email, EmailAttachment, SmtpConfig, _build_mime
 from app.services.email_tracking import build_tracked_html, new_tracking_token
+from app.services.merge_fields import (
+    MergeContext,
+    apply_merge_fields,
+    apply_signature,
+    render_message,
+)
 
 logger = logging.getLogger("simplecrm.bulk_email")
 
@@ -81,12 +88,20 @@ class _SendUnit:
     company_id: uuid.UUID
     company_name: str
     contact_id: uuid.UUID | None
+    # Full name for `{kontakt}`, first name for `{kontakt_jmeno}` — the same
+    # split the composer uses, so one org template renders identically on both
+    # surfaces (a campaign used to put the first name in `{kontakt}`, which made
+    # a shared template greet people differently depending on where it was sent).
     contact_name: str
+    contact_first_name: str
     email: str
-    # Per-recipient open/click token. Campaigns always track, so this is
-    # generated up front (in `send_campaign`) and persisted on the recipient
-    # row alongside the delivery outcome.
-    tracking_token: str = ""
+    # Per-recipient open/click token. Campaigns always track *unless* the org
+    # opted out (`Organization.email_tracking_enabled`), so this is generated
+    # up front (in `send_campaign`) and persisted on the recipient row
+    # alongside the delivery outcome. None = untracked send — and it must be
+    # None rather than "", because the token column carries a UNIQUE index
+    # that would reject a second empty string.
+    tracking_token: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -238,26 +253,10 @@ async def resolve_recipients(
 # ---------------------------------------------------------------------------
 # Rendering
 # ---------------------------------------------------------------------------
-
-
-def render_message(
-    subject: str,
-    body: str,
-    *,
-    company_name: str,
-    contact_name: str,
-    sender_name: str,
-) -> tuple[str, str]:
-    """Substitute the merge fields `{firma}`, `{kontakt}`, `{vlastnik}`."""
-
-    def _sub(text: str) -> str:
-        return (
-            text.replace("{firma}", company_name)
-            .replace("{kontakt}", contact_name)
-            .replace("{vlastnik}", sender_name)
-        )
-
-    return _sub(subject), _sub(body)
+#
+# Merge-field substitution lives in `services/merge_fields.py` — shared with
+# the 1:1 composer so both surfaces speak the same vocabulary. `render_message`
+# is re-exported here because this module is where it used to live.
 
 
 # ---------------------------------------------------------------------------
@@ -265,14 +264,22 @@ def render_message(
 # ---------------------------------------------------------------------------
 
 
-async def _require_verified_smtp(session: AsyncSession, user: User) -> SmtpConfig:
+async def _require_verified_smtp(
+    session: AsyncSession, user: User
+) -> tuple[SmtpConfig, UserSmtpSettings]:
+    """The caller's send-ready SMTP config plus the row it came from.
+
+    The row rides along because the send also needs the sending identity's
+    bare `from_email` (the `{muj_email}` merge field — `SmtpConfig.sender`
+    may carry a display name) and the user's signature.
+    """
     row = (
         await session.execute(select(UserSmtpSettings).where(UserSmtpSettings.user_id == user.id))
     ).scalar_one_or_none()
     if row is None or row.verified_at is None:
         raise BulkEmailError("Nejdřív nastavte a ověřte odesílání e-mailů (SMTP) v nastavení.")
     sender = f"{row.from_name} <{row.from_email}>" if row.from_name else row.from_email
-    return SmtpConfig(
+    config = SmtpConfig(
         host=row.host,
         port=row.port,
         use_ssl=row.use_ssl,
@@ -281,6 +288,7 @@ async def _require_verified_smtp(session: AsyncSession, user: User) -> SmtpConfi
         password=decrypt_token(row.password_encrypted),
         sender=sender,
     )
+    return config, row
 
 
 def _open_smtp(config: SmtpConfig) -> smtplib.SMTP:
@@ -303,7 +311,8 @@ def _run_send_loop(
     config: SmtpConfig,
     subject: str,
     body: str,
-    sender_name: str,
+    base_context: MergeContext,
+    signature: str | None,
     units: list[_SendUnit],
     attachments: tuple[EmailAttachment, ...],
 ) -> list[dict[str, object]]:
@@ -317,13 +326,16 @@ def _run_send_loop(
         return [_result(u, EmailRecipientStatus.failed, str(exc)) for u in units]
 
     for unit in units:
-        rendered_subject, rendered_body = render_message(
-            subject,
-            body,
+        context = replace(
+            base_context,
             company_name=unit.company_name,
             contact_name=unit.contact_name,
-            sender_name=sender_name,
+            contact_first_name=unit.contact_first_name,
         )
+        rendered_subject, rendered_body = render_message(subject, body, context)
+        # Signature goes on before tracking so the pixel/link rewriting sees
+        # the final text; merge fields resolve inside it too.
+        rendered_body = apply_signature(rendered_body, apply_merge_fields(signature or "", context))
         message = Email(
             to=unit.email,
             subject=rendered_subject,
@@ -407,7 +419,12 @@ async def send_campaign(
     attachment: BulkAttachment | None,
 ) -> EmailCampaign:
     org_id = cast(uuid.UUID, user.organization_id)  # guaranteed by require_org_membership
-    config = await _require_verified_smtp(session, user)
+    config, smtp_row = await _require_verified_smtp(session, user)
+    org = await session.get(Organization, org_id)
+    # Campaigns track by default, but an org can switch tracking off entirely
+    # (Settings → Oprávnění) — EU/ePrivacy consent posture. When off, no token
+    # is minted, so no pixel and no link rewriting for anyone in the campaign.
+    tracking_enabled = org is None or org.email_tracking_enabled
 
     # Re-validate every requested company server-side: must be an owned
     # company in the caller's scope/book and not blocked. Each chosen email
@@ -449,9 +466,14 @@ async def send_campaign(
                     company_id=company.id,
                     company_name=company.name,
                     contact_id=contact.id if contact is not None else recip.contact_id,
-                    contact_name=contact.first_name if contact is not None else "",
+                    contact_name=(
+                        f"{contact.first_name} {contact.last_name}".strip()
+                        if contact is not None
+                        else ""
+                    ),
+                    contact_first_name=contact.first_name if contact is not None else "",
                     email=str(email),
-                    tracking_token=new_tracking_token(),
+                    tracking_token=new_tracking_token() if tracking_enabled else None,
                 )
             )
 
@@ -468,6 +490,16 @@ async def send_campaign(
             ),
         )
 
+    # Everything constant across the campaign; the per-recipient company /
+    # contact fields are layered on inside the send loop.
+    base_context = MergeContext(
+        sender_name=user.name,
+        sender_email=smtp_row.from_email,
+        currency=org.currency if org is not None else "CZK",
+        language=language_for_locale(org.locale if org is not None else None),
+    )
+    signature = smtp_row.signature if payload.append_signature else None
+
     sent_results: list[dict[str, object]] = []
     if units:
         sent_results = await asyncio.to_thread(
@@ -475,7 +507,8 @@ async def send_campaign(
             config,
             payload.subject,
             payload.body,
-            user.name,
+            base_context,
+            signature,
             units,
             attachments,
         )

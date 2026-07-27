@@ -10,6 +10,7 @@ import {
   useTestSmtpSettings,
 } from "@/app/settings/useSmtpSettings";
 import { ApiError } from "@/lib/api";
+import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
 
 type Security = "ssl" | "starttls";
@@ -22,6 +23,7 @@ interface FormState {
   password: string;
   from_email: string;
   from_name: string;
+  signature: string;
 }
 
 const EMPTY: FormState = {
@@ -32,6 +34,7 @@ const EMPTY: FormState = {
   password: "",
   from_email: "",
   from_name: "",
+  signature: "",
 };
 
 const inputClass =
@@ -62,6 +65,7 @@ export function SmtpSettingsCard() {
       password: "",
       from_email: data.from_email,
       from_name: data.from_name ?? "",
+      signature: data.signature ?? "",
     });
   }, [data]);
 
@@ -79,6 +83,9 @@ export function SmtpSettingsCard() {
       password: form.password ? form.password : null,
       from_email: form.from_email.trim(),
       from_name: form.from_name.trim() || null,
+      // Trailing whitespace would ride along into every mail; a blank
+      // signature is stored as null so nothing is appended.
+      signature: form.signature.trim() || null,
     };
     save.mutate(body, {
       onSuccess: () => {
@@ -216,6 +223,23 @@ export function SmtpSettingsCard() {
                 onChange={(e) => set("from_name", e.target.value)}
                 placeholder={t("smtp.placeholders.fromName")}
               />
+            </label>
+
+            <label className="block sm:col-span-2">
+              <span className="text-xs font-medium text-text-secondary">
+                {t("smtp.fields.signature")}
+              </span>
+              <textarea
+                className={`${inputClass} min-h-[96px] resize-y`}
+                value={form.signature}
+                data-testid={testIds.settings.smtpSignature}
+                onChange={(e) => set("signature", e.target.value)}
+                placeholder={t("smtp.placeholders.signature")}
+                maxLength={2000}
+              />
+              <span className="mt-1 block text-xs text-text-tertiary">
+                {t("smtp.signatureHint")}
+              </span>
             </label>
 
             <div className="flex flex-wrap items-center gap-2 sm:col-span-2">

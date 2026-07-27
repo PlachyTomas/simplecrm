@@ -390,6 +390,88 @@ async def test_untracked_send_has_no_token_pixel_or_rewrite(
 
 
 # ---------------------------------------------------------------------------
+# Organization-level opt-out (F2)
+# ---------------------------------------------------------------------------
+
+
+async def test_org_opt_out_beats_per_send_track_flag(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`email_tracking_enabled=false` disables tracking for the whole org, so
+    an explicit `track=true` still produces a plain-text mail with no token,
+    no pixel and no rewritten links (EU/ePrivacy escape hatch)."""
+    admin, _, deal = await _seed(db_session, owned_cleanup)
+    org = await db_session.get(Organization, admin.organization_id)
+    assert org is not None
+    assert org.email_tracking_enabled is True  # default stays on
+    org.email_tracking_enabled = False
+    await db_session.commit()
+
+    captured: list[Email] = []
+
+    async def _capture(message: Email, _config: object) -> None:
+        captured.append(message)
+
+    monkeypatch.setattr("app.services.mailer.send_email_via", _capture)
+
+    body = "Odkaz https://example.com/x"
+    resp = await client.post(
+        "/api/v1/emails",
+        headers=_auth(admin),
+        data={
+            "payload": json.dumps(
+                {
+                    "to": ["a@ex.cz"],
+                    "subject": "S",
+                    "body": body,
+                    "deal_id": str(deal.id),
+                    "track": True,
+                }
+            )
+        },
+    )
+    assert resp.status_code == 201, resp.text
+
+    async with AsyncSessionLocal() as check:
+        row = (
+            await check.execute(
+                select(SentEmail).where(SentEmail.id == uuid.UUID(resp.json()["id"]))
+            )
+        ).scalar_one()
+        assert row.tracking_token is None
+
+    message = captured[0]
+    assert message.html_body is None
+    assert message.body == body
+    assert "/t/o/" not in message.body and "/t/c/" not in message.body
+    mime = _build_mime(message, sender="admin@example.com")
+    assert mime.get_content_type() == "text/plain"
+
+
+async def test_org_opt_out_is_settable_by_an_admin(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    admin, _, _ = await _seed(db_session, owned_cleanup)
+    assert (await client.get("/api/v1/organizations/current", headers=_auth(admin))).json()[
+        "email_tracking_enabled"
+    ] is True
+
+    updated = await client.put(
+        "/api/v1/organizations/current",
+        json={"email_tracking_enabled": False},
+        headers=_auth(admin),
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["email_tracking_enabled"] is False
+    assert (await client.get("/api/v1/organizations/current", headers=_auth(admin))).json()[
+        "email_tracking_enabled"
+    ] is False
+
+
+# ---------------------------------------------------------------------------
 # Campaign aggregates
 # ---------------------------------------------------------------------------
 

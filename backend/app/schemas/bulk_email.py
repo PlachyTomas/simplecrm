@@ -62,6 +62,10 @@ class BulkEmailSendIn(BaseModel):
     recipients: list[BulkEmailRecipientIn] = Field(min_length=1, max_length=MAX_RECIPIENTS)
     create_deals: bool = False
     deal_title: str | None = Field(default=None, max_length=200)
+    # Append the sender's stored signature (Nastavení → SMTP) behind the
+    # RFC 3676 "-- " delimiter. On by default; a campaign whose body already
+    # ends in a hand-written sign-off can switch it off.
+    append_signature: bool = True
 
 
 class CampaignRecipientOut(BaseModel):

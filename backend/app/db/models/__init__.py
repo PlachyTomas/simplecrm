@@ -14,6 +14,7 @@ from app.db.models.company import Company
 from app.db.models.contact import Contact
 from app.db.models.deal import Deal
 from app.db.models.email_campaign import EmailCampaign, EmailCampaignRecipient
+from app.db.models.email_template import EmailTemplate
 from app.db.models.enums import (
     ActivityEntityType,
     ActivityType,
@@ -63,6 +64,7 @@ __all__ = [
     "EmailCampaign",
     "EmailCampaignRecipient",
     "EmailRecipientStatus",
+    "EmailTemplate",
     "GoogleCalendarConnection",
     "GoogleSyncStatus",
     "Invitation",

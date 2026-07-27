@@ -11,7 +11,9 @@ import {
   useResolveRecipients,
   useSendBulkEmail,
 } from "@/app/companies/bulk-email/useBulkEmail";
+import { EmailTemplatePicker, MergeFieldHint } from "@/app/emails/EmailTemplatePicker";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
+import { testIds } from "@/lib/testids";
 import { ApiError } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -366,6 +368,14 @@ export function BulkEmailWizard({
 
               {step === 2 ? (
                 <div className="space-y-3">
+                  <EmailTemplatePicker
+                    hasDraft={subject.trim() !== "" || body.trim() !== ""}
+                    onApply={(tpl) => {
+                      setSubject(tpl.subject);
+                      setBody(tpl.body);
+                    }}
+                    selectTestId={testIds.emails.bulkWizard.templateSelect}
+                  />
                   <label className="block">
                     <span className="text-xs font-medium text-text-secondary">
                       {t("wizard.subjectLabel")}
@@ -388,13 +398,11 @@ export function BulkEmailWizard({
                       placeholder={t("wizard.bodyPlaceholder")}
                     />
                   </label>
-                  <p className="text-xs text-text-tertiary">
-                    {t("wizard.placeholdersHintPrefix")}{" "}
-                    <code className="rounded bg-surface-overlay px-1">{"{firma}"}</code>,{" "}
-                    <code className="rounded bg-surface-overlay px-1">{"{kontakt}"}</code>,{" "}
-                    <code className="rounded bg-surface-overlay px-1">{"{vlastnik}"}</code>{" "}
-                    {t("wizard.placeholdersHintSuffix")}
-                  </p>
+                  {/* Vocabulary comes from the server (services/merge_fields)
+                      so the wizard can't drift from what actually resolves.
+                      A campaign has no deal behind it, so the deal-only
+                      tokens are hidden rather than advertised-then-empty. */}
+                  <MergeFieldHint excludeDealFields />
                   <label className="block">
                     <span className="text-xs font-medium text-text-secondary">
                       {t("wizard.attachmentLabel")}
