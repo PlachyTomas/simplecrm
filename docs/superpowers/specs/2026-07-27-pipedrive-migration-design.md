@@ -83,9 +83,12 @@ exchange rates is worse than a visible warning.
 
 - The deal column is `primary_contact_id`, not `contact_id` (nullable — optional
   linking stands).
-- **Deals have no `note` column**, so the "custom fields append to the note" fallback
-  works for companies and contacts only. Pipedrive *deal* custom fields are dropped in
-  v1; a caller asking for `note_append` on the deal side raises.
+- **Deals have no `note` column** — but they do have notes, as `ActivityType.note`
+  activity rows (`POST /deals/{id}/notes`, the pipeline quick action). So deal custom
+  fields are NOT dropped: a deal with unmapped columns gets ONE note activity holding
+  them as `Label: value` lines. That is content the customer exported, not fabricated
+  history, so it is the one exception to "no activity rows on import" below.
+  **Status: pending — phase 2b, after undo lands** (phase 1 shipped with them dropped).
 - Pipedrive's persons export carries `Person - Name` (one full name) while our
   `first_name`/`last_name` are both required — a persons export is unimportable without
   a `full_name` split target, so one was added. Single-token names fail loudly rather
