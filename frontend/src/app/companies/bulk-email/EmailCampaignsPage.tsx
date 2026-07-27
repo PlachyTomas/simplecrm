@@ -10,7 +10,7 @@ import {
   useEmailCampaigns,
 } from "@/app/companies/bulk-email/useBulkEmail";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatPercent } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
@@ -104,36 +104,85 @@ function CampaignCounts({ c }: { c: CampaignOut }) {
 
 function CampaignDetail({ id }: { id: string }) {
   const { t } = useTranslation("emails");
+  const locale = useLocale();
   const { data, isPending } = useEmailCampaign(id);
   if (isPending) {
     return <p className="px-4 py-3 text-sm text-text-tertiary">{t("campaigns.loading")}</p>;
   }
   if (!data) return null;
+  const at = (iso: string) => formatDate(iso, locale, { dateStyle: "medium", timeStyle: "short" });
   return (
     <div className="border-t border-border-subtle">
-      <table className="min-w-full divide-y divide-border-subtle text-sm">
-        <thead>
-          <tr className="text-left text-xs uppercase tracking-wider text-text-tertiary">
-            <th className="px-4 py-2 font-medium">{t("campaigns.tableCompany")}</th>
-            <th className="px-4 py-2 font-medium">{t("campaigns.tableEmail")}</th>
-            <th className="px-4 py-2 font-medium">{t("campaigns.tableStatus")}</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border-subtle">
-          {data.recipients.map((r, i) => (
-            <tr key={`${r.email}-${i}`}>
-              <td className="px-4 py-2 text-text-secondary">{r.company_name}</td>
-              <td className="px-4 py-2 text-text-tertiary">{r.email || "—"}</td>
-              <td className={cn("px-4 py-2 font-medium", STATUS_CLASS[r.status])}>
-                {STATUS_LABEL_KEY[r.status] ? t(STATUS_LABEL_KEY[r.status]!) : r.status}
-                {r.error && r.status !== "sent" ? (
-                  <span className="ml-1 text-xs text-text-tertiary">({r.error})</span>
-                ) : null}
-              </td>
+      <div className="px-4 py-3">
+        <p className="text-sm tabular-nums text-text-secondary">
+          {t("campaigns.engagementOpened", {
+            opened: data.opened_count,
+            sent: data.sent_count,
+            rate: formatPercent(data.open_rate * 100, locale),
+          })}
+          {" · "}
+          {t("campaigns.engagementClicked", {
+            count: data.clicked_count,
+            rate: formatPercent(data.click_rate * 100, locale),
+          })}
+        </p>
+        <p className="mt-1 text-xs text-text-tertiary">{t("campaigns.trackingNote")}</p>
+      </div>
+      <div className="overflow-x-auto border-t border-border-subtle">
+        <table className="min-w-full divide-y divide-border-subtle text-sm">
+          <thead>
+            <tr className="text-left text-xs uppercase tracking-wider text-text-tertiary">
+              <th className="px-4 py-2 font-medium">{t("campaigns.tableCompany")}</th>
+              <th className="px-4 py-2 font-medium">{t("campaigns.tableEmail")}</th>
+              <th className="px-4 py-2 font-medium">{t("campaigns.tableStatus")}</th>
+              <th className="px-4 py-2 font-medium">{t("campaigns.tableOpened")}</th>
+              <th className="px-4 py-2 font-medium">{t("campaigns.tableClicked")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-border-subtle">
+            {data.recipients.map((r, i) => (
+              <tr key={`${r.email}-${i}`}>
+                <td className="px-4 py-2 text-text-secondary">{r.company_name}</td>
+                <td className="px-4 py-2 text-text-tertiary">{r.email || "—"}</td>
+                <td className={cn("px-4 py-2 font-medium", STATUS_CLASS[r.status])}>
+                  {STATUS_LABEL_KEY[r.status] ? t(STATUS_LABEL_KEY[r.status]!) : r.status}
+                  {r.error && r.status !== "sent" ? (
+                    <span className="ml-1 text-xs text-text-tertiary">({r.error})</span>
+                  ) : null}
+                </td>
+                <td className="whitespace-nowrap px-4 py-2">
+                  {r.opened_at ? (
+                    <span
+                      className="font-medium text-success"
+                      title={t("campaigns.openedTooltip", { at: at(r.opened_at) })}
+                    >
+                      {r.open_count > 1
+                        ? t("campaigns.openedWithCount", { n: r.open_count })
+                        : t("campaigns.opened")}
+                    </span>
+                  ) : (
+                    <span className="text-text-tertiary">—</span>
+                  )}
+                </td>
+                <td className="whitespace-nowrap px-4 py-2">
+                  {r.clicked_at ? (
+                    <span
+                      className="font-medium text-accent"
+                      title={t("campaigns.clickedTooltip", { at: at(r.clicked_at) })}
+                    >
+                      {r.click_count > 1
+                        ? t("campaigns.clickedWithCount", { n: r.click_count })
+                        : t("campaigns.clicked")}
+                    </span>
+                  ) : (
+                    <span className="text-text-tertiary">—</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

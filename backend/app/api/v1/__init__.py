@@ -29,6 +29,7 @@ from app.api.v1 import (
     reports_widgets,
     subscription,
     teams,
+    tracking,
     user_smtp,
     users,
 )
@@ -108,6 +109,11 @@ api_router.include_router(subscription.router, dependencies=[Depends(require_org
 api_router.include_router(payments.router)
 # Public pricing catalog — no auth, no trial gate.
 api_router.include_router(plans.router)
+# Email open/click tracking (`/t/o/...`, `/t/c/...`). Public by necessity:
+# the requests come from the recipient's mail client and browser, which
+# carry no session. The random per-send token is the only credential, and
+# the click target is HMAC-signed so the redirect can't be abused.
+api_router.include_router(tracking.router)
 # Super-admin surface — gated per-route by `require_super_admin`. Not under
 # PROTECTED_DEPS because the trial gate is per-org and super-admins operate
 # across orgs (and may themselves belong to a freshly-trialing test org).

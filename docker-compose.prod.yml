@@ -49,6 +49,11 @@ services:
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
       FRONTEND_SUCCESS_REDIRECT: ${FRONTEND_SUCCESS_REDIRECT}
       FRONTEND_LOGIN_REDIRECT: ${FRONTEND_LOGIN_REDIRECT}
+      # Ends up inside outbound mail (open pixel + click links), so it must be
+      # the publicly reachable API origin, not the container's own address.
+      # Embedded in outbound mail (open pixel + click links) — the container
+      # refuses to boot outside dev if this isn't an absolute http(s) URL.
+      PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:?set PUBLIC_API_BASE_URL, e.g. https://api.simplecrm.cz}
       CORS_ORIGINS: ${CORS_ORIGINS}
       SENTRY_DSN: ${SENTRY_DSN:-}
     command: >

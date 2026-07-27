@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { EmailComposeModal } from "@/app/emails/EmailComposeModal";
@@ -38,6 +38,10 @@ const PARENT: SentEmailOut = {
   thread_id: "t1",
   sent_at: null,
   created_at: "2026-07-08T10:00:00Z",
+  opened_at: null,
+  open_count: 0,
+  clicked_at: null,
+  click_count: 0,
 };
 
 describe("EmailComposeModal", () => {
@@ -304,5 +308,58 @@ describe("EmailComposeModal — company contact recipients", () => {
     fireEvent.keyDown(to, { key: "Enter" });
     expect(screen.getByText("jan@acme.cz")).toBeInTheDocument();
     expect(to.value).toBe("");
+  });
+});
+
+describe("EmailComposeModal — open/click tracking", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** Stub fetch so the send resolves as a sent mail; records every call. */
+  function stubSend() {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+        const u = String(url);
+        calls.push({ url: u, init });
+        if (u.includes("/api/v1/emails")) return jsonResponse({ ...PARENT, id: "e2" }, 201);
+        return jsonResponse({});
+      }),
+    );
+    return calls;
+  }
+
+  /** The compose payload rides as a JSON string inside the multipart form. */
+  async function sentPayload(
+    calls: { url: string; init?: RequestInit }[],
+  ): Promise<Record<string, unknown>> {
+    const post = calls.find((c) => c.url.includes("/api/v1/emails"));
+    expect(post).toBeTruthy();
+    return JSON.parse(String((post!.init!.body as FormData).get("payload"))) as Record<
+      string,
+      unknown
+    >;
+  }
+
+  it("is on by default and sends track: true", async () => {
+    const calls = stubSend();
+    wrap(<EmailComposeModal open onClose={vi.fn()} dealId="d1" replyTo={PARENT} />);
+    const toggle = screen.getByTestId(testIds.emails.compose.trackToggle) as HTMLInputElement;
+    expect(toggle.checked).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: /Odeslat/ }));
+    await waitFor(() => expect(calls.some((c) => c.url.includes("/api/v1/emails"))).toBe(true));
+    expect(await sentPayload(calls)).toMatchObject({ track: true });
+  });
+
+  it("sends track: false once the toggle is switched off", async () => {
+    const calls = stubSend();
+    wrap(<EmailComposeModal open onClose={vi.fn()} dealId="d1" replyTo={PARENT} />);
+    fireEvent.click(screen.getByTestId(testIds.emails.compose.trackToggle));
+    expect(
+      (screen.getByTestId(testIds.emails.compose.trackToggle) as HTMLInputElement).checked,
+    ).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: /Odeslat/ }));
+    await waitFor(() => expect(calls.some((c) => c.url.includes("/api/v1/emails"))).toBe(true));
+    expect(await sentPayload(calls)).toMatchObject({ track: false });
   });
 });

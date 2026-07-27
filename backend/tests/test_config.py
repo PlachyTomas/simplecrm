@@ -25,3 +25,24 @@ def test_prod_rejects_empty_secret() -> None:
 def test_prod_accepts_strong_secret() -> None:
     s = Settings(app_env="production", jwt_secret="a-strong-random-production-secret-1234567890")
     assert s.app_env == "production"
+
+
+_STRONG = "a-strong-random-production-secret-1234567890"
+
+
+def test_prod_rejects_empty_public_api_base_url() -> None:
+    """An unset compose var would ship relative tracking URLs in every mail."""
+    with pytest.raises(ValueError, match="PUBLIC_API_BASE_URL"):
+        Settings(app_env="production", jwt_secret=_STRONG, public_api_base_url="")
+
+
+def test_prod_rejects_relative_public_api_base_url() -> None:
+    with pytest.raises(ValueError, match="PUBLIC_API_BASE_URL"):
+        Settings(app_env="production", jwt_secret=_STRONG, public_api_base_url="api.simplecrm.cz")
+
+
+def test_prod_accepts_absolute_public_api_base_url() -> None:
+    s = Settings(
+        app_env="production", jwt_secret=_STRONG, public_api_base_url="https://api.simplecrm.cz"
+    )
+    assert s.public_api_base_url == "https://api.simplecrm.cz"

@@ -20,6 +20,8 @@ export interface SentEmailCreate {
   deal_id?: string | null;
   company_id?: string | null;
   reply_to_email_id?: string | null;
+  /** Embed the open pixel + rewrite links through the click tracker (server default: true). */
+  track?: boolean;
 }
 
 export interface SendEmailInput {

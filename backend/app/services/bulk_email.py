@@ -55,6 +55,7 @@ from app.schemas.bulk_email import (
 )
 from app.schemas.contact import ContactOut
 from app.services.email import Email, EmailAttachment, SmtpConfig, _build_mime
+from app.services.email_tracking import build_tracked_html, new_tracking_token
 
 logger = logging.getLogger("simplecrm.bulk_email")
 
@@ -82,6 +83,10 @@ class _SendUnit:
     contact_id: uuid.UUID | None
     contact_name: str
     email: str
+    # Per-recipient open/click token. Campaigns always track, so this is
+    # generated up front (in `send_campaign`) and persisted on the recipient
+    # row alongside the delivery outcome.
+    tracking_token: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -323,6 +328,13 @@ def _run_send_loop(
             to=unit.email,
             subject=rendered_subject,
             body=rendered_body,
+            # Tracking is rendered per recipient: the merge fields are already
+            # substituted, and each addressee gets their own token.
+            html_body=(
+                build_tracked_html(rendered_body, unit.tracking_token)
+                if unit.tracking_token
+                else None
+            ),
             attachments=attachments,
         )
         mime = _build_mime(message, sender=config.sender)
@@ -358,6 +370,12 @@ def _result(unit: _SendUnit, status: EmailRecipientStatus, error: str | None) ->
         "status": status,
         "error": error,
         "sent_at": datetime.now(tz=UTC) if status is EmailRecipientStatus.sent else None,
+        # Persist the token whenever one was minted, regardless of outcome: it is
+        # already inside the MIME handed to the SMTP server, so a unit recorded as
+        # failed after the server accepted the message (post-DATA timeout, partial
+        # multi-recipient failure) would otherwise leave a live pixel whose opens
+        # match no row and vanish silently.
+        "tracking_token": unit.tracking_token,
     }
 
 
@@ -433,6 +451,7 @@ async def send_campaign(
                     contact_id=contact.id if contact is not None else recip.contact_id,
                     contact_name=contact.first_name if contact is not None else "",
                     email=str(email),
+                    tracking_token=new_tracking_token(),
                 )
             )
 
@@ -491,6 +510,9 @@ async def send_campaign(
                 status=status,
                 error=r["error"],
                 sent_at=r["sent_at"],
+                # `.get` because tests (and any future custom send loop) may
+                # hand back result dicts without the tracking key.
+                tracking_token=r.get("tracking_token"),
             )
         )
     session.add(campaign)

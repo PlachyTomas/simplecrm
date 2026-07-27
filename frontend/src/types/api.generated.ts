@@ -2405,6 +2405,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/t/o/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Track Open
+         * @description Record an open and return the 1x1 transparent GIF (always 200).
+         */
+        get: operations["track_open_api_v1_t_o__token__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/t/c/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Track Click
+         * @description Verify the signature, record the click, then 302 to the target.
+         */
+        get: operations["track_click_api_v1_t_c__token__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/organizations": {
         parameters: {
             query?: never;
@@ -3941,6 +3981,26 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Opened Count
+             * @default 0
+             */
+            opened_count: number;
+            /**
+             * Clicked Count
+             * @default 0
+             */
+            clicked_count: number;
+            /**
+             * Open Rate
+             * @default 0
+             */
+            open_rate: number;
+            /**
+             * Click Rate
+             * @default 0
+             */
+            click_rate: number;
             /** Body */
             body: string;
             /** Recipients */
@@ -3972,6 +4032,26 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Opened Count
+             * @default 0
+             */
+            opened_count: number;
+            /**
+             * Clicked Count
+             * @default 0
+             */
+            clicked_count: number;
+            /**
+             * Open Rate
+             * @default 0
+             */
+            open_rate: number;
+            /**
+             * Click Rate
+             * @default 0
+             */
+            click_rate: number;
         };
         /** CampaignRecipientOut */
         CampaignRecipientOut: {
@@ -3986,6 +4066,20 @@ export interface components {
             error?: string | null;
             /** Sent At */
             sent_at?: string | null;
+            /** Opened At */
+            opened_at?: string | null;
+            /**
+             * Open Count
+             * @default 0
+             */
+            open_count: number;
+            /** Clicked At */
+            clicked_at?: string | null;
+            /**
+             * Click Count
+             * @default 0
+             */
+            click_count: number;
         };
         /**
          * CancelSelfServeIn
@@ -6090,6 +6184,20 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Opened At */
+            opened_at?: string | null;
+            /**
+             * Open Count
+             * @default 0
+             */
+            open_count: number;
+            /** Clicked At */
+            clicked_at?: string | null;
+            /**
+             * Click Count
+             * @default 0
+             */
+            click_count: number;
             /** Thread */
             thread?: components["schemas"]["SentEmailOut"][];
         };
@@ -6142,6 +6250,20 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Opened At */
+            opened_at?: string | null;
+            /**
+             * Open Count
+             * @default 0
+             */
+            open_count: number;
+            /** Clicked At */
+            clicked_at?: string | null;
+            /**
+             * Click Count
+             * @default 0
+             */
+            click_count: number;
         };
         /**
          * SentEmailStatus
@@ -11315,6 +11437,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BillingSettingsPublic"];
+                };
+            };
+        };
+    };
+    track_open_api_v1_t_o__token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/gif": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    track_click_api_v1_t_c__token__get: {
+        parameters: {
+            query: {
+                /** @description URL-safe base64 of the click target */
+                u: string;
+                /** @description Truncated HMAC over token + '.' + u */
+                s: string;
+            };
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            307: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

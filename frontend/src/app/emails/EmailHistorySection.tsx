@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { type SentEmailOut, useCompanyEmails, useDealEmails } from "@/app/emails/useEmails";
+import { formatDate } from "@/lib/format";
 
 interface EmailHistorySectionProps {
   dealId?: string;
@@ -27,6 +28,42 @@ function StatusBadge({ email }: { email: SentEmailOut }) {
     >
       {t("history.statusError")}
     </span>
+  );
+}
+
+const CHIP = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium";
+
+/**
+ * Opened/clicked pills. An unopened mail shows nothing on purpose — most sends
+ * are never opened, and a permanent "unopened" chip would be pure noise.
+ */
+function EngagementChips({ email, locale }: { email: SentEmailOut; locale: string }) {
+  const { t } = useTranslation("emails");
+  if (!email.opened_at && !email.clicked_at) return null;
+  const at = (iso: string) => formatDate(iso, locale, { dateStyle: "medium", timeStyle: "short" });
+  return (
+    <>
+      {email.opened_at ? (
+        <span
+          title={t("history.openedTooltip", { at: at(email.opened_at) })}
+          className={`${CHIP} bg-success-subtle text-success`}
+        >
+          {email.open_count > 1
+            ? t("history.openedWithCount", { n: email.open_count })
+            : t("history.opened")}
+        </span>
+      ) : null}
+      {email.clicked_at ? (
+        <span
+          title={t("history.clickedTooltip", { at: at(email.clicked_at) })}
+          className={`${CHIP} bg-accent-subtle text-accent`}
+        >
+          {email.click_count > 1
+            ? t("history.clickedWithCount", { n: email.click_count })
+            : t("history.clicked")}
+        </span>
+      ) : null}
+    </>
   );
 }
 
@@ -60,9 +97,10 @@ export function EmailHistorySection({
           {items.map((email) => (
             <li key={email.id} className="flex items-start justify-between gap-3 px-3 py-2.5">
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <p className="truncate text-sm font-medium text-text-primary">{email.subject}</p>
                   <StatusBadge email={email} />
+                  <EngagementChips email={email} locale={locale} />
                 </div>
                 <p className="mt-0.5 truncate text-xs text-text-tertiary">
                   {email.to_emails.join(", ")} · {dt.format(new Date(email.created_at))}

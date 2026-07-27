@@ -33,6 +33,7 @@ from app.db.models import (
 from app.schemas.sent_email import SentEmailCreate
 from app.services.activity_log import record_activity
 from app.services.email import Email, EmailAttachment, send_email_via
+from app.services.email_tracking import build_tracked_html, new_tracking_token
 
 
 class SmtpNotVerifiedError(Exception):
@@ -98,10 +99,16 @@ async def send_user_email(
             chain.append(in_reply_to)
         references = " ".join(chain) if chain else in_reply_to
 
+    # Tracking is opt-out per send. Without a token the mail stays exactly as
+    # it was before tracking existed: plain text only, original URLs, no pixel.
+    tracking_token = new_tracking_token() if payload.track else None
+    html_body = build_tracked_html(payload.body, tracking_token) if tracking_token else None
+
     message = Email(
         to=", ".join(str(addr) for addr in payload.to),
         subject=payload.subject,
         body=payload.body,
+        html_body=html_body,
         cc=tuple(str(a) for a in payload.cc),
         bcc=tuple(str(a) for a in payload.bcc),
         message_id=message_id,
@@ -149,6 +156,7 @@ async def send_user_email(
         in_reply_to_message_id=in_reply_to,
         thread_id=thread_id,
         sent_at=sent_at,
+        tracking_token=tracking_token,
     )
     session.add(sent)
 

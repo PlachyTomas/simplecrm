@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Text, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, String, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -36,6 +36,7 @@ class SentEmail(Base):
         Index("ix_sent_emails_company_id", "company_id"),
         Index("ix_sent_emails_thread_id", "thread_id"),
         Index("ix_sent_emails_organization_id_created_at", "organization_id", "created_at"),
+        Index("ix_sent_emails_tracking_token", "tracking_token", unique=True),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -83,6 +84,20 @@ class SentEmail(Base):
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Open/click tracking (see services/email_tracking.py). `tracking_token`
+    # is NULL for historic rows and for sends made with `track=false`, so the
+    # unique index tolerates many NULLs by design. `*_at` holds the *first*
+    # event, `*_count` every subsequent one.
+    tracking_token: Mapped[str | None] = mapped_column(Text)
+    opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    open_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
+    clicked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    click_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
     )
 
     organization: Mapped[Organization] = relationship()

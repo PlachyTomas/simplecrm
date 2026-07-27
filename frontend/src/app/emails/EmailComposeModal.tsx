@@ -414,6 +414,9 @@ export function EmailComposeModal({
   const [subject, setSubject] = useState(initial.subject);
   const [body, setBody] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  // Open/click tracking is on by default (mirrors the server default); opting
+  // out sends a plain mail with no pixel and no rewritten links.
+  const [track, setTrack] = useState(true);
 
   // Dirty = anything beyond the reply/defaultTo prefill.
   const dirty =
@@ -423,7 +426,8 @@ export function EmailComposeModal({
     subject !== initial.subject ||
     to.join("\n") !== initial.to.join("\n") ||
     cc.join("\n") !== initial.cc.join("\n") ||
-    newContactFor !== null;
+    newContactFor !== null ||
+    !track;
   const { onBackdropClick, nudgeClass } = useDismissGuard(onClose, dirty);
 
   if (!open) return null;
@@ -447,6 +451,7 @@ export function EmailComposeModal({
           deal_id: replyTo ? null : (dealId ?? null),
           company_id: replyTo ? null : (companyId ?? null),
           reply_to_email_id: replyTo?.id ?? null,
+          track,
         },
         attachments: files,
       });
@@ -621,6 +626,17 @@ export function EmailComposeModal({
               </ul>
             ) : null}
           </div>
+
+          <label className="flex items-center gap-2 text-sm text-text-secondary">
+            <input
+              type="checkbox"
+              checked={track}
+              data-testid={testIds.emails.compose.trackToggle}
+              onChange={(e) => setTrack(e.target.checked)}
+              className="h-4 w-4 rounded border-border accent-accent"
+            />
+            {t("compose.trackLabel")}
+          </label>
         </div>
 
         <div className="mt-6 flex items-center justify-end gap-3">

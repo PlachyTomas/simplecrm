@@ -31,7 +31,8 @@
     "newContactSave": "Uložit kontakt",
     "newContactSaving": "Ukládám…",
     "newContactCancel": "Zrušit",
-    "newContactError": "Kontakt se nepodařilo uložit."
+    "newContactError": "Kontakt se nepodařilo uložit.",
+    "trackLabel": "Sledovat otevření a prokliky"
   },
   "history": {
     "title": "Odeslané e-maily",
@@ -39,7 +40,13 @@
     "empty": "Zatím žádné odeslané e-maily.",
     "statusSent": "Odesláno",
     "statusError": "Chyba",
-    "reply": "Odpovědět"
+    "reply": "Odpovědět",
+    "opened": "Otevřeno",
+    "openedWithCount": "Otevřeno {{n}}×",
+    "openedTooltip": "Poprvé otevřeno {{at}}",
+    "clicked": "Prokliknuto",
+    "clickedWithCount": "Prokliknuto {{n}}×",
+    "clickedTooltip": "Poprvé prokliknuto {{at}}"
   },
   "gatedMail": {
     "hint": "Nejprve nastavte a ověřte SMTP.",
@@ -59,9 +66,22 @@
     "tableCompany": "Firma",
     "tableEmail": "E-mail",
     "tableStatus": "Stav",
+    "tableOpened": "Otevřeno",
+    "tableClicked": "Prokliknuto",
     "statusSent": "Odesláno",
     "statusFailed": "Selhalo",
-    "statusSkipped": "Přeskočeno"
+    "statusSkipped": "Přeskočeno",
+    "engagementOpened": "{{opened}} z {{sent}} otevřeno ({{rate}})",
+    "engagementClicked_one": "{{count}} proklik ({{rate}})",
+    "engagementClicked_few": "{{count}} prokliky ({{rate}})",
+    "engagementClicked_other": "{{count}} prokliků ({{rate}})",
+    "trackingNote": "Apple Mail a další služby s ochranou soukromí otevření nafukují — spolehlivým signálem jsou prokliky.",
+    "opened": "Otevřeno",
+    "openedWithCount": "Otevřeno {{n}}×",
+    "openedTooltip": "Poprvé otevřeno {{at}}",
+    "clicked": "Prokliknuto",
+    "clickedWithCount": "Prokliknuto {{n}}×",
+    "clickedTooltip": "Poprvé prokliknuto {{at}}"
   },
   "wizard": {
     "title": "Hromadný e-mail",

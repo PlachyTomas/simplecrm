@@ -62,6 +62,12 @@ class Email:
     to: str
     subject: str
     body: str
+    # Optional HTML alternative. When set, the message goes out as
+    # multipart/alternative with `body` as the text/plain part — untouched,
+    # original URLs and all — and this as the text/html one. Used by open/
+    # click tracking (`services/email_tracking.build_tracked_html`); every
+    # other caller leaves it None and keeps the plain-text-only behavior.
+    html_body: str | None = None
     # Optional Reply-To override. Used by the feedback endpoint so the
     # founder can hit Reply and land on the reporting user's inbox.
     reply_to: str | None = None
@@ -216,6 +222,10 @@ def _build_mime(message: Email, *, sender: str) -> EmailMessage:
     if message.references:
         msg["References"] = message.references
     msg.set_content(message.body)
+    if message.html_body is not None:
+        # Promotes the message to multipart/alternative. The plain part above
+        # stays byte-identical; clients that render HTML pick this one up.
+        msg.add_alternative(message.html_body, subtype="html")
     for att in message.attachments:
         maintype, _, subtype = att.content_type.partition("/")
         if not maintype or not subtype:

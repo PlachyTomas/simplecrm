@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.deps import get_current_user
 from app.db import get_db
-from app.db.models import EmailCampaign, User, UserRole
+from app.db.models import EmailCampaign, EmailCampaignRecipient, User, UserRole
 from app.schemas.bulk_email import (
     BulkEmailFilters,
     BulkEmailSendIn,
@@ -98,6 +98,40 @@ async def send(
     return CampaignOut.model_validate(campaign)
 
 
+async def _tracking_totals(
+    session: AsyncSession, campaign_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, tuple[int, int]]:
+    """(opened, clicked) recipient counts per campaign, in one grouped query.
+
+    Kept out of the campaign row itself: opens trickle in for weeks after a
+    send, and a denormalized counter would have to be maintained from the
+    public (unauthenticated) tracking endpoints.
+    """
+    if not campaign_ids:
+        return {}
+    rows = await session.execute(
+        select(
+            EmailCampaignRecipient.campaign_id,
+            func.count().filter(EmailCampaignRecipient.opened_at.is_not(None)),
+            func.count().filter(EmailCampaignRecipient.clicked_at.is_not(None)),
+        )
+        .where(EmailCampaignRecipient.campaign_id.in_(campaign_ids))
+        .group_by(EmailCampaignRecipient.campaign_id)
+    )
+    return {row[0]: (row[1], row[2]) for row in rows.all()}
+
+
+def _with_tracking(out: CampaignOut, totals: tuple[int, int]) -> CampaignOut:
+    """Fill the aggregate engagement fields; rates are fractions of sent_count."""
+    opened, clicked = totals
+    out.opened_count = opened
+    out.clicked_count = clicked
+    if out.sent_count:
+        out.open_rate = round(opened / out.sent_count, 4)
+        out.click_rate = round(clicked / out.sent_count, 4)
+    return out
+
+
 def _campaign_scope(stmt: Select[tuple[EmailCampaign]], user: User) -> Select[tuple[EmailCampaign]]:
     """Scope campaigns: everyone sees their org; salespeople see only their
     own sends, managers/admins see the whole org's history."""
@@ -126,8 +160,11 @@ async def list_campaigns(
         .scalars()
         .all()
     )
+    totals = await _tracking_totals(session, [c.id for c in items])
     return Page[CampaignOut](
-        items=[CampaignOut.model_validate(c) for c in items],
+        items=[
+            _with_tracking(CampaignOut.model_validate(c), totals.get(c.id, (0, 0))) for c in items
+        ],
         total=total,
         limit=pagination.limit,
         offset=pagination.offset,
@@ -146,4 +183,8 @@ async def get_campaign(
     campaign = (await session.execute(stmt)).scalar_one_or_none()
     if campaign is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kampaň nebyla nalezena.")
-    return CampaignDetailOut.model_validate(campaign)
+    detail = CampaignDetailOut.model_validate(campaign)
+    opened = sum(1 for r in campaign.recipients if r.opened_at is not None)
+    clicked = sum(1 for r in campaign.recipients if r.clicked_at is not None)
+    _with_tracking(detail, (opened, clicked))
+    return detail

@@ -31,7 +31,8 @@
     "newContactSave": "Save contact",
     "newContactSaving": "Saving…",
     "newContactCancel": "Cancel",
-    "newContactError": "Could not save the contact."
+    "newContactError": "Could not save the contact.",
+    "trackLabel": "Track opens and clicks"
   },
   "history": {
     "title": "Sent emails",
@@ -39,7 +40,13 @@
     "empty": "No emails sent yet.",
     "statusSent": "Sent",
     "statusError": "Error",
-    "reply": "Reply"
+    "reply": "Reply",
+    "opened": "Opened",
+    "openedWithCount": "Opened {{n}}×",
+    "openedTooltip": "First opened {{at}}",
+    "clicked": "Clicked",
+    "clickedWithCount": "Clicked {{n}}×",
+    "clickedTooltip": "First clicked {{at}}"
   },
   "gatedMail": {
     "hint": "Set up and verify SMTP first.",
@@ -59,9 +66,21 @@
     "tableCompany": "Company",
     "tableEmail": "Email",
     "tableStatus": "Status",
+    "tableOpened": "Opened",
+    "tableClicked": "Clicked",
     "statusSent": "Sent",
     "statusFailed": "Failed",
-    "statusSkipped": "Skipped"
+    "statusSkipped": "Skipped",
+    "engagementOpened": "{{opened}} of {{sent}} opened ({{rate}})",
+    "engagementClicked_one": "{{count}} click ({{rate}})",
+    "engagementClicked_other": "{{count}} clicks ({{rate}})",
+    "trackingNote": "Apple Mail and other privacy proxies inflate opens — clicks are the reliable signal.",
+    "opened": "Opened",
+    "openedWithCount": "Opened {{n}}×",
+    "openedTooltip": "First opened {{at}}",
+    "clicked": "Clicked",
+    "clickedWithCount": "Clicked {{n}}×",
+    "clickedTooltip": "First clicked {{at}}"
   },
   "wizard": {
     "title": "Bulk email",

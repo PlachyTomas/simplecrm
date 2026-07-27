@@ -117,6 +117,7 @@ export const testIds = {
       toInput: "email-compose-to-input",
       ccInput: "email-compose-cc-input",
       bccInput: "email-compose-bcc-input",
+      trackToggle: "email-compose-track-toggle",
       suggestion: (field: string, contactId: string) =>
         `email-compose-${field}-suggestion-${contactId}`,
       newContactToggle: (field: string) => `email-compose-${field}-new-contact-toggle`,

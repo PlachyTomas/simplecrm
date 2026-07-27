@@ -73,6 +73,11 @@ class CampaignRecipientOut(BaseModel):
     status: EmailRecipientStatus
     error: str | None = None
     sent_at: datetime | None = None
+    # Per-recipient engagement. `*_at` is the first event, `*_count` all of them.
+    opened_at: datetime | None = None
+    open_count: int = 0
+    clicked_at: datetime | None = None
+    click_count: int = 0
 
 
 class CampaignOut(BaseModel):
@@ -87,6 +92,14 @@ class CampaignOut(BaseModel):
     failed_count: int
     skipped_count: int
     created_at: datetime
+    # Aggregate engagement, computed per request from the recipient rows (not
+    # denormalized onto the campaign — opens keep arriving for weeks). Counts
+    # are *distinct recipients* who opened/clicked at least once; the rates are
+    # fractions of `sent_count` (0.0 when nothing was sent).
+    opened_count: int = 0
+    clicked_count: int = 0
+    open_rate: float = 0.0
+    click_rate: float = 0.0
 
 
 class CampaignDetailOut(CampaignOut):

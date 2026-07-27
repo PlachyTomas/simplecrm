@@ -13,6 +13,7 @@ from sqlalchemy import (
     String,
     Text,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -78,7 +79,10 @@ class EmailCampaignRecipient(Base):
     """
 
     __tablename__ = "email_campaign_recipients"
-    __table_args__ = (Index("ix_email_campaign_recipients_campaign", "campaign_id"),)
+    __table_args__ = (
+        Index("ix_email_campaign_recipients_campaign", "campaign_id"),
+        Index("ix_email_campaign_recipients_tracking_token", "tracking_token", unique=True),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         PgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -104,5 +108,18 @@ class EmailCampaignRecipient(Base):
     )
     error: Mapped[str | None] = mapped_column(String(500))
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # Per-recipient open/click tracking — same shape as `sent_emails`, so one
+    # token lookup can resolve either surface (see services/email_tracking.py).
+    # NULL on skipped/failed recipients and on pre-tracking history.
+    tracking_token: Mapped[str | None] = mapped_column(Text)
+    opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    open_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
+    clicked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    click_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
 
     campaign: Mapped[EmailCampaign] = relationship(back_populates="recipients")

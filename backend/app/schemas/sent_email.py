@@ -25,6 +25,10 @@ class SentEmailCreate(BaseModel):
     # When set, this send is a follow-up to a previously *sent* email: it
     # inherits that mail's thread_id and links via In-Reply-To/References.
     reply_to_email_id: uuid.UUID | None = None
+    # Embed the open pixel + rewrite links through the click tracker. On by
+    # default; the composer can opt out per send (no token is issued then,
+    # and the mail goes out plain-text-only exactly as before tracking).
+    track: bool = True
 
 
 class SentEmailOut(BaseModel):
@@ -48,6 +52,12 @@ class SentEmailOut(BaseModel):
     thread_id: uuid.UUID
     sent_at: datetime | None = None
     created_at: datetime
+    # Open/click tracking. `*_at` is the first event, `*_count` every event.
+    # All zero/None for untracked sends (`track=false`) and pre-tracking rows.
+    opened_at: datetime | None = None
+    open_count: int = 0
+    clicked_at: datetime | None = None
+    click_count: int = 0
 
 
 class SentEmailDetail(SentEmailOut):

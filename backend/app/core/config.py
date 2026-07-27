@@ -46,6 +46,13 @@ class Settings(BaseSettings):
     # Where to send them when they log out or hit an error.
     frontend_login_redirect: str = "http://localhost:5173/login"
 
+    # Public origin of *this* API, used to build absolute URLs that end up
+    # inside outbound email (the open pixel + click-tracking links in
+    # `services/email_tracking.py`). Unlike `frontend_*`, these are hit by
+    # the recipient's mail client, so the value must be publicly reachable
+    # in prod (e.g. https://api.simplecrm.cz) — localhost only works in dev.
+    public_api_base_url: str = "http://localhost:8000"
+
     # Email verification + password reset link paths on the frontend. The
     # backend builds links as `{origin}{path}?token=...` using the origin
     # of `frontend_success_redirect`.
@@ -121,6 +128,20 @@ class Settings(BaseSettings):
         if self.app_env != "dev" and self.jwt_secret in ("", _DEFAULT_JWT_SECRET):
             raise ValueError(
                 "JWT_SECRET must be set to a strong, non-default value when APP_ENV != 'dev'."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _require_public_api_base_url(self) -> "Settings":
+        """The tracking pixel and click links are built from this and rendered in
+        the recipient's mail client. An unset compose var would leave it empty and
+        silently ship relative `/api/v1/t/...` URLs — dead links in every tracked
+        mail, with nothing failing loudly. Outside dev, demand an absolute URL."""
+        value = self.public_api_base_url.strip()
+        if self.app_env != "dev" and not value.startswith(("http://", "https://")):
+            raise ValueError(
+                "PUBLIC_API_BASE_URL must be an absolute http(s) URL when APP_ENV != 'dev' "
+                "— it is embedded in outbound email as the open pixel and click links."
             )
         return self
 
