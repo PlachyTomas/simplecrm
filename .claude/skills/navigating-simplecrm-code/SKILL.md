@@ -49,3 +49,11 @@ House map + patterns so sessions don't rediscover the repo. Boot/login/test comm
 2. Changing backend response/route? Regen types before FE work.
 3. New strings in BOTH catalogs; new controls in testids.
 4. Check MEMORY.md index + repo tracker docs for in-flight work on your surface.
+
+## Widget-type gotcha (learned 2026-07-27)
+
+Adding a widget type means editing **two** discriminated unions, not one:
+`backend/app/schemas/reports/dashboard.py` (Reports) **and**
+`backend/app/schemas/home_dashboard.py` (Home). The home catalog re-exposes the
+Reports analytics types, so a type added only to the Reports union shows up in
+the home picker and then **422s on save**.
