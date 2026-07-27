@@ -18,9 +18,10 @@
       "title": "Žádný výsledek pro vybrané filtry.",
       "body": "Zkuste upravit hledaný výraz.",
       "cta": "Vymazat filtry"
-    }
+    },
+    "exportCsv": "Stáhnout CSV",
+    "exportPending": "Stahuji…"
   },
-
   "addContactModal": {
     "title": "Přidat kontakt",
     "subtitle": "Zadejte jméno a případně další kontaktní údaje.",
@@ -37,7 +38,6 @@
     "save": "Uložit kontakt",
     "saving": "Ukládám…"
   },
-
   "editContactModal": {
     "title": "Upravit kontakt",
     "subtitle": "Změny se propíší do obchodů i e-mailů, kde kontakt vystupuje.",
@@ -57,7 +57,6 @@
     "savedToast": "Kontakt byl upraven.",
     "saveError": "Uložení se nepovedlo. Zkuste to prosím znovu."
   },
-
   "contactDetail": {
     "editButton": "Upravit kontakt",
     "deleteButton": "Smazat kontakt",

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -12,7 +13,7 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.db.models import Company, Contact, Deal, Organization, Stage, User, UserRole
+from app.db.models import Company, Contact, Deal, Organization, Stage, Team, User, UserRole
 from app.db.session import AsyncSessionLocal
 from app.services.pipeline import create_default_pipeline
 
@@ -48,10 +49,12 @@ async def _seed_user(
     owned_cleanup: dict[str, list],
     org: Organization,
     role: UserRole,
+    *,
+    team_id: uuid.UUID | None = None,
 ) -> User:
     email = f"u-{uuid.uuid4().hex[:8]}@ex.cz"
     owned_cleanup["emails"].append(email)
-    user = User(email=email, name="U", role=role, organization_id=org.id)
+    user = User(email=email, name="U", role=role, organization_id=org.id, team_id=team_id)
     session.add(user)
     await session.commit()
     await session.refresh(user)
@@ -981,3 +984,499 @@ async def test_create_deal_note_blocked_for_foreign_deal(
         f"/api/v1/deals/{deal.id}/notes", headers=_auth(sales), json={"body": "Ahoj"}
     )
     assert resp.status_code == 404
+
+
+# list_deals: search / stage_id / owner_user_id / status / sort -----------
+
+
+async def test_list_deals_search_matches_deal_name_or_company_name(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    alza = Company(organization_id=org.id, name="Alza.cz a.s.")
+    rohlik = Company(organization_id=org.id, name="Rohlík.cz")
+    db_session.add_all([alza, rohlik])
+    await db_session.commit()
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=alza.id,
+                stage_id=stage.id,
+                name="Roll-out projekt",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=rohlik.id,
+                stage_id=stage.id,
+                name="Servisní smlouva",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    # Match on the deal's own name.
+    by_deal_name = await client.get("/api/v1/deals?search=roll-out", headers=_auth(admin))
+    assert by_deal_name.status_code == 200
+    assert {it["name"] for it in by_deal_name.json()["items"]} == {"Roll-out projekt"}
+
+    # Match on the joined company's name.
+    by_company_name = await client.get("/api/v1/deals?search=rohl", headers=_auth(admin))
+    assert {it["name"] for it in by_company_name.json()["items"]} == {"Servisní smlouva"}
+
+
+async def test_list_deals_filter_by_stage_id(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, open_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    won_stage = await _won_stage_for(db_session, org.id)
+    company = await _seed_company(db_session, org)
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                name="Open one",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                name="Won one",
+                value=Decimal("1"),
+                currency="CZK",
+                closed_at=datetime.now(tz=UTC),
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get(f"/api/v1/deals?stage_id={open_stage.id}", headers=_auth(admin))
+    assert r.status_code == 200
+    assert {it["name"] for it in r.json()["items"]} == {"Open one"}
+
+
+async def test_list_deals_filter_by_owner_user_id(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    a = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    b = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    company = await _seed_company(db_session, org)
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=stage.id,
+                owner_user_id=a.id,
+                name="A deal",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=stage.id,
+                owner_user_id=b.id,
+                name="B deal",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get(f"/api/v1/deals?owner_user_id={a.id}", headers=_auth(admin))
+    assert r.status_code == 200
+    assert {it["name"] for it in r.json()["items"]} == {"A deal"}
+
+
+async def test_list_deals_status_open_excludes_won_and_lost(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, open_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    won_stage = await _won_stage_for(db_session, org.id)
+    company = await _seed_company(db_session, org)
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                name="Open",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                name="Won",
+                value=Decimal("1"),
+                currency="CZK",
+                closed_at=datetime.now(tz=UTC),
+            ),
+            # Lost convention: open-type stage stamped with closed_at.
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                name="Lost",
+                value=Decimal("1"),
+                currency="CZK",
+                closed_at=datetime.now(tz=UTC),
+                lost_reason="Konkurence",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get("/api/v1/deals?status=open", headers=_auth(admin))
+    assert r.status_code == 200
+    assert {it["name"] for it in r.json()["items"]} == {"Open"}
+
+
+async def test_list_deals_status_won(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, open_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    won_stage = await _won_stage_for(db_session, org.id)
+    company = await _seed_company(db_session, org)
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                name="Open",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                name="Won",
+                value=Decimal("1"),
+                currency="CZK",
+                closed_at=datetime.now(tz=UTC),
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get("/api/v1/deals?status=won", headers=_auth(admin))
+    assert r.status_code == 200
+    assert {it["name"] for it in r.json()["items"]} == {"Won"}
+
+
+async def test_list_deals_status_lost_open_stage_with_closed_at(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """House convention: the default pipeline ships no dedicated lost-type
+    stage, so a LOST deal lives in an OPEN-type stage with `closed_at` set.
+    status=lost must pick this up, and status=open must exclude it."""
+    org, open_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    won_stage = await _won_stage_for(db_session, org.id)
+    company = await _seed_company(db_session, org)
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                name="Still open",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                name="Won",
+                value=Decimal("1"),
+                currency="CZK",
+                closed_at=datetime.now(tz=UTC),
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                name="Lost",
+                value=Decimal("1"),
+                currency="CZK",
+                closed_at=datetime.now(tz=UTC),
+                lost_reason="Konkurence",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    lost = await client.get("/api/v1/deals?status=lost", headers=_auth(admin))
+    assert lost.status_code == 200
+    assert {it["name"] for it in lost.json()["items"]} == {"Lost"}
+
+    open_only = await client.get("/api/v1/deals?status=open", headers=_auth(admin))
+    assert {it["name"] for it in open_only.json()["items"]} == {"Still open"}
+
+
+async def test_list_deals_sort_by_value_asc_and_desc(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=stage.id,
+                name="Small",
+                value=Decimal("100"),
+                currency="CZK",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=stage.id,
+                name="Big",
+                value=Decimal("900"),
+                currency="CZK",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=stage.id,
+                name="Mid",
+                value=Decimal("500"),
+                currency="CZK",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    asc = await client.get("/api/v1/deals?sort=value&order=asc", headers=_auth(admin))
+    assert asc.status_code == 200
+    assert [it["name"] for it in asc.json()["items"]] == ["Small", "Mid", "Big"]
+
+    desc = await client.get("/api/v1/deals?sort=value&order=desc", headers=_auth(admin))
+    assert desc.status_code == 200
+    assert [it["name"] for it in desc.json()["items"]] == ["Big", "Mid", "Small"]
+
+
+async def test_list_deals_sort_by_company_name(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    alfa = Company(organization_id=org.id, name="Alfa")
+    beta = Company(organization_id=org.id, name="Beta")
+    db_session.add_all([alfa, beta])
+    await db_session.commit()
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=beta.id,
+                stage_id=stage.id,
+                name="Deal B",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=alfa.id,
+                stage_id=stage.id,
+                name="Deal A",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get("/api/v1/deals?sort=company_name&order=asc", headers=_auth(admin))
+    assert r.status_code == 200
+    assert [it["company_name"] for it in r.json()["items"]] == ["Alfa", "Beta"]
+
+
+async def test_list_deals_rejects_unknown_sort_key(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, _stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    r = await client.get("/api/v1/deals?sort=evil_drop_table", headers=_auth(admin))
+    assert r.status_code == 400
+
+
+async def test_list_deals_org_isolation_with_search_filter(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    first_org, first_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    second_org, second_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, first_org, UserRole.admin)
+    company_first = await _seed_company(db_session, first_org)
+    company_second = await _seed_company(db_session, second_org)
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=first_org.id,
+                company_id=company_first.id,
+                stage_id=first_stage.id,
+                name="Visible unique-xyz",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+            Deal(
+                organization_id=second_org.id,
+                company_id=company_second.id,
+                stage_id=second_stage.id,
+                name="Hidden unique-xyz",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get("/api/v1/deals?search=unique-xyz", headers=_auth(admin))
+    assert r.status_code == 200
+    assert {it["name"] for it in r.json()["items"]} == {"Visible unique-xyz"}
+
+
+async def test_list_deals_salesperson_scoping_excludes_non_teammate_owned_deal(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    team = Team(organization_id=org.id, name=f"T-{uuid.uuid4().hex[:4]}")
+    db_session.add(team)
+    await db_session.commit()
+    await db_session.refresh(team)
+    me = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson, team_id=team.id)
+    mate = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson, team_id=team.id)
+    stranger = await _seed_user(db_session, owned_cleanup, org, UserRole.salesperson)
+    company = await _seed_company(db_session, org)
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=stage.id,
+                owner_user_id=mate.id,
+                name="Mate deal",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=stage.id,
+                owner_user_id=stranger.id,
+                name="Stranger deal",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=stage.id,
+                owner_user_id=None,
+                name="Pool deal",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get("/api/v1/deals", headers=_auth(me))
+    assert r.status_code == 200
+    names = {it["name"] for it in r.json()["items"]}
+    assert names == {"Mate deal", "Pool deal"}
+
+
+# export.csv ----------------------------------------------------------------
+
+
+async def test_export_deals_csv_happy(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+    db_session.add(
+        Deal(
+            organization_id=org.id,
+            company_id=company.id,
+            stage_id=stage.id,
+            name="Export me",
+            value=Decimal("123.45"),
+            currency="CZK",
+        )
+    )
+    await db_session.commit()
+
+    r = await client.get("/api/v1/deals/export.csv", headers=_auth(admin))
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/csv")
+    text = r.content.decode("utf-8")
+    assert text.startswith("﻿"), "expected UTF-8 BOM for Excel"
+    header_row = text.lstrip("﻿").splitlines()[0]
+    assert header_row.split(",")[0] == "název"
+    assert "Export me" in text
+
+    today = datetime.now(tz=UTC).date().isoformat()
+    assert f'filename="simplecrm-deals-{today}.csv"' in r.headers["content-disposition"]
+    assert "attachment" in r.headers["content-disposition"]
+
+
+async def test_export_deals_csv_respects_status_filter(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, open_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    won_stage = await _won_stage_for(db_session, org.id)
+    company = await _seed_company(db_session, org)
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                name="Open deal unique",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                name="Won deal unique",
+                value=Decimal("1"),
+                currency="CZK",
+                closed_at=datetime.now(tz=UTC),
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get("/api/v1/deals/export.csv?status=won", headers=_auth(admin))
+    assert r.status_code == 200
+    text = r.content.decode("utf-8")
+    assert "Won deal unique" in text
+    assert "Open deal unique" not in text

@@ -8,6 +8,18 @@
     "skipToContent": "Přeskočit na obsah",
     "adminLink": "Admin"
   },
+  "search": {
+    "label": "Hledat",
+    "placeholder": "Hledat firmy, kontakty, obchody…",
+    "close": "Zavřít hledání",
+    "resultsLabel": "Výsledky hledání",
+    "noResults": "Nic nenalezeno",
+    "groups": {
+      "companies": "Firmy",
+      "contacts": "Kontakty",
+      "deals": "Obchody"
+    }
+  },
   "trial": {
     "remaining_one": "Zbývá {{count}} den",
     "remaining_few": "Zbývají {{count}} dny",

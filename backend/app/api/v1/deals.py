@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from fastapi.responses import StreamingResponse
+from sqlalchemy import Select, func, nulls_last, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -38,6 +40,7 @@ from app.schemas.deal import (
 )
 from app.schemas.pagination import Page, PaginationParams
 from app.services.activity_log import record_activity, resolve_field_changes
+from app.services.list_export import EXPORT_ROW_CAP, csv_date, csv_response
 
 router = APIRouter(prefix="/deals", tags=["deals"])
 
@@ -108,39 +111,246 @@ async def _assert_contact_in_org(
         )
 
 
+_SORT_COLUMNS: dict[str, Any] = {
+    "name": Deal.name,
+    "value": Deal.value,
+    "created_at": Deal.created_at,
+    "expected_close_date": Deal.expected_close_date,
+    "company_name": Company.name,
+    # "stage" sorts by pipeline order, not alphabetically — `position` is what
+    # the kanban board (and the user's mental model) treats as stage order.
+    "stage": Stage.position,
+}
+
+# Sort keys whose underlying column is nullable. Those always push NULLs to the
+# bottom regardless of direction so real data stays at the top (mirrors
+# `list_companies`).
+_NULLABLE_SORT_KEYS = frozenset({"expected_close_date"})
+
+
+async def _scoped_deals_query(
+    session: AsyncSession,
+    user: User,
+    *,
+    company_id: uuid.UUID | None,
+    search: str | None,
+    stage_id: uuid.UUID | None,
+    owner_user_id: uuid.UUID | None,
+    deal_status: str | None,
+) -> Select[tuple[Any, ...]]:
+    """Build the visibility-scoped, filtered deal query shared by the list
+    endpoint and the CSV export, so an export always matches what the user is
+    looking at.
+
+    `Company` and `Stage` are inner-joined unconditionally: both FKs are NOT
+    NULL, so the join never drops a row, and having them in scope lets us
+    filter/sort on company name and stage without a second query shape.
+    """
+    base = (
+        select(Deal)
+        .join(Company, Company.id == Deal.company_id)
+        .join(Stage, Stage.id == Deal.stage_id)
+        .where(Deal.organization_id == user.organization_id)
+    )
+    if company_id is not None:
+        base = base.where(Deal.company_id == company_id)
+    if search:
+        pattern = f"%{search.strip()}%"
+        base = base.where(or_(Deal.name.ilike(pattern), Company.name.ilike(pattern)))
+    if stage_id is not None:
+        base = base.where(Deal.stage_id == stage_id)
+    if owner_user_id is not None:
+        base = base.where(Deal.owner_user_id == owner_user_id)
+    if deal_status == "open":
+        # Still in play: an open-type stage AND not yet closed. A LOST deal
+        # lives in an open-type stage with `closed_at` set (see pipelines.py),
+        # so the closed_at check is what keeps it out.
+        base = base.where(Stage.stage_type == StageType.open, Deal.closed_at.is_(None))
+    elif deal_status == "won":
+        base = base.where(Stage.stage_type == StageType.won)
+    elif deal_status == "lost":
+        # Either a dedicated lost-type stage, or the house convention: an
+        # open-type stage stamped with closed_at. Together with the two
+        # branches above this partitions every deal into exactly one status.
+        base = base.where(
+            or_(
+                Stage.stage_type == StageType.lost,
+                (Stage.stage_type == StageType.open) & Deal.closed_at.is_not(None),
+            )
+        )
+    return await scope_by_owner(base, session=session, user=user, owner_col=Deal.owner_user_id)
+
+
+def _order_deals(stmt: Select[tuple[Any, ...]], sort: str, order: str) -> Select[tuple[Any, ...]]:
+    sort_col = _SORT_COLUMNS[sort]
+    sort_expr = sort_col.asc() if order == "asc" else sort_col.desc()
+    if sort in _NULLABLE_SORT_KEYS:
+        sort_expr = nulls_last(sort_expr)
+    # Stable tiebreakers keep pagination deterministic — deal names are far from
+    # unique, so the id backstops them.
+    return stmt.order_by(sort_expr, Deal.name, Deal.id)
+
+
+def _assert_known_sort(sort: str) -> None:
+    if sort not in _SORT_COLUMNS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown sort key: {sort}",
+        )
+
+
+_SORT_DESCRIPTION = (
+    "Sort key. One of: name, value, created_at, expected_close_date, company_name, stage."
+)
+_STATUS_DESCRIPTION = (
+    "Lifecycle filter. 'open' = open-type stage and not closed, 'won' = won-type "
+    "stage, 'lost' = lost-type stage or an open-type stage already closed."
+)
+_SEARCH_DESCRIPTION = "Case-insensitive partial match on the deal name or its company's name."
+
+
 @router.get("", response_model=Page[DealListItemOut])
 async def list_deals(
     pagination: PaginationParams = Depends(),
     company_id: uuid.UUID | None = Query(default=None),
+    search: str | None = Query(default=None, max_length=120, description=_SEARCH_DESCRIPTION),
+    stage_id: uuid.UUID | None = Query(default=None, description="Filter to a single stage."),
+    owner_user_id: uuid.UUID | None = Query(
+        default=None, description="Filter to deals owned by this specific user."
+    ),
+    deal_status: str | None = Query(
+        default=None, alias="status", pattern="^(open|won|lost)$", description=_STATUS_DESCRIPTION
+    ),
+    sort: str = Query(default="created_at", description=_SORT_DESCRIPTION),
+    order: str = Query(default="desc", pattern="^(asc|desc)$"),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Page[DealListItemOut]:
-    base = select(Deal).where(Deal.organization_id == user.organization_id)
-    if company_id is not None:
-        base = base.where(Deal.company_id == company_id)
-    scoped = await scope_by_owner(base, session=session, user=user, owner_col=Deal.owner_user_id)
+    _assert_known_sort(sort)
+    scoped = await _scoped_deals_query(
+        session,
+        user,
+        company_id=company_id,
+        search=search,
+        stage_id=stage_id,
+        owner_user_id=owner_user_id,
+        deal_status=deal_status,
+    )
     count_stmt = select(func.count()).select_from(scoped.subquery())
     total = (await session.execute(count_stmt)).scalar_one()
     # Eager-load the display relationships so the response can carry names
     # (stage/owner/company/contact) without the client issuing per-row fetches.
-    items_stmt = (
+    items_stmt = _order_deals(
         scoped.options(
             selectinload(Deal.company),
             selectinload(Deal.stage),
             selectinload(Deal.owner),
             selectinload(Deal.primary_contact),
-        )
-        .order_by(Deal.created_at.desc())
-        .limit(pagination.limit)
-        .offset(pagination.offset)
-    )
-    items = (await session.execute(items_stmt)).scalars().all()
+        ),
+        sort,
+        order,
+    ).limit(pagination.limit)
+    items = (await session.execute(items_stmt.offset(pagination.offset))).scalars().all()
     return Page[DealListItemOut](
         items=[DealListItemOut.from_deal(d) for d in items],
         total=total,
         limit=pagination.limit,
         offset=pagination.offset,
     )
+
+
+@router.get("/export.csv")
+async def export_deals_list_csv(
+    company_id: uuid.UUID | None = Query(default=None),
+    search: str | None = Query(default=None, max_length=120, description=_SEARCH_DESCRIPTION),
+    stage_id: uuid.UUID | None = Query(default=None),
+    owner_user_id: uuid.UUID | None = Query(default=None),
+    deal_status: str | None = Query(
+        default=None, alias="status", pattern="^(open|won|lost)$", description=_STATUS_DESCRIPTION
+    ),
+    sort: str = Query(default="created_at", description=_SORT_DESCRIPTION),
+    order: str = Query(default="desc", pattern="^(asc|desc)$"),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """CSV of the deals list, honouring exactly the filters/sort the list
+    endpoint takes — so the download matches the table on screen.
+
+    Capped at `EXPORT_ROW_CAP` rows; see `csv_response` for how that's
+    announced. Note this is the *list* export; the trial-ungated
+    walk-away-with-your-data export still lives at `/reports/export-csv`.
+    """
+    _assert_known_sort(sort)
+    scoped = await _scoped_deals_query(
+        session,
+        user,
+        company_id=company_id,
+        search=search,
+        stage_id=stage_id,
+        owner_user_id=owner_user_id,
+        deal_status=deal_status,
+    )
+    stmt = _order_deals(
+        scoped.options(
+            selectinload(Deal.company),
+            selectinload(Deal.stage),
+            selectinload(Deal.owner),
+            selectinload(Deal.primary_contact),
+        ),
+        sort,
+        order,
+        # One extra row is fetched purely to detect truncation.
+    ).limit(EXPORT_ROW_CAP + 1)
+    deals = list((await session.execute(stmt)).scalars().all())
+    truncated = len(deals) > EXPORT_ROW_CAP
+    if truncated:
+        deals = deals[:EXPORT_ROW_CAP]
+
+    rows: list[list[Any]] = [
+        [
+            "název",
+            "firma",
+            "fáze",
+            "stav",
+            "hodnota",
+            "měna",
+            "obchodník",
+            "kontakt",
+            "e-mail kontaktu",
+            "očekávané uzavření",
+            "uzavřeno",
+            "důvod neúspěchu",
+            "zaplaceno",
+            "vytvořeno",
+        ]
+    ]
+    state_label = {StageType.won: "vyhráno", StageType.lost: "prohráno", StageType.open: "otevřeno"}
+    for deal in deals:
+        stage_type = deal.stage.stage_type
+        if stage_type is StageType.open and deal.closed_at is not None:
+            state = state_label[StageType.lost]
+        else:
+            state = state_label[stage_type]
+        contact = deal.primary_contact
+        rows.append(
+            [
+                deal.name,
+                deal.company.name,
+                deal.stage.name,
+                state,
+                f"{deal.value:.2f}",
+                deal.currency,
+                deal.owner.name if deal.owner else "",
+                f"{contact.first_name} {contact.last_name}".strip() if contact else "",
+                (contact.email or "") if contact else "",
+                csv_date(deal.expected_close_date),
+                csv_date(deal.closed_at),
+                deal.lost_reason or "",
+                "ano" if deal.is_paid else "ne",
+                csv_date(deal.created_at),
+            ]
+        )
+    return csv_response(rows, filename_stem="deals", truncated=truncated)
 
 
 @router.get("/{deal_id}", response_model=DealOut)

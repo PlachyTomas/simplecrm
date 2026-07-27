@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { useAuth } from "@/auth/useAuth";
 import { API_BASE_URL } from "@/lib/api";
+import { triggerCsvDownload } from "@/lib/csvExport";
 
 import { resolvePreset } from "@/app/reports/dashboard/dateRange";
 import type { DashboardConfig, GlobalFilters } from "@/app/reports/dashboard/types";
@@ -54,18 +55,7 @@ export function useExportCsv() {
       }
       const blob = await res.blob();
       const today = new Date().toISOString().slice(0, 10);
-      triggerDownload(blob, `${t("reportsPage.exportFilenamePrefix")}-${today}.csv`);
+      triggerCsvDownload(blob, `${t("reportsPage.exportFilenamePrefix")}-${today}.csv`);
     },
   });
-}
-
-function triggerDownload(blob: Blob, filename: string): void {
-  const href = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = href;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(href);
 }

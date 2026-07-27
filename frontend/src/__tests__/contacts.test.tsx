@@ -229,6 +229,46 @@ describe("Contacts split-view", () => {
     );
   });
 
+  it("downloads a contacts CSV honouring the open-deals filter", async () => {
+    const createUrl = vi.fn(() => "blob:contacts");
+    vi.stubGlobal(
+      "URL",
+      Object.assign(URL, { createObjectURL: createUrl, revokeObjectURL: vi.fn() }),
+    );
+    fetchMock.mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
+      if (url.includes("/api/v1/contacts/export.csv")) {
+        return new Response("jm\u00e9no\n", {
+          status: 200,
+          headers: {
+            "content-type": "text/csv; charset=utf-8",
+            "content-disposition": 'attachment; filename="simplecrm-contacts-2026-07-27.csv"',
+          },
+        });
+      }
+      if (url.includes("/api/v1/contacts?")) {
+        return jsonResponse({ items: CONTACTS, total: CONTACTS.length, limit: 50, offset: 0 });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    renderAt("/app/contacts");
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId("contacts-open-deals-filter"));
+    await user.click(screen.getByTestId("contacts-export-csv"));
+
+    await waitFor(() => {
+      const calls = fetchMock.mock.calls
+        .map(([i]) => (typeof i === "string" ? i : (i as Request).url))
+        .filter((u: string) => u.includes("/api/v1/contacts/export.csv"));
+      expect(calls.length).toBe(1);
+      expect(calls[0]).toContain("has_open_deals=true");
+    });
+    await waitFor(() => expect(createUrl).toHaveBeenCalled());
+    vi.unstubAllGlobals();
+  });
+
   it("lets an admin delete a contact", async () => {
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     fetchMock.mockImplementation(async (input, init) => {

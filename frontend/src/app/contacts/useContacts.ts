@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 
 import { useAuth } from "@/auth/useAuth";
 import { apiFetch } from "@/lib/api";
+import { useCsvExport } from "@/lib/csvExport";
 import type { components } from "@/types/api.generated";
 
 export type ContactOut = components["schemas"]["ContactOut"];
@@ -37,6 +38,20 @@ export function useContacts({
       if (hasOpenDeals) params.set("has_open_deals", "true");
       return apiFetch<ContactsPage>(`/api/v1/contacts?${params}`, { token: accessToken });
     },
+  });
+}
+
+/**
+ * "Stáhnout CSV" on the contacts list.
+ *
+ * Only the server-side filters travel with it — the page's search box narrows
+ * the fetched page in the browser and has no backend counterpart, so the
+ * export is "everything matching the active filters", not "the rows on screen".
+ */
+export function useExportContactsCsv() {
+  return useCsvExport({
+    path: "/api/v1/contacts/export.csv",
+    fallbackName: "simplecrm-contacts.csv",
   });
 }
 

@@ -35,6 +35,12 @@ export const testIds = {
     settingsInstall: "pwa-settings-install",
     iosModalClose: "pwa-ios-modal-close",
   },
+  search: {
+    input: "global-search-input",
+    mobileToggle: "global-search-toggle",
+    panel: "global-search-panel",
+    option: (id: string) => `global-search-option-${id}`,
+  },
   companies: {
     addButton: "companies-add-button",
     openDealsFilter: "companies-open-deals-filter",
@@ -61,6 +67,7 @@ export const testIds = {
   },
   contacts: {
     addButton: "contacts-add-button",
+    exportCsv: "contacts-export-csv",
     openDealsFilter: "contacts-open-deals-filter",
     deleteButton: "contacts-delete-button",
     addModal: {
@@ -84,6 +91,13 @@ export const testIds = {
   },
   deals: {
     addButton: "deals-add-button",
+    exportCsv: "deals-export-csv",
+    searchInput: "deals-search-input",
+    stageFilter: "deals-stage-filter",
+    ownerFilter: "deals-owner-filter",
+    statusFilter: "deals-status-filter",
+    clearFilters: "deals-clear-filters",
+    sortHeader: (key: string) => `deals-sort-${key}`,
     addModal: {
       nameInput: "deals-add-modal-name",
       companyInput: "deals-add-modal-company-search",

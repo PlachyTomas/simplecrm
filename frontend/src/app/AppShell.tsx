@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { MobileTabBar } from "@/app/MobileTabBar";
 import { InstallNudge } from "@/app/pwa/InstallNudge";
+import { GlobalSearch } from "@/app/search/GlobalSearch";
 import { Sidebar } from "@/app/Sidebar";
 import { TourOverlay, TourReplayButton } from "@/app/tutorial";
 import { TrialBanner } from "@/app/TrialBanner";
@@ -132,6 +133,7 @@ export function AppShell() {
             </div>
 
             <div className="flex items-center gap-3">
+              <GlobalSearch />
               <TourReplayButton />
               {user.is_super_admin ? (
                 <Link

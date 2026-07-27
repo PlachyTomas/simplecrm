@@ -8,6 +8,18 @@
     "skipToContent": "Skip to content",
     "adminLink": "Admin"
   },
+  "search": {
+    "label": "Search",
+    "placeholder": "Search companies, contacts, deals…",
+    "close": "Close search",
+    "resultsLabel": "Search results",
+    "noResults": "Nothing found",
+    "groups": {
+      "companies": "Companies",
+      "contacts": "Contacts",
+      "deals": "Deals"
+    }
+  },
   "trial": {
     "remaining_one": "{{count}} day left",
     "remaining_other": "{{count}} days left",

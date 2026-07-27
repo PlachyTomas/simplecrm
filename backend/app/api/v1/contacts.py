@@ -9,9 +9,11 @@ contact can only be deleted by an admin.
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from fastapi.responses import StreamingResponse
+from sqlalchemy import Select, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +22,7 @@ from app.db import get_db
 from app.db.models import Company, Contact, Deal, Stage, StageType, User, UserRole
 from app.schemas.contact import ContactCreate, ContactOut, ContactUpdate
 from app.schemas.pagination import Page, PaginationParams
+from app.services.list_export import EXPORT_ROW_CAP, csv_date, csv_response
 
 router = APIRouter(prefix="/contacts", tags=["contacts"])
 
@@ -81,22 +84,28 @@ async def _validate_company_in_org(
         )
 
 
-@router.get("", response_model=Page[ContactOut])
-async def list_contacts(
-    pagination: PaginationParams = Depends(),
-    company_id: uuid.UUID | None = Query(default=None),
-    has_open_deals: bool | None = Query(
-        default=None,
-        description=(
-            "When true, keep only contacts whose linked company has at least one "
-            "deal in an open-type stage. Contacts with no company are excluded. "
-            "False/omitted applies no filter."
-        ),
-    ),
-    user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
-) -> Page[ContactOut]:
-    base = select(Contact).where(Contact.organization_id == user.organization_id)
+_HAS_OPEN_DEALS_DESCRIPTION = (
+    "When true, keep only contacts whose linked company has at least one "
+    "deal in an open-type stage. Contacts with no company are excluded. "
+    "False/omitted applies no filter."
+)
+
+
+def _contacts_query(
+    *,
+    # `User.organization_id` is nullable at the ORM level (a freshly-signed-up
+    # user has no org yet); the router is org-gated so it is never NULL here.
+    organization_id: uuid.UUID | None,
+    company_id: uuid.UUID | None,
+    has_open_deals: bool | None,
+) -> Select[tuple[Contact]]:
+    """Filtered contacts query shared by the list endpoint and the CSV export
+    so a download matches what the user is looking at.
+
+    Contacts carry no `owner_user_id` — visibility is purely org-scoped (see
+    the module docstring), so there is no `scope_by_owner` here.
+    """
+    base = select(Contact).where(Contact.organization_id == organization_id)
     if company_id is not None:
         base = base.where(Contact.company_id == company_id)
     if has_open_deals:
@@ -115,6 +124,25 @@ async def list_contacts(
             .exists()
         )
         base = base.where(Contact.company_id.is_not(None), open_deal_exists)
+    return base
+
+
+@router.get("", response_model=Page[ContactOut])
+async def list_contacts(
+    pagination: PaginationParams = Depends(),
+    company_id: uuid.UUID | None = Query(default=None),
+    has_open_deals: bool | None = Query(
+        default=None,
+        description=_HAS_OPEN_DEALS_DESCRIPTION,
+    ),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Page[ContactOut]:
+    base = _contacts_query(
+        organization_id=user.organization_id,
+        company_id=company_id,
+        has_open_deals=has_open_deals,
+    )
     count_stmt = select(func.count()).select_from(base.subquery())
     total = (await session.execute(count_stmt)).scalar_one()
 
@@ -131,6 +159,67 @@ async def list_contacts(
         limit=pagination.limit,
         offset=pagination.offset,
     )
+
+
+@router.get("/export.csv")
+async def export_contacts_csv(
+    company_id: uuid.UUID | None = Query(default=None),
+    has_open_deals: bool | None = Query(default=None, description=_HAS_OPEN_DEALS_DESCRIPTION),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """CSV of the contacts list, honouring the same server-side filters the
+    list endpoint takes.
+
+    The contacts screen's own search box filters the fetched page in the
+    browser and has no server counterpart, so it is deliberately NOT part of
+    this export — the download is "everything matching the active filters",
+    not "the rows currently on screen".
+    """
+    stmt = (
+        _contacts_query(
+            organization_id=user.organization_id,
+            company_id=company_id,
+            has_open_deals=has_open_deals,
+        )
+        .order_by(Contact.last_name, Contact.first_name)
+        # One extra row is fetched purely to detect truncation.
+        .limit(EXPORT_ROW_CAP + 1)
+    )
+    contacts = list((await session.execute(stmt)).scalars().all())
+    truncated = len(contacts) > EXPORT_ROW_CAP
+    if truncated:
+        contacts = contacts[:EXPORT_ROW_CAP]
+    names = await _company_names(session, contacts)
+
+    rows: list[list[Any]] = [
+        [
+            "jméno",
+            "příjmení",
+            "pozice",
+            "firma",
+            "e-mail",
+            "telefon",
+            "linkedin",
+            "poznámka",
+            "vytvořeno",
+        ]
+    ]
+    rows.extend(
+        [
+            contact.first_name,
+            contact.last_name,
+            contact.position or "",
+            (names.get(contact.company_id) or "") if contact.company_id else "",
+            contact.email or "",
+            contact.phone or "",
+            contact.linkedin_url or "",
+            contact.note or "",
+            csv_date(contact.created_at),
+        ]
+        for contact in contacts
+    )
+    return csv_response(rows, filename_stem="contacts", truncated=truncated)
 
 
 @router.get("/{contact_id}", response_model=ContactOut)

@@ -825,6 +825,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/contacts/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Contacts Csv
+         * @description CSV of the contacts list, honouring the same server-side filters the
+         *     list endpoint takes.
+         *
+         *     The contacts screen's own search box filters the fetched page in the
+         *     browser and has no server counterpart, so it is deliberately NOT part of
+         *     this export — the download is "everything matching the active filters",
+         *     not "the rows currently on screen".
+         */
+        get: operations["export_contacts_csv_api_v1_contacts_export_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/contacts/{contact_id}": {
         parameters: {
             query?: never;
@@ -856,6 +882,31 @@ export interface paths {
         put?: never;
         /** Create Deal */
         post: operations["create_deal_api_v1_deals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/deals/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Deals List Csv
+         * @description CSV of the deals list, honouring exactly the filters/sort the list
+         *     endpoint takes — so the download matches the table on screen.
+         *
+         *     Capped at `EXPORT_ROW_CAP` rows; see `csv_response` for how that's
+         *     announced. Note this is the *list* export; the trial-ungated
+         *     walk-away-with-your-data export still lives at `/reports/export-csv`.
+         */
+        get: operations["export_deals_list_csv_api_v1_deals_export_csv_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1729,6 +1780,23 @@ export interface paths {
         };
         /** Widget Companies At Risk */
         get: operations["widget_companies_at_risk_api_v1_reports_widgets_companies_at_risk_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Global Search */
+        get: operations["global_search_api_v1_search_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5069,6 +5137,24 @@ export interface components {
             /** Owneruserid */
             ownerUserId?: string | null;
         };
+        /** GlobalSearchResults */
+        GlobalSearchResults: {
+            /**
+             * Companies
+             * @default []
+             */
+            companies: components["schemas"]["SearchHit"][];
+            /**
+             * Contacts
+             * @default []
+             */
+            contacts: components["schemas"]["SearchHit"][];
+            /**
+             * Deals
+             * @default []
+             */
+            deals: components["schemas"]["SearchHit"][];
+        };
         /**
          * GoogleCalendarAuthorizeUrlOut
          * @description Google consent-screen URL the frontend redirects the browser to.
@@ -6329,6 +6415,26 @@ export interface components {
             metric: string;
             /** Currency */
             currency: string;
+        };
+        /**
+         * SearchHit
+         * @description One row in the global-search dropdown.
+         *
+         *     Deliberately entity-agnostic: the caller renders `name` as the headline and
+         *     `subtitle` as the dim second line, whatever the entity is. What goes into
+         *     `subtitle` is decided server-side (IČO for companies, company name for
+         *     contacts and deals) so the UI never has to branch per entity type.
+         */
+        SearchHit: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Subtitle */
+            subtitle?: string | null;
         };
         /**
          * SeatChangeInitIn
@@ -8724,6 +8830,39 @@ export interface operations {
             };
         };
     };
+    export_contacts_csv_api_v1_contacts_export_csv_get: {
+        parameters: {
+            query?: {
+                company_id?: string | null;
+                /** @description When true, keep only contacts whose linked company has at least one deal in an open-type stage. Contacts with no company are excluded. False/omitted applies no filter. */
+                has_open_deals?: boolean | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_contact_api_v1_contacts__contact_id__get: {
         parameters: {
             query?: never;
@@ -8823,6 +8962,17 @@ export interface operations {
         parameters: {
             query?: {
                 company_id?: string | null;
+                /** @description Case-insensitive partial match on the deal name or its company's name. */
+                search?: string | null;
+                /** @description Filter to a single stage. */
+                stage_id?: string | null;
+                /** @description Filter to deals owned by this specific user. */
+                owner_user_id?: string | null;
+                /** @description Lifecycle filter. 'open' = open-type stage and not closed, 'won' = won-type stage, 'lost' = lost-type stage or an open-type stage already closed. */
+                status?: string | null;
+                /** @description Sort key. One of: name, value, created_at, expected_close_date, company_name, stage. */
+                sort?: string;
+                order?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -8872,6 +9022,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_deals_list_csv_api_v1_deals_export_csv_get: {
+        parameters: {
+            query?: {
+                company_id?: string | null;
+                /** @description Case-insensitive partial match on the deal name or its company's name. */
+                search?: string | null;
+                stage_id?: string | null;
+                owner_user_id?: string | null;
+                /** @description Lifecycle filter. 'open' = open-type stage and not closed, 'won' = won-type stage, 'lost' = lost-type stage or an open-type stage already closed. */
+                status?: string | null;
+                /** @description Sort key. One of: name, value, created_at, expected_close_date, company_name, stage. */
+                sort?: string;
+                order?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -10653,6 +10843,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompaniesAtRiskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    global_search_api_v1_search_get: {
+        parameters: {
+            query: {
+                /** @description Search term. */
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlobalSearchResults"];
                 };
             };
             /** @description Validation Error */

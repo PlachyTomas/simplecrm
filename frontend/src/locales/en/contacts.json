@@ -18,9 +18,10 @@
       "title": "No results for the selected filters.",
       "body": "Try adjusting your search.",
       "cta": "Clear filters"
-    }
+    },
+    "exportCsv": "Download CSV",
+    "exportPending": "Downloading…"
   },
-
   "addContactModal": {
     "title": "Add contact",
     "subtitle": "Enter a name and any additional contact details.",
@@ -37,7 +38,6 @@
     "save": "Save contact",
     "saving": "Saving…"
   },
-
   "editContactModal": {
     "title": "Edit contact",
     "subtitle": "Changes propagate to the deals and emails the contact appears in.",
@@ -57,7 +57,6 @@
     "savedToast": "Contact updated.",
     "saveError": "Saving failed. Please try again."
   },
-
   "contactDetail": {
     "editButton": "Edit contact",
     "deleteButton": "Delete contact",

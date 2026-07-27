@@ -29,6 +29,7 @@ from app.api.v1 import (
     plans,
     reports,
     reports_widgets,
+    search,
     subscription,
     teams,
     tracking,
@@ -88,6 +89,9 @@ api_router.include_router(invoices.router, dependencies=[Depends(require_org_mem
 api_router.include_router(pipelines.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(reports.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(reports_widgets.router, dependencies=PROTECTED_DEPS)
+# Global top-bar search across companies/contacts/deals. Each entity keeps its
+# own visibility rules inside the handler.
+api_router.include_router(search.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(teams.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(users.router, dependencies=PROTECTED_DEPS)
 # Editable home dashboard layout (/users/me/home-dashboard). Open to every

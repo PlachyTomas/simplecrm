@@ -94,7 +94,28 @@
       "stage": "Stage",
       "owner": "Owner",
       "closed": "Closed"
-    }
+    },
+    "searchLabel": "Search deals",
+    "searchPlaceholder": "Deal or company name…",
+    "stageFilterLabel": "Stage",
+    "stageAll": "All stages",
+    "ownerFilterLabel": "Owner",
+    "ownerAll": "All owners",
+    "statusFilterLabel": "Status",
+    "statusAll": "All statuses",
+    "status": {
+      "open": "Open",
+      "won": "Won",
+      "lost": "Lost"
+    },
+    "clearFilters": "Clear filters",
+    "exportCsv": "Download CSV",
+    "exportPending": "Downloading…",
+    "emptyFilteredTitle": "No deal matches the filters",
+    "emptyFilteredBody": "Try adjusting the search term or filters.",
+    "paginationOf": "of",
+    "prevPage": "Previous page",
+    "nextPage": "Next page"
   },
   "addDealModal": {
     "title": "Add deal",

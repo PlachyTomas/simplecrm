@@ -600,3 +600,119 @@ async def test_create_and_update_contact_return_company_name(
     )
     assert updated.status_code == 200, updated.text
     assert updated.json()["company_name"] is None
+
+
+# export.csv -----------------------------------------------------------------
+
+
+async def test_export_contacts_csv_happy(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    contact = Contact(
+        organization_id=org.id,
+        first_name="Export",
+        last_name="Mě",
+        email=f"exp-{uuid.uuid4().hex[:6]}@ex.cz",
+    )
+    db_session.add(contact)
+    await db_session.commit()
+
+    r = await client.get("/api/v1/contacts/export.csv", headers=_auth(admin))
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/csv")
+    text = r.content.decode("utf-8")
+    assert text.startswith("﻿"), "expected UTF-8 BOM for Excel"
+    header_row = text.lstrip("﻿").splitlines()[0]
+    assert header_row.split(",")[0] == "jméno"
+    assert "Export" in text and "Mě" in text
+
+    today = datetime.now(tz=UTC).date().isoformat()
+    assert f'filename="simplecrm-contacts-{today}.csv"' in r.headers["content-disposition"]
+    assert "attachment" in r.headers["content-disposition"]
+
+
+async def test_export_contacts_csv_respects_company_id_filter(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company_a = Company(organization_id=org.id, name="A co")
+    company_b = Company(organization_id=org.id, name="B co")
+    db_session.add_all([company_a, company_b])
+    await db_session.commit()
+    db_session.add_all(
+        [
+            Contact(
+                organization_id=org.id,
+                company_id=company_a.id,
+                first_name="Alfa-unique",
+                last_name="Contact",
+                email=f"a-{uuid.uuid4().hex[:6]}@ex.cz",
+            ),
+            Contact(
+                organization_id=org.id,
+                company_id=company_b.id,
+                first_name="Beta-unique",
+                last_name="Contact",
+                email=f"b-{uuid.uuid4().hex[:6]}@ex.cz",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get(
+        f"/api/v1/contacts/export.csv?company_id={company_a.id}", headers=_auth(admin)
+    )
+    assert r.status_code == 200
+    text = r.content.decode("utf-8")
+    assert "Alfa-unique" in text
+    assert "Beta-unique" not in text
+
+
+async def test_export_contacts_csv_respects_has_open_deals_filter(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    open_stage, _won_stage = await _seed_stages(db_session, org)
+    open_co = Company(organization_id=org.id, name="OpenCo export")
+    none_co = Company(organization_id=org.id, name="NoneCo export")
+    db_session.add_all([open_co, none_co])
+    await db_session.commit()
+    db_session.add(
+        Deal(
+            organization_id=org.id,
+            company_id=open_co.id,
+            stage_id=open_stage.id,
+            name="D-open",
+            value=Decimal("1"),
+            currency="CZK",
+        )
+    )
+    db_session.add_all(
+        [
+            Contact(
+                organization_id=org.id,
+                company_id=open_co.id,
+                first_name="Has-open-unique",
+                last_name="Contact",
+                email=f"ho-{uuid.uuid4().hex[:6]}@ex.cz",
+            ),
+            Contact(
+                organization_id=org.id,
+                company_id=none_co.id,
+                first_name="No-deal-unique",
+                last_name="Contact",
+                email=f"nd-{uuid.uuid4().hex[:6]}@ex.cz",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get("/api/v1/contacts/export.csv?has_open_deals=true", headers=_auth(admin))
+    assert r.status_code == 200
+    text = r.content.decode("utf-8")
+    assert "Has-open-unique" in text
+    assert "No-deal-unique" not in text

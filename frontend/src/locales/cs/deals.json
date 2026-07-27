@@ -96,7 +96,28 @@
       "stage": "Fáze",
       "owner": "Vlastník",
       "closed": "Uzavření"
-    }
+    },
+    "searchLabel": "Hledat obchod",
+    "searchPlaceholder": "Název obchodu nebo firmy…",
+    "stageFilterLabel": "Fáze",
+    "stageAll": "Všechny fáze",
+    "ownerFilterLabel": "Vlastník",
+    "ownerAll": "Všichni vlastníci",
+    "statusFilterLabel": "Stav",
+    "statusAll": "Všechny stavy",
+    "status": {
+      "open": "Otevřené",
+      "won": "Vyhrané",
+      "lost": "Prohrané"
+    },
+    "clearFilters": "Vymazat filtry",
+    "exportCsv": "Stáhnout CSV",
+    "exportPending": "Stahuji…",
+    "emptyFilteredTitle": "Žádný obchod neodpovídá filtrům",
+    "emptyFilteredBody": "Zkuste upravit hledaný výraz nebo filtry.",
+    "paginationOf": "z",
+    "prevPage": "Předchozí stránka",
+    "nextPage": "Další stránka"
   },
   "addDealModal": {
     "title": "Přidat obchod",

@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -196,5 +197,149 @@ describe("Deals list + detail", () => {
         screen.getByRole("heading", { level: 2, name: /Zatím žádné obchody/ }),
       ).toBeInTheDocument(),
     );
+  });
+});
+
+const BOARD = {
+  stages: [
+    { id: "st1", name: "Nový lead", position: 0, color: null, deals: [] },
+    { id: "st2", name: "Nabídka", position: 1, color: null, deals: [] },
+  ],
+};
+
+const USERS = {
+  items: [{ id: "u1", name: "Eva Nováková", email: "eva@ex.cz", role: "salesperson" }],
+  total: 1,
+  limit: 100,
+  offset: 0,
+};
+
+/** URL that the Nth matching call was made with, or undefined. */
+function urlsMatching(mock: ReturnType<typeof vi.fn>, needle: string): string[] {
+  return mock.mock.calls
+    .map(([i]) => (typeof i === "string" ? i : (i as Request).url))
+    .filter((u: string) => u.includes(needle));
+}
+
+describe("Deals list — server-side search, filters and sort", () => {
+  const fetchMock = vi.fn<typeof fetch>();
+  const originalFetch = globalThis.fetch;
+
+  /** Answers every request the list page makes; deals responses are recorded. */
+  function mockList(deals = [makeDeal()]) {
+    fetchMock.mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
+      if (url.includes("/api/v1/pipelines")) return jsonResponse(BOARD);
+      if (url.includes("/api/v1/users")) return jsonResponse(USERS);
+      if (url.includes("/api/v1/deals/export.csv")) {
+        return new Response("name\n", {
+          status: 200,
+          headers: {
+            "content-type": "text/csv; charset=utf-8",
+            "content-disposition": 'attachment; filename="simplecrm-deals-2026-07-27.csv"',
+          },
+        });
+      }
+      if (url.includes("/api/v1/deals?")) {
+        return jsonResponse({ items: deals, total: deals.length, limit: 25, offset: 0 });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+  }
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("sends the debounced search term to the server", async () => {
+    mockList();
+    renderAt("/app/deals");
+    const user = userEvent.setup();
+    await user.type(await screen.findByTestId("deals-search-input"), "Brno");
+
+    await waitFor(() => expect(urlsMatching(fetchMock, "search=Brno").length).toBeGreaterThan(0), {
+      timeout: 3000,
+    });
+  });
+
+  it("seeds the search box from the URL so a deep link keeps its filter", async () => {
+    mockList();
+    renderAt("/app/deals?q=Brno");
+    expect(await screen.findByTestId("deals-search-input")).toHaveValue("Brno");
+    await waitFor(() => expect(urlsMatching(fetchMock, "search=Brno").length).toBeGreaterThan(0));
+  });
+
+  it("sends stage_id, owner_user_id and status when the filters are used", async () => {
+    mockList();
+    renderAt("/app/deals");
+    const user = userEvent.setup();
+
+    // The stage/owner options come from the board + users queries — wait for
+    // them to land before driving the selects.
+    await screen.findByRole("option", { name: "Nabídka" });
+    await user.selectOptions(screen.getByTestId("deals-stage-filter"), "st2");
+    await waitFor(() => expect(urlsMatching(fetchMock, "stage_id=st2").length).toBeGreaterThan(0));
+
+    await screen.findByRole("option", { name: "Eva Nováková" });
+    await user.selectOptions(screen.getByTestId("deals-owner-filter"), "u1");
+    await waitFor(() =>
+      expect(urlsMatching(fetchMock, "owner_user_id=u1").length).toBeGreaterThan(0),
+    );
+
+    await user.selectOptions(screen.getByTestId("deals-status-filter"), "won");
+    await waitFor(() => expect(urlsMatching(fetchMock, "status=won").length).toBeGreaterThan(0));
+  });
+
+  it("sorts server-side and flips direction on a second click", async () => {
+    mockList();
+    renderAt("/app/deals");
+    const user = userEvent.setup();
+
+    const valueHeader = await screen.findByTestId("deals-sort-value");
+    await user.click(valueHeader);
+    await waitFor(() =>
+      expect(urlsMatching(fetchMock, "sort=value&order=asc").length).toBeGreaterThan(0),
+    );
+
+    await user.click(screen.getByTestId("deals-sort-value"));
+    await waitFor(() =>
+      expect(urlsMatching(fetchMock, "sort=value&order=desc").length).toBeGreaterThan(0),
+    );
+  });
+
+  it("shows the filtered-empty state (not the onboarding one) when filters match nothing", async () => {
+    mockList([]);
+    renderAt("/app/deals?status=won");
+    expect(
+      await screen.findByRole("heading", { level: 2, name: /Žádný obchod neodpovídá filtrům/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("downloads a CSV carrying the active filters", async () => {
+    const createUrl = vi.fn(() => "blob:deals");
+    const revokeUrl = vi.fn();
+    vi.stubGlobal(
+      "URL",
+      Object.assign(URL, { createObjectURL: createUrl, revokeObjectURL: revokeUrl }),
+    );
+    mockList();
+
+    renderAt("/app/deals?status=won");
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId("deals-export-csv"));
+
+    await waitFor(() => {
+      const exportCalls = urlsMatching(fetchMock, "/api/v1/deals/export.csv");
+      expect(exportCalls.length).toBe(1);
+      expect(exportCalls[0]).toContain("status=won");
+    });
+    await waitFor(() => expect(createUrl).toHaveBeenCalled());
+    vi.unstubAllGlobals();
   });
 });

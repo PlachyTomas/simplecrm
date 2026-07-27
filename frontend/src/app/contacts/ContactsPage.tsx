@@ -1,11 +1,11 @@
-import { CircleDollarSign, Plus, Search, Users } from "lucide-react";
+import { CircleDollarSign, Download, Plus, Search, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { AddContactModal } from "@/app/contacts/AddContactModal";
 import { ContactDetailPanel } from "@/app/contacts/ContactDetailPanel";
-import { type ContactOut, useContacts } from "@/app/contacts/useContacts";
+import { type ContactOut, useContacts, useExportContactsCsv } from "@/app/contacts/useContacts";
 import { EmptyState } from "@/components/ui/empty-state";
 import { testIds } from "@/lib/testids";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
@@ -77,6 +77,15 @@ export function ContactsPage() {
   // The open-deals filter is applied server-side (contacts whose company has an
   // open deal); the search box filters the returned page client-side.
   const { data: contacts, isPending, isError } = useContacts({ hasOpenDeals: openDeals });
+  const exportCsv = useExportContactsCsv();
+
+  // Only the server-side filter travels with the export — the search box has no
+  // backend counterpart, so the CSV is "everything matching the filters".
+  const runExport = () => {
+    const params = new URLSearchParams();
+    if (openDeals) params.set("has_open_deals", "true");
+    exportCsv.mutate(params);
+  };
 
   const handleSelect = (id: string) => {
     navigate(`/app/contacts/${id}`);
@@ -156,21 +165,35 @@ export function ContactsPage() {
                   />
                 </label>
               ) : null}
-              <button
-                type="button"
-                data-testid={testIds.contacts.openDealsFilter}
-                aria-pressed={openDeals}
-                onClick={() => setOpenDeals((v) => !v)}
-                className={cn(
-                  "inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors duration-fast",
-                  openDeals
-                    ? "border-accent bg-accent-subtle text-accent"
-                    : "border-border bg-surface-overlay text-text-secondary hover:text-text-primary",
-                )}
-              >
-                <CircleDollarSign size={14} strokeWidth={1.75} aria-hidden />{" "}
-                {t("contactsPage.openDealsFilter")}
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  data-testid={testIds.contacts.openDealsFilter}
+                  aria-pressed={openDeals}
+                  onClick={() => setOpenDeals((v) => !v)}
+                  className={cn(
+                    "inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors duration-fast",
+                    openDeals
+                      ? "border-accent bg-accent-subtle text-accent"
+                      : "border-border bg-surface-overlay text-text-secondary hover:text-text-primary",
+                  )}
+                >
+                  <CircleDollarSign size={14} strokeWidth={1.75} aria-hidden />{" "}
+                  {t("contactsPage.openDealsFilter")}
+                </button>
+                <button
+                  type="button"
+                  data-testid={testIds.contacts.exportCsv}
+                  onClick={runExport}
+                  disabled={exportCsv.isPending}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface-overlay px-3 text-xs font-medium text-text-secondary transition-colors duration-fast hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Download size={14} strokeWidth={1.75} aria-hidden />
+                  {exportCsv.isPending
+                    ? t("contactsPage.exportPending")
+                    : t("contactsPage.exportCsv")}
+                </button>
+              </div>
             </>
           ) : null}
         </div>
