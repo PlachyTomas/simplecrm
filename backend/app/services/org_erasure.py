@@ -13,7 +13,7 @@ Kept (with FKs that survive via SET NULL on user/org pointers):
 Hard-deleted (PII-heavy, no accounting need):
 - contacts, companies, deals, activities, blocked_companies, invitations,
   pipelines (stages cascade), teams, payment_methods, refresh_tokens,
-  auth_action_tokens
+  auth_action_tokens, import_runs
 """
 
 from __future__ import annotations
@@ -35,6 +35,7 @@ from app.db.models import (
     Deal,
     EmailCampaign,
     GoogleCalendarConnection,
+    ImportRun,
     Invitation,
     Organization,
     PaymentMethod,
@@ -114,6 +115,9 @@ async def erase_organization(
     await session.execute(delete(Deal).where(Deal.organization_id == org_id))
     await session.execute(delete(Contact).where(Contact.organization_id == org_id))
     await session.execute(delete(Company).where(Company.organization_id == org_id))
+    # After the rows it stamped, so the SET NULL back-references have
+    # nothing left to update.
+    await session.execute(delete(ImportRun).where(ImportRun.organization_id == org_id))
     await session.execute(delete(BlockedCompany).where(BlockedCompany.organization_id == org_id))
     await session.execute(delete(Invitation).where(Invitation.organization_id == org_id))
     await session.execute(delete(Pipeline).where(Pipeline.organization_id == org_id))

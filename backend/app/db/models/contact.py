@@ -23,6 +23,7 @@ class Contact(Base):
         UniqueConstraint("organization_id", "email", name="uq_contacts_org_email"),
         Index("ix_contacts_organization_id", "organization_id"),
         Index("ix_contacts_company_id", "company_id"),
+        Index("ix_contacts_import_run_id", "import_run_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -46,6 +47,13 @@ class Contact(Base):
     phone: Mapped[str | None] = mapped_column(String(40))
     linkedin_url: Mapped[str | None] = mapped_column(String(300))
     note: Mapped[str | None] = mapped_column(String(2000))
+
+    # Provenance: which import created this row (NULL = created by hand, or
+    # only *updated* by an import). See `ImportRun`.
+    import_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("import_runs.id", ondelete="SET NULL"),
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

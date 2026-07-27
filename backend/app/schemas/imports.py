@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -10,6 +11,13 @@ from pydantic import BaseModel, ConfigDict, Field
 ImportMode = Literal["companies_only", "combined", "separate", "deals"]
 MatchSource = Literal["ico", "name", "email"]
 FileRole = Literal["companies", "contacts", "combined", "deals"]
+ImportRunStatusOut = Literal["committed", "undone", "partially_undone"]
+UndoSkipCode = Literal[
+    "modified_after_import",
+    "has_activity",
+    "has_calendar_events",
+    "has_other_records",
+]
 
 
 class FieldDescriptor(BaseModel):
@@ -149,3 +157,59 @@ class ImportCommitOut(BaseModel):
     created_contact_ids: list[uuid.UUID] = Field(default_factory=list)
     updated_contact_ids: list[uuid.UUID] = Field(default_factory=list)
     created_deal_ids: list[uuid.UUID] = Field(default_factory=list)
+    # The `import_runs` row this commit created. Feed it straight to
+    # `POST /admin/imports/runs/{id}/undo` for the result screen's undo button.
+    import_run_id: uuid.UUID | None = None
+
+
+class ImportRunOut(BaseModel):
+    """One row of the import history."""
+
+    id: uuid.UUID
+    provider: str
+    status: ImportRunStatusOut
+    created_at: datetime
+    # Who ran it. `null` when the account has since been deleted (the run row
+    # deliberately outlives the user).
+    created_by_user_id: uuid.UUID | None = None
+    created_by_name: str | None = None
+    created_by_email: str | None = None
+    counts: ImportCountsOut
+    undone_at: datetime | None = None
+    undone_by_user_id: uuid.UUID | None = None
+    # False once undo has run — v1 offers exactly one undo pass per import,
+    # including when that pass had to skip rows (`partially_undone`).
+    undoable: bool
+
+
+class ImportUndoCountsOut(BaseModel):
+    companies: int = 0
+    contacts: int = 0
+    deals: int = 0
+
+
+class ImportUndoSkipOut(BaseModel):
+    """One row undo refused to delete.
+
+    Render from `code` + `name` for a localized string; `message` is a Czech
+    fallback in the same style as the import's row errors.
+    """
+
+    entity_type: Literal["company", "contact", "deal"]
+    entity_id: uuid.UUID
+    name: str
+    code: UndoSkipCode
+    message: str
+
+
+class ImportUndoOut(BaseModel):
+    run_id: uuid.UUID
+    status: ImportRunStatusOut
+    deleted: ImportUndoCountsOut
+    skipped: ImportUndoCountsOut
+    skipped_reasons: list[ImportUndoSkipOut] = Field(default_factory=list)
+    skipped_reasons_truncated: bool = False
+    # Rows the import UPDATED rather than created. Undo does **not** revert
+    # them — no before-image is stored — so the UI must say so when either
+    # number is non-zero.
+    updates_not_reverted: ImportUndoCountsOut

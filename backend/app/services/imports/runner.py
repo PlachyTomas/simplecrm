@@ -21,7 +21,15 @@ from typing import Literal
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import BlockedCompany, Company, Contact, Deal, Organization
+from app.db.models import (
+    BlockedCompany,
+    Company,
+    Contact,
+    Deal,
+    ImportRun,
+    ImportRunStatus,
+    Organization,
+)
 from app.services.imports.mapping import (
     CandidateCompany,
     CandidateContact,
@@ -92,6 +100,10 @@ class ImportInput:
     # wizard pre-fills it from `suggest_stage_mapping`). Any non-empty stage
     # cell missing from this map blocks its row — never a silent default.
     stage_mapping: dict[str, uuid.UUID] = field(default_factory=dict)
+    # Recorded on the `import_runs` row a commit creates, so the history list
+    # can say "Pipedrive, ran by Jana". Preview ignores both.
+    provider: str = "generic"
+    actor_user_id: uuid.UUID | None = None
 
 
 @dataclass
@@ -114,6 +126,9 @@ class ImportRunResult:
     created_contact_ids: list[uuid.UUID] = field(default_factory=list)
     updated_contact_ids: list[uuid.UUID] = field(default_factory=list)
     created_deal_ids: list[uuid.UUID] = field(default_factory=list)
+    # The `import_runs` row this commit created; `None` for a preview. Every
+    # created row above carries it in `import_run_id`.
+    import_run_id: uuid.UUID | None = None
     # Distinct source stage values with no entry in `stage_mapping`. The
     # wizard highlights exactly these in the stage-mapping step.
     unmapped_stage_values: list[str] = field(default_factory=list)
@@ -924,6 +939,22 @@ async def _run_pipeline(
         return result
 
     # ---- Write phase ----
+    # The `import_runs` row is created first so every INSERT below can carry
+    # its id, and it lives in the same transaction as the rows it stamps: a
+    # crash leaves neither a run without rows nor rows without a run.
+    # `counts` is final by now — the planning phase above owns every counter,
+    # the write phase only persists what was planned.
+    import_run = ImportRun(
+        organization_id=payload.organization_id,
+        user_id=payload.actor_user_id,
+        provider=payload.provider,
+        counts=dict(result.counts),
+        status=ImportRunStatus.committed,
+    )
+    session.add(import_run)
+    await session.flush()
+    result.import_run_id = import_run.id
+
     # Companies first so contact FKs resolve.
     candidate_index_to_company_id: dict[int, uuid.UUID] = {}
     write_skip_codes = BLOCKING_CODES | {"ico_blocked"}
@@ -950,9 +981,12 @@ async def _run_pipeline(
                 result.updated_company_ids.append(existing.id)
         else:
             create_fields = {k: v for k, v in cand.fields.items() if v is not None}
+            # Only CREATED rows are stamped. An updated row existed before the
+            # import and is not ours to delete on undo.
             company = Company(
                 organization_id=payload.organization_id,
                 owner_user_id=new_owner_id,
+                import_run_id=import_run.id,
                 **create_fields,
             )
             session.add(company)
@@ -993,6 +1027,7 @@ async def _run_pipeline(
             new_contact = Contact(
                 organization_id=payload.organization_id,
                 company_id=company_id,
+                import_run_id=import_run.id,
                 **{k: v for k, v in contact.fields.items() if v is not None},
             )
             session.add(new_contact)
@@ -1009,7 +1044,11 @@ async def _run_pipeline(
         # per-user `max_owned_companies` cap arithmetic that the company
         # phase computed before deals were resolved. Quietly blowing past a
         # business cap is worse than an admin bulk-assigning afterwards.
-        company = Company(organization_id=payload.organization_id, name=display_name)
+        company = Company(
+            organization_id=payload.organization_id,
+            name=display_name,
+            import_run_id=import_run.id,
+        )
         session.add(company)
         await session.flush()
         auto_company_ids[key] = company.id
@@ -1041,6 +1080,7 @@ async def _run_pipeline(
             expected_close_date=deal_cand.expected_close_date,
             closed_at=plan.state.closed_at,
             lost_reason=plan.state.lost_reason,
+            import_run_id=import_run.id,
         )
         session.add(deal)
         await session.flush()

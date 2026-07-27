@@ -2169,8 +2169,67 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Commit Import */
+        /**
+         * Commit Import
+         * @description Write the import in one transaction and record it in the history.
+         *
+         *     The `import_runs` row and every row it stamps land in the same
+         *     transaction, so the response's `import_run_id` always points at a run that
+         *     owns exactly the rows this call created.
+         */
         post: operations["commit_import_api_v1_admin_imports_commit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/imports/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Import Runs
+         * @description Import history, newest first — the source for the wizard's history
+         *     screen and its per-run undo button.
+         */
+        get: operations["list_import_runs_api_v1_admin_imports_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/imports/runs/{run_id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo Import
+         * @description Delete what this import created — and only that.
+         *
+         *     Rows the import **updated** are left exactly as the import left them: no
+         *     before-image is stored, so there is nothing to restore. `updates_not_reverted`
+         *     reports how many rows that covers.
+         *
+         *     Anything worked on since the import survives too — edited rows, deals with
+         *     meetings, entities with logged activity, and companies that still have
+         *     contacts or deals hanging off them. Each is listed in `skipped_reasons`
+         *     with a `code`, and the run ends as `partially_undone`.
+         *
+         *     One transaction; 409 if the run has already been undone.
+         */
+        post: operations["undo_import_api_v1_admin_imports_runs__run_id__undo_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4140,6 +4199,8 @@ export interface components {
             bulk_owner_user_id?: string | null;
             /** Stage Mapping Json */
             stage_mapping_json?: string | null;
+            /** Provider */
+            provider?: string | null;
         };
         /** Body_preview_import_api_v1_admin_imports_preview_post */
         Body_preview_import_api_v1_admin_imports_preview_post: {
@@ -5436,6 +5497,8 @@ export interface components {
             updated_contact_ids?: string[];
             /** Created Deal Ids */
             created_deal_ids?: string[];
+            /** Import Run Id */
+            import_run_id?: string | null;
         };
         /** ImportCountsOut */
         ImportCountsOut: {
@@ -5486,6 +5549,42 @@ export interface components {
             /** Org Currency */
             org_currency?: string | null;
         };
+        /**
+         * ImportRunOut
+         * @description One row of the import history.
+         */
+        ImportRunOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Provider */
+            provider: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "committed" | "undone" | "partially_undone";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By User Id */
+            created_by_user_id?: string | null;
+            /** Created By Name */
+            created_by_name?: string | null;
+            /** Created By Email */
+            created_by_email?: string | null;
+            counts: components["schemas"]["ImportCountsOut"];
+            /** Undone At */
+            undone_at?: string | null;
+            /** Undone By User Id */
+            undone_by_user_id?: string | null;
+            /** Undoable */
+            undoable: boolean;
+        };
         /** ImportStageOut */
         ImportStageOut: {
             /**
@@ -5511,6 +5610,75 @@ export interface components {
             pipeline_name: string;
             /** Is Default Pipeline */
             is_default_pipeline: boolean;
+        };
+        /** ImportUndoCountsOut */
+        ImportUndoCountsOut: {
+            /**
+             * Companies
+             * @default 0
+             */
+            companies: number;
+            /**
+             * Contacts
+             * @default 0
+             */
+            contacts: number;
+            /**
+             * Deals
+             * @default 0
+             */
+            deals: number;
+        };
+        /** ImportUndoOut */
+        ImportUndoOut: {
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "committed" | "undone" | "partially_undone";
+            deleted: components["schemas"]["ImportUndoCountsOut"];
+            skipped: components["schemas"]["ImportUndoCountsOut"];
+            /** Skipped Reasons */
+            skipped_reasons?: components["schemas"]["ImportUndoSkipOut"][];
+            /**
+             * Skipped Reasons Truncated
+             * @default false
+             */
+            skipped_reasons_truncated: boolean;
+            updates_not_reverted: components["schemas"]["ImportUndoCountsOut"];
+        };
+        /**
+         * ImportUndoSkipOut
+         * @description One row undo refused to delete.
+         *
+         *     Render from `code` + `name` for a localized string; `message` is a Czech
+         *     fallback in the same style as the import's row errors.
+         */
+        ImportUndoSkipOut: {
+            /**
+             * Entity Type
+             * @enum {string}
+             */
+            entity_type: "company" | "contact" | "deal";
+            /**
+             * Entity Id
+             * Format: uuid
+             */
+            entity_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "modified_after_import" | "has_activity" | "has_calendar_events" | "has_other_records";
+            /** Message */
+            message: string;
         };
         /**
          * InboundAddressOut
@@ -6195,6 +6363,17 @@ export interface components {
         Page_DealListItemOut_: {
             /** Items */
             items: components["schemas"]["DealListItemOut"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** Page[ImportRunOut] */
+        Page_ImportRunOut_: {
+            /** Items */
+            items: components["schemas"]["ImportRunOut"][];
             /** Total */
             total: number;
             /** Limit */
@@ -12101,6 +12280,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportCommitOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_import_runs_api_v1_admin_imports_runs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ImportRunOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    undo_import_api_v1_admin_imports_runs__run_id__undo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportUndoOut"];
                 };
             };
             /** @description Validation Error */

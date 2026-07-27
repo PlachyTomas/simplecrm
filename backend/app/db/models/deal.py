@@ -43,6 +43,7 @@ class Deal(Base):
         Index("ix_deals_owner_user_id", "owner_user_id"),
         Index("ix_deals_expected_close_date", "expected_close_date"),
         Index("ix_deals_is_paid_paid_at", "is_paid", "paid_at"),
+        Index("ix_deals_import_run_id", "import_run_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -94,6 +95,14 @@ class Deal(Base):
         Boolean, default=False, server_default="false", nullable=False
     )
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # Provenance: which import created this row. Imports never update deals
+    # (no natural key to match on), so a non-NULL value here always means
+    # "created by that run". See `ImportRun`.
+    import_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("import_runs.id", ondelete="SET NULL"),
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

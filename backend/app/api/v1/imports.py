@@ -11,6 +11,10 @@ company candidates by that field across every uploaded company file.
 Both ``/preview`` (no writes) and ``/commit`` (single transaction) share
 the same multipart shape so the frontend can run a dry-run and re-submit
 identical form data on confirm.
+
+A successful ``/commit`` also writes an ``import_runs`` row and stamps every
+row it *creates* with its id, which is what ``GET /runs`` (history) and
+``POST /runs/{id}/undo`` (undo) work from.
 """
 
 from __future__ import annotations
@@ -19,12 +23,13 @@ import json
 import uuid
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, UploadFile, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import require_role
 from app.db import get_db
-from app.db.models import User, UserRole
+from app.db.models import ImportRun, ImportRunStatus, User, UserRole
 from app.schemas.imports import (
     AnalyzedFileOut,
     AnalyzeOut,
@@ -34,7 +39,11 @@ from app.schemas.imports import (
     ImportCommitOut,
     ImportCountsOut,
     ImportPreviewOut,
+    ImportRunOut,
     ImportStageOut,
+    ImportUndoCountsOut,
+    ImportUndoOut,
+    ImportUndoSkipOut,
     ProviderOut,
     ProvidersOut,
     RowErrorOut,
@@ -43,6 +52,7 @@ from app.schemas.imports import (
     UnmatchedContactOut,
     UpdateDiffOut,
 )
+from app.schemas.pagination import Page, PaginationParams
 from app.services.imports import (
     COMPANY_FIELDS,
     CONTACT_FIELDS,
@@ -62,6 +72,8 @@ from app.services.imports import (
     run_commit,
     run_preview,
     suggest_stage_mapping,
+    undo_import_run,
+    updates_not_reverted,
     validate_mapping,
 )
 from app.services.imports.matcher import MatchSource
@@ -203,6 +215,7 @@ def _to_out(run: ImportRunResult, *, commit: bool) -> ImportPreviewOut | ImportC
             created_contact_ids=run.created_contact_ids,
             updated_contact_ids=run.updated_contact_ids,
             created_deal_ids=run.created_deal_ids,
+            import_run_id=run.import_run_id,
         )
     return ImportPreviewOut(
         counts=counts,
@@ -236,6 +249,8 @@ async def _build_input(
     skip_unmatched: bool,
     bulk_owner_user_id: uuid.UUID | None,
     stage_mapping_json: str | None = None,
+    provider: str | None = None,
+    actor_user_id: uuid.UUID | None = None,
 ) -> ImportInput:
     if organization_id is None:
         raise HTTPException(
@@ -324,6 +339,10 @@ async def _build_input(
         bulk_owner_user_id=bulk_owner_user_id,
         deal_candidates=deal_candidates,
         stage_mapping=_parse_stage_mapping(stage_mapping_json),
+        # A label for the history list only. An unknown key degrades to
+        # "generic" rather than 400-ing a 500-row migration over a caption.
+        provider=(profile.key if (profile := get_provider(provider)) is not None else "generic"),
+        actor_user_id=actor_user_id,
     )
 
 
@@ -371,10 +390,17 @@ async def commit_import(
     skip_unmatched: Annotated[bool, Form()] = False,
     bulk_owner_user_id: Annotated[uuid.UUID | None, Form()] = None,
     stage_mapping_json: Annotated[str | None, Form()] = None,
+    provider: Annotated[str | None, Form()] = None,
     user: User = Depends(require_role(UserRole.admin)),
     session: AsyncSession = Depends(get_db),
     rate_limiter: RateLimiter = Depends(get_import_rate_limiter),
 ) -> ImportCommitOut:
+    """Write the import in one transaction and record it in the history.
+
+    The `import_runs` row and every row it stamps land in the same
+    transaction, so the response's `import_run_id` always points at a run that
+    owns exactly the rows this call created.
+    """
     if not await rate_limiter.try_acquire(user.id):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -389,6 +415,8 @@ async def commit_import(
         skip_unmatched=skip_unmatched,
         bulk_owner_user_id=bulk_owner_user_id,
         stage_mapping_json=stage_mapping_json,
+        provider=provider,
+        actor_user_id=user.id,
     )
     try:
         run = await run_commit(session, payload)
@@ -398,6 +426,127 @@ async def commit_import(
     if not isinstance(out, ImportCommitOut):  # pragma: no cover - narrowing
         raise RuntimeError("commit returned wrong shape")
     return out
+
+
+_ZERO_COUNTS: dict[str, int] = dict.fromkeys(ImportCountsOut.model_fields, 0)
+
+
+def _counts_from_jsonb(raw: dict[str, Any]) -> ImportCountsOut:
+    """`import_runs.counts` → the same shape preview/commit return.
+
+    Defensive about the stored blob: a run written by an older build (or by a
+    future one with extra counters) must still render in the history list.
+    """
+    known = {k: v for k, v in raw.items() if k in _ZERO_COUNTS and isinstance(v, int)}
+    return ImportCountsOut(**{**_ZERO_COUNTS, **known})
+
+
+def _run_out(run: ImportRun, actor: User | None) -> ImportRunOut:
+    return ImportRunOut(
+        id=run.id,
+        provider=run.provider,
+        status=run.status.value,
+        created_at=run.created_at,
+        created_by_user_id=run.user_id,
+        created_by_name=actor.name if actor is not None else None,
+        created_by_email=actor.email if actor is not None else None,
+        counts=_counts_from_jsonb(run.counts or {}),
+        undone_at=run.undone_at,
+        undone_by_user_id=run.undone_by_user_id,
+        undoable=run.status is ImportRunStatus.committed,
+    )
+
+
+@router.get("/runs", response_model=Page[ImportRunOut])
+async def list_import_runs(
+    pagination: PaginationParams = Depends(),
+    user: User = Depends(require_role(UserRole.admin)),
+    session: AsyncSession = Depends(get_db),
+) -> Page[ImportRunOut]:
+    """Import history, newest first — the source for the wizard's history
+    screen and its per-run undo button."""
+    if user.organization_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin must belong to an organization to import data.",
+        )
+    base = select(ImportRun).where(ImportRun.organization_id == user.organization_id)
+    total = (await session.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
+    stmt = (
+        select(ImportRun, User)
+        .outerjoin(User, User.id == ImportRun.user_id)
+        .where(ImportRun.organization_id == user.organization_id)
+        # `id` breaks ties so two imports inside the same second paginate
+        # deterministically.
+        .order_by(ImportRun.created_at.desc(), ImportRun.id.desc())
+        .limit(pagination.limit)
+        .offset(pagination.offset)
+    )
+    rows = (await session.execute(stmt)).all()
+    return Page[ImportRunOut](
+        items=[_run_out(run, actor) for run, actor in rows],
+        total=total,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+
+
+@router.post("/runs/{run_id}/undo", response_model=ImportUndoOut)
+async def undo_import(
+    run_id: Annotated[uuid.UUID, Path()],
+    user: User = Depends(require_role(UserRole.admin)),
+    session: AsyncSession = Depends(get_db),
+) -> ImportUndoOut:
+    """Delete what this import created — and only that.
+
+    Rows the import **updated** are left exactly as the import left them: no
+    before-image is stored, so there is nothing to restore. `updates_not_reverted`
+    reports how many rows that covers.
+
+    Anything worked on since the import survives too — edited rows, deals with
+    meetings, entities with logged activity, and companies that still have
+    contacts or deals hanging off them. Each is listed in `skipped_reasons`
+    with a `code`, and the run ends as `partially_undone`.
+
+    One transaction; 409 if the run has already been undone.
+    """
+    if user.organization_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin must belong to an organization to import data.",
+        )
+    # Row lock: two admins hitting undo at once must not both pass the status
+    # check and double-delete (the second would find nothing, but would also
+    # overwrite `undone_by_user_id` and report a bogus zero-delete success).
+    run = await session.get(ImportRun, run_id, with_for_update=True)
+    if run is None or run.organization_id != user.organization_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Import run not found.")
+    if run.status is not ImportRunStatus.committed:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This import has already been undone.",
+        )
+
+    stored_counts = dict(run.counts or {})
+    outcome = await undo_import_run(session, run=run, actor_user_id=user.id)
+    return ImportUndoOut(
+        run_id=run_id,
+        status=outcome.status.value,
+        deleted=ImportUndoCountsOut(**outcome.deleted),
+        skipped=ImportUndoCountsOut(**outcome.skipped),
+        skipped_reasons=[
+            ImportUndoSkipOut(
+                entity_type=s.entity_type,
+                entity_id=s.entity_id,
+                name=s.name,
+                code=s.code,
+                message=s.message,
+            )
+            for s in outcome.skipped_reasons
+        ],
+        skipped_reasons_truncated=outcome.skipped_reasons_truncated,
+        updates_not_reverted=ImportUndoCountsOut(**updates_not_reverted(stored_counts)),
+    )
 
 
 @router.post("/stage-suggestions", response_model=StageSuggestionsOut)

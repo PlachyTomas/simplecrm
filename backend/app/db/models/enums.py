@@ -110,6 +110,23 @@ class SalesGoalMetric(StrEnum):
     won_count = "won_count"
 
 
+class ImportRunStatus(StrEnum):
+    """Lifecycle of one committed CSV/migration import.
+
+    `committed`        — the import wrote rows and nothing has been undone.
+    `undone`           — undo removed every row the run created.
+    `partially_undone` — undo ran but left some rows behind (edited since the
+                         import, or carrying work created after it). Terminal:
+                         v1 does not offer a second undo pass, because the
+                         provenance stamp of the surviving rows no longer tells
+                         us whether the user meant to keep them.
+    """
+
+    committed = "committed"
+    undone = "undone"
+    partially_undone = "partially_undone"
+
+
 class EmailDirection(StrEnum):
     """Which way a `sent_emails` row travelled.
 

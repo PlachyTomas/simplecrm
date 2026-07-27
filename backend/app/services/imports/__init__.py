@@ -16,6 +16,8 @@ The package is split into four layers so each can be tested in isolation:
 * :mod:`runner` — orchestrate the above for `preview` and `commit`. The
   two modes share the same parse + match pipeline; only the final DB
   write step differs.
+* :mod:`undo` — delete what one committed run created, skipping anything
+  that has been worked on since.
 """
 
 from app.services.imports.csv_reader import (
@@ -67,6 +69,12 @@ from app.services.imports.stages import (
     load_stages,
     suggest_stage_mapping,
 )
+from app.services.imports.undo import (
+    UndoResult,
+    UndoSkip,
+    undo_import_run,
+    updates_not_reverted,
+)
 
 __all__ = [
     "COMPANY_FIELDS",
@@ -92,6 +100,8 @@ __all__ = [
     "RowError",
     "StageInfo",
     "StageResolver",
+    "UndoResult",
+    "UndoSkip",
     "apply_company_mapping",
     "apply_contact_mapping",
     "apply_deal_mapping",
@@ -103,5 +113,7 @@ __all__ = [
     "run_commit",
     "run_preview",
     "suggest_stage_mapping",
+    "undo_import_run",
+    "updates_not_reverted",
     "validate_mapping",
 ]

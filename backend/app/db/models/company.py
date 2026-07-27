@@ -36,6 +36,7 @@ class Company(Base):
         Index("ix_companies_owner_user_id", "owner_user_id"),
         Index("ix_companies_ownership_expires_at", "ownership_expires_at"),
         Index("ix_companies_ico", "ico"),
+        Index("ix_companies_import_run_id", "import_run_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -91,6 +92,14 @@ class Company(Base):
     )
 
     ares_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # Provenance: which import created this row (NULL = created by hand, or
+    # only *updated* by an import). ON DELETE SET NULL so deleting the import
+    # history never cascades into business data.
+    import_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("import_runs.id", ondelete="SET NULL"),
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

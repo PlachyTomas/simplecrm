@@ -22,6 +22,7 @@ from app.db.models.enums import (
     EmailDirection,
     EmailRecipientStatus,
     GoogleSyncStatus,
+    ImportRunStatus,
     OwnershipChangeReason,
     Region,
     SalesGoalMetric,
@@ -30,6 +31,7 @@ from app.db.models.enums import (
     UserRole,
 )
 from app.db.models.google_calendar_connection import GoogleCalendarConnection
+from app.db.models.import_run import ImportRun
 from app.db.models.invitation import Invitation
 from app.db.models.invoice import Invoice
 from app.db.models.invoice_audit_log import InvoiceAuditLog
@@ -71,6 +73,8 @@ __all__ = [
     "EmailTemplate",
     "GoogleCalendarConnection",
     "GoogleSyncStatus",
+    "ImportRun",
+    "ImportRunStatus",
     "Invitation",
     "Invoice",
     "InvoiceAuditLog",
