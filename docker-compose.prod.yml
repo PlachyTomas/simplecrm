@@ -55,6 +55,14 @@ services:
       # refuses to boot outside dev if this isn't an absolute http(s) URL.
       PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:?set PUBLIC_API_BASE_URL, e.g. https://api.simplecrm.cz}
       CORS_ORIGINS: ${CORS_ORIGINS}
+      # Smart BCC inbound email. The secret is the ONLY credential on a public
+      # write endpoint, so the app refuses to boot without it outside dev —
+      # it must be set in the same deploy as the code or the service won't come
+      # up. Setup: docs/inbound-email-setup.md.
+      INBOUND_SHARED_SECRET: "${INBOUND_SHARED_SECRET:?set INBOUND_SHARED_SECRET, generate with openssl rand -base64 32}"
+      INBOUND_EMAIL_DOMAIN: ${INBOUND_EMAIL_DOMAIN:-in.simplecrm.cz}
+      INBOUND_EMAIL_LOCAL_PREFIX: ${INBOUND_EMAIL_LOCAL_PREFIX:-bcc}
+      INBOUND_MAX_BYTES: ${INBOUND_MAX_BYTES:-10485760}
       SENTRY_DSN: ${SENTRY_DSN:-}
     command: >
       sh -c "
