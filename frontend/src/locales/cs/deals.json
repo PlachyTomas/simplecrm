@@ -249,6 +249,19 @@
   "dealDetailDialog": {
     "ariaLabel": "Detail obchodu"
   },
+  "noteSection": {
+    "title": "Popis obchodu",
+    "subtitle": "Trvalá poznámka k obchodu — rozsah, podmínky, region. Průběžné poznámky z hovorů patří do aktivity (rychlé akce na kartě v pipeline).",
+    "editButton": "Upravit",
+    "addButton": "+ Přidat popis",
+    "placeholder": "Napište trvalou poznámku k tomuto obchodu…",
+    "save": "Uložit",
+    "saving": "Ukládám…",
+    "cancel": "Zrušit",
+    "saveSuccess": "Popis uložen.",
+    "saveError": "Popis se nepodařilo uložit.",
+    "empty": "K tomuto obchodu zatím není žádný popis."
+  },
   "eventsSection": {
     "title": "Události",
     "subtitle": "Schůzky a termíny k tomuto obchodu — volitelně i ve vašem Google kalendáři.",

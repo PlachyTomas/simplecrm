@@ -245,6 +245,19 @@
   "dealDetailDialog": {
     "ariaLabel": "Deal detail"
   },
+  "noteSection": {
+    "title": "Deal description",
+    "subtitle": "A standing note about the deal — scope, terms, region. Running commentary from calls belongs in the activity log (quick actions on the pipeline card).",
+    "editButton": "Edit",
+    "addButton": "+ Add description",
+    "placeholder": "Write a standing note about this deal…",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "saveSuccess": "Description saved.",
+    "saveError": "Failed to save the description.",
+    "empty": "This deal has no description yet."
+  },
   "eventsSection": {
     "title": "Events",
     "subtitle": "Meetings and appointments for this deal — optionally in your Google Calendar too.",

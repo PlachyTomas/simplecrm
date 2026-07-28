@@ -84,9 +84,23 @@ export const CHANGE_FIELD_LABEL_KEY: Record<string, CommonKey> = {
   main_contact_id: "activities.changeFields.main_contact_id",
 };
 
+/**
+ * Per-entity overrides for {@link CHANGE_FIELD_LABEL_KEY}.
+ *
+ * `note` names two different things depending on where it was edited. On a
+ * deal it is the standing *description* (`deals.note`), and labelling its
+ * edit "Poznámka" would put it one line away from the `note` activity rows —
+ * the running commentary — which is exactly the confusion the column was
+ * added to end. Companies and contacts keep the plain label.
+ */
+const CHANGE_FIELD_LABEL_KEY_BY_ENTITY: Record<string, Record<string, CommonKey>> = {
+  deal: { note: "activities.changeFields.deal_note" },
+};
+
 /** Catalog key for a changed field, falling back to `null` if unknown (caller shows the raw key). */
-export function changeFieldLabelKey(field: string): CommonKey | null {
-  return CHANGE_FIELD_LABEL_KEY[field] ?? null;
+export function changeFieldLabelKey(field: string, entityType?: string | null): CommonKey | null {
+  const override = entityType ? CHANGE_FIELD_LABEL_KEY_BY_ENTITY[entityType]?.[field] : undefined;
+  return override ?? CHANGE_FIELD_LABEL_KEY[field] ?? null;
 }
 
 /** Catalog key for a field in the comma-joined legacy list, falling back to `null` if unknown. */

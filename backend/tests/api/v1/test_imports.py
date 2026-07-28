@@ -701,10 +701,11 @@ async def test_fields_catalog_includes_the_deal_side(
         "contact",
         "owner",
         "external_id",
+        "note",
     }.issubset(keys)
-    # note_append is offered where there is a note column, and only there.
+    # `deals.note` landed in phase 2b, so every side can park a custom column.
     assert "note_append" in {f["key"] for f in r.json()["company"]}
-    assert "note_append" not in keys
+    assert "note_append" in keys
 
 
 async def test_providers_endpoint_lists_pipedrive_and_generic(
@@ -1145,3 +1146,62 @@ async def test_note_append_lands_on_the_imported_company(
             "Organization - Label: Customer",
             "Organization - Pipedrive System ID: 101",
         ]
+
+
+async def test_deal_custom_columns_land_in_the_deal_note(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Phase 2b: the deal side gained `note_append` along with `deals.note`.
+
+    The two unmapped Pipedrive custom columns are record *attributes*, so
+    they belong in the column — not in the activity log, which would dress
+    them up as things that happened at migration time.
+    """
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    stages = await _seed_pipeline(org)
+
+    mapping = {
+        **_DEAL_MAPPING_EN,
+        "Deal - Label": "note_append",
+        "Deal - Probability": "note_append",
+    }
+    data = _deals_form(
+        {"Qualified": stages["Nový lead"], "Negotiation": stages["Jednání"]},
+        mapping=mapping,
+    )
+    r = await client.post(
+        "/api/v1/admin/imports/commit",
+        headers=_auth(admin),
+        files=[("files", _fixture_upload("deals_en.csv"))],
+        data=data,
+    )
+    assert r.status_code == 200, r.text
+
+    async with AsyncSessionLocal() as s:
+        rows = (
+            (
+                await s.execute(
+                    select(Deal).where(Deal.organization_id == org.id).order_by(Deal.name)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        by_name = {d.name: d for d in rows}
+        assert by_name["New website"].note is not None
+        assert by_name["New website"].note.splitlines() == [
+            "Deal - Label: Hot",
+            "Deal - Probability: 70",
+        ]
+        # An empty custom cell contributes no line.
+        assert by_name["Support renewal"].note == "Deal - Probability: 10"
+
+        # And nothing became a timeline event: the column is the field, the
+        # `ActivityType.note` rows are the running commentary.
+        activities = (
+            (await s.execute(select(Activity).where(Activity.organization_id == org.id)))
+            .scalars()
+            .all()
+        )
+        assert activities == []

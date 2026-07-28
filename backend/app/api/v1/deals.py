@@ -30,10 +30,10 @@ from app.db.models.enums import StageType
 from app.schemas.activity import ActivityOut
 from app.schemas.deal import (
     DealCreate,
+    DealDetailOut,
     DealListItemOut,
     DealMarkLost,
     DealNoteCreate,
-    DealOut,
     DealPaymentUpdate,
     DealStageMove,
     DealUpdate,
@@ -353,7 +353,7 @@ async def export_deals_list_csv(
     return csv_response(rows, filename_stem="deals", truncated=truncated)
 
 
-@router.get("/{deal_id}", response_model=DealOut)
+@router.get("/{deal_id}", response_model=DealDetailOut)
 async def get_deal(
     deal_id: uuid.UUID,
     user: User = Depends(get_current_user),
@@ -362,7 +362,7 @@ async def get_deal(
     return await _get_scoped(session, user, deal_id)
 
 
-@router.post("", response_model=DealOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=DealDetailOut, status_code=status.HTTP_201_CREATED)
 async def create_deal(
     payload: DealCreate,
     user: User = Depends(get_current_user),
@@ -403,6 +403,7 @@ async def create_deal(
         currency=currency,
         probability_override=payload.probability_override,
         expected_close_date=payload.expected_close_date,
+        note=payload.note,
     )
     session.add(deal)
     await session.flush()  # populate deal.id for the activity row
@@ -428,7 +429,7 @@ async def create_deal(
     return deal
 
 
-@router.put("/{deal_id}", response_model=DealOut)
+@router.put("/{deal_id}", response_model=DealDetailOut)
 async def update_deal(
     deal_id: uuid.UUID,
     payload: DealUpdate,
@@ -492,7 +493,7 @@ async def update_deal(
     return deal
 
 
-@router.post("/{deal_id}/move-stage", response_model=DealOut)
+@router.post("/{deal_id}/move-stage", response_model=DealDetailOut)
 async def move_deal_stage(
     deal_id: uuid.UUID,
     payload: DealStageMove,
@@ -578,7 +579,7 @@ async def move_deal_stage(
     return deal
 
 
-@router.post("/{deal_id}/mark-won", response_model=DealOut)
+@router.post("/{deal_id}/mark-won", response_model=DealDetailOut)
 async def mark_deal_won(
     deal_id: uuid.UUID,
     user: User = Depends(get_current_user),
@@ -648,7 +649,7 @@ async def mark_deal_won(
     return deal
 
 
-@router.post("/{deal_id}/mark-lost", response_model=DealOut)
+@router.post("/{deal_id}/mark-lost", response_model=DealDetailOut)
 async def mark_deal_lost(
     deal_id: uuid.UUID,
     payload: DealMarkLost,
@@ -703,7 +704,7 @@ async def mark_deal_lost(
     return deal
 
 
-@router.post("/{deal_id}/payment", response_model=DealOut)
+@router.post("/{deal_id}/payment", response_model=DealDetailOut)
 async def update_deal_payment(
     deal_id: uuid.UUID,
     payload: DealPaymentUpdate,

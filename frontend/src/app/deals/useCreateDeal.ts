@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/api";
 import type { components } from "@/types/api.generated";
 
 export type DealCreate = components["schemas"]["DealCreate"];
-export type DealOut = components["schemas"]["DealOut"];
+export type DealOut = components["schemas"]["DealDetailOut"];
 
 export function useCreateDeal() {
   const { accessToken } = useAuth();

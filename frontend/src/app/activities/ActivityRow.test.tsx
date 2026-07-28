@@ -106,9 +106,23 @@ describe("ActivityRow", () => {
     fireEvent.click(screen.getByRole("button", { name: /Zobrazit vše \(5\)/ }));
 
     expect(screen.getByText("Měna:")).toBeInTheDocument();
-    expect(screen.getByText("Poznámka:")).toBeInTheDocument();
+    // On a deal, `note` is the standing description — labelling it "Poznámka"
+    // here would read as one of the timeline's note events.
+    expect(screen.getByText("Popis obchodu:")).toBeInTheDocument();
     expect(screen.getByText("Telefon:")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Skrýt/ })).toBeInTheDocument();
+  });
+
+  it("keeps the plain 'Poznámka' label for a company's note", () => {
+    renderRow(
+      makeActivity({
+        entity_type: "company",
+        activity_type: "company_updated",
+        payload: { changes: { note: { from: "staré", to: "nové" } } },
+      }),
+    );
+    expect(screen.getByText("Poznámka:")).toBeInTheDocument();
+    expect(screen.queryByText("Popis obchodu:")).not.toBeInTheDocument();
   });
 
   it("falls back to the legacy names list for old payloads (no raw enums)", () => {

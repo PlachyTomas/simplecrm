@@ -82,6 +82,14 @@ describe("activityLabels", () => {
     expect(changeFieldLabelKey("unknown_field")).toBeNull();
   });
 
+  it("labels a deal's note as the description, so it never reads as a timeline note", () => {
+    expect(changeFieldLabelKey("note")).toBe("activities.changeFields.note");
+    expect(changeFieldLabelKey("note", "company")).toBe("activities.changeFields.note");
+    expect(changeFieldLabelKey("note", "deal")).toBe("activities.changeFields.deal_note");
+    // The override is per-field, not a blanket per-entity swap.
+    expect(changeFieldLabelKey("name", "deal")).toBe("activities.changeFields.name");
+  });
+
   it("maps legacy list field names to a catalog key, falling back to null for unknown fields", () => {
     expect(fieldLabelKey("name")).toBe("activities.fields.name");
     expect(fieldLabelKey("unknown_field")).toBeNull();

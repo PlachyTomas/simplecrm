@@ -21,6 +21,7 @@ class DealCreate(BaseModel):
     currency: str | None = Field(default=None, min_length=3, max_length=3)
     probability_override: int | None = Field(default=None, ge=0, le=100)
     expected_close_date: date | None = None
+    note: str | None = Field(default=None, max_length=2000)
 
 
 class DealUpdate(BaseModel):
@@ -34,6 +35,7 @@ class DealUpdate(BaseModel):
     probability_override: int | None = Field(default=None, ge=0, le=100)
     expected_close_date: date | None = None
     lost_reason: str | None = Field(default=None, max_length=200)
+    note: str | None = Field(default=None, max_length=2000)
 
 
 class DealStageMove(BaseModel):
@@ -79,6 +81,18 @@ class DealOut(BaseModel):
     paid_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class DealDetailOut(DealOut):
+    """`DealOut` plus the fields only a single-deal view needs.
+
+    `note` lives here rather than on `DealOut` because `DealOut` is the base
+    of both `DealListItemOut` and `BoardDealOut`: put a 2000-char column on it
+    and every kanban card and every list row starts carrying a description
+    nothing renders. One deal by id → this; many deals → the leaner bases.
+    """
+
+    note: str | None = None
 
 
 class DealListItemOut(DealOut):

@@ -4982,6 +4982,76 @@ export interface components {
             probability_override?: number | null;
             /** Expected Close Date */
             expected_close_date?: string | null;
+            /** Note */
+            note?: string | null;
+        };
+        /**
+         * DealDetailOut
+         * @description `DealOut` plus the fields only a single-deal view needs.
+         *
+         *     `note` lives here rather than on `DealOut` because `DealOut` is the base
+         *     of both `DealListItemOut` and `BoardDealOut`: put a 2000-char column on it
+         *     and every kanban card and every list row starts carrying a description
+         *     nothing renders. One deal by id → this; many deals → the leaner bases.
+         */
+        DealDetailOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /**
+             * Stage Id
+             * Format: uuid
+             */
+            stage_id: string;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Primary Contact Id */
+            primary_contact_id?: string | null;
+            /** Name */
+            name: string;
+            /** Value */
+            value: string;
+            /** Currency */
+            currency: string;
+            /** Probability Override */
+            probability_override?: number | null;
+            /** Expected Close Date */
+            expected_close_date?: string | null;
+            /** Closed At */
+            closed_at?: string | null;
+            /** Lost Reason */
+            lost_reason?: string | null;
+            /**
+             * Is Paid
+             * @default false
+             */
+            is_paid: boolean;
+            /** Paid At */
+            paid_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Note */
+            note?: string | null;
         };
         /**
          * DealListItemOut
@@ -5075,64 +5145,6 @@ export interface components {
             /** Body */
             body: string;
         };
-        /** DealOut */
-        DealOut: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Organization Id
-             * Format: uuid
-             */
-            organization_id: string;
-            /**
-             * Company Id
-             * Format: uuid
-             */
-            company_id: string;
-            /**
-             * Stage Id
-             * Format: uuid
-             */
-            stage_id: string;
-            /** Owner User Id */
-            owner_user_id?: string | null;
-            /** Primary Contact Id */
-            primary_contact_id?: string | null;
-            /** Name */
-            name: string;
-            /** Value */
-            value: string;
-            /** Currency */
-            currency: string;
-            /** Probability Override */
-            probability_override?: number | null;
-            /** Expected Close Date */
-            expected_close_date?: string | null;
-            /** Closed At */
-            closed_at?: string | null;
-            /** Lost Reason */
-            lost_reason?: string | null;
-            /**
-             * Is Paid
-             * @default false
-             */
-            is_paid: boolean;
-            /** Paid At */
-            paid_at?: string | null;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-        };
         /** DealPaymentUpdate */
         DealPaymentUpdate: {
             /** Paid */
@@ -5168,6 +5180,8 @@ export interface components {
             expected_close_date?: string | null;
             /** Lost Reason */
             lost_reason?: string | null;
+            /** Note */
+            note?: string | null;
         };
         /**
          * DealsWonConfig
@@ -9561,7 +9575,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DealOut"];
+                    "application/json": components["schemas"]["DealDetailOut"];
                 };
             };
             /** @description Validation Error */
@@ -9632,7 +9646,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DealOut"];
+                    "application/json": components["schemas"]["DealDetailOut"];
                 };
             };
             /** @description Validation Error */
@@ -9667,7 +9681,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DealOut"];
+                    "application/json": components["schemas"]["DealDetailOut"];
                 };
             };
             /** @description Validation Error */
@@ -9731,7 +9745,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DealOut"];
+                    "application/json": components["schemas"]["DealDetailOut"];
                 };
             };
             /** @description Validation Error */
@@ -9762,7 +9776,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DealOut"];
+                    "application/json": components["schemas"]["DealDetailOut"];
                 };
             };
             /** @description Validation Error */
@@ -9797,7 +9811,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DealOut"];
+                    "application/json": components["schemas"]["DealDetailOut"];
                 };
             };
             /** @description Validation Error */
@@ -9832,7 +9846,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DealOut"];
+                    "application/json": components["schemas"]["DealDetailOut"];
                 };
             };
             /** @description Validation Error */

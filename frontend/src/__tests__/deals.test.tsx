@@ -138,6 +138,52 @@ describe("Deals list + detail", () => {
     expect(screen.getByText(/Otevřeno/)).toBeInTheDocument();
   });
 
+  it("edits the standing deal description and keeps it distinct from timeline notes", async () => {
+    const deal = makeDeal({ id: "note-deal", name: "Obchod s popisem", note: null });
+    const puts: unknown[] = [];
+    fetchMock.mockImplementation(async (input, init) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
+      if (url.endsWith(`/api/v1/deals/${deal.id}`)) {
+        if (init?.method === "PUT") {
+          const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+          puts.push(body);
+          return jsonResponse({ ...deal, ...body });
+        }
+        return jsonResponse(puts.length ? { ...deal, ...(puts.at(-1) as object) } : deal);
+      }
+      if (url.includes("/api/v1/deals?"))
+        return jsonResponse({ items: [deal], total: 1, limit: 50, offset: 0 });
+      if (url.includes("/api/v1/companies/")) return jsonResponse({ id: "co1", name: "Firma" });
+      if (url.includes("/api/v1/contacts")) return jsonResponse({ items: [], total: 0 });
+      if (url.includes("/api/v1/users") || url.includes("/api/v1/teams"))
+        return jsonResponse({ items: [], total: 0 });
+      if (url.includes("/api/v1/pipelines")) return jsonResponse({ stages: [] });
+      if (url.includes("/api/v1/events")) return jsonResponse({ items: [], total: 0 });
+      if (url.includes("/api/v1/emails")) return jsonResponse({ items: [], total: 0 });
+      if (url.includes("/api/v1/me/smtp")) return jsonResponse({ configured: false });
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    renderAt(`/app/deals/${deal.id}`);
+    const user = userEvent.setup();
+
+    // Empty state names the field as a description, and the subtitle sends
+    // running commentary to the activity log instead.
+    expect(await screen.findByText(/Popis obchodu/)).toBeInTheDocument();
+    expect(screen.getByText(/K tomuto obchodu zatím není žádný popis/)).toBeInTheDocument();
+    expect(screen.getByText(/Průběžné poznámky z hovorů/)).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("deals-detail-note-edit"));
+    await user.type(screen.getByTestId("deals-detail-note-input"), "Region: Morava");
+    await user.click(screen.getByTestId("deals-detail-note-save"));
+
+    await waitFor(() => expect(puts).toEqual([{ note: "Region: Morava" }]));
+    // It saves through the deal itself, not POST /deals/{id}/notes.
+    expect(urlsMatching(fetchMock, "/notes")).toEqual([]);
+    expect(await screen.findByText("Region: Morava")).toBeInTheDocument();
+  });
+
   it("gates the deal e-mail button behind SMTP with a link to Nastavení → Integrace", async () => {
     const deal = makeDeal({
       id: "gate-deal",

@@ -145,6 +145,7 @@
       "phone": "Phone",
       "website": "Website",
       "note": "Note",
+      "deal_note": "Deal description",
       "industry": "Industry",
       "legal_form": "Legal form",
       "address_street": "Street",

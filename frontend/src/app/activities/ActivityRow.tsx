@@ -66,7 +66,13 @@ function DetailLine({ children }: { children: ReactNode }) {
  * Per-field edit list ("Name: old → new"). More than three changed fields
  * collapse to the first two behind a "Show all (N)" toggle.
  */
-function ChangesDetail({ entries }: { entries: [string, unknown][] }): JSX.Element {
+function ChangesDetail({
+  entries,
+  entityType,
+}: {
+  entries: [string, unknown][];
+  entityType: string | null | undefined;
+}): JSX.Element {
   const { t } = useTranslation("common");
   const [expanded, setExpanded] = useState(false);
   const collapsible = entries.length > 3;
@@ -75,7 +81,7 @@ function ChangesDetail({ entries }: { entries: [string, unknown][] }): JSX.Eleme
     <div className="mt-0.5 space-y-0.5">
       {visible.map(([field, delta]) => {
         const d = (delta ?? {}) as Record<string, unknown>;
-        const key = changeFieldLabelKey(field);
+        const key = changeFieldLabelKey(field, entityType);
         return (
           <p key={field} className="text-sm text-text-secondary">
             <span className="text-text-tertiary">{key ? t(key) : field}:</span> {sideValue(d.from)}{" "}
@@ -123,7 +129,8 @@ function ActivityDetail({
     const { changes } = payload;
     if (changes && typeof changes === "object" && !Array.isArray(changes)) {
       const entries = Object.entries(changes as Record<string, unknown>);
-      if (entries.length > 0) return <ChangesDetail entries={entries} />;
+      if (entries.length > 0)
+        return <ChangesDetail entries={entries} entityType={activity.entity_type} />;
     }
     const legacy = activityDetail(activity);
     return legacy ? <DetailLine>{renderDetail(legacy, t)}</DetailLine> : null;

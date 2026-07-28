@@ -6,7 +6,9 @@ import { apiFetch } from "@/lib/api";
 import { useCsvExport } from "@/lib/csvExport";
 import type { components } from "@/types/api.generated";
 
-export type DealOut = components["schemas"]["DealOut"];
+/** One deal by id. Carries `note` (the standing description); the list
+ * and board schemas deliberately do not — see `DealDetailOut` on the API. */
+export type DealOut = components["schemas"]["DealDetailOut"];
 export type DealListItem = components["schemas"]["DealListItemOut"];
 export type DealUpdate = components["schemas"]["DealUpdate"];
 export type DealsPage = components["schemas"]["Page_DealListItemOut_"];

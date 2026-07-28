@@ -5,7 +5,7 @@ import { useAuth } from "@/auth/useAuth";
 import { apiFetch } from "@/lib/api";
 import type { components } from "@/types/api.generated";
 
-type DealOut = components["schemas"]["DealOut"];
+type DealOut = components["schemas"]["DealDetailOut"];
 
 export function useMarkDealWon(dealId: string | undefined) {
   const { accessToken } = useAuth();

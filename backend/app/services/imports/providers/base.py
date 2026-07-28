@@ -29,9 +29,9 @@ ROLE_SIDES: dict[FileRole, tuple[Side, ...]] = {
 }
 
 # Sides whose table has a `note` column, i.e. where an unrecognised column
-# can be parked instead of dropped. `deals` has none — see the comment on
-# VIRTUAL_DEAL_FIELDS in mapping.py.
-_NOTE_CAPABLE_SIDES: frozenset[str] = frozenset({"company", "contact"})
+# can be parked instead of dropped. All three, since `deals.note` landed —
+# no side drops a provider's custom fields on the floor any more.
+_NOTE_CAPABLE_SIDES: frozenset[str] = frozenset({"company", "contact", "deal"})
 
 
 @dataclass(frozen=True)
@@ -71,8 +71,8 @@ class ProviderProfile:
         comes first in the file.
 
         Headers that match nothing (or a target already claimed) fall to
-        ``note_append`` where the side has a note column, ``ignore``
-        otherwise — the spec's default for provider custom fields.
+        ``note_append`` where the side has a note column (all three today),
+        ``ignore`` otherwise — the spec's default for provider custom fields.
 
         Matching is exact-on-the-normalized-form, never fuzzy. A near-miss
         threshold loose enough to catch "Organisation" also maps

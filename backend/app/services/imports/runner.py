@@ -1078,6 +1078,7 @@ async def _run_pipeline(
             value=deal_cand.value if deal_cand.value is not None else Decimal("0"),
             currency=plan.currency,
             expected_close_date=deal_cand.expected_close_date,
+            note=deal_cand.note,
             closed_at=plan.state.closed_at,
             lost_reason=plan.state.lost_reason,
             import_run_id=import_run.id,

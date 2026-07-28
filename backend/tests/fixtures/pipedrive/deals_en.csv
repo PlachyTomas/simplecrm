@@ -1,4 +1,4 @@
-Deal - Title*,Deal - Value,Deal - Currency of value,Deal - Status,Deal - Stage (pipeline),Deal - Expected close date,Deal - Won time,Deal - Lost time,Deal - Closed on,Deal - Lost reason,Organization,Contact person,Deal - Owner,Deal - Pipedrive System ID
-New website,120000,CZK,Open,Qualified,2026-09-30,,,,,Acme Ltd,anna@acme.cz,,301
-Rollout phase 2,50000,CZK,Won,Negotiation,2026-06-01,2026-06-15 10:00,,,,Acme Ltd,,,302
-Support renewal,9000,CZK,Lost,Qualified,2026-05-01,,2026-05-20,,Too expensive,Gamma GmbH,,,303
+Deal - Title*,Deal - Value,Deal - Currency of value,Deal - Status,Deal - Stage (pipeline),Deal - Expected close date,Deal - Won time,Deal - Lost time,Deal - Closed on,Deal - Lost reason,Organization,Contact person,Deal - Owner,Deal - Pipedrive System ID,Deal - Label,Deal - Probability
+New website,120000,CZK,Open,Qualified,2026-09-30,,,,,Acme Ltd,anna@acme.cz,,301,Hot,70
+Rollout phase 2,50000,CZK,Won,Negotiation,2026-06-01,2026-06-15 10:00,,,,Acme Ltd,,,302,Upsell,90
+Support renewal,9000,CZK,Lost,Qualified,2026-05-01,,2026-05-20,,Too expensive,Gamma GmbH,,,303,,10

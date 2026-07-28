@@ -18,6 +18,7 @@ import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings"
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { useLocale } from "@/lib/i18n/useLocale";
+import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -492,6 +493,8 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
           </>
         ) : null}
 
+        <DealNoteSection dealId={deal.id} note={deal.note ?? null} />
+
         <DealEventsSection dealId={deal.id} dealName={deal.name} locale={locale} />
 
         <EmailHistorySection
@@ -535,6 +538,103 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
         }}
       />
     </div>
+  );
+}
+
+/**
+ * The deal's **standing description** — `deals.note`, a record attribute that
+ * overwrites in place ("Region: Morava", scope, terms). Deliberately not the
+ * timeline: a running commentary ("volal jsem, chtějí nabídku do pátku") is a
+ * timestamped, attributed event and is written through the pipeline card's
+ * quick actions as an `ActivityType.note` row. The subtitle says which is
+ * which, so the two never read as the same box.
+ *
+ * Edit/save interaction mirrors the company `NotesTab` (own toggle, textarea
+ * capped at the column's 2000 chars, cancel restores the server value) rather
+ * than joining the header's all-fields edit mode — a description is edited on
+ * its own, and the company page already established that shape.
+ */
+function DealNoteSection({ dealId, note }: { dealId: string; note: string | null }) {
+  const { t } = useTranslation("deals");
+  const update = useUpdateDeal(dealId);
+  const toast = useToast();
+  const [draft, setDraft] = useState(note ?? "");
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    setDraft(note ?? "");
+  }, [note]);
+
+  async function handleSave() {
+    try {
+      await update.mutateAsync({ note: draft.trim() ? draft : null });
+      toast.success(t("noteSection.saveSuccess"));
+      setEditing(false);
+    } catch {
+      toast.error(t("noteSection.saveError"));
+    }
+  }
+
+  return (
+    <section className="mt-6 rounded-lg border border-border bg-surface">
+      <header className="flex items-start justify-between gap-4 border-b border-border-subtle px-6 py-4">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-base font-semibold">{t("noteSection.title")}</h2>
+          <p className="mt-0.5 text-sm text-text-tertiary">{t("noteSection.subtitle")}</p>
+        </div>
+        {!editing ? (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            data-testid={testIds.deals.detail.noteEdit}
+            className="shrink-0 text-sm font-medium text-accent hover:text-accent-hover"
+          >
+            {note ? t("noteSection.editButton") : t("noteSection.addButton")}
+          </button>
+        ) : null}
+      </header>
+      <div className="px-6 py-4">
+        {editing ? (
+          <div className="space-y-3">
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              rows={6}
+              maxLength={2000}
+              placeholder={t("noteSection.placeholder")}
+              data-testid={testIds.deals.detail.noteInput}
+              className="block w-full resize-y rounded-md border border-border bg-surface-overlay p-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
+            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={update.isPending}
+                data-testid={testIds.deals.detail.noteSave}
+                className="inline-flex h-9 items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent disabled:opacity-60"
+              >
+                {update.isPending ? t("noteSection.saving") : t("noteSection.save")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDraft(note ?? "");
+                  setEditing(false);
+                }}
+                data-testid={testIds.deals.detail.noteCancel}
+                className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary"
+              >
+                {t("noteSection.cancel")}
+              </button>
+            </div>
+          </div>
+        ) : note ? (
+          <p className="whitespace-pre-wrap text-sm text-text-primary">{note}</p>
+        ) : (
+          <p className="text-sm text-text-secondary">{t("noteSection.empty")}</p>
+        )}
+      </div>
+    </section>
   );
 }
 

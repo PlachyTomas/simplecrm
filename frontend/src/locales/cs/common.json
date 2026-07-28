@@ -147,6 +147,7 @@
       "phone": "Telefon",
       "website": "Web",
       "note": "Poznámka",
+      "deal_note": "Popis obchodu",
       "industry": "Obor",
       "legal_form": "Právní forma",
       "address_street": "Ulice",

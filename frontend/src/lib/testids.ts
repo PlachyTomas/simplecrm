@@ -98,6 +98,13 @@ export const testIds = {
     statusFilter: "deals-status-filter",
     clearFilters: "deals-clear-filters",
     sortHeader: (key: string) => `deals-sort-${key}`,
+    detail: {
+      // The standing description (`deals.note`), not the activity timeline.
+      noteEdit: "deals-detail-note-edit",
+      noteInput: "deals-detail-note-input",
+      noteSave: "deals-detail-note-save",
+      noteCancel: "deals-detail-note-cancel",
+    },
     addModal: {
       nameInput: "deals-add-modal-name",
       companyInput: "deals-add-modal-company-search",

@@ -86,6 +86,15 @@ class Deal(Base):
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     lost_reason: Mapped[str | None] = mapped_column(String(200))
 
+    # A *static* record attribute — the deal's standing description ("Region:
+    # Morava", scope, terms), same as `Company.note` / `Contact.note`. NOT the
+    # running commentary: a timestamped, attributed "volal jsem, chtějí nabídku
+    # do pátku" is an event and lives in `ActivityType.note` activity rows
+    # (POST /deals/{id}/notes). Also the parking spot an import uses for a
+    # provider's custom columns (`note_append`), which are attributes, not
+    # things that happened at migration time.
+    note: Mapped[str | None] = mapped_column(String(2000))
+
     # `is_paid` only carries meaning while the deal sits in a won stage —
     # the UI surfaces the checkbox there only. The board endpoint reads it
     # to sink paid deals to the bottom of the won column. `paid_at` is

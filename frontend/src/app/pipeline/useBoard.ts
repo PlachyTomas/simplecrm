@@ -10,7 +10,7 @@ export type BoardStage = components["schemas"]["BoardStage"];
 export type BoardDeal = components["schemas"]["BoardDealOut"];
 /** move-stage returns the bare deal — the board cache keeps the enriched
  * card object from the optimistic move, so the response is fire-and-check. */
-type MovedDeal = components["schemas"]["DealOut"];
+type MovedDeal = components["schemas"]["DealDetailOut"];
 
 export const BOARD_QUERY_KEY = ["pipeline", "default", "board"] as const;
 

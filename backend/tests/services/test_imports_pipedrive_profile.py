@@ -131,8 +131,9 @@ def test_suggest_mapping_deal_side_covers_status_and_link_columns() -> None:
             "contact",
             "owner",
         }.issubset(targets)
-        # No note column on `deals`, so leftovers must not claim note_append.
-        assert "note_append" not in targets
+        # `deals.note` exists since phase 2b, so leftover custom columns park
+        # on the note here exactly as they do on companies and contacts.
+        assert "note_append" in targets
 
 
 def test_suggest_mapping_prefers_the_specific_address_subfield() -> None:
@@ -161,7 +162,9 @@ def test_generic_provider_recognises_nothing() -> None:
     assert generic is not None
     headers, _rows = _fixture("deals_en.csv")
     assert generic.detect_role(headers) is None
-    assert set(generic.suggest_mapping(headers, side="deal").values()) == {"ignore"}
+    # Nothing is recognised, so every column falls to the note — the same
+    # fallback the company and contact sides already had.
+    assert set(generic.suggest_mapping(headers, side="deal").values()) == {"note_append"}
 
 
 def test_stage_header_lookup_finds_the_source_stage_column() -> None:
@@ -268,13 +271,44 @@ def test_duplicate_targets_other_than_note_append_still_collide() -> None:
         validate_mapping({"A": "name", "B": "name"}, side="company", headers=["A", "B"])
 
 
-def test_note_append_is_not_offered_on_the_deal_side() -> None:
-    with pytest.raises(MappingError):
-        validate_mapping(
-            {"Deal - Title": "name", "Deal - Probability": "note_append"},
-            side="deal",
-            headers=["Deal - Title", "Deal - Probability"],
-        )
+def test_note_append_is_offered_on_the_deal_side_too() -> None:
+    """Phase 1 raised here because `deals` had no note column; 2b added one."""
+    cleaned = validate_mapping(
+        {"Deal - Title": "name", "Deal - Probability": "note_append"},
+        side="deal",
+        headers=["Deal - Title", "Deal - Probability"],
+    )
+    assert cleaned["Deal - Probability"] == "note_append"
+
+
+def test_deal_custom_columns_concatenate_into_the_deal_note() -> None:
+    headers, rows = _fixture("deals_en.csv")
+    mapping = PIPEDRIVE.suggest_mapping(headers, side="deal")
+    cleaned = validate_mapping(mapping, side="deal", headers=headers)
+    candidates = apply_deal_mapping(rows, cleaned)
+
+    note = candidates[0].note
+    assert note is not None
+    # Two unmapped custom columns, one `Label: value` line each, mapping order.
+    assert note.splitlines() == [
+        "Deal - Label: Hot",
+        "Deal - Probability: 70",
+    ]
+    # An empty custom cell contributes no line at all.
+    assert candidates[2].note == "Deal - Probability: 10"
+
+
+def test_deal_note_column_and_note_append_merge() -> None:
+    cleaned = validate_mapping(
+        {"Název": "name", "Popis": "note", "Region": "note_append"},
+        side="deal",
+        headers=["Název", "Popis", "Region"],
+    )
+    candidates = apply_deal_mapping(
+        [{"Název": "Nový web", "Popis": "Rámcová smlouva", "Region": "Morava"}],
+        cleaned,
+    )
+    assert candidates[0].note == "Rámcová smlouva\nRegion: Morava"
 
 
 def test_multi_value_email_keeps_first_and_parks_the_rest_in_the_note() -> None:

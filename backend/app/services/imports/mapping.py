@@ -91,8 +91,8 @@ CONTACT_FIELDS: list[dict[str, str | bool]] = [
 VIRTUAL_CONTACT_FIELDS: set[str] = {"full_name", NOTE_APPEND}
 
 # Deal-side fields. `name` is the only SQL-required one; `value`,
-# `currency` and `expected_close_date` land on the row via setattr, and
-# everything in VIRTUAL_DEAL_FIELDS is resolved by the runner (stage +
+# `currency`, `expected_close_date` and `note` land on the row via setattr,
+# and the rest of VIRTUAL_DEAL_FIELDS is resolved by the runner (stage +
 # status → stage_id/closed_at/lost_reason, company/contact → FKs, owner →
 # User.id).
 DEAL_FIELDS: list[dict[str, str | bool]] = [
@@ -110,12 +110,14 @@ DEAL_FIELDS: list[dict[str, str | bool]] = [
     {"key": "contact", "label": "Kontakt (jméno nebo e-mail)", "required": False},
     {"key": "owner", "label": "Obchodník (e-mail nebo jméno)", "required": False},
     {"key": "external_id", "label": "ID ve zdrojovém CRM", "required": False},
+    {"key": "note", "label": "Poznámka", "required": False},
+    _NOTE_APPEND_FIELD,
 ]
 
-# Note: no `note_append` on the deal side — `deals` has no note column, so
-# offering the target would promise a write we cannot make. Deal custom
-# fields are dropped in v1 (spec: "Out (v1, deliberate)").
+# `note_append` is virtual on every side: the cells are folded into `note`
+# by `_merge_note`, never setattr'd under their own name.
 VIRTUAL_DEAL_FIELDS: set[str] = {
+    NOTE_APPEND,
     "stage",
     "status",
     "lost_reason",
@@ -156,6 +158,7 @@ _CONTACT_LENGTHS = {
 _DEAL_LENGTHS = {
     "name": 200,
     "currency": 3,
+    "note": 2000,
 }
 # Auxiliary deal cells we truncate rather than reject — losing the tail of a
 # lost reason is strictly better than losing the deal.
@@ -244,6 +247,9 @@ class CandidateDeal:
     value: Decimal | None = None
     currency: str | None = None
     expected_close_date: date | None = None
+    # The static description column, plus whatever `note_append` folded into
+    # it. Never an activity row — see the comment on `Deal.note`.
+    note: str | None = None
     # Unresolved cells (see VIRTUAL_DEAL_FIELDS).
     stage_raw: str | None = None
     status_raw: str | None = None
@@ -263,6 +269,7 @@ class CandidateDeal:
             "name": self.name,
             "value": self.value if self.value is not None else Decimal("0"),
             "expected_close_date": self.expected_close_date,
+            "note": self.note,
         }
 
 
@@ -597,13 +604,21 @@ def apply_deal_mapping(
     for row in rows:
         row_index = rows.index(row) + 2
         errors: list[RowError] = []
+        note_lines: list[str] = []
         cand = CandidateDeal(row_index=row_index, name=None)
 
         for header, target in cleaned_mapping.items():
             cell = row.get(header, "").strip()
             if cell == "":
                 continue
-            if target == "name":
+            if target == NOTE_APPEND:
+                note_lines.append(f"{note_label(header)}: {cell}")
+            elif target == "note":
+                err = _validate_value("deal", target, cell, row_index)
+                if err is not None:
+                    errors.append(err)
+                cand.note = cell
+            elif target == "name":
                 err = _validate_value("deal", target, cell, row_index)
                 if err is not None:
                     errors.append(err)
@@ -680,6 +695,9 @@ def apply_deal_mapping(
                         )
                     )
                 cand.owner_raw = cell
+
+        if note_lines:
+            cand.note = _merge_note(cand.note, note_lines)
 
         if not cand.name:
             errors.append(

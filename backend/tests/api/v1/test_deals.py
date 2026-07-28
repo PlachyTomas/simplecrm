@@ -366,6 +366,98 @@ async def test_update_deal_happy(
     assert response.json()["value"] == "1000.00"
 
 
+async def test_update_deal_round_trips_the_static_note(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """`deals.note` is the record attribute, editable through the normal PUT.
+
+    Distinct from the `ActivityType.note` rows POST /deals/{id}/notes writes:
+    those are timestamped events, this is a field that overwrites in place.
+    """
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=admin.id,
+        name="Rámcová smlouva",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    # The detail schema exposes it; the list/board schemas deliberately do not.
+    fresh = await client.get(f"/api/v1/deals/{deal.id}", headers=_auth(admin))
+    assert fresh.status_code == 200
+    assert fresh.json()["note"] is None
+
+    saved = await client.put(
+        f"/api/v1/deals/{deal.id}",
+        headers=_auth(admin),
+        json={"note": "Region: Morava\nFakturace čtvrtletně."},
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["note"] == "Region: Morava\nFakturace čtvrtletně."
+
+    reread = await client.get(f"/api/v1/deals/{deal.id}", headers=_auth(admin))
+    assert reread.json()["note"] == "Region: Morava\nFakturace čtvrtletně."
+
+    # A partial PUT that omits `note` must not wipe it (exclude_unset).
+    renamed = await client.put(
+        f"/api/v1/deals/{deal.id}", headers=_auth(admin), json={"name": "Nový název"}
+    )
+    assert renamed.json()["note"] == "Region: Morava\nFakturace čtvrtletně."
+
+    cleared = await client.put(
+        f"/api/v1/deals/{deal.id}", headers=_auth(admin), json={"note": None}
+    )
+    assert cleared.json()["note"] is None
+
+    # Editing the field never fabricates a note *event* on the timeline.
+    from sqlalchemy import select as sql_select
+
+    from app.db.models import Activity, ActivityType
+
+    async with AsyncSessionLocal() as s:
+        note_activities = (
+            (
+                await s.execute(
+                    sql_select(Activity).where(
+                        Activity.entity_id == deal.id,
+                        Activity.activity_type == ActivityType.note,
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert note_activities == []
+
+
+async def test_create_deal_accepts_the_static_note(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+
+    response = await client.post(
+        "/api/v1/deals",
+        headers=_auth(admin),
+        json={
+            "name": "Nový web",
+            "company_id": str(company.id),
+            "stage_id": str(stage.id),
+            "note": "Region: Morava",
+        },
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["note"] == "Region: Morava"
+
+
 async def test_update_deal_rejects_cross_org_stage(
     client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
 ) -> None:
