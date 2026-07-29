@@ -47,9 +47,13 @@ interface HomeKpiWidgetProps {
 
 /**
  * A single home KPI tile, framed with the shared `WidgetFrame` so it matches
- * the Reports widgets. The value + hint sit in the body next to the metric's
- * icon box; the revenue tile keeps the magenta `highlight` accent, the rest
- * are indigo. React Query dedupes the four tiles into one summary request.
+ * the Reports widgets. The metric's icon box rides in the frame header beside
+ * the label — the same arrangement `KpiCard` uses, and the reason the body is
+ * free of it: a formatted money value is a single unbreakable token (Czech
+ * `Intl` joins the groups with non-breaking spaces), so sitting the icon next
+ * to it meant a wide number ran underneath the glyph instead of wrapping. The
+ * revenue tile keeps the magenta `highlight` accent, the rest are indigo.
+ * React Query dedupes the four tiles into one summary request.
  */
 export function HomeKpiWidget({ type, isEditMode, onRemove }: HomeKpiWidgetProps) {
   const { t } = useTranslation("dashboard");
@@ -69,24 +73,33 @@ export function HomeKpiWidget({ type, isEditMode, onRemove }: HomeKpiWidgetProps
   const hint = failed ? t("widgetUnavailable.short") : t(`dashboardPage.${meta.hintKey}`);
 
   return (
-    <WidgetFrame label={t(`widgetLabels.${type}`)} isEditMode={isEditMode} onRemove={onRemove}>
-      {isPending ? (
-        <WidgetSkeleton />
-      ) : (
-        <div className="flex h-full items-start justify-between gap-3">
-          <div className="flex h-full min-w-0 flex-1 flex-col justify-between gap-2">
-            <p className="text-3xl font-semibold tabular-nums text-text-primary">{value}</p>
-            <p className="text-xs text-text-tertiary">{hint}</p>
-          </div>
+    <WidgetFrame
+      label={t(`widgetLabels.${type}`)}
+      isEditMode={isEditMode}
+      onRemove={onRemove}
+      // Edit mode already spends the header on a drag handle and a remove
+      // button; keeping the decorative glyph too truncated the label just
+      // when the user needs to tell the tiles apart.
+      controls={
+        isEditMode ? undefined : (
           <span
             aria-hidden
             className={cn(
-              "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
+              "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md",
               iconBox,
             )}
           >
             <Icon size={16} strokeWidth={1.75} />
           </span>
+        )
+      }
+    >
+      {isPending ? (
+        <WidgetSkeleton />
+      ) : (
+        <div className="flex h-full flex-col justify-between gap-2">
+          <p className="text-3xl font-semibold tabular-nums text-text-primary">{value}</p>
+          <p className="text-xs text-text-tertiary">{hint}</p>
         </div>
       )}
     </WidgetFrame>
