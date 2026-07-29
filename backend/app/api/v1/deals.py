@@ -29,6 +29,7 @@ from app.db.models import (
 from app.db.models.enums import StageType
 from app.schemas.activity import ActivityOut
 from app.schemas.deal import (
+    DealCallCreate,
     DealCreate,
     DealDetailOut,
     DealListItemOut,
@@ -781,6 +782,48 @@ async def create_deal_note(
         user_id=user.id,
         activity_type=ActivityType.note,
         payload={"deal_name": deal.name, "note": payload.body},
+    )
+    await session.commit()
+    await session.refresh(activity)
+    out = ActivityOut.model_validate(activity)
+    out.user_name = user.name
+    return out
+
+
+@router.post(
+    "/{deal_id}/calls",
+    response_model=ActivityOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_deal_call(
+    deal_id: uuid.UUID,
+    payload: DealCallCreate,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ActivityOut:
+    """Log a call that already happened on a deal.
+
+    Same shape as `create_deal_note` — an activity row, not a table of its
+    own — but a distinct `ActivityType` so the timeline can say "called"
+    rather than burying it among written notes. The summary is optional.
+    """
+    deal = await _get_scoped(session, user, deal_id)
+    if not await can_write_row(session, user, deal.owner_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot log calls on deals outside your visibility scope",
+        )
+
+    note = (payload.body or "").strip()
+    activity = record_activity(
+        session,
+        organization_id=deal.organization_id,
+        entity_type=ActivityEntityType.deal,
+        entity_id=deal.id,
+        company_id=deal.company_id,
+        user_id=user.id,
+        activity_type=ActivityType.call_logged,
+        payload={"deal_name": deal.name, **({"note": note} if note else {})},
     )
     await session.commit()
     await session.refresh(activity)

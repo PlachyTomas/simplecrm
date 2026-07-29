@@ -287,14 +287,15 @@
     "connectCalendarLink": "connect your calendar in Settings first",
     "reconnectGoogle": "Google Calendar disconnected — Reconnect",
     "errorRequired": "Fill in the name, date, and times.",
-    "errorDealRequired": "Pick the deal this event belongs to.",
     "errorEndBeforeStart": "The end must be after the start.",
     "dealPicker": {
       "label": "Deal",
       "placeholder": "Search by deal or company name…",
       "loading": "Loading deals…",
       "noMatch": "No deal matches your search.",
-      "loadError": "Failed to load deals."
+      "loadError": "Failed to load deals.",
+      "labelOptional": "Deal (optional)",
+      "hint": "With no deal this is a standalone event — you can attach a deal later."
     },
     "cancel": "Cancel",
     "saving": "Saving…",
@@ -332,6 +333,17 @@
       "saving": "Saving…",
       "toastSaved": "Note saved.",
       "toastError": "Failed to save the note."
+    },
+    "call": {
+      "label": "Log a call",
+      "description": "Record a call that already happened.",
+      "fieldLabel": "Call summary",
+      "placeholder": "What did you talk about? What did you agree on?",
+      "hint": "The summary is optional — you can log the call without it.",
+      "submit": "Log call",
+      "saving": "Saving…",
+      "toastSaved": "Call logged.",
+      "toastError": "The call could not be logged."
     }
   },
   "cardPreview": {

@@ -26,6 +26,7 @@ export const ACTIVITY_LABEL_KEY: Record<ActivityType, CommonKey> = {
   deal_updated: "activities.types.deal_updated",
   company_updated: "activities.types.company_updated",
   event_created: "activities.types.event_created",
+  call_logged: "activities.types.call_logged",
 };
 
 // Deal + company field names -> catalog key, for the inline "changed
@@ -129,6 +130,11 @@ export function activityDetail(
   switch (a.activity_type) {
     case "note": {
       // Free-text note written from the pipeline card / deal detail.
+      const note = str(p.note);
+      return note ? { kind: "text", value: note } : null;
+    }
+    case "call_logged": {
+      // Optional summary — a call logged without one carries no detail line.
       const note = str(p.note);
       return note ? { kind: "text", value: note } : null;
     }

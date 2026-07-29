@@ -1,8 +1,8 @@
-import { CalendarPlus, Mail, StickyNote, X, type LucideIcon } from "lucide-react";
+import { CalendarPlus, Mail, PhoneCall, StickyNote, X, type LucideIcon } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useCreateDealNote } from "@/app/activities/useActivities";
+import { useCreateDealCall, useCreateDealNote } from "@/app/activities/useActivities";
 import { EmailComposeModal } from "@/app/emails/EmailComposeModal";
 import { EventFormModal } from "@/app/events/EventFormModal";
 import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings";
@@ -32,7 +32,7 @@ interface DealQuickActionsModalProps {
  * focus traps would fight over Tab and Escape. Closing the spawned modal
  * closes the flow, putting the user back on the board.
  */
-type View = "menu" | "note" | "email" | "event";
+type View = "menu" | "note" | "call" | "email" | "event";
 
 function ActionRow({
   icon: Icon,
@@ -100,10 +100,11 @@ export function DealQuickActionsModal({ deal, open, onClose }: DealQuickActionsM
   const { data: smtp } = useSmtpSettings();
   const smtpReady = isSmtpVerified(smtp);
   const createNote = useCreateDealNote(deal?.id);
+  const createCall = useCreateDealCall(deal?.id);
   const toast = useToast();
-  // Only trap focus while the menu/note surface itself is on screen — the
+  // Only trap focus while a surface rendered here is on screen — the
   // spawned email/event modals bring their own trap.
-  const menuActive = open && (view === "menu" || view === "note");
+  const menuActive = open && view !== "email" && view !== "event";
   const dialogRef = useModalDialog<HTMLDivElement>(onClose, menuActive);
 
   useEffect(() => {
@@ -137,6 +138,22 @@ export function DealQuickActionsModal({ deal, open, onClose }: DealQuickActionsM
       onError: () => toast.error(t("quickActions.note.toastError")),
     });
   };
+
+  // The summary is optional here — logging that the call happened is the
+  // point, and the note is a bonus.
+  const handleSaveCall = (event: FormEvent) => {
+    event.preventDefault();
+    if (createCall.isPending) return;
+    createCall.mutate(note, {
+      onSuccess: () => {
+        toast.success(t("quickActions.call.toastSaved"));
+        onClose();
+      },
+      onError: () => toast.error(t("quickActions.call.toastError")),
+    });
+  };
+
+  const isCall = view === "call";
 
   return (
     <div
@@ -191,6 +208,13 @@ export function DealQuickActionsModal({ deal, open, onClose }: DealQuickActionsM
               testId={testIds.pipeline.quickActions.event}
             />
             <ActionRow
+              icon={PhoneCall}
+              label={t("quickActions.call.label")}
+              description={t("quickActions.call.description")}
+              onClick={() => setView("call")}
+              testId={testIds.pipeline.quickActions.call}
+            />
+            <ActionRow
               icon={StickyNote}
               label={t("quickActions.note.label")}
               description={t("quickActions.note.description")}
@@ -199,10 +223,12 @@ export function DealQuickActionsModal({ deal, open, onClose }: DealQuickActionsM
             />
           </ul>
         ) : (
-          <form onSubmit={handleSaveNote} className="mt-5">
+          // One form for both: a call and a note differ only in whether the
+          // text is required and which activity type it lands as.
+          <form onSubmit={isCall ? handleSaveCall : handleSaveNote} className="mt-5">
             <label className="block">
               <span className="text-xs font-medium text-text-secondary">
-                {t("quickActions.note.fieldLabel")}
+                {isCall ? t("quickActions.call.fieldLabel") : t("quickActions.note.fieldLabel")}
               </span>
               <textarea
                 autoFocus
@@ -210,17 +236,26 @@ export function DealQuickActionsModal({ deal, open, onClose }: DealQuickActionsM
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 maxLength={2000}
-                placeholder={t("quickActions.note.placeholder")}
-                data-testid={testIds.pipeline.quickActions.noteInput}
+                placeholder={
+                  isCall ? t("quickActions.call.placeholder") : t("quickActions.note.placeholder")
+                }
+                data-testid={
+                  isCall
+                    ? testIds.pipeline.quickActions.callInput
+                    : testIds.pipeline.quickActions.noteInput
+                }
                 className="mt-2 block w-full resize-y rounded-md border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
               />
             </label>
-            {createNote.isError ? (
+            {isCall ? (
+              <p className="mt-2 text-xs text-text-tertiary">{t("quickActions.call.hint")}</p>
+            ) : null}
+            {(isCall ? createCall : createNote).isError ? (
               <p
                 className="mt-3 rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger"
                 role="alert"
               >
-                {t("quickActions.note.toastError")}
+                {isCall ? t("quickActions.call.toastError") : t("quickActions.note.toastError")}
               </p>
             ) : null}
             <div className="mt-5 flex items-center justify-end gap-3">
@@ -234,13 +269,23 @@ export function DealQuickActionsModal({ deal, open, onClose }: DealQuickActionsM
               </button>
               <button
                 type="submit"
-                disabled={createNote.isPending || note.trim() === ""}
-                data-testid={testIds.pipeline.quickActions.noteSave}
+                disabled={
+                  isCall ? createCall.isPending : createNote.isPending || note.trim() === ""
+                }
+                data-testid={
+                  isCall
+                    ? testIds.pipeline.quickActions.callSave
+                    : testIds.pipeline.quickActions.noteSave
+                }
                 className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {createNote.isPending
-                  ? t("quickActions.note.saving")
-                  : t("quickActions.note.submit")}
+                {isCall
+                  ? createCall.isPending
+                    ? t("quickActions.call.saving")
+                    : t("quickActions.call.submit")
+                  : createNote.isPending
+                    ? t("quickActions.note.saving")
+                    : t("quickActions.note.submit")}
               </button>
             </div>
           </form>

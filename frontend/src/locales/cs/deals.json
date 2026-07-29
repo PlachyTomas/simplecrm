@@ -291,14 +291,15 @@
     "connectCalendarLink": "nejprve propojte kalendář v Nastavení",
     "reconnectGoogle": "Google kalendář odpojen — Znovu připojit",
     "errorRequired": "Vyplňte název, datum a časy.",
-    "errorDealRequired": "Vyberte obchod, ke kterému událost patří.",
     "errorEndBeforeStart": "Konec musí být po začátku.",
     "dealPicker": {
       "label": "Obchod",
       "placeholder": "Hledejte podle názvu obchodu nebo firmy…",
       "loading": "Načítání obchodů…",
       "noMatch": "Žádný obchod neodpovídá hledání.",
-      "loadError": "Obchody se nepodařilo načíst."
+      "loadError": "Obchody se nepodařilo načíst.",
+      "labelOptional": "Obchod (volitelné)",
+      "hint": "Bez obchodu je to samostatná událost — obchod můžete přiřadit i později."
     },
     "cancel": "Zrušit",
     "saving": "Ukládám…",
@@ -336,6 +337,17 @@
       "saving": "Ukládám…",
       "toastSaved": "Poznámka uložena.",
       "toastError": "Poznámku se nepodařilo uložit."
+    },
+    "call": {
+      "label": "Zaznamenat hovor",
+      "description": "Zapište hovor, který už proběhl.",
+      "fieldLabel": "Shrnutí hovoru",
+      "placeholder": "O čem jste mluvili? Na čem jste se domluvili?",
+      "hint": "Shrnutí je nepovinné — hovor můžete zaznamenat i bez něj.",
+      "submit": "Zaznamenat hovor",
+      "saving": "Ukládám…",
+      "toastSaved": "Hovor zaznamenán.",
+      "toastError": "Hovor se nepodařilo zaznamenat."
     }
   },
   "cardPreview": {

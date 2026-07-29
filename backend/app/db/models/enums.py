@@ -76,6 +76,10 @@ class ActivityType(StrEnum):
     deal_updated = "deal_updated"
     company_updated = "company_updated"
     event_created = "event_created"
+    # "Zaznamenat hovor" in the deal quick actions — a call that already
+    # happened, with an optional summary. Distinct from `note` so the
+    # timeline can tell "we spoke" from "I wrote something down".
+    call_logged = "call_logged"
 
 
 class EmailRecipientStatus(StrEnum):

@@ -1057,6 +1057,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/deals/{deal_id}/calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Deal Call
+         * @description Log a call that already happened on a deal.
+         *
+         *     Same shape as `create_deal_note` — an activity row, not a table of its
+         *     own — but a distinct `ActivityType` so the timeline can say "called"
+         *     rather than burying it among written notes. The summary is optional.
+         */
+        post: operations["create_deal_call_api_v1_deals__deal_id__calls_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/emails": {
         parameters: {
             query?: never;
@@ -3373,7 +3397,7 @@ export interface components {
          * ActivityType
          * @enum {string}
          */
-        ActivityType: "note" | "stage_change" | "owner_change" | "deal_won" | "deal_lost" | "company_freed" | "ownership_reassigned" | "subscription_change" | "email_sent" | "email_received" | "deal_created" | "deal_updated" | "company_updated" | "event_created";
+        ActivityType: "note" | "stage_change" | "owner_change" | "deal_won" | "deal_lost" | "company_freed" | "ownership_reassigned" | "subscription_change" | "email_sent" | "email_received" | "deal_created" | "deal_updated" | "company_updated" | "event_created" | "call_logged";
         /** AdminAccessLogList */
         AdminAccessLogList: {
             /** Items */
@@ -4265,11 +4289,8 @@ export interface components {
         };
         /** CalendarEventCreate */
         CalendarEventCreate: {
-            /**
-             * Deal Id
-             * Format: uuid
-             */
-            deal_id: string;
+            /** Deal Id */
+            deal_id?: string | null;
             /** Title */
             title: string;
             /** Description */
@@ -4304,13 +4325,10 @@ export interface components {
              * Format: uuid
              */
             organization_id: string;
-            /**
-             * Deal Id
-             * Format: uuid
-             */
-            deal_id: string;
+            /** Deal Id */
+            deal_id: string | null;
             /** Deal Name */
-            deal_name: string;
+            deal_name: string | null;
             /** Owner User Id */
             owner_user_id: string | null;
             /** Title */
@@ -4345,6 +4363,8 @@ export interface components {
         };
         /** CalendarEventUpdate */
         CalendarEventUpdate: {
+            /** Deal Id */
+            deal_id?: string | null;
             /** Title */
             title?: string | null;
             /** Description */
@@ -4952,6 +4972,18 @@ export interface components {
             from?: string | null;
             /** To */
             to?: string | null;
+        };
+        /**
+         * DealCallCreate
+         * @description A call that already happened, logged against a deal.
+         *
+         *     The summary is optional on purpose: "I called them" is worth recording
+         *     even when there's nothing to write down, and forcing a note would push
+         *     people to type "-" instead of logging the call at all.
+         */
+        DealCallCreate: {
+            /** Body */
+            body?: string | null;
         };
         /** DealCreate */
         DealCreate: {
@@ -9872,6 +9904,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["DealNoteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_deal_call_api_v1_deals__deal_id__calls_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealCallCreate"];
             };
         };
         responses: {

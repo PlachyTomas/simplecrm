@@ -45,6 +45,7 @@ export const testIds = {
     addButton: "companies-add-button",
     openDealsFilter: "companies-open-deals-filter",
     deleteButton: "companies-delete-button",
+    contactRowView: (id: string) => `company-contact-view-${id}`,
     contactRowEdit: (id: string) => `company-contact-edit-${id}`,
     contactRowDelete: (id: string) => `company-contact-delete-${id}`,
     addModal: {
@@ -88,6 +89,10 @@ export const testIds = {
       submit: "contacts-edit-modal-submit",
       cancel: "contacts-edit-modal-cancel",
     },
+    viewModal: {
+      close: "contacts-view-modal-close",
+      edit: "contacts-view-modal-edit",
+    },
   },
   deals: {
     addButton: "deals-add-button",
@@ -127,6 +132,9 @@ export const testIds = {
       noteInput: "pipeline-quick-actions-note-input",
       noteSave: "pipeline-quick-actions-note-save",
       noteCancel: "pipeline-quick-actions-note-cancel",
+      call: "pipeline-quick-actions-call",
+      callInput: "pipeline-quick-actions-call-input",
+      callSave: "pipeline-quick-actions-call-save",
       close: "pipeline-quick-actions-close",
     },
     preview: {

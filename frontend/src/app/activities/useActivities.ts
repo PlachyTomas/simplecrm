@@ -66,3 +66,24 @@ export function useCreateDealNote(dealId: string | undefined) {
     },
   });
 }
+
+/**
+ * Log a call that already happened on a deal (`activity_type:
+ * "call_logged"`). The summary is optional — pass an empty string to record
+ * just the fact of the call.
+ */
+export function useCreateDealCall(dealId: string | undefined) {
+  const { accessToken } = useAuth();
+  const qc = useQueryClient();
+  return useMutation<ActivityOut, Error, string>({
+    mutationFn: (body) =>
+      apiFetch<ActivityOut>(`/api/v1/deals/${dealId}/calls`, {
+        method: "POST",
+        token: accessToken,
+        body: { body: body.trim() || null },
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["activities"] });
+    },
+  });
+}

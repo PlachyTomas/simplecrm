@@ -61,6 +61,17 @@ class DealNoteCreate(BaseModel):
     body: str = Field(min_length=1, max_length=2000)
 
 
+class DealCallCreate(BaseModel):
+    """A call that already happened, logged against a deal.
+
+    The summary is optional on purpose: "I called them" is worth recording
+    even when there's nothing to write down, and forcing a note would push
+    people to type "-" instead of logging the call at all.
+    """
+
+    body: str | None = Field(default=None, max_length=2000)
+
+
 class DealOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
