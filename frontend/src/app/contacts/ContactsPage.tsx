@@ -126,7 +126,10 @@ export function ContactsPage() {
   const detailVisibleOnMobile = !!contactId;
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col md:flex-row">
+    // Fills the fluid shell's content region rather than guessing at it: the
+    // old `100vh - 4rem` didn't know about the trial banner or main's bottom
+    // padding, and left the page a few pixels of scroll on an empty screen.
+    <div className="flex min-h-0 flex-1 flex-col md:flex-row">
       <section
         aria-label={t("contactsPage.listAriaLabel")}
         className={cn(

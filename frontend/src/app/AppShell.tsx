@@ -30,9 +30,12 @@ export function AppShell() {
   const navigate = useNavigate();
   // Fluid full-viewport routes clamp their own scroll: the kanban needs
   // every horizontal pixel, the calendar keeps its day panel scrolling
-  // internally so the page itself never scrolls.
+  // internally, and the contacts split-pane scrolls its list and its detail
+  // separately — so the page itself never scrolls.
   const fluidLayout =
-    location.pathname.startsWith("/app/pipeline") || location.pathname.startsWith("/app/calendar");
+    location.pathname.startsWith("/app/pipeline") ||
+    location.pathname.startsWith("/app/calendar") ||
+    location.pathname.startsWith("/app/contacts");
 
   const logout = useMutation({
     mutationFn: () =>
@@ -71,9 +74,15 @@ export function AppShell() {
   const showUpgradeCta = showTrialBadge && daysRemaining <= 7;
 
   return (
+    // `relative` is load-bearing on the fluid routes: it makes this the
+    // containing block for absolutely-positioned descendants that have no
+    // positioned ancestor of their own — notably Tailwind's `sr-only`, which
+    // is `position: absolute`. Resolving against the viewport instead, an
+    // sr-only element below the fold escapes the `overflow-hidden` here and
+    // gives the kanban a stray window scrollbar over blank space.
     <div
       className={cn(
-        "flex bg-bg text-text-primary",
+        "relative flex bg-bg text-text-primary",
         fluidLayout ? "h-screen overflow-hidden" : "min-h-screen",
       )}
     >
