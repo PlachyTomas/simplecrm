@@ -55,7 +55,7 @@ It is fixed independently in `fd0bb29`. **The revert of attempt 1 was therefore
 not necessary** — but by the time that was established the owner had reverted, and
 re-landing it is what became attempt 2.
 
-## Attempt 2 — reverted, cause still unknown
+## Attempt 2 — reverted, and the report was not about this change at all
 
 Same change, re-landed once the calendar was fixed, plus a verification pass
 written specifically for the failure mode attempt 1 missed (see below).
@@ -150,8 +150,8 @@ whose box extends past the viewport with **no scrollable ancestor** between it a
 the root — content the user physically cannot reach. It reported zero across all
 twelve routes at 1280×620, 1280×560 and 390×844.
 
-**It still missed whatever the owner saw**, and the most likely reason is a gap in
-coverage rather than in method:
+**It still would not have caught what the owner saw**, for two reasons — one a
+coverage gap, one fundamental:
 
 - it only walked `main`, so **the sidebar and top bar were never checked** — and
   the sidebar is exactly what the owner reported broken;
