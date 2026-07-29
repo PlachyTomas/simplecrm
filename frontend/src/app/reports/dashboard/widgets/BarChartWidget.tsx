@@ -55,6 +55,17 @@ const MAX_LABEL_CHARS = Math.floor(
   (AXIS_WIDTH_CAP_PX - AXIS_LABEL_PADDING_PX) / AXIS_CHAR_WIDTH_PX,
 );
 
+// Each category gets a fixed vertical slot rather than an equal share of
+// whatever height the widget happens to have. Recharts spreads N bands
+// across the full chart height, so a one-row chart parked its single 16px
+// bar in the middle of a band as tall as the widget — reading as enormous
+// padding — and a short widget couldn't fit the band at all. A fixed slot
+// (16px bar + 8px breathing room either side) keeps the bar rhythm
+// identical at every widget size; the container scrolls when the rows
+// outgrow it.
+const BAND_HEIGHT_PX = 32;
+const CHART_VERTICAL_PADDING_PX = 8;
+
 // Right margin reserves room for the LabelList value trailing the
 // longest bar ("780 000 Kč") — the old fixed 56px clipped currency
 // values at the widget's right edge. 11px tabular-nums digits run
@@ -124,12 +135,14 @@ export function BarChartWidget({
     ),
   );
 
+  const chartHeight = data.length * BAND_HEIGHT_PX + CHART_VERTICAL_PADDING_PX * 2;
+
   return (
-    // minHeight floor here keeps ResponsiveContainer happy on the first
-    // paint before react-grid-layout measures the row — without it,
-    // Recharts logs a width(-1)/height(-1) warning that only clears
-    // after the second render.
-    <div className="h-full w-full" style={{ minHeight: 160 }} role="img" aria-label={ariaLabel}>
+    // `my-auto` (not `justify-center`) centres a short chart in a tall
+    // widget: auto margins only claim leftover space, so an overflowing
+    // chart still starts at the top instead of having its first rows
+    // clipped above the scroll origin.
+    <div className="flex h-full w-full flex-col overflow-y-auto" role="img" aria-label={ariaLabel}>
       {/* Visually-hidden data table so screen readers can read the chart
           contents — Recharts itself isn't AT-friendly. Per
           REPORTS_TASK §R9.3. */}
@@ -150,48 +163,55 @@ export function BarChartWidget({
           ))}
         </tbody>
       </table>
-      <ResponsiveContainer>
-        <BarChart
-          data={data}
-          layout="vertical"
-          margin={{ top: 4, right: rightMargin, bottom: 4, left: 0 }}
-        >
-          {/* Function form so an all-zero data set (common for
-              rep_activity / sales_leaderboard with no activity in the
-              period) never degenerates the domain to [0, 0] — that
-              collapsed every bar to 0×0 and hid the value labels too. */}
-          <XAxis type="number" hide domain={[0, (dataMax: number) => Math.max(dataMax, 1)]} />
-          <YAxis
-            type="category"
-            dataKey="name"
-            width={yAxisWidth}
-            tick={{ fontSize: 12, fill: "currentColor" }}
-            axisLine={false}
-            tickLine={false}
-            className="text-text-secondary"
-          />
-          <Tooltip
-            cursor={{ fill: "var(--color-surface-overlay, transparent)" }}
-            formatter={(_v: unknown, _n: unknown, ctx: { payload?: { display?: string } }) =>
-              ctx.payload?.display ?? "—"
-            }
-            labelFormatter={(
-              label: unknown,
-              payload: ReadonlyArray<{ payload?: { fullName?: string } }>,
-            ) => String(payload?.[0]?.payload?.fullName ?? label ?? "")}
-          />
-          <Bar dataKey="value" radius={4} barSize={16} minPointSize={2}>
-            {data.map((d, i) => (
-              <Cell key={i} className={cn(d.highlighted ? "fill-brand-accent" : "fill-accent")} />
-            ))}
-            <LabelList
-              dataKey="display"
-              position="right"
-              className="fill-text-secondary text-[11px] tabular-nums"
+      <div className="my-auto w-full shrink-0" style={{ height: chartHeight }}>
+        <ResponsiveContainer>
+          <BarChart
+            data={data}
+            layout="vertical"
+            margin={{
+              top: CHART_VERTICAL_PADDING_PX,
+              right: rightMargin,
+              bottom: CHART_VERTICAL_PADDING_PX,
+              left: 0,
+            }}
+          >
+            {/* Function form so an all-zero data set (common for
+                rep_activity / sales_leaderboard with no activity in the
+                period) never degenerates the domain to [0, 0] — that
+                collapsed every bar to 0×0 and hid the value labels too. */}
+            <XAxis type="number" hide domain={[0, (dataMax: number) => Math.max(dataMax, 1)]} />
+            <YAxis
+              type="category"
+              dataKey="name"
+              width={yAxisWidth}
+              tick={{ fontSize: 12, fill: "currentColor" }}
+              axisLine={false}
+              tickLine={false}
+              className="text-text-secondary"
             />
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+            <Tooltip
+              cursor={{ fill: "var(--color-surface-overlay, transparent)" }}
+              formatter={(_v: unknown, _n: unknown, ctx: { payload?: { display?: string } }) =>
+                ctx.payload?.display ?? "—"
+              }
+              labelFormatter={(
+                label: unknown,
+                payload: ReadonlyArray<{ payload?: { fullName?: string } }>,
+              ) => String(payload?.[0]?.payload?.fullName ?? label ?? "")}
+            />
+            <Bar dataKey="value" radius={4} barSize={16} minPointSize={2}>
+              {data.map((d, i) => (
+                <Cell key={i} className={cn(d.highlighted ? "fill-brand-accent" : "fill-accent")} />
+              ))}
+              <LabelList
+                dataKey="display"
+                position="right"
+                className="fill-text-secondary text-[11px] tabular-nums"
+              />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
