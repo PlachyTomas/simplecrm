@@ -216,6 +216,7 @@ async def _validate_main_contact_id(
 
 _SORT_COLUMNS = {
     "name": Company.name,
+    "industry": Company.industry,
     "ownership_expires_at": Company.ownership_expires_at,
     "last_order_at": Company.last_order_at,
     # "Activity" doesn't have its own column yet — the closest proxy is the
@@ -236,8 +237,8 @@ async def list_companies(
     sort: str = Query(
         default="name",
         description=(
-            "Sort key. One of: name, ownership_expires_at, last_order_at, "
-            "last_activity_at, created_at."
+            "Sort key. One of: name, industry, ownership_expires_at, "
+            "last_order_at, last_activity_at, created_at."
         ),
     ),
     order: str = Query(default="asc", pattern="^(asc|desc)$"),

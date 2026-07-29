@@ -1015,6 +1015,32 @@ async def test_list_companies_sort_by_ownership_expires_at_asc(
     assert names == ["ExpiresSoon", "ExpiresLater"]
 
 
+async def test_list_companies_sort_by_industry_asc_puts_blanks_last(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    db_session.add_all(
+        [
+            Company(
+                organization_id=org.id, name="Zeta", owner_user_id=admin.id, industry="Stavebnictví"
+            ),
+            Company(
+                organization_id=org.id, name="Alfa", owner_user_id=admin.id, industry="Doprava"
+            ),
+            # No industry: must sort last rather than leading the list.
+            Company(organization_id=org.id, name="Beta", owner_user_id=admin.id),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get("/api/v1/companies?sort=industry&order=asc", headers=_auth(admin))
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert [it["industry"] for it in items] == ["Doprava", "Stavebnictví", None]
+    assert [it["name"] for it in items] == ["Alfa", "Zeta", "Beta"]
+
+
 async def test_list_companies_ownership_filter_mine(
     client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
 ) -> None:

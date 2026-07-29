@@ -9058,7 +9058,7 @@ export interface operations {
             query?: {
                 /** @description Case-insensitive partial match on name or IČO. */
                 search?: string | null;
-                /** @description Sort key. One of: name, ownership_expires_at, last_order_at, last_activity_at, created_at. */
+                /** @description Sort key. One of: name, industry, ownership_expires_at, last_order_at, last_activity_at, created_at. */
                 sort?: string;
                 order?: string;
                 /** @description Ownership filter: 'mine' (only my own), 'mine_and_unowned' (mine + pool), or 'unowned' (pool only). */

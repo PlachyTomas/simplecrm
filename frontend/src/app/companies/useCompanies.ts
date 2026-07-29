@@ -10,6 +10,7 @@ export type CompanyFilterOptions = components["schemas"]["CompanyFilterOptions"]
 
 export type CompanySortKey =
   | "name"
+  | "industry"
   | "ownership_expires_at"
   | "last_order_at"
   | "last_activity_at"
