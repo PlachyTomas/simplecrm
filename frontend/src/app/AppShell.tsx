@@ -28,9 +28,12 @@ export function AppShell() {
   const { accessToken, clearAuth } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  // Fluid full-viewport routes clamp their own scroll: the kanban needs
-  // every horizontal pixel, the calendar keeps its day panel scrolling
-  // internally so the page itself never scrolls.
+  // The whole app is viewport-locked: the sidebar and top bar never move and
+  // scrolling happens inside a content region, never on the window. Fluid
+  // routes go one step further and hand the entire region to the page (the
+  // kanban needs every horizontal pixel, the calendar scrolls its day panel
+  // internally), so they opt out of the shared scroll container and the
+  // centred max-width wrapper.
   const fluidLayout =
     location.pathname.startsWith("/app/pipeline") || location.pathname.startsWith("/app/calendar");
 
@@ -71,12 +74,16 @@ export function AppShell() {
   const showUpgradeCta = showTrialBadge && daysRemaining <= 7;
 
   return (
-    <div
-      className={cn(
-        "flex bg-bg text-text-primary",
-        fluidLayout ? "h-screen overflow-hidden" : "min-h-screen",
-      )}
-    >
+    // `h-dvh`, not `h-screen`: on mobile browsers 100vh includes the
+    // collapsible URL bar, which pushed the tab bar off-screen.
+    //
+    // `relative` is load-bearing: it makes this the containing block for
+    // absolutely-positioned descendants that have no positioned ancestor of
+    // their own — notably Tailwind's `sr-only`, which is `position:
+    // absolute`. Left resolving against the viewport, an sr-only radio far
+    // down a long form sits below the fold, escapes the `overflow-hidden`
+    // here, and gives the window a stray scrollbar over a locked shell.
+    <div className="relative flex h-dvh overflow-hidden bg-bg text-text-primary">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-text-on-accent focus:shadow-lg"
@@ -85,14 +92,9 @@ export function AppShell() {
       </a>
       <Sidebar onLogout={() => logout.mutate()} />
 
-      <div
-        className={cn(
-          "flex min-w-0 flex-1 flex-col",
-          fluidLayout ? "h-screen overflow-hidden" : "min-h-screen",
-        )}
-      >
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {showTrialBadge ? <TrialBanner daysRemaining={daysRemaining} endsOn={trialEndsAt} /> : null}
-        <header className="sticky top-0 z-30 border-b border-border-subtle bg-bg/70 backdrop-blur">
+        <header className="z-30 shrink-0 border-b border-border-subtle bg-bg/70 backdrop-blur">
           <div className="flex h-16 items-center justify-between gap-3 px-4 md:px-8">
             <div className="flex min-w-0 items-center gap-3">
               <Link
@@ -172,13 +174,23 @@ export function AppShell() {
           id="main-content"
           tabIndex={-1}
           className={cn(
-            "w-full flex-1 focus:outline-none",
-            fluidLayout
-              ? "flex min-h-0 flex-col overflow-hidden pb-20 md:pb-0"
-              : "mx-auto max-w-[1200px] pb-20 md:pb-12",
+            "min-h-0 w-full flex-1 pb-20 focus:outline-none md:pb-0",
+            fluidLayout ? "flex flex-col overflow-hidden" : "overflow-y-auto",
           )}
         >
-          <Outlet />
+          {fluidLayout ? (
+            <Outlet />
+          ) : (
+            // `h-full`, not `min-h-full`: a definite height is what lets a
+            // page claim the viewport remainder with `flex-1` and push the
+            // overflow into a region it scrolls itself. With `min-h-full`
+            // the column just grows to fit its content and `main` scrolls
+            // instead — which is still the fallback for pages that don't
+            // opt in, since their overflow scrolls `main` either way.
+            <div className="mx-auto flex h-full w-full max-w-[1200px] flex-col">
+              <Outlet />
+            </div>
+          )}
         </main>
       </div>
 

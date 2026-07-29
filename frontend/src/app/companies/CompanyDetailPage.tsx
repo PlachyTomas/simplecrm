@@ -76,8 +76,8 @@ function OverviewTab({ company, locale }: { company: CompanyOut; locale: string 
   const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: "long" });
   const expiresRelative = relativeFromNow(company.ownership_expires_at, locale);
   return (
-    <section className="rounded-lg border border-border bg-surface">
-      <dl className="divide-y divide-border-subtle px-6">
+    <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-border bg-surface">
+      <dl className="min-h-0 flex-1 divide-y divide-border-subtle overflow-y-auto px-6">
         <FieldRow label={t("companyDetail.fields.dic")}>
           <span className="font-mono">{company.dic ?? "—"}</span>
         </FieldRow>
@@ -170,8 +170,8 @@ function ContactsTab({ company }: { company: CompanyOut }) {
     return <p className="text-sm text-danger">{t("companyDetail.contactsTab.loadError")}</p>;
   }
   return (
-    <section className="rounded-lg border border-border bg-surface p-6">
-      <div className="flex items-baseline justify-between">
+    <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-border bg-surface">
+      <div className="flex shrink-0 items-baseline justify-between px-6 pt-6">
         <h2 className="text-lg font-semibold">{t("companyDetail.contactsTab.title")}</h2>
         <button
           type="button"
@@ -182,9 +182,11 @@ function ContactsTab({ company }: { company: CompanyOut }) {
         </button>
       </div>
       {data.items.length === 0 ? (
-        <p className="mt-4 text-sm text-text-secondary">{t("companyDetail.contactsTab.empty")}</p>
+        <p className="px-6 py-6 text-sm text-text-secondary">
+          {t("companyDetail.contactsTab.empty")}
+        </p>
       ) : (
-        <ul className="mt-4 divide-y divide-border-subtle">
+        <ul className="mt-4 min-h-0 flex-1 divide-y divide-border-subtle overflow-y-auto px-6 pb-6">
           {data.items.map((c) => (
             <CompanyContactRow
               key={c.id}
@@ -412,8 +414,8 @@ function DealsTab({ company, locale }: { company: CompanyOut; locale: string }) 
     return <p className="text-sm text-danger">{t("companyDetail.dealsTab.loadError")}</p>;
   }
   return (
-    <section className="rounded-lg border border-border bg-surface p-6">
-      <div className="flex items-baseline justify-between">
+    <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-border bg-surface">
+      <div className="flex shrink-0 items-baseline justify-between px-6 pt-6">
         <h2 className="text-lg font-semibold">{t("companyDetail.dealsTab.title")}</h2>
         <button
           type="button"
@@ -424,11 +426,14 @@ function DealsTab({ company, locale }: { company: CompanyOut; locale: string }) 
         </button>
       </div>
       {data.items.length === 0 ? (
-        <p className="mt-4 text-sm text-text-secondary">{t("companyDetail.dealsTab.empty")}</p>
+        <p className="px-6 py-6 text-sm text-text-secondary">{t("companyDetail.dealsTab.empty")}</p>
       ) : (
-        <div className="mt-4 overflow-x-auto rounded-md border border-border-subtle">
+        <div className="mx-6 mb-6 mt-4 min-h-0 flex-1 overflow-auto rounded-md border border-border-subtle">
           <table className="min-w-full divide-y divide-border-subtle">
-            <thead>
+            {/* The table body is what scrolls now, so the header has to
+                stay put — and needs an opaque fill to cover the rows
+                passing under it. */}
+            <thead className="sticky top-0 z-10 bg-surface">
               <tr>
                 <th scope="col" className={DEALS_TH}>
                   {t("companyDetail.dealsTab.columns.name")}
@@ -541,8 +546,8 @@ function EmailsTab({ company, locale }: { company: CompanyOut; locale: string })
   const [composeOpen, setComposeOpen] = useState(false);
   const [replyTarget, setReplyTarget] = useState<SentEmailOut | null>(null);
   return (
-    <section className="rounded-lg border border-border bg-surface p-6">
-      <div className="flex items-baseline justify-between">
+    <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-border bg-surface">
+      <div className="flex shrink-0 items-baseline justify-between px-6 pt-6">
         <h2 className="text-lg font-semibold">{t("companyDetail.emailsTab.title")}</h2>
         <GatedMailButton
           verified={isSmtpVerified(smtp)}
@@ -555,14 +560,16 @@ function EmailsTab({ company, locale }: { company: CompanyOut; locale: string })
           <Mail size={14} strokeWidth={2} /> {t("companyDetail.emailsTab.sendButton")}
         </GatedMailButton>
       </div>
-      <EmailHistorySection
-        companyId={company.id}
-        locale={locale}
-        onReply={(email) => {
-          setReplyTarget(email);
-          setComposeOpen(true);
-        }}
-      />
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
+        <EmailHistorySection
+          companyId={company.id}
+          locale={locale}
+          onReply={(email) => {
+            setReplyTarget(email);
+            setComposeOpen(true);
+          }}
+        />
+      </div>
       {composeOpen ? (
         <EmailComposeModal
           key={replyTarget?.id ?? "new"}
@@ -601,9 +608,11 @@ function ActivityTab({ companyId }: { companyId: string }) {
     );
   }
   return (
-    <section className="rounded-lg border border-border bg-surface p-6">
-      <h2 className="text-lg font-semibold">{t("companyDetail.activityTab.title")}</h2>
-      <ol className="mt-4 space-y-3 border-l border-border-subtle pl-5">
+    <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-border bg-surface">
+      <h2 className="shrink-0 px-6 pt-6 text-lg font-semibold">
+        {t("companyDetail.activityTab.title")}
+      </h2>
+      <ol className="mx-6 mb-6 mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto border-l border-border-subtle pl-5">
         {data.items.map((a) => (
           <ActivityRow key={a.id} activity={a} />
         ))}
@@ -634,8 +643,8 @@ function NotesTab({ companyId, initialNote }: { companyId: string; initialNote: 
   }
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-6">
-      <div className="flex items-baseline justify-between">
+    <section className="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-lg border border-border bg-surface p-6">
+      <div className="flex shrink-0 items-baseline justify-between">
         <h2 className="text-lg font-semibold">{t("companyDetail.notesTab.title")}</h2>
         {!editing ? (
           <button
@@ -758,15 +767,17 @@ export function CompanyDetailPage() {
   }
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8">
+    // Identity, tabs and the danger row are page chrome and stay put; the
+    // active tab owns the leftover height and scrolls its own list.
+    <div className="flex min-h-0 flex-1 flex-col px-4 py-6 md:px-8 md:py-8">
       <Link
         to={backTo}
-        className="mb-4 inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary"
+        className="mb-4 inline-flex w-fit shrink-0 items-center gap-2 text-sm text-text-secondary hover:text-text-primary"
       >
         <ArrowLeft size={16} strokeWidth={1.75} /> {t("companyDetail.backToList")}
       </Link>
 
-      <header className="mb-6">
+      <header className="mb-6 shrink-0">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold">{company.name}</h1>
           <OwnershipBadge
@@ -811,7 +822,7 @@ export function CompanyDetailPage() {
 
       <nav
         aria-label={t("companyDetail.tabsAriaLabel")}
-        className="mb-6 border-b border-border-subtle"
+        className="mb-6 shrink-0 border-b border-border-subtle"
       >
         <ul role="tablist" className="-mb-px flex gap-1 overflow-x-auto">
           {TABS.map((tab) => {
@@ -840,7 +851,12 @@ export function CompanyDetailPage() {
         </ul>
       </nav>
 
-      <div role="tabpanel" id={`tab-panel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
+      <div
+        role="tabpanel"
+        id={`tab-panel-${activeTab}`}
+        aria-labelledby={`tab-${activeTab}`}
+        className="flex min-h-0 flex-1 flex-col"
+      >
         {activeTab === "overview" ? (
           <OverviewTab company={company} locale={locale} />
         ) : activeTab === "contacts" ? (
@@ -857,7 +873,7 @@ export function CompanyDetailPage() {
       </div>
 
       {canDelete ? (
-        <div className="mt-8 border-t border-border-subtle pt-6">
+        <div className="mt-6 shrink-0 border-t border-border-subtle pt-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-text-tertiary">{t("companyDetail.deleteHint")}</p>
             <button

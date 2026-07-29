@@ -555,8 +555,9 @@ export function CompaniesListPage() {
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    // Title and filters stay put; the rows are the only thing that scrolls.
+    <div className="flex min-h-0 flex-1 flex-col px-4 py-6 md:px-8 md:py-8">
+      <div className="mb-6 flex shrink-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">{t("companiesList.pageTitle")}</h1>
           <p className="mt-1 text-sm text-text-tertiary">{t("companyCount", { count: total })}</p>
@@ -586,7 +587,7 @@ export function CompaniesListPage() {
         </div>
       </div>
 
-      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="mb-4 flex shrink-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <label className="relative block md:max-w-md md:flex-1">
           <span className="sr-only">{t("companiesList.searchLabel")}</span>
           <Search
@@ -742,9 +743,12 @@ export function CompaniesListPage() {
           )}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border bg-surface">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-surface">
           {/* Mobile: stacked cards (<768px) */}
-          <ul role="list" className="divide-y divide-border-subtle md:hidden">
+          <ul
+            role="list"
+            className="min-h-0 flex-1 divide-y divide-border-subtle overflow-y-auto md:hidden"
+          >
             {table.getRowModel().rows.map((row) => {
               const company = row.original;
               return (
@@ -781,9 +785,15 @@ export function CompaniesListPage() {
 
           {/* Desktop: full table (≥768px). Tabulka mode adds horizontal
               scroll + denser cell padding to fit all columns. */}
-          <div className={cn("hidden md:block", viewMode === "table" && "overflow-x-auto")}>
+          <div
+            className={cn(
+              "hidden min-h-0 flex-1 md:block",
+              viewMode === "table" ? "overflow-auto" : "overflow-y-auto",
+            )}
+          >
             <table className="min-w-full divide-y divide-border-subtle">
-              <thead>
+              {/* Opaque fill so rows scrolling underneath stay hidden. */}
+              <thead className="sticky top-0 z-10 bg-surface">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
@@ -865,7 +875,7 @@ export function CompaniesListPage() {
           </div>
 
           {pageCount > 1 ? (
-            <div className="flex items-center justify-between border-t border-border-subtle px-4 py-3 text-sm text-text-tertiary">
+            <div className="flex shrink-0 items-center justify-between border-t border-border-subtle px-4 py-3 text-sm text-text-tertiary">
               <span className="tabular-nums">
                 {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)}{" "}
                 {t("companiesList.paginationOf")} {t("companyCount", { count: total })}

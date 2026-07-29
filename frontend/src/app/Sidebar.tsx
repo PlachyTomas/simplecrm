@@ -71,7 +71,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
   return (
     <nav
       aria-label={t("nav.desktopAriaLabel")}
-      className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-border-subtle bg-surface px-3 py-4 md:flex"
+      className="hidden h-full w-60 shrink-0 flex-col border-r border-border-subtle bg-surface px-3 py-4 md:flex"
     >
       <Link
         to="/app"
@@ -81,7 +81,9 @@ export function Sidebar({ onLogout }: SidebarProps) {
         <Logo />
       </Link>
 
-      <div className="flex-1 space-y-1">
+      {/* The shell no longer scrolls, so on a short viewport this group —
+          not the window — is what gives. */}
+      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
         <p className="px-3 pb-2 text-xs font-medium uppercase tracking-wider text-text-tertiary">
           {t("nav.groupSales")}
         </p>
