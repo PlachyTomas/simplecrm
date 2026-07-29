@@ -143,10 +143,8 @@ export function ReportsPage() {
   }
 
   return (
-    // Title, editor controls and the global filter bar stay put; the widget
-    // grid scrolls beneath them.
-    <div className="flex min-h-0 flex-1 flex-col px-4 py-6 md:px-8 md:py-8">
-      <header className="mb-4 flex shrink-0 flex-wrap items-end justify-between gap-3">
+    <div className="px-4 py-6 md:px-8 md:py-8">
+      <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">{t("reportsPage.title")}</h1>
           <p className="mt-1 text-sm text-text-tertiary">{t("reportsPage.subtitle")}</p>
@@ -215,11 +213,9 @@ export function ReportsPage() {
         </div>
       </header>
 
-      <div className="shrink-0">
-        <GlobalFilterBar value={filters} onChange={handleFiltersChange} />
-      </div>
+      <GlobalFilterBar value={filters} onChange={handleFiltersChange} />
 
-      <div className={cn("mt-4 min-h-0 flex-1 overflow-y-auto")}>
+      <div className={cn("mt-4")}>
         {config.isPending ? (
           <DashboardSkeleton />
         ) : !working ? (
