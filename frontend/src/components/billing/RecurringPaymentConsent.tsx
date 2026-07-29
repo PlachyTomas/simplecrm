@@ -1,6 +1,8 @@
 import type { ParseKeys } from "i18next";
 import { useTranslation } from "react-i18next";
 
+import { externalLinkProps } from "@/lib/externalLink";
+
 type PlanCode = "monthly" | "annual";
 
 interface RecurringPaymentConsentProps {
@@ -48,8 +50,7 @@ export function RecurringPaymentConsent({
           • {t("recurringPaymentConsent.cancelBulletPrefix")}{" "}
           <a
             href="/predplatne"
-            target="_blank"
-            rel="noreferrer noopener"
+            {...externalLinkProps}
             className="underline hover:text-text-primary"
           >
             {t("recurringPaymentConsent.cancelLinkText")}
@@ -70,8 +71,7 @@ export function RecurringPaymentConsent({
           {t("recurringPaymentConsent.consentPrefix")}{" "}
           <a
             href="/obchodni-podminky#cl-6"
-            target="_blank"
-            rel="noreferrer noopener"
+            {...externalLinkProps}
             className="underline hover:text-text-primary"
           >
             {t("recurringPaymentConsent.termsLinkText")}
