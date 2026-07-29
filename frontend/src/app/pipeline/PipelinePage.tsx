@@ -559,15 +559,11 @@ function MobileBoard({
   const { t } = useTranslation("deals");
   const active = stages[activeIndex];
   return (
-    // The fluid shell hands the pipeline a fixed-height region and scrolls
-    // nothing itself, so the deal list has to — a plain column left every
-    // deal past the first screenful unreachable on a phone. The stage
-    // switcher and the totals line stay pinned above it.
-    <div className="flex min-h-0 flex-1 select-none flex-col gap-3 overflow-hidden px-4 md:hidden">
+    <div className="flex select-none flex-col gap-3 px-4 pb-24 md:hidden">
       <div
         role="tablist"
         aria-label={t("pipelinePage.mobileBoard.tablistAriaLabel")}
-        className="-mx-1 flex shrink-0 gap-2 overflow-x-auto px-1 pb-1"
+        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
       >
         {stages.map((s, i) => (
           <button
@@ -595,7 +591,7 @@ function MobileBoard({
       </div>
       {active ? (
         <>
-          <p className="shrink-0 text-xs text-text-tertiary">
+          <p className="text-xs text-text-tertiary">
             {t("dealCount", { count: active.deal_count })} ·{" "}
             {formatMoney(active.total_value, boardCurrency, locale)}
           </p>
@@ -604,8 +600,7 @@ function MobileBoard({
               {t("pipelinePage.stageColumn.empty")}
             </p>
           ) : (
-            // pb-24 clears the floating add button and the mobile tab bar.
-            <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-24">
+            <ul className="flex flex-col gap-2">
               {active.deals.map((deal) => (
                 <li key={deal.id}>
                   <MobileDealCard
