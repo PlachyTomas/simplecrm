@@ -14,6 +14,7 @@ import { useUpdateCompany } from "@/app/companies/useUpdateCompany";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { ApiError } from "@/lib/api";
 import { AddContactModal } from "@/app/contacts/AddContactModal";
+import { ContactViewModal } from "@/app/contacts/ContactViewModal";
 import { EditContactModal } from "@/app/contacts/EditContactModal";
 import { useContacts, useDeleteContact, type ContactOut } from "@/app/contacts/useContacts";
 import { AddDealModal } from "@/app/deals/AddDealModal";
@@ -138,6 +139,7 @@ function ContactsTab({ company }: { company: CompanyOut }) {
   const { t } = useTranslation("companies");
   const [adding, setAdding] = useState(false);
   const [editingContact, setEditingContact] = useState<ContactOut | null>(null);
+  const [viewingContact, setViewingContact] = useState<ContactOut | null>(null);
   const toast = useToast();
   const { data, isPending, isError } = useContacts({ companyId: company.id, limit: 100 });
   const update = useUpdateCompany(company.id);
@@ -197,6 +199,7 @@ function ContactsTab({ company }: { company: CompanyOut }) {
               onSetMain={() => setMain(c.id)}
               canManage={canManageContacts}
               onEdit={() => setEditingContact(c)}
+              onView={() => setViewingContact(c)}
             />
           ))}
         </ul>
@@ -210,6 +213,22 @@ function ContactsTab({ company }: { company: CompanyOut }) {
         onCreated={() => setAdding(false)}
         forCompanyId={company.id}
       />
+      {viewingContact ? (
+        <ContactViewModal
+          open
+          onClose={() => setViewingContact(null)}
+          contact={viewingContact}
+          companyName={company.name}
+          onEdit={
+            canManageContacts
+              ? () => {
+                  setEditingContact(viewingContact);
+                  setViewingContact(null);
+                }
+              : undefined
+          }
+        />
+      ) : null}
       {editingContact ? (
         <EditContactModal
           open
@@ -236,6 +255,7 @@ function CompanyContactRow({
   onSetMain,
   canManage,
   onEdit,
+  onView,
 }: {
   contact: ContactOut;
   isMain: boolean;
@@ -244,6 +264,7 @@ function CompanyContactRow({
   onSetMain: () => void;
   canManage: boolean;
   onEdit: () => void;
+  onView: () => void;
 }) {
   const { t } = useTranslation("companies");
   const { t: tContacts } = useTranslation("contacts");
@@ -301,9 +322,13 @@ function CompanyContactRow({
           className={cn(isHighlighted && "fill-accent")}
         />
       </button>
-      <Link
-        to={`/app/contacts/${contact.id}`}
-        className="flex min-w-0 flex-1 items-center gap-3 text-sm text-text-primary hover:text-accent"
+      {/* Opens a read-only modal, NOT the contact route: leaving the company
+          to read one phone number cost the user their place in this list. */}
+      <button
+        type="button"
+        onClick={onView}
+        data-testid={testIds.companies.contactRowView(contact.id)}
+        className="flex min-w-0 flex-1 items-center gap-3 text-left text-sm text-text-primary hover:text-accent"
       >
         <span
           aria-hidden
@@ -326,7 +351,7 @@ function CompanyContactRow({
             </span>
           ) : null}
         </span>
-      </Link>
+      </button>
       {canManage ? (
         <span className="flex shrink-0 items-center gap-1">
           <button

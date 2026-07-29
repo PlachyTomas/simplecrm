@@ -78,5 +78,13 @@
     "cancel": "Cancel",
     "noContactInfo": "No email or phone number has been added for this contact yet.",
     "noteTitle": "Note"
+  },
+  "viewContactModal": {
+    "close": "Close",
+    "edit": "Edit contact",
+    "noPosition": "No position given",
+    "email": "Email",
+    "phone": "Phone",
+    "note": "Note"
   }
 }

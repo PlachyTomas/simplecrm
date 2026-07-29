@@ -78,5 +78,13 @@
     "cancel": "Zrušit",
     "noContactInfo": "Ke kontaktu zatím nejsou vyplněny e-mail ani telefon.",
     "noteTitle": "Poznámka"
+  },
+  "viewContactModal": {
+    "close": "Zavřít",
+    "edit": "Upravit kontakt",
+    "noPosition": "Bez uvedené pozice",
+    "email": "E-mail",
+    "phone": "Telefon",
+    "note": "Poznámka"
   }
 }
