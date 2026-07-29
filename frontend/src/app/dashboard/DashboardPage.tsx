@@ -160,8 +160,10 @@ export function DashboardPage() {
   );
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+    // Greeting and the layout-editor controls stay put; the widget grid
+    // scrolls beneath them.
+    <div className="flex min-h-0 flex-1 flex-col px-4 py-6 md:px-8 md:py-8">
+      <header className="mb-6 flex shrink-0 flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">
             {t("dashboardPage.welcome", {
@@ -222,7 +224,10 @@ export function DashboardPage() {
         </div>
       </header>
 
-      <section aria-label={t("dashboardPage.widgetsAriaLabel")}>
+      <section
+        aria-label={t("dashboardPage.widgetsAriaLabel")}
+        className="min-h-0 flex-1 overflow-y-auto"
+      >
         {config.isPending ? (
           <DashboardSkeleton />
         ) : !working ? (

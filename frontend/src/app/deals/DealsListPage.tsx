@@ -217,8 +217,10 @@ export function DealsListPage() {
   const items = deals?.items ?? [];
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    // Title and filters stay put; the table body is the only thing that
+    // scrolls, so the controls that shape the list are always in reach.
+    <div className="flex min-h-0 flex-1 flex-col px-4 py-6 md:px-8 md:py-8">
+      <div className="mb-6 flex shrink-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">{t("dealsList.pageTitle")}</h1>
           <p className="mt-1 text-sm text-text-tertiary">
@@ -237,7 +239,7 @@ export function DealsListPage() {
         </button>
       </div>
 
-      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
+      <div className="mb-4 flex shrink-0 flex-col gap-3 md:flex-row md:items-center">
         <label className="relative block md:max-w-md md:flex-1">
           <span className="sr-only">{t("dealsList.searchLabel")}</span>
           <Search
@@ -345,10 +347,11 @@ export function DealsListPage() {
           )}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border bg-surface">
-          <div className="overflow-x-auto">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-surface">
+          <div className="min-h-0 flex-1 overflow-auto">
             <table className="min-w-full divide-y divide-border-subtle">
-              <thead>
+              {/* Opaque fill so rows scrolling underneath stay hidden. */}
+              <thead className="sticky top-0 z-10 bg-surface">
                 <tr>
                   <SortHeader
                     label={t("dealsList.columns.name")}
@@ -468,7 +471,7 @@ export function DealsListPage() {
           </div>
 
           {pageCount > 1 ? (
-            <div className="flex items-center justify-between border-t border-border-subtle px-4 py-3 text-sm text-text-tertiary">
+            <div className="flex shrink-0 items-center justify-between border-t border-border-subtle px-4 py-3 text-sm text-text-tertiary">
               <span className="tabular-nums">
                 {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)}{" "}
                 {t("dealsList.paginationOf")} {t("dealCount", { count: total })}
