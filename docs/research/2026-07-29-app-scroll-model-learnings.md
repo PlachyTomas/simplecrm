@@ -62,22 +62,57 @@ written specifically for the failure mode attempt 1 missed (see below).
 
 Owner reported: **"u broke the whole ui (cant see log out for example)"**.
 
-**I could not reproduce this.** With the shell locked, at 1440×560 and with the
-shell root forced down to 500/440/400/360px, the sidebar logout button and the
-theme toggle both stayed on screen, and the nav group above them scrolled as
-designed. So the mechanism is unexplained.
+I could not reproduce it at any viewport height. Then the owner sent a
+screenshot, and it turned out **the shell lock had nothing to do with it**.
 
-Plausible causes not yet ruled out — **check these first next time**:
+### The actual cause: the Chrome window extends behind the macOS Dock
 
-1. **Browser zoom.** The owner may not be at 100%. Zoom shrinks the CSS viewport,
-   and the sidebar's fixed-height children (logo, nav items, footer group) don't
-   shrink with it. This is the most likely candidate and the easiest to test.
-2. **A shorter real viewport than any tested** — external monitor scaling, browser
-   with bookmarks bar + dev tools docked.
-3. **`h-dvh` on a desktop browser that reports a different dvh than vh.**
-4. **A stale hot-reload state** — the app was mid-HMR when they looked.
-5. **Trial banner mounted**, eating ~40px above the shell on their org but not on
-   the demo org used for verification.
+Measured off the owner's screenshot (2938×1912 at 2× Retina → a 1469×956 CSS
+screen):
+
+| | CSS px from the top of the viewport |
+|---|---|
+| Sidebar logo | ~37 |
+| "Nastavení" | ~735 |
+| Last pixel the owner can actually see | ~760 |
+
+The sidebar footer group (Nastavení / Zpětná vazba / Odhlásit se / theme toggle)
+is 169px tall and is anchored to the **bottom** of the sidebar box, which is
+`h-screen` — exactly `100vh`. If "Nastavení" starts at ~735 then the bottom of
+that box is at ~735 + 169 ≈ **900**.
+
+Rendering the same page locally at `innerHeight: 900` puts "Nastavení" at 715 and
+the theme toggle's bottom at 884 — matching the screenshot.
+
+So `window.innerHeight` on the owner's machine is **~900**, while only **~760** of
+it is visible: the Chrome window is ~140px taller than the Dock-free area of the
+screen, and its bottom strip sits behind the Dock. `100vh` is *correct* — the
+window really is 900 tall — the last 140px of it just isn't lookable-at. And
+because the sidebar is `sticky top-0 h-screen`, scrolling the page never moves it,
+so the footer is permanently unreachable.
+
+**This is true on main right now and was true before any of this work started.**
+It is not a regression from either attempt; both attempts simply left it in place,
+and the second one got blamed for it.
+
+Confirm in five seconds: DevTools console → `window.innerHeight`. ~900 while you
+can only see ~760 means the window is under the Dock.
+
+No CSS can fix this on its own — the page cannot detect the Dock, and when the box
+height equals the window height there is nothing to scroll. The real options are:
+
+1. **Move logout (and the theme toggle) into the top-bar user menu.** The top bar
+   is always visible and this is where most apps put it. This is the fix that
+   makes the app resilient rather than depending on the last 140px of the window.
+2. Stop anchoring the sidebar footer to the bottom — pack it directly under the
+   nav items so it lives in the upper part of the window. Cheaper, but it changes
+   the look on a normal full-height window.
+3. Owner-side only: resize the Chrome window off the Dock, or set the Dock to
+   auto-hide.
+
+A scrollable nav group (tried and reverted here) does **not** help this case: the
+sidebar content is 757px inside a 900px box, so nothing overflows and there is
+nothing to scroll.
 
 ## What each attempt got right, mechanically
 
@@ -120,19 +155,27 @@ coverage rather than in method:
 
 - it only walked `main`, so **the sidebar and top bar were never checked** — and
   the sidebar is exactly what the owner reported broken;
-- it only ran at three viewport sizes and **never at a non-100% zoom**;
-- it ran against the demo org, which has **no trial banner**.
+- it only ran at three viewport sizes, against the demo org, which has **no trial
+  banner**;
+- and fundamentally, it could not have caught the Dock problem at all: that
+  content is *inside* the viewport as far as the DOM is concerned. Only a human
+  looking at the screen can see it.
 
-Attempt three should extend it to the whole shell, run it at several zoom levels,
-and run it against an org that shows the trial banner. Better still: **get the
-owner's viewport size and zoom level before starting**, and reproduce their exact
-report first.
+Attempt three should extend it to the whole shell and run it against an org that
+shows the trial banner — but the more important lesson is the one below.
 
 ## Process lessons
 
+- **Get a screenshot before doing anything.** The owner's screenshot solved in one
+  minute what two rounds of reverting and measuring had not: the numbers in it
+  identified a 900px window with 760px visible. Ask for one the moment a report
+  can't be reproduced.
 - **Ask which page the complaint is about before reverting anything.** Attempt 1
   was reverted app-wide over a bug on one route that turned out to predate the
   change entirely. One question would have saved both attempts.
+- **"I broke it" is a hypothesis, not a fact.** Both reports turned out to be
+  pre-existing problems that the change either revealed or merely coexisted with.
+  Establish provenance *before* reverting, not after.
 - **A pre-existing bug that a change merely *reveals* is not a regression** — but
   it will be reported as one, so establish provenance immediately (`git checkout
   <base> -- <files>` and re-measure) and say so.
