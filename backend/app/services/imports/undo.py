@@ -138,8 +138,14 @@ async def _deal_ids_with_events(
 ) -> set[uuid.UUID]:
     found: set[uuid.UUID] = set()
     for chunk in _chunked(deal_ids):
-        stmt = select(CalendarEvent.deal_id).where(CalendarEvent.deal_id.in_(chunk)).distinct()
-        found |= set((await session.execute(stmt)).scalars().all())
+        stmt = (
+            select(CalendarEvent.deal_id)
+            # `deal_id` is nullable now — deal-less events match no chunk, but
+            # the IS NOT NULL keeps the column type honest for the set below.
+            .where(CalendarEvent.deal_id.is_not(None), CalendarEvent.deal_id.in_(chunk))
+            .distinct()
+        )
+        found |= {row for row in (await session.execute(stmt)).scalars().all() if row is not None}
     return found
 
 

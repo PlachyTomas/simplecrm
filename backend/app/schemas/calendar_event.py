@@ -9,7 +9,9 @@ from app.db.models.enums import GoogleSyncStatus
 
 
 class CalendarEventCreate(BaseModel):
-    deal_id: uuid.UUID
+    # Optional: an event can be booked before anyone knows which deal it
+    # belongs to, and linked afterwards via CalendarEventUpdate.
+    deal_id: uuid.UUID | None = None
     title: str = Field(min_length=1, max_length=200)
     description: str | None = None
     location: str | None = Field(default=None, max_length=200)
@@ -30,6 +32,9 @@ class CalendarEventCreate(BaseModel):
 
 
 class CalendarEventUpdate(BaseModel):
+    # Tri-state, and `exclude_unset` is what tells the cases apart: absent =
+    # leave the link alone, a UUID = attach/move, explicit null = detach.
+    deal_id: uuid.UUID | None = None
     title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = None
     location: str | None = Field(default=None, max_length=200)
@@ -42,9 +47,10 @@ class CalendarEventUpdate(BaseModel):
 class CalendarEventOut(BaseModel):
     id: uuid.UUID
     organization_id: uuid.UUID
-    deal_id: uuid.UUID
+    deal_id: uuid.UUID | None
     # Denormalized so the calendar page can label chips without N+1 fetches.
-    deal_name: str
+    # None for an event that isn't attached to a deal.
+    deal_name: str | None
     owner_user_id: uuid.UUID | None
     title: str
     description: str | None

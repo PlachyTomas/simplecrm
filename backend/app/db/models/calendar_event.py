@@ -52,10 +52,11 @@ class CalendarEvent(Base):
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
     )
-    deal_id: Mapped[uuid.UUID] = mapped_column(
+    # Nullable: not every meeting starts life attached to a deal. A user can
+    # block out a call first and link the deal once they know which one it is.
+    deal_id: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True),
         ForeignKey("deals.id", ondelete="CASCADE"),
-        nullable=False,
     )
     # The creator — whose Google Calendar the event mirrors into. SET NULL
     # keeps the event on the org calendar when the user is removed.

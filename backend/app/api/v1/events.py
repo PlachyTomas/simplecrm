@@ -55,7 +55,7 @@ from app.services.google_calendar import (
 router = APIRouter(prefix="/events", tags=["events"])
 
 
-def _event_out(event: CalendarEvent, deal_name: str) -> CalendarEventOut:
+def _event_out(event: CalendarEvent, deal_name: str | None) -> CalendarEventOut:
     """`deal_name` is passed explicitly — accessing `event.deal` after a
     commit can trigger an async lazy-load, which raises MissingGreenlet."""
     return CalendarEventOut(
@@ -244,7 +244,7 @@ async def list_events(
     )
     events = (await session.execute(items_stmt)).scalars().all()
     return Page(
-        items=[_event_out(event, event.deal.name) for event in events],
+        items=[_event_out(event, event.deal.name if event.deal else None) for event in events],
         total=total,
         limit=pagination.limit,
         offset=pagination.offset,
@@ -258,11 +258,11 @@ async def create_event(
     session: AsyncSession = Depends(get_db),
     client: GoogleCalendarClient = Depends(get_google_calendar_client),
 ) -> CalendarEventOut:
-    deal = await _get_visible_deal(session, user, payload.deal_id)
+    deal = await _get_visible_deal(session, user, payload.deal_id) if payload.deal_id else None
 
     event = CalendarEvent(
         organization_id=user.organization_id,
-        deal_id=deal.id,
+        deal_id=deal.id if deal else None,
         owner_user_id=user.id,
         title=payload.title,
         description=payload.description,
@@ -273,20 +273,23 @@ async def create_event(
     session.add(event)
     await session.flush()
 
-    record_activity(
-        session,
-        organization_id=deal.organization_id,
-        entity_type=ActivityEntityType.deal,
-        entity_id=deal.id,
-        company_id=deal.company_id,
-        user_id=user.id,
-        activity_type=ActivityType.event_created,
-        payload={
-            "deal_name": deal.name,
-            "title": event.title,
-            "starts_at": event.starts_at.isoformat(),
-        },
-    )
+    # Only a deal-linked event has somewhere to be logged: the activity feed
+    # is keyed on an entity, and a free-standing event has no company either.
+    if deal is not None:
+        record_activity(
+            session,
+            organization_id=deal.organization_id,
+            entity_type=ActivityEntityType.deal,
+            entity_id=deal.id,
+            company_id=deal.company_id,
+            user_id=user.id,
+            activity_type=ActivityType.event_created,
+            payload={
+                "deal_name": deal.name,
+                "title": event.title,
+                "starts_at": event.starts_at.isoformat(),
+            },
+        )
 
     if payload.add_to_google:
         connection = await _owner_connection(session, user.id)
@@ -299,7 +302,7 @@ async def create_event(
 
     await session.commit()
     await session.refresh(event)
-    return _event_out(event, deal.name)
+    return _event_out(event, deal.name if deal else None)
 
 
 @router.put("/{event_id}", response_model=CalendarEventOut)
@@ -312,11 +315,23 @@ async def update_event(
 ) -> CalendarEventOut:
     event = await _get_scoped_event(session, user, event_id)
     _assert_can_modify(user, event)
-    deal_name = event.deal.name  # capture before commit expires the relationship
+    deal_name = event.deal.name if event.deal else None  # before commit expires it
 
-    fields = payload.model_dump(exclude_unset=True, exclude={"add_to_google"})
+    fields = payload.model_dump(exclude_unset=True, exclude={"add_to_google", "deal_id"})
     for key, value in fields.items():
         setattr(event, key, value)
+
+    # deal_id is handled apart from the blind setattr loop: attaching a deal
+    # has to go through the same visibility check as creating against one,
+    # or a user could link an event to a deal they cannot see.
+    if "deal_id" in payload.model_fields_set:
+        if payload.deal_id is None:
+            event.deal_id = None
+            deal_name = None
+        else:
+            deal = await _get_visible_deal(session, user, payload.deal_id)
+            event.deal_id = deal.id
+            deal_name = deal.name
     if event.ends_at <= event.starts_at:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,

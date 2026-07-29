@@ -98,12 +98,18 @@ function DayEventsList({
               <SyncBadge status={event.google_sync_status} />
             </p>
             <p className="mt-0.5 text-sm text-text-tertiary">
-              <Link
-                to={`/app/deals/${event.deal_id}`}
-                className="text-accent hover:text-accent-hover"
-              >
-                {event.deal_name}
-              </Link>
+              {/* Deal-less events are legitimate now — say so rather than
+                  rendering a link to nowhere. */}
+              {event.deal_id ? (
+                <Link
+                  to={`/app/deals/${event.deal_id}`}
+                  className="text-accent hover:text-accent-hover"
+                >
+                  {event.deal_name}
+                </Link>
+              ) : (
+                <span>{t("calendarPage.noDeal")}</span>
+              )}
               {event.location ? ` · ${event.location}` : ""}
             </p>
           </div>
@@ -283,7 +289,7 @@ export function CalendarPage() {
                 setEditingEvent(event);
               }
             }}
-            title={`${event.title} — ${event.deal_name}`}
+            title={event.deal_name ? `${event.title} — ${event.deal_name}` : event.title}
             className={cn(
               "truncate rounded px-1.5 py-0.5 text-xs",
               event.google_sync_status === "error"

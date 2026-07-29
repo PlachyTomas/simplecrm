@@ -29,6 +29,7 @@
     "moreEvents": "+{{count}} more",
     "deleteConfirm": "Delete the event \"{{title}}\"?",
     "deleteSuccess": "Event deleted.",
-    "deleteError": "Failed to delete the event."
+    "deleteError": "Failed to delete the event.",
+    "noDeal": "No deal"
   }
 }

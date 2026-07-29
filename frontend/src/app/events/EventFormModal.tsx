@@ -104,9 +104,11 @@ export function EventFormModal({
   useEffect(() => {
     if (open) void refetchGoogleStatus();
   }, [open, refetchGoogleStatus]);
-  // Create mode without a bound deal (dashboard quick action): the user
-  // must pick the deal, since events are deal-bound (`deal_id NOT NULL`).
-  const needsDealPicker = !editing && !dealId;
+  // Show the searchable deal picker whenever the event has no deal of its
+  // own — creating from the dashboard/calendar without one, or editing an
+  // event that was saved deal-less. The pick is OPTIONAL: an event can exist
+  // before anyone knows which deal it belongs to, and be attached later.
+  const needsDealPicker = editing ? !event?.deal_id : !dealId;
 
   const [selectedDeal, setSelectedDeal] = useState<PickedDeal | null>(null);
   // Tracks the last auto-filled default title so a fresh deal pick can
@@ -258,6 +260,9 @@ export function EventFormModal({
             starts_at: starts.toISOString(),
             ends_at: ends.toISOString(),
             add_to_google: addToGoogle,
+            // Only sent when the user actually picked one — omitting the key
+            // leaves the existing link alone (the PUT is exclude_unset).
+            ...(selectedDeal ? { deal_id: selectedDeal.id } : {}),
           },
         },
         {
@@ -266,14 +271,11 @@ export function EventFormModal({
         },
       );
     } else {
-      const effectiveDealId = dealId ?? selectedDeal?.id;
-      if (!effectiveDealId) {
-        setError(t("eventFormModal.errorDealRequired"));
-        return;
-      }
       createEvent.mutate(
         {
-          deal_id: effectiveDealId,
+          // No deal is a valid event — a call you booked before you knew
+          // which deal it was about.
+          deal_id: dealId ?? selectedDeal?.id ?? null,
           title: title.trim(),
           description: description.trim() || null,
           location: location.trim() || null,
@@ -312,7 +314,7 @@ export function EventFormModal({
         {needsDealPicker ? null : (
           <p className="mt-1 text-sm text-text-tertiary">
             {t("eventFormModal.dealLabel")}{" "}
-            {event ? (
+            {event?.deal_id ? (
               <Link
                 to={`/app/deals/${event.deal_id}`}
                 className="font-medium text-accent hover:text-accent-hover"
@@ -504,11 +506,10 @@ function DealPickerField({
   return (
     <label className="block text-sm">
       <span className="mb-1 block text-text-secondary">
-        {t("eventFormModal.dealPicker.label")} <span className="text-danger">*</span>
+        {t("eventFormModal.dealPicker.labelOptional")}
       </span>
       <input
         type="text"
-        aria-required="true"
         autoComplete="off"
         data-testid={testIds.events.dealPicker.input}
         value={search}
@@ -519,6 +520,9 @@ function DealPickerField({
         placeholder={t("eventFormModal.dealPicker.placeholder")}
         className={inputCls}
       />
+      {!q && !value ? (
+        <p className="mt-1 text-xs text-text-tertiary">{t("eventFormModal.dealPicker.hint")}</p>
+      ) : null}
       {q && deals.isPending ? (
         <p className="mt-2 text-xs text-text-tertiary" role="status">
           {t("eventFormModal.dealPicker.loading")}

@@ -102,12 +102,13 @@ describe("EventFormModal deal picker", () => {
     globalThis.fetch = originalFetch;
   });
 
-  it("create mode without dealId shows the required picker and creates with the picked deal", async () => {
+  it("create mode without dealId shows an optional picker and creates with the picked deal", async () => {
     const onClose = vi.fn();
     wrap(<EventFormModal open onClose={onClose} />);
 
     const input = screen.getByTestId(testIds.events.dealPicker.input);
-    expect(input).toHaveAttribute("aria-required", "true");
+    // The deal is optional now — nothing marks the picker as required.
+    expect(input).not.toHaveAttribute("aria-required");
 
     await userEvent.type(input, "acme");
     const option = await screen.findByTestId(testIds.events.dealPicker.option("d1"));
@@ -129,16 +130,20 @@ describe("EventFormModal deal picker", () => {
     });
   });
 
-  it("blocks submit with a validation message until a deal is picked", async () => {
-    wrap(<EventFormModal open onClose={vi.fn()} />);
-    await userEvent.type(screen.getByTestId(testIds.events.dealPicker.input), "nic neodpovídá");
-    // Give the title a value so only the deal is missing.
+  it("creates a deal-less event when no deal is picked", async () => {
+    const onClose = vi.fn();
+    wrap(<EventFormModal open onClose={onClose} />);
     await userEvent.type(screen.getByRole("textbox", { name: "Název" }), "Schůzka");
     await userEvent.click(screen.getByRole("button", { name: "Vytvořit událost" }));
-    expect(
-      await screen.findByText("Vyberte obchod, ke kterému událost patří."),
-    ).toBeInTheDocument();
-    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    expect(post).toBeDefined();
+    // Explicit null, not an omitted key: the event is deliberately unattached.
+    expect(JSON.parse(String(post![1]!.body))).toMatchObject({
+      deal_id: null,
+      title: "Schůzka",
+    });
   });
 
   it("keeps the deal-locked create mode unchanged when dealId is passed", async () => {

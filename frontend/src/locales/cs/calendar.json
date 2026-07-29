@@ -29,6 +29,7 @@
     "moreEvents": "+{{count}} další",
     "deleteConfirm": "Smazat událost \"{{title}}\"?",
     "deleteSuccess": "Událost smazána.",
-    "deleteError": "Událost se nepodařilo smazat."
+    "deleteError": "Událost se nepodařilo smazat.",
+    "noDeal": "Bez obchodu"
   }
 }
