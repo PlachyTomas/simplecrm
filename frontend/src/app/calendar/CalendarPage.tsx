@@ -498,17 +498,26 @@ export function CalendarPage() {
         className={cn("hidden min-h-0 flex-1 md:flex", zoom === "week" ? "flex-col" : "flex-row")}
       >
         {zoom === "week" ? (
-          <div className="flex flex-col">
+          <div className="flex min-h-0 flex-1 flex-col">
             {weekdayHeader}
-            <div className="mt-1 grid grid-cols-7 gap-1">
-              {days.map((day) => dayCell(day, MAX_CHIPS.week, "min-h-28"))}
+            <div className="mt-1 min-h-0 flex-1 overflow-y-auto">
+              <div className="grid grid-cols-7 gap-1">
+                {days.map((day) => dayCell(day, MAX_CHIPS.week, "min-h-28"))}
+              </div>
             </div>
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">
             {weekdayHeader}
-            <div className="mt-1 grid min-h-0 flex-1 auto-rows-fr grid-cols-7 gap-1">
-              {days.map((day) => dayCell(day, MAX_CHIPS.month, "min-h-20"))}
+            {/* The cells carry a min-height, so on a short window six week
+                rows don't fit and `auto-rows-fr` can't shrink past it. Scroll
+                the grid rather than clipping the last week off the bottom of
+                a page that has no scroll of its own; the weekday header and
+                the toolbar above stay put. */}
+            <div className="mt-1 min-h-0 flex-1 overflow-y-auto">
+              <div className="grid min-h-full auto-rows-fr grid-cols-7 gap-1">
+                {days.map((day) => dayCell(day, MAX_CHIPS.month, "min-h-20"))}
+              </div>
             </div>
           </div>
         )}
