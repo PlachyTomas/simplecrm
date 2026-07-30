@@ -106,7 +106,7 @@ export function EmailHistorySection({
   const items = query.data?.items ?? [];
 
   return (
-    <section className="mt-6">
+    <section className="mt-4">
       <h3 className="text-sm font-semibold text-text-primary">{t("history.title")}</h3>
       {query.isPending ? (
         <p className="mt-2 text-sm text-text-tertiary">{t("history.loading")}</p>

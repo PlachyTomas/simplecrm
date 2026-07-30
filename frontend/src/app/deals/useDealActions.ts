@@ -75,6 +75,27 @@ export function useMarkAnyDealLost() {
   });
 }
 
+/**
+ * Real reopen: `POST /deals/{id}/reopen` clears `closed_at` + `lost_reason`
+ * server-side (and moves a won/lost-staged deal back to the first open
+ * stage). A PATCH with `{lost_reason: null}` cannot do this — `DealUpdate`
+ * has no `closed_at`, so the deal would stay terminal.
+ */
+export function useReopenDeal(dealId: string | undefined) {
+  const { accessToken } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation<DealOut, Error, void>({
+    mutationFn: () =>
+      apiFetch<DealOut>(`/api/v1/deals/${dealId}/reopen`, {
+        method: "POST",
+        token: accessToken,
+      }),
+    onSuccess: () => {
+      invalidateDealReadModels(queryClient, dealId);
+    },
+  });
+}
+
 export function useToggleAnyDealPayment() {
   const { accessToken } = useAuth();
   const queryClient = useQueryClient();

@@ -27,6 +27,7 @@ export const ACTIVITY_LABEL_KEY: Record<ActivityType, CommonKey> = {
   company_updated: "activities.types.company_updated",
   event_created: "activities.types.event_created",
   call_logged: "activities.types.call_logged",
+  deal_reopened: "activities.types.deal_reopened",
 };
 
 // Deal + company field names -> catalog key, for the inline "changed

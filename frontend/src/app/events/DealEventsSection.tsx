@@ -34,7 +34,7 @@ function EventRow({
   const ends = new Date(event.ends_at);
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-2 px-6 py-3">
+    <li className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
       <div className={past ? "opacity-60" : undefined}>
         <p className="flex items-center gap-2 text-sm font-medium text-text-primary">
           {event.title}
@@ -108,8 +108,8 @@ export function DealEventsSection({ dealId, dealName, locale }: DealEventsSectio
   }
 
   return (
-    <section className="mt-6 rounded-lg border border-border bg-surface">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle px-6 py-4">
+    <section className="mt-4 rounded-lg border border-border bg-surface">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle px-4 py-3">
         <div>
           <h2 className="text-base font-semibold">{t("eventsSection.title")}</h2>
           <p className="mt-0.5 text-sm text-text-tertiary">{t("eventsSection.subtitle")}</p>
@@ -127,11 +127,11 @@ export function DealEventsSection({ dealId, dealName, locale }: DealEventsSectio
       </header>
 
       {isPending ? (
-        <p className="px-6 py-4 text-sm text-text-tertiary" role="status">
+        <p className="px-4 py-3 text-sm text-text-tertiary" role="status">
           {t("eventsSection.loading")}
         </p>
       ) : upcoming.length === 0 && past.length === 0 ? (
-        <p className="px-6 py-4 text-sm text-text-tertiary">{t("eventsSection.empty")}</p>
+        <p className="px-4 py-3 text-sm text-text-tertiary">{t("eventsSection.empty")}</p>
       ) : (
         <ul className="divide-y divide-border-subtle">
           {upcoming.map((event) => (

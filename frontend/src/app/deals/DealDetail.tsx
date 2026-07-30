@@ -5,9 +5,10 @@ import { Link } from "react-router-dom";
 
 import { useCompany } from "@/app/companies/useCompany";
 import { useContact, useContacts } from "@/app/contacts/useContacts";
+import { DealTimelineSection } from "@/app/deals/DealTimelineSection";
 import { MarkLostDialog } from "@/app/deals/MarkLostDialog";
-import { useMarkDealLost, useMarkDealWon } from "@/app/deals/useDealActions";
-import { useDeal, useDeleteDeal, useUpdateDeal } from "@/app/deals/useDeals";
+import { useMarkDealLost, useMarkDealWon, useReopenDeal } from "@/app/deals/useDealActions";
+import { type DealOut, useDeal, useDeleteDeal, useUpdateDeal } from "@/app/deals/useDeals";
 import { EmailComposeModal } from "@/app/emails/EmailComposeModal";
 import { EmailHistorySection } from "@/app/emails/EmailHistorySection";
 import { GatedMailButton } from "@/app/emails/GatedMailButton";
@@ -17,16 +18,45 @@ import { usePipelineBoard } from "@/app/pipeline/useBoard";
 import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
 
+/**
+ * One cell of the info grid: label above value, so two fields fit side by side
+ * from `sm` up (`DealNoteField` builds its own full-width cell).
+ */
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="grid grid-cols-3 gap-4 py-3">
-      <dt className="text-sm text-text-tertiary">{label}</dt>
-      <dd className="col-span-2 text-sm text-text-primary">{children}</dd>
+    <div className="min-w-0 py-1">
+      <dt className="text-xs font-medium text-text-tertiary">{label}</dt>
+      <dd className="mt-0.5 text-sm text-text-primary">{children}</dd>
     </div>
+  );
+}
+
+/** Open / won / lost — the deal's state, shown next to the name in the header. */
+function StatusChip({ deal }: { deal: DealOut }) {
+  const { t } = useTranslation("deals");
+  if (!deal.closed_at) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-accent-subtle px-3 py-1 text-xs font-medium text-accent">
+        {t("dealDetail.open")}
+      </span>
+    );
+  }
+  if (deal.lost_reason) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-danger-subtle px-3 py-1 text-xs font-medium text-danger">
+        {t("dealDetail.lost")} · {deal.lost_reason}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-success-subtle px-3 py-1 text-xs font-medium text-success">
+      <Check size={12} strokeWidth={2} aria-hidden /> {t("dealDetail.won")}
+    </span>
   );
 }
 
@@ -66,6 +96,8 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
   });
   const { data: smtp } = useSmtpSettings();
   const [lostDialogOpen, setLostDialogOpen] = useState(false);
+  const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [edit, setEdit] = useState<EditState | null>(null);
@@ -87,6 +119,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
   }, [deal]);
 
   const markWon = useMarkDealWon(dealId);
+  const reopenDeal = useReopenDeal(dealId);
   const markLost = useMarkDealLost(dealId);
   const updateDeal = useUpdateDeal(dealId);
   const deleteDeal = useDeleteDeal(dealId);
@@ -186,18 +219,19 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
     }
   }
 
+  // Both confirmations keep the dialog open on failure so the toast explains
+  // the error next to a button the user can press again.
   async function handleReopen() {
-    if (!window.confirm(t("dealDetail.confirmReopen"))) return;
     try {
-      await updateDeal.mutateAsync({ lost_reason: null });
+      await reopenDeal.mutateAsync();
       toast.success(t("dealDetail.toast.reopened"));
+      setReopenDialogOpen(false);
     } catch {
       toast.error(t("dealDetail.toast.reopenError"));
     }
   }
 
   async function handleDelete() {
-    if (!window.confirm(t("dealDetail.confirmDelete", { name: deal!.name }))) return;
     try {
       await deleteDeal.mutateAsync();
       toast.success(t("dealDetail.toast.deleted"));
@@ -209,26 +243,29 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="shrink-0 border-b border-border-subtle p-6">
+      <header className="shrink-0 border-b border-border-subtle p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h2
-              ref={titleRef}
-              tabIndex={-1}
-              id="deal-detail-title"
-              className="text-2xl font-semibold outline-none"
-            >
-              {deal.name}
-            </h2>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h2
+                ref={titleRef}
+                tabIndex={-1}
+                id="deal-detail-title"
+                className="text-2xl font-semibold outline-none"
+              >
+                {deal.name}
+              </h2>
+              <StatusChip deal={deal} />
+            </div>
             {value > 0 ? (
               <p className="mt-1 font-mono text-lg tabular-nums text-text-primary">
-                {Number.isNaN(value) ? `${deal.value} ${deal.currency}` : moneyFmt.format(value)}
+                {moneyFmt.format(value)}
               </p>
             ) : null}
           </div>
           <CloseButton onClose={onClose} />
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           {!isClosed ? (
             <>
               <button
@@ -255,8 +292,8 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
           ) : (
             <button
               type="button"
-              onClick={handleReopen}
-              disabled={updateDeal.isPending}
+              onClick={() => setReopenDialogOpen(true)}
+              disabled={reopenDeal.isPending}
               className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
             >
               <RotateCcw size={16} strokeWidth={1.75} /> {t("dealDetail.reopen")}
@@ -284,9 +321,10 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
           {user?.role === "admin" ? (
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => setDeleteDialogOpen(true)}
               disabled={deleteDeal.isPending}
               aria-label={t("dealDetail.deleteAriaLabel")}
+              data-testid={testIds.deals.detail.deleteButton}
               className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-3 text-sm font-medium text-text-secondary transition-colors duration-fast hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger disabled:opacity-60"
             >
               <Trash2 size={14} strokeWidth={1.75} />
@@ -295,40 +333,25 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
         </div>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-6">
-        <section className="rounded-lg border border-border bg-surface">
-          <dl className="divide-y divide-border-subtle px-6">
-            <Field label={t("dealDetail.fields.status")}>
-              {deal.closed_at ? (
-                deal.lost_reason ? (
-                  <span className="inline-flex items-center rounded-full bg-danger-subtle px-3 py-1 text-xs font-medium text-danger">
-                    {t("dealDetail.lost")} · {deal.lost_reason}
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-success-subtle px-3 py-1 text-xs font-medium text-success">
-                    <Check size={12} strokeWidth={2} aria-hidden /> {t("dealDetail.won")}
-                  </span>
-                )
-              ) : (
-                <span className="inline-flex items-center rounded-full bg-accent-subtle px-3 py-1 text-xs font-medium text-accent">
-                  {t("dealDetail.open")}
-                </span>
-              )}
-            </Field>
-            <Field label={t("dealDetail.fields.name")}>
-              {editing && edit ? (
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <DealTimelineSection dealId={deal.id} />
+
+        <section className="mt-4 rounded-lg border border-border bg-surface p-4">
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+            {/* The header carries name, value and status in view mode; edit mode
+                still needs every field, so those rows come back with the form. */}
+            {editing && edit ? (
+              <Field label={t("dealDetail.fields.name")}>
                 <input
                   type="text"
                   value={edit.name}
                   onChange={(e) => setEdit((p) => p && { ...p, name: e.target.value })}
                   className="block h-9 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none"
                 />
-              ) : (
-                deal.name
-              )}
-            </Field>
-            <Field label={t("dealDetail.fields.value")}>
-              {editing && edit ? (
+              </Field>
+            ) : null}
+            {editing && edit ? (
+              <Field label={t("dealDetail.fields.value")}>
                 <input
                   type="text"
                   inputMode="decimal"
@@ -336,14 +359,18 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
                   onChange={(e) => setEdit((p) => p && { ...p, value: e.target.value })}
                   className="block h-9 w-full rounded-md border border-border bg-surface-overlay px-3 font-mono text-sm tabular-nums focus:border-accent focus:outline-none"
                 />
-              ) : Number.isNaN(value) ? (
-                `${deal.value} ${deal.currency}`
-              ) : value > 0 ? (
-                moneyFmt.format(value)
-              ) : (
-                <span className="text-text-tertiary">—</span>
-              )}
-            </Field>
+              </Field>
+            ) : value > 0 ? null : (
+              // Zero or unparseable values are hidden in the header, so they
+              // keep their row — otherwise the value would show up nowhere.
+              <Field label={t("dealDetail.fields.value")}>
+                {Number.isNaN(value) ? (
+                  `${deal.value} ${deal.currency}`
+                ) : (
+                  <span className="text-text-tertiary">—</span>
+                )}
+              </Field>
+            )}
             <Field label={t("dealDetail.fields.company")}>
               <Link
                 to={`/app/companies/${deal.company_id}`}
@@ -459,6 +486,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
                 {dateFmt.format(new Date(deal.closed_at))}
               </Field>
             ) : null}
+            <DealNoteField dealId={deal.id} note={deal.note ?? null} />
           </dl>
         </section>
 
@@ -493,8 +521,6 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
           </>
         ) : null}
 
-        <DealNoteSection dealId={deal.id} note={deal.note ?? null} />
-
         <DealEventsSection dealId={deal.id} dealName={deal.name} locale={locale} />
 
         <EmailHistorySection
@@ -522,6 +548,29 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
         />
       ) : null}
 
+      <ConfirmDialog
+        open={reopenDialogOpen}
+        title={t("dealDetail.reopenDialog.title")}
+        body={t("dealDetail.reopenDialog.body")}
+        confirmLabel={t("dealDetail.reopenDialog.confirm")}
+        pendingLabel={t("dealDetail.reopenDialog.pending")}
+        pending={reopenDeal.isPending}
+        onCancel={() => setReopenDialogOpen(false)}
+        onConfirm={() => void handleReopen()}
+      />
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        danger
+        title={t("dealDetail.deleteDialog.title")}
+        body={t("dealDetail.deleteDialog.body", { name: deal.name })}
+        confirmLabel={t("dealDetail.deleteDialog.confirm")}
+        pendingLabel={t("dealDetail.deleteDialog.pending")}
+        pending={deleteDeal.isPending}
+        onCancel={() => setDeleteDialogOpen(false)}
+        onConfirm={() => void handleDelete()}
+      />
+
       <MarkLostDialog
         open={lostDialogOpen}
         onClose={() => setLostDialogOpen(false)}
@@ -545,16 +594,15 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
  * The deal's **standing description** — `deals.note`, a record attribute that
  * overwrites in place ("Region: Morava", scope, terms). Deliberately not the
  * timeline: a running commentary ("volal jsem, chtějí nabídku do pátku") is a
- * timestamped, attributed event and is written through the pipeline card's
- * quick actions as an `ActivityType.note` row. The subtitle says which is
- * which, so the two never read as the same box.
+ * timestamped, attributed event and lands in Průběh as an `ActivityType.note`
+ * row. With the timeline now one section above, the subtitle only shows while
+ * the field is empty or being written — that is when the distinction matters.
  *
- * Edit/save interaction mirrors the company `NotesTab` (own toggle, textarea
- * capped at the column's 2000 chars, cancel restores the server value) rather
- * than joining the header's all-fields edit mode — a description is edited on
- * its own, and the company page already established that shape.
+ * Rendered as the closing full-width row of the info grid, but it keeps its own
+ * edit toggle and mutation (the company `NotesTab` shape) instead of joining
+ * the header's all-fields edit mode — a description is edited on its own.
  */
-function DealNoteSection({ dealId, note }: { dealId: string; note: string | null }) {
+function DealNoteField({ dealId, note }: { dealId: string; note: string | null }) {
   const { t } = useTranslation("deals");
   const update = useUpdateDeal(dealId);
   const toast = useToast();
@@ -576,12 +624,9 @@ function DealNoteSection({ dealId, note }: { dealId: string; note: string | null
   }
 
   return (
-    <section className="mt-6 rounded-lg border border-border bg-surface">
-      <header className="flex items-start justify-between gap-4 border-b border-border-subtle px-6 py-4">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-base font-semibold">{t("noteSection.title")}</h2>
-          <p className="mt-0.5 text-sm text-text-tertiary">{t("noteSection.subtitle")}</p>
-        </div>
+    <div className="mt-1 border-t border-border-subtle pt-3 sm:col-span-2">
+      <dt className="flex items-center justify-between gap-3 text-xs font-medium text-text-tertiary">
+        {t("noteSection.title")}
         {!editing ? (
           <button
             type="button"
@@ -592,19 +637,20 @@ function DealNoteSection({ dealId, note }: { dealId: string; note: string | null
             {note ? t("noteSection.editButton") : t("noteSection.addButton")}
           </button>
         ) : null}
-      </header>
-      <div className="px-6 py-4">
+      </dt>
+      <dd className="mt-1">
         {editing ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             <textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              rows={6}
+              rows={4}
               maxLength={2000}
               placeholder={t("noteSection.placeholder")}
               data-testid={testIds.deals.detail.noteInput}
               className="block w-full resize-y rounded-md border border-border bg-surface-overlay p-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
             />
+            <p className="text-xs text-text-tertiary">{t("noteSection.subtitle")}</p>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -631,10 +677,13 @@ function DealNoteSection({ dealId, note }: { dealId: string; note: string | null
         ) : note ? (
           <p className="whitespace-pre-wrap text-sm text-text-primary">{note}</p>
         ) : (
-          <p className="text-sm text-text-secondary">{t("noteSection.empty")}</p>
+          <>
+            <p className="text-sm text-text-secondary">{t("noteSection.empty")}</p>
+            <p className="mt-1 text-xs text-text-tertiary">{t("noteSection.subtitle")}</p>
+          </>
         )}
-      </div>
-    </section>
+      </dd>
+    </div>
   );
 }
 

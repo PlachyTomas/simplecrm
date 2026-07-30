@@ -153,11 +153,19 @@ function ActivityDetail({
  * (`Deal "X" · Stage change`); everything else shows the bare action label.
  * Renders as an `<li>` to slot into the timeline `<ol>` at the call site.
  */
-export function ActivityRow({ activity }: { activity: ActivityItem }): JSX.Element {
+export function ActivityRow({
+  activity,
+  hideDealName = false,
+}: {
+  activity: ActivityItem;
+  /** Suppress the "Obchod „…“ ·" prefix — redundant inside a single deal's
+   *  own timeline, where every row is that deal. */
+  hideDealName?: boolean;
+}): JSX.Element {
   const { t } = useTranslation("common");
   const locale = useLocale();
   const payload = (activity.payload ?? {}) as Record<string, unknown>;
-  const dealName = asString(payload.deal_name);
+  const dealName = hideDealName ? undefined : asString(payload.deal_name);
   const label = t(ACTIVITY_LABEL_KEY[activity.activity_type]);
   const userName = asString(activity.user_name);
 

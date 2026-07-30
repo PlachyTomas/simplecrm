@@ -58,6 +58,11 @@ function makeDeal(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/** GET /activities response for the deal-detail Průběh section. */
+function activitiesPage(items: unknown[], total = items.length) {
+  return { items, total, limit: 20, offset: 0 };
+}
+
 function renderAt(path: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -124,18 +129,120 @@ describe("Deals list + detail", () => {
         return jsonResponse({ items: [], total: 0 });
       if (url.includes("/api/v1/pipelines")) return jsonResponse({ stages: [] });
       if (url.includes("/api/v1/events")) return jsonResponse({ items: [], total: 0 });
+      if (url.includes("/api/v1/activities")) return jsonResponse(activitiesPage([]));
       throw new Error(`Unexpected fetch: ${url}`);
     });
 
     // The retired /app/deals/:id route redirects to /app/deals?deal=:id and
     // opens the dialog (an h2, not a full page).
     renderAt(`/app/deals/${deal.id}`);
+    const heading = await screen.findByRole("heading", { level: 2, name: /Otevřený obchod/ });
+    // The status chip sits next to the title in the header, not in the <dl>.
+    expect(heading.parentElement).toHaveTextContent(/Otevřeno/);
+    // Name and Value duplicate the header, so they leave the info grid.
+    const fieldLabels = Array.from(document.querySelectorAll("dl dt")).map((n) => n.textContent);
+    expect(fieldLabels).toContain("Firma");
+    expect(fieldLabels).not.toContain("Název");
+    expect(fieldLabels).not.toContain("Hodnota");
+  });
+
+  it("shows the deal timeline first and pages it with Načíst další", async () => {
+    const deal = makeDeal({ id: "timeline-deal", name: "Obchod s průběhem" });
+    const activities = Array.from({ length: 21 }, (_, i) => ({
+      id: `a${i}`,
+      organization_id: ME.organization.id,
+      user_id: null,
+      user_name: "Eva Nováková",
+      entity_type: "deal",
+      entity_id: deal.id,
+      activity_type: i === 0 ? "deal_created" : "note",
+      payload: i === 0 ? {} : { body: `Poznámka ${i}` },
+      created_at: "2026-04-01T08:00:00+00:00",
+    }));
+    const limits: string[] = [];
+    fetchMock.mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
+      if (url.endsWith(`/api/v1/deals/${deal.id}`)) return jsonResponse(deal);
+      if (url.includes("/api/v1/deals?"))
+        return jsonResponse({ items: [deal], total: 1, limit: 50, offset: 0 });
+      if (url.includes("/api/v1/activities")) {
+        const limit = Number(new URL(url, "http://x").searchParams.get("limit"));
+        limits.push(String(limit));
+        return jsonResponse(activitiesPage(activities.slice(0, limit), activities.length));
+      }
+      if (url.includes("/api/v1/companies/")) return jsonResponse({ id: "co1", name: "Firma" });
+      if (url.includes("/api/v1/contacts")) return jsonResponse({ items: [], total: 0 });
+      if (url.includes("/api/v1/users") || url.includes("/api/v1/teams"))
+        return jsonResponse({ items: [], total: 0 });
+      if (url.includes("/api/v1/pipelines")) return jsonResponse({ stages: [] });
+      if (url.includes("/api/v1/events")) return jsonResponse({ items: [], total: 0 });
+      if (url.includes("/api/v1/emails")) return jsonResponse({ items: [], total: 0 });
+      if (url.includes("/api/v1/me/smtp")) return jsonResponse({ configured: false });
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    renderAt(`/app/deals/${deal.id}`);
+    const user = userEvent.setup();
+
+    expect(await screen.findByText("Průběh")).toBeInTheDocument();
+    // First page = 20 of 21 rows, so the pager is offered.
+    await waitFor(() => expect(screen.getAllByText("Poznámka").length).toBe(19));
+    expect(limits).toContain("20");
+
+    await user.click(screen.getByTestId("deals-detail-timeline-load-more"));
+    await waitFor(() => expect(limits).toContain("40"));
+    // Everything fits now — the pager disappears instead of looping.
     await waitFor(() =>
-      expect(
-        screen.getByRole("heading", { level: 2, name: /Otevřený obchod/ }),
-      ).toBeInTheDocument(),
+      expect(screen.queryByTestId("deals-detail-timeline-load-more")).not.toBeInTheDocument(),
     );
-    expect(screen.getByText(/Otevřeno/)).toBeInTheDocument();
+  });
+
+  it("deletes through the styled confirm dialog, not window.confirm", async () => {
+    const deal = makeDeal({ id: "del-deal", name: "Obchod ke smazání" });
+    const confirmSpy = vi.spyOn(window, "confirm");
+    const deletes: string[] = [];
+    fetchMock.mockImplementation(async (input, init) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
+      if (url.endsWith(`/api/v1/deals/${deal.id}`)) {
+        if (init?.method === "DELETE") {
+          deletes.push(url);
+          return new Response(null, { status: 204 });
+        }
+        return jsonResponse(deal);
+      }
+      if (url.includes("/api/v1/deals?"))
+        return jsonResponse({ items: [deal], total: 1, limit: 50, offset: 0 });
+      if (url.includes("/api/v1/activities")) return jsonResponse(activitiesPage([]));
+      if (url.includes("/api/v1/companies/")) return jsonResponse({ id: "co1", name: "Firma" });
+      if (url.includes("/api/v1/contacts")) return jsonResponse({ items: [], total: 0 });
+      if (url.includes("/api/v1/users") || url.includes("/api/v1/teams"))
+        return jsonResponse({ items: [], total: 0 });
+      if (url.includes("/api/v1/pipelines")) return jsonResponse({ stages: [] });
+      if (url.includes("/api/v1/events")) return jsonResponse({ items: [], total: 0 });
+      if (url.includes("/api/v1/emails")) return jsonResponse({ items: [], total: 0 });
+      if (url.includes("/api/v1/me/smtp")) return jsonResponse({ configured: false });
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    renderAt(`/app/deals/${deal.id}`);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByTestId("deals-detail-delete-button"));
+    expect(await screen.findByText("Smazat obchod?")).toBeInTheDocument();
+    expect(screen.getByText(/Obchod „Obchod ke smazání“/)).toBeInTheDocument();
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    // Cancel is a real escape hatch — nothing is sent.
+    await user.click(screen.getByTestId("confirm-dialog-cancel"));
+    await waitFor(() => expect(screen.queryByText("Smazat obchod?")).not.toBeInTheDocument());
+    expect(deletes).toEqual([]);
+
+    await user.click(screen.getByTestId("deals-detail-delete-button"));
+    await user.click(await screen.findByTestId("confirm-dialog-confirm"));
+    await waitFor(() => expect(deletes.length).toBe(1));
+    confirmSpy.mockRestore();
   });
 
   it("edits the standing deal description and keeps it distinct from timeline notes", async () => {
@@ -154,6 +261,7 @@ describe("Deals list + detail", () => {
       }
       if (url.includes("/api/v1/deals?"))
         return jsonResponse({ items: [deal], total: 1, limit: 50, offset: 0 });
+      if (url.includes("/api/v1/activities")) return jsonResponse(activitiesPage([]));
       if (url.includes("/api/v1/companies/")) return jsonResponse({ id: "co1", name: "Firma" });
       if (url.includes("/api/v1/contacts")) return jsonResponse({ items: [], total: 0 });
       if (url.includes("/api/v1/users") || url.includes("/api/v1/teams"))
@@ -168,8 +276,8 @@ describe("Deals list + detail", () => {
     renderAt(`/app/deals/${deal.id}`);
     const user = userEvent.setup();
 
-    // Empty state names the field as a description, and the subtitle sends
-    // running commentary to the activity log instead.
+    // The description is the closing full-width row of the info grid, and its
+    // subtitle still sends running commentary to the timeline instead.
     expect(await screen.findByText(/Popis obchodu/)).toBeInTheDocument();
     expect(screen.getByText(/K tomuto obchodu zatím není žádný popis/)).toBeInTheDocument();
     expect(screen.getByText(/Průběžné poznámky z hovorů/)).toBeInTheDocument();
@@ -198,6 +306,7 @@ describe("Deals list + detail", () => {
       if (url.includes("/api/v1/me/smtp")) return jsonResponse({ configured: false });
       if (url.includes("/api/v1/emails"))
         return jsonResponse({ items: [], total: 0, limit: 50, offset: 0 });
+      if (url.includes("/api/v1/activities")) return jsonResponse(activitiesPage([]));
       if (url.includes("/api/v1/companies/"))
         return jsonResponse({ id: "co1", name: "Firma", email: "info@firma.cz" });
       if (url.includes("/api/v1/contacts")) return jsonResponse({ items: [], total: 0 });

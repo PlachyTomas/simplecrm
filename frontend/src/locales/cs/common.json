@@ -107,7 +107,8 @@
       "deal_updated": "Obchod upraven",
       "company_updated": "Firma upravena",
       "event_created": "Událost přidána",
-      "call_logged": "Zaznamenaný hovor"
+      "call_logged": "Zaznamenaný hovor",
+      "deal_reopened": "Obchod znovu otevřen"
     },
     "fields": {
       "name": "název",
