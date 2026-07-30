@@ -33,7 +33,9 @@
     "newContactCancel": "Cancel",
     "newContactError": "Could not save the contact.",
     "trackLabel": "Track opens and clicks",
-    "trackingOffByOrg": "Open and click tracking is switched off for your organization."
+    "trackingOffByOrg": "Open and click tracking is switched off for your organization.",
+    "attachDealLabel": "Attach to a deal",
+    "attachDealSelectLabel": "Deal"
   },
   "history": {
     "title": "Email history",

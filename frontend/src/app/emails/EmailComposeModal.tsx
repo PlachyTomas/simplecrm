@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { type ContactOut, useContacts } from "@/app/contacts/useContacts";
 import { useCreateContact } from "@/app/contacts/useCreateContact";
+import { useDeals } from "@/app/deals/useDeals";
 import { EmailTemplatePicker, MergeFieldHint } from "@/app/emails/EmailTemplatePicker";
 import { type SentEmailOut, useSendEmail } from "@/app/emails/useEmails";
 import { useCurrentUser } from "@/auth/useCurrentUser";
@@ -379,6 +380,74 @@ function InlineNewContactForm({
   );
 }
 
+/**
+ * "Attach to a deal" row for a compose opened from a company (no deal context).
+ * Filing the mail on the company's live deal is the common case, so it defaults
+ * on and preselects the most recently updated open deal — `updated_at` stands
+ * in for "where things are happening" without a new endpoint.
+ *
+ * Its own component so the deals request only happens on that path: `useDeals`
+ * has no `enabled` switch, and the reply/deal-context flows must stay untouched.
+ */
+function AttachToDealRow({
+  companyId,
+  onChange,
+}: {
+  companyId: string;
+  /** Reports the deal to file the mail on; `null` = company only. */
+  onChange: (dealId: string | null) => void;
+}) {
+  const { t } = useTranslation("emails");
+  const { data } = useDeals({ companyId, status: "open", limit: 100 });
+  // The list API offers no "recently updated" sort, so order client-side.
+  const deals = useMemo(
+    () => [...(data?.items ?? [])].sort((a, b) => b.updated_at.localeCompare(a.updated_at)),
+    [data],
+  );
+
+  const [attach, setAttach] = useState(true);
+  const [picked, setPicked] = useState<string | null>(null);
+  // Falls back to the newest deal until the user picks another; keeping the
+  // pick separate from `attach` restores it on an uncheck→recheck round trip.
+  const selected = deals.find((d) => d.id === picked)?.id ?? deals[0]?.id ?? null;
+
+  useEffect(() => {
+    onChange(attach ? selected : null);
+  }, [attach, selected, onChange]);
+
+  // No open deal → nothing to attach to; an empty dropdown would be noise.
+  if (deals.length === 0) return null;
+
+  return (
+    <div className="rounded-md border border-border-subtle bg-surface-overlay p-3">
+      <label className="flex cursor-pointer items-center gap-2 text-sm text-text-secondary">
+        <input
+          type="checkbox"
+          checked={attach}
+          data-testid={testIds.emails.compose.attachDealToggle}
+          onChange={(e) => setAttach(e.target.checked)}
+          className="h-4 w-4 rounded border-border accent-accent"
+        />
+        {t("compose.attachDealLabel")}
+      </label>
+      <select
+        value={selected ?? ""}
+        aria-label={t("compose.attachDealSelectLabel")}
+        data-testid={testIds.emails.compose.attachDealSelect}
+        disabled={!attach}
+        onChange={(e) => setPicked(e.target.value)}
+        className="mt-2 block h-9 w-full rounded-md border border-border bg-surface px-2 text-sm text-text-primary focus:border-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {deals.map((d) => (
+          <option key={d.id} value={d.id}>
+            {d.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export function EmailComposeModal({
   open,
   onClose,
@@ -432,6 +501,11 @@ export function EmailComposeModal({
   // Open/click tracking is on by default (mirrors the server default); opting
   // out sends a plain mail with no pixel and no rewritten links.
   const [track, setTrack] = useState(true);
+  // Deal chosen in the attach row below; only ever set on the company path.
+  const [attachedDealId, setAttachedDealId] = useState<string | null>(null);
+  // A reply is filed by the server off its parent, and a deal-context compose
+  // already knows its deal — the row exists only to fill that gap.
+  const attachRowCompanyId = !replyTo && !dealId ? companyId : undefined;
 
   // Dirty = anything beyond the reply/defaultTo prefill.
   const dirty =
@@ -463,7 +537,7 @@ export function EmailComposeModal({
           // A reply is anchored server-side to its parent's deal/company;
           // resending ids can only 422 on mismatch (e.g. an older parent
           // stored without a company link).
-          deal_id: replyTo ? null : (dealId ?? null),
+          deal_id: replyTo ? null : (dealId ?? attachedDealId),
           company_id: replyTo ? null : (companyId ?? null),
           reply_to_email_id: replyTo?.id ?? null,
           track: track && trackingAllowed,
@@ -653,6 +727,10 @@ export function EmailComposeModal({
               </ul>
             ) : null}
           </div>
+
+          {attachRowCompanyId ? (
+            <AttachToDealRow companyId={attachRowCompanyId} onChange={setAttachedDealId} />
+          ) : null}
 
           {trackingAllowed ? (
             <label className="flex items-center gap-2 text-sm text-text-secondary">

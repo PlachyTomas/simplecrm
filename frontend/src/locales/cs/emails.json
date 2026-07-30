@@ -33,7 +33,9 @@
     "newContactCancel": "Zrušit",
     "newContactError": "Kontakt se nepodařilo uložit.",
     "trackLabel": "Sledovat otevření a prokliky",
-    "trackingOffByOrg": "Sledování otevření a prokliků je pro Vaši organizaci vypnuté."
+    "trackingOffByOrg": "Sledování otevření a prokliků je pro Vaši organizaci vypnuté.",
+    "attachDealLabel": "Připojit k obchodu",
+    "attachDealSelectLabel": "Obchod"
   },
   "history": {
     "title": "Historie e-mailů",

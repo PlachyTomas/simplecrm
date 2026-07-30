@@ -2,6 +2,7 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Check,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -58,6 +59,44 @@ function isSortKey(value: string): value is DealSortKey {
 
 function isStatus(value: string): value is DealStatusFilter {
   return (STATUSES as string[]).includes(value);
+}
+
+/** Open / won / lost — mirrors the header chip in DealDetail (kept local so
+ * this file doesn't reach into a page another change is landing on). Lost
+ * carries the reason as a native tooltip since the row has no room for it
+ * inline. */
+function StatusChip({
+  status,
+  lostReason,
+}: {
+  status: DealStatusFilter;
+  lostReason: string | null | undefined;
+}) {
+  const { t } = useTranslation("deals");
+  if (status === "won") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-success-subtle px-3 py-1 text-xs font-medium text-success">
+        <Check size={12} strokeWidth={2} aria-hidden /> {t("dealsList.status.won")}
+      </span>
+    );
+  }
+  if (status === "lost") {
+    const label = t("dealsList.status.lost");
+    return (
+      <span
+        title={lostReason ?? undefined}
+        aria-label={lostReason ? `${label}: ${lostReason}` : label}
+        className="inline-flex items-center rounded-full bg-danger-subtle px-3 py-1 text-xs font-medium text-danger"
+      >
+        {label}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center rounded-full bg-accent-subtle px-3 py-1 text-xs font-medium text-accent">
+      {t("dealsList.status.open")}
+    </span>
+  );
 }
 
 /** Sortable column header. Clicking the active column flips direction;
@@ -381,6 +420,9 @@ export function DealsListPage() {
                     onSort={onSort}
                     className="hidden md:table-cell"
                   />
+                  <th scope="col" className={TH}>
+                    {t("dealsList.columns.status")}
+                  </th>
                   <th scope="col" className={`${TH} hidden lg:table-cell`}>
                     {t("dealsList.columns.owner")}
                   </th>
@@ -443,6 +485,9 @@ export function DealsListPage() {
                         ) : (
                           <span className="text-text-secondary">{deal.stage_name}</span>
                         )}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <StatusChip status={deal.status} lostReason={deal.lost_reason} />
                       </td>
                       <td className="hidden px-4 py-3 text-sm text-text-secondary lg:table-cell">
                         {deal.owner_name ?? "—"}

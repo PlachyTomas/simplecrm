@@ -408,6 +408,134 @@ describe("EmailComposeModal — open/click tracking", () => {
   });
 });
 
+const deal = (id: string, name: string, updatedAt: string): Record<string, unknown> => ({
+  id,
+  organization_id: "o1",
+  company_id: "c1",
+  stage_id: "s1",
+  owner_user_id: null,
+  primary_contact_id: null,
+  name,
+  value: "10000",
+  currency: "CZK",
+  probability_override: null,
+  expected_close_date: null,
+  closed_at: null,
+  lost_reason: null,
+  is_paid: false,
+  paid_at: null,
+  created_at: "2026-07-01T10:00:00Z",
+  updated_at: updatedAt,
+  company_name: "Acme",
+  company_email: null,
+  stage_name: "Nabídka",
+  owner_name: null,
+  primary_contact_name: null,
+  primary_contact_email: null,
+});
+
+describe("EmailComposeModal — attach to open deal", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** Serves the company's open deals + a successful send; records every call. */
+  function stubDeals(items: Record<string, unknown>[]) {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+        const u = String(url);
+        calls.push({ url: u, init });
+        if (u.includes("/api/v1/deals")) {
+          return jsonResponse({ items, total: items.length, limit: 100, offset: 0 });
+        }
+        if (u.includes("/api/v1/emails")) return jsonResponse({ ...PARENT, id: "e2" }, 201);
+        return jsonResponse({});
+      }),
+    );
+    return calls;
+  }
+
+  async function sentPayload(
+    calls: { url: string; init?: RequestInit }[],
+  ): Promise<Record<string, unknown>> {
+    const post = calls.find((c) => c.url.includes("/api/v1/emails"));
+    expect(post).toBeTruthy();
+    return JSON.parse(String((post!.init!.body as FormData).get("payload"))) as Record<
+      string,
+      unknown
+    >;
+  }
+
+  // Server order is deliberately not newest-first: the sort must be ours.
+  const DEALS = [
+    deal("d-old", "Starý obchod", "2026-07-01T10:00:00Z"),
+    deal("d-new", "Čerstvý obchod", "2026-07-25T10:00:00Z"),
+    deal("d-mid", "Střední obchod", "2026-07-10T10:00:00Z"),
+  ];
+
+  it("preselects the most recently updated open deal and files the mail on it", async () => {
+    const calls = stubDeals(DEALS);
+    wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" defaultTo="jan@acme.cz" />);
+    const select = (await screen.findByTestId(
+      testIds.emails.compose.attachDealSelect,
+    )) as HTMLSelectElement;
+    expect(select.value).toBe("d-new");
+    expect(
+      (screen.getByTestId(testIds.emails.compose.attachDealToggle) as HTMLInputElement).checked,
+    ).toBe(true);
+    // Only open deals are asked for.
+    expect(
+      calls.some((c) => c.url.includes("status=open") && c.url.includes("company_id=c1")),
+    ).toBe(true);
+
+    fireEvent.change(screen.getByLabelText("Předmět"), { target: { value: "Dobrý den" } });
+    fireEvent.click(screen.getByRole("button", { name: /Odeslat/ }));
+    await waitFor(() => expect(calls.some((c) => c.url.includes("/api/v1/emails"))).toBe(true));
+    expect(await sentPayload(calls)).toMatchObject({ deal_id: "d-new", company_id: "c1" });
+  });
+
+  it("sends deal_id null once the attach checkbox is unchecked", async () => {
+    const calls = stubDeals(DEALS);
+    wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" defaultTo="jan@acme.cz" />);
+    fireEvent.click(await screen.findByTestId(testIds.emails.compose.attachDealToggle));
+    expect(screen.getByTestId(testIds.emails.compose.attachDealSelect)).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Předmět"), { target: { value: "Dobrý den" } });
+    fireEvent.click(screen.getByRole("button", { name: /Odeslat/ }));
+    await waitFor(() => expect(calls.some((c) => c.url.includes("/api/v1/emails"))).toBe(true));
+    // Detached from the deal, still filed on the company.
+    expect(await sentPayload(calls)).toMatchObject({ deal_id: null, company_id: "c1" });
+  });
+
+  it("files the mail on another open deal once one is picked", async () => {
+    const calls = stubDeals(DEALS);
+    wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" defaultTo="jan@acme.cz" />);
+    fireEvent.change(await screen.findByTestId(testIds.emails.compose.attachDealSelect), {
+      target: { value: "d-mid" },
+    });
+    fireEvent.change(screen.getByLabelText("Předmět"), { target: { value: "Dobrý den" } });
+    fireEvent.click(screen.getByRole("button", { name: /Odeslat/ }));
+    await waitFor(() => expect(calls.some((c) => c.url.includes("/api/v1/emails"))).toBe(true));
+    expect(await sentPayload(calls)).toMatchObject({ deal_id: "d-mid" });
+  });
+
+  it("renders no attach row in deal context and never asks for deals", async () => {
+    const calls = stubDeals(DEALS);
+    wrap(<EmailComposeModal open onClose={vi.fn()} dealId="d1" companyId="c1" />);
+    await waitFor(() => expect(calls.length).toBeGreaterThan(0));
+    expect(screen.queryByTestId(testIds.emails.compose.attachDealToggle)).not.toBeInTheDocument();
+    expect(calls.some((c) => c.url.includes("/api/v1/deals"))).toBe(false);
+  });
+
+  it("renders no attach row when the company has no open deal", async () => {
+    const calls = stubDeals([]);
+    wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" />);
+    await waitFor(() => expect(calls.some((c) => c.url.includes("/api/v1/deals"))).toBe(true));
+    expect(screen.queryByTestId(testIds.emails.compose.attachDealToggle)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(testIds.emails.compose.attachDealSelect)).not.toBeInTheDocument();
+  });
+});
+
 const TEMPLATES = [
   {
     id: "tpl1",
