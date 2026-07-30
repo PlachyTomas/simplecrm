@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppRoutes } from "@/App";
 import { AuthProvider } from "@/auth/AuthContext";
+import { testIds } from "@/lib/testids";
 
 const ME = {
   id: "00000000-0000-0000-0000-000000000001",
@@ -144,6 +145,28 @@ describe("Pipeline Kanban", () => {
 
     const secondColumn = screen.getByRole("region", { name: /Fáze Osloveno/ });
     expect(within(secondColumn).getByText(/Zatím žádné obchody/)).toBeInTheDocument();
+  });
+
+  it("offers a lose drop zone and no delete route on the board", async () => {
+    fetchMock.mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
+      if (url.includes("/api/v1/pipelines/default/board")) return jsonResponse(BOARD);
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    renderAt("/app/pipeline");
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1, name: /Pipeline/ })).toBeInTheDocument(),
+    );
+
+    const loseZone = screen.getByTestId(testIds.pipeline.loseZone);
+    expect(within(loseZone).getByText(/Sem přetáhněte = neúspěch/)).toBeInTheDocument();
+    // Deleting a deal now only happens from its detail page.
+    expect(screen.queryByText(/smazání/i)).not.toBeInTheDocument();
+    expect(
+      screen.getAllByRole("button", { name: /Označit obchod .* jako neúspěch/ }).length,
+    ).toBeGreaterThan(0);
   });
 
   it("shows the Brzy hotové empty state when no deals are on the board", async () => {

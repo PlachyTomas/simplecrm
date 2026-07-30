@@ -55,18 +55,10 @@
       "addDealAriaLabel": "Add deal to stage {{name}}",
       "empty": "No deals yet."
     },
-    "trash": {
-      "ariaLabel": "Delete deal",
-      "dropHere": "Drop to delete",
-      "dragHere": "Drag here to delete"
-    },
-    "deleteDialog": {
-      "title": "Delete deal?",
-      "bodyPrefix": "Permanently deletes deal",
-      "bodySuffix": "This action cannot be undone.",
-      "cancel": "Cancel",
-      "confirm": "Delete",
-      "deleting": "Deleting…"
+    "loseDropZone": {
+      "ariaLabel": "Mark deal as lost",
+      "dropHere": "Drop = lost",
+      "dragHere": "Drag here = lost"
     },
     "winToast": {
       "withValue": "🎉 Congratulations! Deal {{name}} worth {{value}} closed.",
@@ -76,9 +68,7 @@
     "toast": {
       "paymentSaveError": "Failed to save the payment status.",
       "lostSuccess": "Deal {{name}} marked as lost.",
-      "lostError": "Failed to mark the deal as lost.",
-      "deleteSuccess": "Deal {{name}} deleted.",
-      "deleteError": "Failed to delete the deal."
+      "lostError": "Failed to mark the deal as lost."
     }
   },
   "dealsList": {
@@ -94,6 +84,7 @@
       "company": "Company",
       "value": "Value",
       "stage": "Stage",
+      "status": "Status",
       "owner": "Owner",
       "closed": "Closed"
     },
@@ -206,8 +197,6 @@
     "sendEmail": "Send email",
     "deleteAriaLabel": "Delete deal",
     "closeAriaLabel": "Close",
-    "confirmReopen": "Reopen this deal? The close date and reason will be removed.",
-    "confirmDelete": "Delete deal \"{{name}}\"? This action cannot be undone.",
     "goToCompany": "Go to company",
     "noOwner": "No owner",
     "noPrimaryContact": "No primary contact",
@@ -230,6 +219,25 @@
       "probability": "Probability",
       "created": "Created",
       "closed": "Closed"
+    },
+    "timeline": {
+      "title": "Timeline",
+      "loading": "Loading…",
+      "loadError": "Failed to load the timeline.",
+      "empty": "Nothing has happened yet. Move the deal, send an email or log a call and it will show up here.",
+      "loadMore": "Load more"
+    },
+    "reopenDialog": {
+      "title": "Reopen this deal?",
+      "body": "The close date and the lost reason will be cleared and the deal moves back to open.",
+      "confirm": "Reopen",
+      "pending": "Reopening…"
+    },
+    "deleteDialog": {
+      "title": "Delete this deal?",
+      "body": "The deal “{{name}}” and its history will be permanently removed.",
+      "confirm": "Delete",
+      "pending": "Deleting…"
     },
     "toast": {
       "saved": "Deal saved.",
@@ -349,6 +357,7 @@
   "cardPreview": {
     "loading": "Loading…",
     "empty": "No events or notes.",
+    "lastActionTitle": "Last action",
     "eventsTitle": "Events",
     "notesTitle": "Notes",
     "more_one": "…and {{count}} more",

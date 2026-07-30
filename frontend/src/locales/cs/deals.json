@@ -59,18 +59,10 @@
       "addDealAriaLabel": "Přidat obchod do fáze {{name}}",
       "empty": "Zatím žádné obchody."
     },
-    "trash": {
-      "ariaLabel": "Smazat obchod",
-      "dropHere": "Pustit pro smazání",
-      "dragHere": "Sem přetáhněte pro smazání"
-    },
-    "deleteDialog": {
-      "title": "Smazat obchod?",
-      "bodyPrefix": "Smaže obchod",
-      "bodySuffix": "natrvalo. Akci nelze vrátit zpět.",
-      "cancel": "Zrušit",
-      "confirm": "Smazat",
-      "deleting": "Mažu…"
+    "loseDropZone": {
+      "ariaLabel": "Označit obchod jako neúspěch",
+      "dropHere": "Pustit = neúspěch",
+      "dragHere": "Sem přetáhněte = neúspěch"
     },
     "winToast": {
       "withValue": "🎉 Gratulujeme! Obchod {{name}} ve výši {{value}} uzavřen.",
@@ -80,9 +72,7 @@
     "toast": {
       "paymentSaveError": "Nepodařilo se uložit stav platby.",
       "lostSuccess": "Obchod {{name}} označen jako neúspěch.",
-      "lostError": "Obchod se nepodařilo označit jako neúspěch.",
-      "deleteSuccess": "Obchod {{name}} smazán.",
-      "deleteError": "Obchod se nepodařilo smazat."
+      "lostError": "Obchod se nepodařilo označit jako neúspěch."
     }
   },
   "dealsList": {
@@ -98,6 +88,7 @@
       "company": "Firma",
       "value": "Hodnota",
       "stage": "Fáze",
+      "status": "Stav",
       "owner": "Vlastník",
       "closed": "Uzavření"
     },
@@ -210,8 +201,6 @@
     "sendEmail": "Poslat e-mail",
     "deleteAriaLabel": "Smazat obchod",
     "closeAriaLabel": "Zavřít",
-    "confirmReopen": "Znovu otevřít tento obchod? Datum uzavření a důvod budou odstraněny.",
-    "confirmDelete": "Smazat obchod \"{{name}}\"? Akci nelze vrátit zpět.",
     "goToCompany": "Přejít na firmu",
     "noOwner": "Bez vlastníka",
     "noPrimaryContact": "Bez hlavního kontaktu",
@@ -234,6 +223,25 @@
       "probability": "Pravděpodobnost",
       "created": "Vytvořeno",
       "closed": "Uzavřeno"
+    },
+    "timeline": {
+      "title": "Průběh",
+      "loading": "Načítání…",
+      "loadError": "Průběh se nepodařilo načíst.",
+      "empty": "Zatím se nic nestalo. Jakmile obchod posunete, pošlete e-mail nebo zapíšete hovor, objeví se to tady.",
+      "loadMore": "Načíst další"
+    },
+    "reopenDialog": {
+      "title": "Znovu otevřít obchod?",
+      "body": "Datum uzavření i důvod neúspěchu budou odstraněny a obchod se vrátí mezi otevřené.",
+      "confirm": "Znovu otevřít",
+      "pending": "Otevírám…"
+    },
+    "deleteDialog": {
+      "title": "Smazat obchod?",
+      "body": "Obchod „{{name}}“ i jeho historie budou nenávratně odstraněny.",
+      "confirm": "Smazat",
+      "pending": "Mažu…"
     },
     "toast": {
       "saved": "Obchod uložen.",
@@ -353,6 +361,7 @@
   "cardPreview": {
     "loading": "Načítání…",
     "empty": "Žádné události ani poznámky.",
+    "lastActionTitle": "Poslední akce",
     "eventsTitle": "Události",
     "notesTitle": "Poznámky",
     "more_one": "…a další {{count}}",

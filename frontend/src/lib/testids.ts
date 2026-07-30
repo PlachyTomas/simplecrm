@@ -109,6 +109,8 @@ export const testIds = {
       noteInput: "deals-detail-note-input",
       noteSave: "deals-detail-note-save",
       noteCancel: "deals-detail-note-cancel",
+      deleteButton: "deals-detail-delete-button",
+      timelineLoadMore: "deals-detail-timeline-load-more",
     },
     addModal: {
       nameInput: "deals-add-modal-name",
@@ -140,7 +142,12 @@ export const testIds = {
     preview: {
       popover: "pipeline-deal-preview",
     },
+    loseZone: "pipeline-lose-zone",
     rottingBadge: (dealId: string) => `pipeline-rotting-${dealId}`,
+  },
+  confirmDialog: {
+    confirm: "confirm-dialog-confirm",
+    cancel: "confirm-dialog-cancel",
   },
   emails: {
     compose: {
@@ -149,6 +156,8 @@ export const testIds = {
       bccInput: "email-compose-bcc-input",
       trackToggle: "email-compose-track-toggle",
       templateSelect: "email-compose-template-select",
+      attachDealToggle: "email-compose-attach-deal-toggle",
+      attachDealSelect: "email-compose-attach-deal-select",
       suggestion: (field: string, contactId: string) =>
         `email-compose-${field}-suggestion-${contactId}`,
       newContactToggle: (field: string) => `email-compose-${field}-new-contact-toggle`,

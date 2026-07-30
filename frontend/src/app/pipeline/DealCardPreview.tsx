@@ -1,8 +1,9 @@
-import { CalendarDays, StickyNote } from "lucide-react";
+import { CalendarDays, History, StickyNote } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
+import { ACTIVITY_LABEL_KEY } from "@/app/activities/activityLabels";
 import { useActivities } from "@/app/activities/useActivities";
 import { useEvents } from "@/app/events/useEvents";
 import { formatDate } from "@/lib/format";
@@ -17,8 +18,9 @@ const HOVER_DELAY_MS = 300;
  *  press that turns into a drag never also pops the preview. */
 const LONG_PRESS_MS = 400;
 const PANEL_WIDTH = 264;
-/** Rough panel height used only to decide whether to flip above the card. */
-const PANEL_HEIGHT_ESTIMATE = 220;
+/** Rough panel height used only to decide whether to flip above the card.
+ *  Bumped with the "Poslední akce" section. */
+const PANEL_HEIGHT_ESTIMATE = 260;
 
 interface Anchor {
   /** Panel left edge, already clamped into the viewport. */
@@ -173,6 +175,8 @@ export function DealCardPreview({
   tooltipId: string;
 }) {
   const { t } = useTranslation("deals");
+  // Activity-type labels live in the shared `common` catalog (see ActivityRow).
+  const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
   const { data: eventsPage, isPending: eventsPending } = useEvents({ dealId, limit: 50 });
   const { data: activitiesPage, isPending: notesPending } = useActivities({
@@ -215,8 +219,21 @@ export function DealCardPreview({
       .filter((row) => row.title !== "");
   }, [activitiesPage, locale]);
 
+  // Newest activity of any type — the endpoint returns them created_at desc,
+  // so `items[0]` is it. Answers "what last happened here" without opening
+  // the deal; the notes section below only ever shows note-type rows.
+  const lastAction = useMemo<PreviewRow | null>(() => {
+    const latest = activitiesPage?.items?.[0];
+    if (!latest) return null;
+    return {
+      key: latest.id,
+      title: tCommon(ACTIVITY_LABEL_KEY[latest.activity_type]),
+      meta: formatDate(latest.created_at, locale, { dateStyle: "medium" }),
+    };
+  }, [activitiesPage, locale, tCommon]);
+
   const pending = eventsPending || notesPending;
-  const isEmpty = !pending && events.length === 0 && notes.length === 0;
+  const isEmpty = !pending && !lastAction && events.length === 0 && notes.length === 0;
 
   return createPortal(
     <div
@@ -231,7 +248,10 @@ export function DealCardPreview({
         width: PANEL_WIDTH,
         zIndex: 80,
       }}
-      className="pointer-events-none rounded-md border border-border bg-surface-elevated p-3 text-xs shadow-lg"
+      // The panel floats over deal cards that share its surface color (light
+      // theme: both are white), so it needs more edge than a default popover:
+      // strong border + a second hairline ring outside it + the top shadow step.
+      className="pointer-events-none rounded-md border border-border-strong bg-surface-elevated p-3 text-xs shadow-lg ring-1 ring-border"
     >
       {pending ? (
         <p className="text-text-tertiary">{t("cardPreview.loading")}</p>
@@ -239,6 +259,14 @@ export function DealCardPreview({
         <p className="text-text-tertiary">{t("cardPreview.empty")}</p>
       ) : (
         <div className="space-y-3">
+          {lastAction ? (
+            <PreviewSection
+              icon={<History size={12} strokeWidth={1.75} aria-hidden />}
+              title={t("cardPreview.lastActionTitle")}
+              rows={[lastAction]}
+              moreLabel={(count) => t("cardPreview.more", { count })}
+            />
+          ) : null}
           {events.length > 0 ? (
             <PreviewSection
               icon={<CalendarDays size={12} strokeWidth={1.75} aria-hidden />}

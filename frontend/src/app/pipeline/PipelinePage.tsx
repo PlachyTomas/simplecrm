@@ -10,7 +10,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { createPortal } from "react-dom";
-import { Crown, Plus, Trash2, Workflow, X, Zap } from "lucide-react";
+import { Crown, Plus, Workflow, X, Zap } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -23,7 +23,6 @@ import {
   useToggleAnyDealPayment,
 } from "@/app/deals/useDealActions";
 import { useDealDialog } from "@/app/deals/useDealDialog";
-import { useDeleteAnyDeal } from "@/app/deals/useDeals";
 import { stageColor } from "@/app/pipeline/colors";
 import { DealCardPreview, useDealCardPreview } from "@/app/pipeline/DealCardPreview";
 import { DealQuickActionsModal } from "@/app/pipeline/DealQuickActionsModal";
@@ -42,13 +41,14 @@ import { celebrateWin } from "@/lib/celebrate";
 import { formatMoney } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { testIds } from "@/lib/testids";
-import { useModalDialog } from "@/lib/useModalDialog";
 import { useToast } from "@/lib/toast";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 
 const WON_WINDOW_STORAGE_KEY = "pipeline-won-window-days";
 const WON_WINDOW_VALUES: WonWindow[] = [7, 30, 90, "all"];
+/** dnd-kit id of the bottom drop zone. Not a stage id — handled separately. */
+const LOSE_ZONE_ID = "lose";
 
 function loadWonWindow(): WonWindow {
   // localStorage can be absent (SSR, some webviews) or throw on access (Safari
@@ -338,7 +338,11 @@ function DealCard({
                   ariaLabel={t("pipelinePage.card.loseAriaLabel", { name: deal.name })}
                   disabled={losing}
                   onActivate={() => onLose()}
-                  className="border border-border bg-surface-overlay text-text-secondary hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger"
+                  // Danger-tinted from the moment it appears: at rest it read
+                  // as a neutral close/dismiss ✕ next to the win crown, which
+                  // is not what it does. Solid red on direct hover mirrors the
+                  // lose drop zone's over-state.
+                  className="border border-danger/30 bg-danger-subtle text-danger hover:border-danger hover:bg-danger hover:text-white"
                 >
                   <X size={13} strokeWidth={2} aria-hidden />
                 </CardActionButton>
@@ -770,14 +774,13 @@ export function PipelinePage() {
   const winMutation = useMarkAnyDealWon();
   const loseMutation = useMarkAnyDealLost();
   const paymentMutation = useToggleAnyDealPayment();
-  const deleteMutation = useDeleteAnyDeal();
   const toast = useToast();
   const { dealId: dialogDealId, openDeal, closeDeal } = useDealDialog();
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
   // Whether releasing now would move the deal to another stage. Drives the
   // DragOverlay's dropAnimation: the default animation flies the overlay back
-  // to the source card's rect — correct for cancels/same-column/trash, but a
-  // moved deal would visibly "return" to the old column before the optimistic
+  // to the source card's rect — correct for cancels/same-column/lose-zone, but
+  // a moved deal would visibly "return" to the old column before the optimistic
   // board update re-renders it in the target column.
   const [dropWillMove, setDropWillMove] = useState(false);
   const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | string>("all");
@@ -790,7 +793,6 @@ export function PipelinePage() {
   const [winToast, setWinToast] = useState<string | null>(null);
   const [losingDealTarget, setLosingDealTarget] = useState<BoardDeal | null>(null);
   const [payingDealId, setPayingDealId] = useState<string | null>(null);
-  const [deletingDealTarget, setDeletingDealTarget] = useState<BoardDeal | null>(null);
   // The deal whose quick actions (e-mail / event / note) are open, if any.
   const [quickActionsDeal, setQuickActionsDeal] = useState<BoardDeal | null>(null);
 
@@ -899,23 +901,6 @@ export function PipelinePage() {
     [loseMutation, losingDealTarget, toast, t],
   );
 
-  const handleConfirmDelete = useCallback(() => {
-    if (!deletingDealTarget) return;
-    const target = deletingDealTarget;
-    deleteMutation.mutate(
-      { dealId: target.id },
-      {
-        onSuccess: () => {
-          toast.success(t("pipelinePage.toast.deleteSuccess", { name: target.name }));
-          setDeletingDealTarget(null);
-        },
-        onError: () => {
-          toast.error(t("pipelinePage.toast.deleteError"));
-        },
-      },
-    );
-  }, [deleteMutation, deletingDealTarget, toast, t]);
-
   const filteredStages = useMemo<BoardStage[]>(() => {
     if (!board) return [];
     const normalized = searchTerm.trim().toLowerCase();
@@ -981,9 +966,11 @@ export function PipelinePage() {
     if (!over) return;
     const dealId = String(active.id);
     const overId = String(over.id);
-    if (overId === "trash") {
+    // Dropping on the lose zone runs the ordinary lose flow — the dialog
+    // collects the reason, exactly like the card's ✕ and the deal detail.
+    if (overId === LOSE_ZONE_ID) {
       const dropped = board?.stages.flatMap((s) => s.deals).find((d) => d.id === dealId);
-      if (dropped) setDeletingDealTarget(dropped);
+      if (dropped) setLosingDealTarget(dropped);
       return;
     }
     const fromStage = active.data.current?.stageId;
@@ -1143,7 +1130,7 @@ export function PipelinePage() {
             onDragOver={(event) => {
               const fromStage = event.active.data.current?.stageId;
               const overId = event.over ? String(event.over.id) : null;
-              setDropWillMove(overId !== null && overId !== "trash" && overId !== fromStage);
+              setDropWillMove(overId !== null && overId !== LOSE_ZONE_ID && overId !== fromStage);
             }}
             onDragEnd={handleDragEnd}
             onDragCancel={() => setActiveDealId(null)}
@@ -1179,7 +1166,7 @@ export function PipelinePage() {
                 />
               ))}
             </div>
-            <TrashDropZone visible={activeDealId !== null} />
+            <LoseDropZone visible={activeDealId !== null} />
             <DragOverlay dropAnimation={dropWillMove ? null : undefined}>
               {activeDeal ? (
                 <DealCard deal={activeDeal} locale={locale} rottingThreshold={rottingThreshold} />
@@ -1247,14 +1234,6 @@ export function PipelinePage() {
         onConfirm={handleConfirmLose}
       />
 
-      <DeleteConfirmDialog
-        deal={deletingDealTarget}
-        pending={deleteMutation.isPending}
-        onCancel={() => setDeletingDealTarget(null)}
-        onConfirm={handleConfirmDelete}
-        moneyFmt={moneyFmt}
-      />
-
       <DealQuickActionsModal
         deal={quickActionsDeal}
         open={quickActionsDeal !== null}
@@ -1266,15 +1245,19 @@ export function PipelinePage() {
   );
 }
 
-function TrashDropZone({ visible }: { visible: boolean }) {
+// Bottom drop zone shown only while a card is in flight. Dropping here marks
+// the deal lost (reason dialog follows) — the board has no delete route; a
+// deal is removed for good only from its detail page.
+function LoseDropZone({ visible }: { visible: boolean }) {
   const { t } = useTranslation("deals");
-  const { setNodeRef, isOver } = useDroppable({ id: "trash", data: { type: "trash" } });
+  const { setNodeRef, isOver } = useDroppable({ id: LOSE_ZONE_ID, data: { type: "lose" } });
   return (
     <div
       ref={setNodeRef}
       role="region"
-      aria-label={t("pipelinePage.trash.ariaLabel")}
+      aria-label={t("pipelinePage.loseDropZone.ariaLabel")}
       aria-hidden={!visible}
+      data-testid={testIds.pipeline.loseZone}
       className={cn(
         "pointer-events-none fixed inset-x-0 bottom-0 z-30 flex items-center justify-center px-4 pb-4 transition-opacity duration-fast",
         visible ? "opacity-100" : "opacity-0",
@@ -1288,71 +1271,12 @@ function TrashDropZone({ visible }: { visible: boolean }) {
             : "border-danger-subtle bg-surface text-danger",
         )}
       >
-        <Trash2 size={16} strokeWidth={1.75} aria-hidden />
-        <span>{isOver ? t("pipelinePage.trash.dropHere") : t("pipelinePage.trash.dragHere")}</span>
-      </div>
-    </div>
-  );
-}
-
-function DeleteConfirmDialog({
-  deal,
-  pending,
-  onCancel,
-  onConfirm,
-  moneyFmt,
-}: {
-  deal: BoardDeal | null;
-  pending: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-  moneyFmt: Intl.NumberFormat | null;
-}) {
-  const { t } = useTranslation("deals");
-  const dialogRef = useModalDialog<HTMLDivElement>(onCancel, Boolean(deal));
-  if (!deal) return null;
-  const valueShown = hasValue(deal.value);
-  const formattedValue = valueShown && moneyFmt ? moneyFmt.format(Number(deal.value)) : null;
-  return (
-    <div
-      ref={dialogRef}
-      tabIndex={-1}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="delete-deal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCancel();
-      }}
-    >
-      <div className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg">
-        <h2 id="delete-deal-title" className="text-xl font-semibold">
-          {t("pipelinePage.deleteDialog.title")}
-        </h2>
-        <p className="mt-2 text-sm text-text-secondary">
-          {t("pipelinePage.deleteDialog.bodyPrefix")}{" "}
-          <strong className="text-text-primary">{deal.name}</strong>
-          {formattedValue ? ` (${formattedValue})` : ""} {t("pipelinePage.deleteDialog.bodySuffix")}
-        </p>
-        <div className="mt-6 flex items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
-          >
-            {t("pipelinePage.deleteDialog.cancel")}
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={pending}
-            className="inline-flex h-10 items-center justify-center rounded-md bg-danger px-5 text-sm font-medium text-white transition-colors duration-fast hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {pending
-              ? t("pipelinePage.deleteDialog.deleting")
-              : t("pipelinePage.deleteDialog.confirm")}
-          </button>
-        </div>
+        <X size={16} strokeWidth={1.75} aria-hidden />
+        <span>
+          {isOver
+            ? t("pipelinePage.loseDropZone.dropHere")
+            : t("pipelinePage.loseDropZone.dragHere")}
+        </span>
       </div>
     </div>
   );
