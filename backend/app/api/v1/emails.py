@@ -12,16 +12,23 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from pydantic import ValidationError
-from sqlalchemy import func, select
+from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.v1.bulk_email import _ALLOWED_ATTACHMENT_TYPES, _MAX_ATTACHMENT_BYTES
 from app.core.deps import get_current_user
 from app.core.scoping import scope_by_owner
 from app.db import get_db
 from app.db.models import Company, Deal, SentEmail, User, UserRole
+from app.db.models.enums import EmailDirection
 from app.schemas.pagination import Page, PaginationParams
-from app.schemas.sent_email import SentEmailCreate, SentEmailDetail, SentEmailOut
+from app.schemas.sent_email import (
+    SentEmailCreate,
+    SentEmailDetail,
+    SentEmailListItemOut,
+    SentEmailOut,
+)
 from app.services.email import EmailAttachment
 from app.services.mailer import SmtpNotVerifiedError, send_user_email
 
@@ -152,19 +159,63 @@ async def send_email_endpoint(
         ) from exc
 
 
-@router.get("", response_model=Page[SentEmailOut])
+def _email_list_item(email: SentEmail) -> SentEmailListItemOut:
+    """Fill display names from eager-loaded relations (see `_activity_out`)."""
+    out = SentEmailListItemOut.model_validate(email)
+    out.company_name = email.company.name if email.company else None
+    out.deal_name = email.deal.name if email.deal else None
+    out.sender_name = email.sender.name if email.sender else None
+    return out
+
+
+@router.get("", response_model=Page[SentEmailListItemOut])
 async def list_emails(
     pagination: PaginationParams = Depends(),
     deal_id: uuid.UUID | None = Query(default=None),
     company_id: uuid.UUID | None = Query(default=None),
+    search: str | None = Query(
+        default=None,
+        max_length=120,
+        description="Case-insensitive substring over subject, body and addresses.",
+    ),
+    direction: EmailDirection | None = Query(default=None),
+    unmatched: bool = Query(
+        default=False, description="Only mail linked to no company AND no deal."
+    ),
+    mine: bool = Query(
+        default=False,
+        description=(
+            "Only mail this user sent or captured. No-op for salespeople, "
+            "whose history is already scoped to their own sends."
+        ),
+    ),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Page[SentEmailOut]:
+) -> Page[SentEmailListItemOut]:
     base = _scope_history(select(SentEmail), user)
     if deal_id is not None:
         base = base.where(SentEmail.deal_id == deal_id)
     if company_id is not None:
         base = base.where(SentEmail.company_id == company_id)
+    if search is not None and search.strip():
+        term = f"%{search.strip()}%"
+        # Recipient arrays are JSONB; matching their text rendering is crude
+        # but fine for a substring search over e-mail addresses.
+        base = base.where(
+            or_(
+                SentEmail.subject.ilike(term),
+                SentEmail.body.ilike(term),
+                SentEmail.from_email.ilike(term),
+                cast(SentEmail.to_emails, Text).ilike(term),
+                cast(SentEmail.cc_emails, Text).ilike(term),
+            )
+        )
+    if direction is not None:
+        base = base.where(SentEmail.direction == direction)
+    if unmatched:
+        base = base.where(SentEmail.company_id.is_(None), SentEmail.deal_id.is_(None))
+    if mine:
+        base = base.where(SentEmail.sender_user_id == user.id)
     total = (await session.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
     items = (
         (
@@ -175,7 +226,12 @@ async def list_emails(
                 # capture, and the history renders `sent_at`, so sorting on
                 # `created_at` would show a timeline out of its own order.
                 # `created_at` stays as the tiebreaker to keep paging stable.
-                base.order_by(
+                base.options(
+                    selectinload(SentEmail.company),
+                    selectinload(SentEmail.deal),
+                    selectinload(SentEmail.sender),
+                )
+                .order_by(
                     func.coalesce(SentEmail.sent_at, SentEmail.created_at).desc(),
                     SentEmail.created_at.desc(),
                 )
@@ -186,8 +242,8 @@ async def list_emails(
         .scalars()
         .all()
     )
-    return Page[SentEmailOut](
-        items=[SentEmailOut.model_validate(e) for e in items],
+    return Page[SentEmailListItemOut](
+        items=[_email_list_item(e) for e in items],
         total=total,
         limit=pagination.limit,
         offset=pagination.offset,
@@ -202,7 +258,11 @@ async def get_email(
 ) -> SentEmailDetail:
     email = (
         await session.execute(
-            _scope_history(select(SentEmail).where(SentEmail.id == email_id), user)
+            _scope_history(select(SentEmail).where(SentEmail.id == email_id), user).options(
+                selectinload(SentEmail.company),
+                selectinload(SentEmail.deal),
+                selectinload(SentEmail.sender),
+            )
         )
     ).scalar_one_or_none()
     if email is None:
@@ -218,6 +278,6 @@ async def get_email(
         .scalars()
         .all()
     )
-    detail = SentEmailDetail.model_validate(email)
+    detail = SentEmailDetail.model_validate(_email_list_item(email).model_dump())
     detail.thread = [SentEmailOut.model_validate(t) for t in thread]
     return detail

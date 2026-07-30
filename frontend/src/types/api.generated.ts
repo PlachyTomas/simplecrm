@@ -6471,10 +6471,10 @@ export interface components {
             /** Offset */
             offset: number;
         };
-        /** Page[SentEmailOut] */
-        Page_SentEmailOut_: {
+        /** Page[SentEmailListItemOut] */
+        Page_SentEmailListItemOut_: {
             /** Items */
-            items: components["schemas"]["SentEmailOut"][];
+            items: components["schemas"]["SentEmailListItemOut"][];
             /** Total */
             total: number;
             /** Limit */
@@ -7146,8 +7146,93 @@ export interface components {
              * @default 0
              */
             click_count: number;
+            /** Company Name */
+            company_name?: string | null;
+            /** Deal Name */
+            deal_name?: string | null;
+            /** Sender Name */
+            sender_name?: string | null;
             /** Thread */
             thread?: components["schemas"]["SentEmailOut"][];
+        };
+        /**
+         * SentEmailListItemOut
+         * @description `SentEmailOut` plus display names so the Mail page can render
+         *     company/deal/sender links without per-row fetches (mirrors the
+         *     `DealListItemOut` denormalization).
+         */
+        SentEmailListItemOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /** Sender User Id */
+            sender_user_id?: string | null;
+            /** Deal Id */
+            deal_id?: string | null;
+            /** Company Id */
+            company_id?: string | null;
+            /** @default outbound */
+            direction: components["schemas"]["EmailDirection"];
+            /** From Email */
+            from_email?: string | null;
+            /** To Emails */
+            to_emails: string[];
+            /** Cc Emails */
+            cc_emails: string[];
+            /** Bcc Emails */
+            bcc_emails: string[];
+            /** Subject */
+            subject: string;
+            /** Body */
+            body: string;
+            /** Attachment Filenames */
+            attachment_filenames: string[];
+            status: components["schemas"]["SentEmailStatus"];
+            /** Error */
+            error?: string | null;
+            /** Message Id */
+            message_id: string;
+            /** In Reply To Message Id */
+            in_reply_to_message_id?: string | null;
+            /**
+             * Thread Id
+             * Format: uuid
+             */
+            thread_id: string;
+            /** Sent At */
+            sent_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Opened At */
+            opened_at?: string | null;
+            /**
+             * Open Count
+             * @default 0
+             */
+            open_count: number;
+            /** Clicked At */
+            clicked_at?: string | null;
+            /**
+             * Click Count
+             * @default 0
+             */
+            click_count: number;
+            /** Company Name */
+            company_name?: string | null;
+            /** Deal Name */
+            deal_name?: string | null;
+            /** Sender Name */
+            sender_name?: string | null;
         };
         /** SentEmailOut */
         SentEmailOut: {
@@ -10031,6 +10116,13 @@ export interface operations {
             query?: {
                 deal_id?: string | null;
                 company_id?: string | null;
+                /** @description Case-insensitive substring over subject, body and addresses. */
+                search?: string | null;
+                direction?: components["schemas"]["EmailDirection"] | null;
+                /** @description Only mail linked to no company AND no deal. */
+                unmatched?: boolean;
+                /** @description Only mail this user sent or captured. No-op for salespeople, whose history is already scoped to their own sends. */
+                mine?: boolean;
                 limit?: number;
                 offset?: number;
             };
@@ -10046,7 +10138,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Page_SentEmailOut_"];
+                    "application/json": components["schemas"]["Page_SentEmailListItemOut_"];
                 };
             };
             /** @description Validation Error */

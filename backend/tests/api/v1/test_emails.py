@@ -19,6 +19,7 @@ from app.db.models import (
     ActivityType,
     Company,
     Deal,
+    EmailDirection,
     Organization,
     SentEmail,
     SentEmailStatus,
@@ -491,3 +492,158 @@ async def test_send_unexpected_error_persists_failed_row_and_surfaces(
             .all()
         )
         assert acts == []
+
+
+def _mk_mail(
+    org_id: uuid.UUID,
+    *,
+    sender_user_id: uuid.UUID | None,
+    subject: str,
+    body: str = "",
+    direction: EmailDirection = EmailDirection.outbound,
+    from_email: str | None = None,
+    to: list[str] | None = None,
+    company_id: uuid.UUID | None = None,
+    deal_id: uuid.UUID | None = None,
+) -> SentEmail:
+    """Bare history row for list-endpoint tests — no SMTP involved."""
+    return SentEmail(
+        organization_id=org_id,
+        sender_user_id=sender_user_id,
+        company_id=company_id,
+        deal_id=deal_id,
+        direction=direction,
+        from_email=from_email,
+        to_emails=to or ["a@ex.cz"],
+        cc_emails=[],
+        bcc_emails=[],
+        subject=subject,
+        body=body,
+        attachment_filenames=[],
+        status=SentEmailStatus.sent,
+        message_id=f"<{uuid.uuid4().hex}@test>",
+        thread_id=uuid.uuid4(),
+        sent_at=datetime.now(tz=UTC),
+    )
+
+
+async def test_list_emails_mail_page_filters(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """The Mail page's search/direction/unmatched/mine filters and the
+    denormalized display names on `SentEmailListItemOut`."""
+    admin, company, deal = await _seed(db_session, owned_cleanup, verified_smtp=False)
+    colleague_email = f"u-{uuid.uuid4().hex[:8]}@ex.cz"
+    owned_cleanup["emails"].append(colleague_email)
+    colleague = User(
+        email=colleague_email,
+        name="Kolega",
+        role=UserRole.admin,
+        organization_id=admin.organization_id,
+    )
+    db_session.add(colleague)
+    await db_session.commit()
+    await db_session.refresh(colleague)
+
+    org_id = admin.organization_id
+    offer = _mk_mail(
+        org_id,
+        sender_user_id=admin.id,
+        subject="Nabídka služeb",
+        body="posílám cenovou nabídku",
+        to=["jednatel@acme.cz"],
+        company_id=company.id,
+        deal_id=deal.id,
+    )
+    question = _mk_mail(
+        org_id,
+        sender_user_id=admin.id,
+        subject="Dotaz k faktuře",
+        direction=EmailDirection.inbound,
+        from_email="petr@klient.cz",
+        company_id=company.id,
+    )
+    stray = _mk_mail(org_id, sender_user_id=admin.id, subject="Zatoulaný")
+    colleagues_mail = _mk_mail(
+        org_id, sender_user_id=colleague.id, subject="Kolegova pošta", company_id=company.id
+    )
+    db_session.add_all([offer, question, stray, colleagues_mail])
+    await db_session.commit()
+
+    async def names(resp) -> set[str]:  # type: ignore[no-untyped-def]
+        assert resp.status_code == 200, resp.text
+        return {it["subject"] for it in resp.json()["items"]}
+
+    everything = await client.get("/api/v1/emails", headers=_auth(admin))
+    assert await names(everything) == {
+        "Nabídka služeb",
+        "Dotaz k faktuře",
+        "Zatoulaný",
+        "Kolegova pošta",
+    }
+
+    # search hits subject, body, from_email and recipient addresses
+    assert await names(await client.get("/api/v1/emails?search=nabídk", headers=_auth(admin))) == {
+        "Nabídka služeb"
+    }
+    assert await names(
+        await client.get("/api/v1/emails?search=petr@klient", headers=_auth(admin))
+    ) == {"Dotaz k faktuře"}
+    assert await names(
+        await client.get("/api/v1/emails?search=jednatel@acme", headers=_auth(admin))
+    ) == {"Nabídka služeb"}
+
+    assert await names(
+        await client.get("/api/v1/emails?direction=inbound", headers=_auth(admin))
+    ) == {"Dotaz k faktuře"}
+
+    assert await names(await client.get("/api/v1/emails?unmatched=true", headers=_auth(admin))) == {
+        "Zatoulaný"
+    }
+
+    mine = await client.get("/api/v1/emails?mine=true", headers=_auth(admin))
+    assert "Kolegova pošta" not in await names(mine)
+
+    row = next(it for it in everything.json()["items"] if it["subject"] == "Nabídka služeb")
+    assert row["company_name"] == "Acme"
+    assert row["deal_name"] == "Deal"
+    assert row["sender_name"] == "Admin"
+
+
+async def test_send_activity_payload_carries_email_id(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """New `email_sent` activities must link back to the stored mail so the
+    timeline can open its detail."""
+    admin, _, deal = await _seed(db_session, owned_cleanup)
+
+    async def _ok(_message: object, _config: object) -> None:
+        return None
+
+    monkeypatch.setattr("app.services.mailer.send_email_via", _ok)
+
+    resp = await client.post(
+        "/api/v1/emails",
+        headers=_auth(admin),
+        data={"payload": f'{{"to": ["a@ex.cz"], "subject": "Link me", "deal_id": "{deal.id}"}}'},
+    )
+    assert resp.status_code == 201, resp.text
+    sent_id = resp.json()["id"]
+
+    async with AsyncSessionLocal() as fresh:
+        activity = (
+            (
+                await fresh.execute(
+                    select(Activity).where(
+                        Activity.entity_id == deal.id,
+                        Activity.activity_type == ActivityType.email_sent,
+                    )
+                )
+            )
+            .scalars()
+            .one()
+        )
+        assert activity.payload["email_id"] == sent_id

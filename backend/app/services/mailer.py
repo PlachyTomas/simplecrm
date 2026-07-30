@@ -214,6 +214,9 @@ async def send_user_email(
         unexpected = exc
 
     sent = SentEmail(
+        # Explicit id: the activity payload below links to this row, and the
+        # column default only fires at flush — after the payload is built.
+        id=uuid.uuid4(),
         organization_id=user.organization_id,
         sender_user_id=user.id,
         deal_id=deal.id if deal else None,
@@ -237,7 +240,10 @@ async def send_user_email(
     session.add(sent)
 
     if status is SentEmailStatus.sent and company_id is not None:
-        email_payload: dict[str, Any] = {"subject": subject}
+        # `email_id` lets the timeline link the activity row to the stored
+        # mail (the Mail page's detail view). Rows logged before it existed
+        # simply render unlinked.
+        email_payload: dict[str, Any] = {"subject": subject, "email_id": str(sent.id)}
         if deal is not None:
             entity_type, entity_id = ActivityEntityType.deal, deal.id
             email_payload["deal_name"] = deal.name

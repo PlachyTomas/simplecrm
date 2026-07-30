@@ -623,6 +623,10 @@ async def record_inbound_message(session: AsyncSession, *, raw: bytes) -> Inboun
         session, organization_id=organization_id, in_reply_to=parsed.in_reply_to
     )
     email_row = SentEmail(
+        # Explicit id: the activity payload below links to this row, and the
+        # column default only fires at flush — which must stay inside the
+        # idempotency try/except at commit time.
+        id=uuid.uuid4(),
         organization_id=organization_id,
         sender_user_id=user.id,
         deal_id=deal.id if deal is not None else None,
@@ -651,7 +655,12 @@ async def record_inbound_message(session: AsyncSession, *, raw: bytes) -> Inboun
     session.add(email_row)
 
     if company is not None:
-        payload: dict[str, Any] = {"subject": email_row.subject}
+        # `email_id` links the timeline row to the stored mail (Mail page
+        # detail); pre-existing rows without it render unlinked.
+        payload: dict[str, Any] = {
+            "subject": email_row.subject,
+            "email_id": str(email_row.id),
+        }
         if correspondent:
             payload["from"] = correspondent
         if deal is not None:

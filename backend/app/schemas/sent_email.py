@@ -69,7 +69,17 @@ class SentEmailOut(BaseModel):
     click_count: int = 0
 
 
-class SentEmailDetail(SentEmailOut):
+class SentEmailListItemOut(SentEmailOut):
+    """`SentEmailOut` plus display names so the Mail page can render
+    company/deal/sender links without per-row fetches (mirrors the
+    `DealListItemOut` denormalization)."""
+
+    company_name: str | None = None
+    deal_name: str | None = None
+    sender_name: str | None = None
+
+
+class SentEmailDetail(SentEmailListItemOut):
     """One sent email plus every other mail sharing its `thread_id`."""
 
     thread: list[SentEmailOut] = Field(default_factory=list)
