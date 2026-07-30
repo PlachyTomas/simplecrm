@@ -19,7 +19,7 @@
     "bulkEmailButton": "Hromadný e-mail",
     "addButton": "Přidat firmu",
     "searchLabel": "Hledat firmu",
-    "searchPlaceholder": "Hledat podle názvu nebo IČO…",
+    "searchPlaceholder": "Hledat název, IČO…",
     "ownerFilterLabel": "Filtr podle vlastníka",
     "ownerAll": "Vlastník: vše",
     "unowned": "Nezabrané",
