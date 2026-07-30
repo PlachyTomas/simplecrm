@@ -156,11 +156,15 @@ function ActivityDetail({
 export function ActivityRow({
   activity,
   hideDealName = false,
+  onOpenEmail,
 }: {
   activity: ActivityItem;
   /** Suppress the "Obchod „…“ ·" prefix — redundant inside a single deal's
    *  own timeline, where every row is that deal. */
   hideDealName?: boolean;
+  /** When provided, email rows whose payload carries `email_id` render a
+   *  "view email" link. Rows logged before the id existed stay plain. */
+  onOpenEmail?: (emailId: string) => void;
 }): JSX.Element {
   const { t } = useTranslation("common");
   const locale = useLocale();
@@ -168,6 +172,11 @@ export function ActivityRow({
   const dealName = hideDealName ? undefined : asString(payload.deal_name);
   const label = t(ACTIVITY_LABEL_KEY[activity.activity_type]);
   const userName = asString(activity.user_name);
+  const linkedEmailId =
+    onOpenEmail &&
+    (activity.activity_type === "email_sent" || activity.activity_type === "email_received")
+      ? asString(payload.email_id)
+      : undefined;
 
   return (
     <li className="relative">
@@ -186,6 +195,15 @@ export function ActivityRow({
         )}
       </p>
       <ActivityDetail activity={activity} payload={payload} locale={locale} />
+      {linkedEmailId ? (
+        <button
+          type="button"
+          onClick={() => onOpenEmail?.(linkedEmailId)}
+          className="mt-0.5 text-xs font-medium text-accent hover:text-accent-hover"
+        >
+          {t("activities.openEmail")}
+        </button>
+      ) : null}
       <p className="mt-0.5 text-xs text-text-tertiary">
         {userName ? <span>{userName} · </span> : null}
         {formatDateTime(activity.created_at, locale)}

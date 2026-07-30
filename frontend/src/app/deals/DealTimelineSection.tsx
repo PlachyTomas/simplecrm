@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { ActivityRow } from "@/app/activities/ActivityRow";
 import { type ActivitiesPage, useActivities } from "@/app/activities/useActivities";
+import { EmailDetailModal } from "@/app/emails/EmailDetailModal";
 import { testIds } from "@/lib/testids";
 
 const PAGE_SIZE = 20;
@@ -16,6 +17,7 @@ const PAGE_SIZE = 20;
 export function DealTimelineSection({ dealId }: { dealId: string }) {
   const { t } = useTranslation("deals");
   const [limit, setLimit] = useState(PAGE_SIZE);
+  const [openEmailId, setOpenEmailId] = useState<string | null>(null);
   const { data, isError, isFetching } = useActivities({
     entityType: "deal",
     entityId: dealId,
@@ -48,7 +50,12 @@ export function DealTimelineSection({ dealId }: { dealId: string }) {
         <>
           <ol className="mt-3 space-y-3 border-l border-border-subtle pl-5">
             {page.items.map((activity) => (
-              <ActivityRow key={activity.id} activity={activity} hideDealName />
+              <ActivityRow
+                key={activity.id}
+                activity={activity}
+                hideDealName
+                onOpenEmail={setOpenEmailId}
+              />
             ))}
           </ol>
           {page.items.length < page.total ? (
@@ -64,6 +71,11 @@ export function DealTimelineSection({ dealId }: { dealId: string }) {
           ) : null}
         </>
       )}
+      <EmailDetailModal
+        emailId={openEmailId}
+        onClose={() => setOpenEmailId(null)}
+        onSwitch={setOpenEmailId}
+      />
     </section>
   );
 }

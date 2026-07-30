@@ -22,6 +22,7 @@ export const testIds = {
     companies: "nav-companies",
     contacts: "nav-contacts",
     deals: "nav-deals",
+    emails: "nav-emails",
     calendar: "nav-calendar",
     reports: "nav-reports",
     settings: "nav-settings",
@@ -150,6 +151,18 @@ export const testIds = {
     cancel: "confirm-dialog-cancel",
   },
   emails: {
+    mail: {
+      searchInput: "mail-search-input",
+      typeFilter: "mail-type-filter",
+      companyFilter: "mail-company-filter",
+      dealFilter: "mail-deal-filter",
+      mineToggle: "mail-mine-toggle",
+      helpButton: "mail-help-button",
+      helpDialog: "mail-help-dialog",
+      row: (id: string) => `mail-row-${id}`,
+      detailDialog: "mail-detail-dialog",
+      detailReply: "mail-detail-reply",
+    },
     compose: {
       toInput: "email-compose-to-input",
       ccInput: "email-compose-cc-input",

@@ -1,7 +1,8 @@
 import { Reply } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { EmailDetailModal } from "@/app/emails/EmailDetailModal";
 import { type SentEmailOut, useCompanyEmails, useDealEmails } from "@/app/emails/useEmails";
 import { formatDate } from "@/lib/format";
 import { testIds } from "@/lib/testids";
@@ -18,7 +19,7 @@ function isInboundEmail(email: SentEmailOut): boolean {
   return email.direction === "inbound";
 }
 
-function StatusBadge({ email }: { email: SentEmailOut }) {
+export function StatusBadge({ email }: { email: SentEmailOut }) {
   const { t } = useTranslation("emails");
   if (isInboundEmail(email)) {
     // Inbound rows have no delivery outcome — `status` is always `sent`
@@ -56,7 +57,7 @@ const CHIP = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-med
  * are never opened, and a permanent "unopened" chip would be pure noise.
  * Inbound rows carry no pixel and no rewritten links, so they never get chips.
  */
-function EngagementChips({ email, locale }: { email: SentEmailOut; locale: string }) {
+export function EngagementChips({ email, locale }: { email: SentEmailOut; locale: string }) {
   const { t } = useTranslation("emails");
   if (isInboundEmail(email)) return null;
   if (!email.opened_at && !email.clicked_at) return null;
@@ -98,6 +99,7 @@ export function EmailHistorySection({
   const dealEmails = useDealEmails(dealId);
   const companyEmails = useCompanyEmails(companyId);
   const query = dealId ? dealEmails : companyEmails;
+  const [openEmailId, setOpenEmailId] = useState<string | null>(null);
   const dt = useMemo(
     () => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }),
     [locale],
@@ -122,7 +124,13 @@ export function EmailHistorySection({
             >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate text-sm font-medium text-text-primary">{email.subject}</p>
+                  <button
+                    type="button"
+                    onClick={() => setOpenEmailId(email.id)}
+                    className="max-w-full truncate text-left text-sm font-medium text-text-primary hover:text-accent"
+                  >
+                    {email.subject}
+                  </button>
                   <StatusBadge email={email} />
                   <EngagementChips email={email} locale={locale} />
                 </div>
@@ -151,6 +159,15 @@ export function EmailHistorySection({
           ))}
         </ul>
       )}
+      <EmailDetailModal
+        emailId={openEmailId}
+        onClose={() => setOpenEmailId(null)}
+        onSwitch={setOpenEmailId}
+        onReply={(email) => {
+          setOpenEmailId(null);
+          onReply(email);
+        }}
+      />
     </section>
   );
 }

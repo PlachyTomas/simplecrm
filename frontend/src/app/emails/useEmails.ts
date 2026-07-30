@@ -6,7 +6,8 @@ import type { components } from "@/types/api.generated";
 
 export type SentEmailOut = components["schemas"]["SentEmailOut"];
 export type SentEmailDetail = components["schemas"]["SentEmailDetail"];
-export type SentEmailsPage = components["schemas"]["Page_SentEmailOut_"];
+export type SentEmailsPage = components["schemas"]["Page_SentEmailListItemOut_"];
+export type SentEmailListItem = components["schemas"]["SentEmailListItemOut"];
 
 // The compose payload is sent as a JSON string inside a multipart form, so
 // FastAPI doesn't expose it as a body schema — declare it here to match
@@ -71,6 +72,43 @@ export function useCompanyEmails(companyId: string | undefined) {
     enabled: !!accessToken && !!companyId,
     queryFn: () =>
       apiFetch<SentEmailsPage>(`/api/v1/emails?company_id=${companyId}`, { token: accessToken }),
+  });
+}
+
+export interface MailListFilters {
+  search?: string;
+  direction?: "outbound" | "inbound";
+  unmatched?: boolean;
+  mine?: boolean;
+  companyId?: string;
+  dealId?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export function mailListParams(f: MailListFilters): URLSearchParams {
+  const params = new URLSearchParams();
+  if (f.search) params.set("search", f.search);
+  if (f.direction) params.set("direction", f.direction);
+  if (f.unmatched) params.set("unmatched", "true");
+  if (f.mine) params.set("mine", "true");
+  if (f.companyId) params.set("company_id", f.companyId);
+  if (f.dealId) params.set("deal_id", f.dealId);
+  if (f.limit !== undefined) params.set("limit", String(f.limit));
+  if (f.offset !== undefined) params.set("offset", String(f.offset));
+  return params;
+}
+
+/** The Mail page's unified list — every captured mail the user may see. */
+export function useMailList(filters: MailListFilters) {
+  const { accessToken } = useAuth();
+  return useQuery<SentEmailsPage>({
+    queryKey: ["emails", "mail-list", filters],
+    enabled: !!accessToken,
+    queryFn: () =>
+      apiFetch<SentEmailsPage>(`/api/v1/emails?${mailListParams(filters)}`, {
+        token: accessToken,
+      }),
   });
 }
 

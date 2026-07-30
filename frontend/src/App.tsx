@@ -14,6 +14,7 @@ import { ContactsPage } from "@/app/contacts/ContactsPage";
 import { DashboardPage } from "@/app/dashboard/DashboardPage";
 import { DealDetailRedirect } from "@/app/deals/DealDetailRedirect";
 import { DealsListPage } from "@/app/deals/DealsListPage";
+import { MailPage } from "@/app/emails/MailPage";
 import { FeedbackPage } from "@/app/feedback/FeedbackPage";
 import { PipelinePage } from "@/app/pipeline/PipelinePage";
 import { ReportsPage } from "@/app/reports/ReportsPage";
@@ -135,6 +136,7 @@ export function AppRoutes() {
         <Route path="contacts/:contactId" element={<ContactsPage />} />
         <Route path="deals" element={<DealsListPage />} />
         <Route path="deals/:dealId" element={<DealDetailRedirect />} />
+        <Route path="emails" element={<MailPage />} />
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsLayout />}>

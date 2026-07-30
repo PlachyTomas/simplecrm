@@ -161,7 +161,8 @@
     "stageChangeTo": "Fáze: {{to}}",
     "dealPrefix": "Obchod „{{dealName}}“",
     "showAll": "Zobrazit vše ({{count}})",
-    "hide": "Skrýt"
+    "hide": "Skrýt",
+    "openEmail": "Zobrazit e-mail"
   },
   "nav": {
     "overview": "Přehled",
@@ -169,6 +170,7 @@
     "companies": "Firmy",
     "contacts": "Kontakty",
     "deals": "Obchody",
+    "emails": "E-maily",
     "calendar": "Kalendář",
     "reports": "Reporty",
     "settings": "Nastavení",

@@ -7,6 +7,7 @@ import {
   Home,
   LineChart,
   LogOut,
+  Mail,
   MessageSquare,
   Settings,
   Users,
@@ -39,6 +40,7 @@ const PRIMARY_ITEMS: NavItem[] = [
   },
   { to: "/app/contacts", labelKey: "nav.contacts", icon: Users, testId: testIds.nav.contacts },
   { to: "/app/deals", labelKey: "nav.deals", icon: Handshake, testId: testIds.nav.deals },
+  { to: "/app/emails", labelKey: "nav.emails", icon: Mail, testId: testIds.nav.emails },
   {
     to: "/app/calendar",
     labelKey: "nav.calendar",

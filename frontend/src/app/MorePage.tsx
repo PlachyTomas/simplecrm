@@ -6,6 +6,7 @@ import {
   Handshake,
   LineChart,
   LogOut,
+  Mail,
   MessageSquare,
   MonitorSmartphone,
   Settings,
@@ -60,6 +61,7 @@ export function MorePage() {
 
   const rows: Row[] = [
     { to: "/app/deals", labelKey: "nav.deals", icon: Handshake },
+    { to: "/app/emails", labelKey: "nav.emails", icon: Mail },
     { to: "/app/calendar", labelKey: "nav.calendar", icon: CalendarDays },
     { to: "/app/reports", labelKey: "nav.reports", icon: LineChart },
     { to: "/app/settings", labelKey: "nav.settings", icon: Settings },

@@ -5,6 +5,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { ActivityRow } from "@/app/activities/ActivityRow";
 import { useActivities } from "@/app/activities/useActivities";
+import { EmailDetailModal } from "@/app/emails/EmailDetailModal";
 import { EditCompanyModal } from "@/app/companies/EditCompanyModal";
 import { OwnershipBadge } from "@/app/companies/OwnershipBadge";
 import { useCompany } from "@/app/companies/useCompany";
@@ -612,6 +613,7 @@ function EmailsTab({ company, locale }: { company: CompanyOut; locale: string })
 
 function ActivityTab({ companyId }: { companyId: string }) {
   const { t } = useTranslation("companies");
+  const [openEmailId, setOpenEmailId] = useState<string | null>(null);
   const { data, isPending, isError } = useActivities({
     companyId,
     limit: 50,
@@ -635,9 +637,14 @@ function ActivityTab({ companyId }: { companyId: string }) {
       <h2 className="text-lg font-semibold">{t("companyDetail.activityTab.title")}</h2>
       <ol className="mt-4 space-y-3 border-l border-border-subtle pl-5">
         {data.items.map((a) => (
-          <ActivityRow key={a.id} activity={a} />
+          <ActivityRow key={a.id} activity={a} onOpenEmail={setOpenEmailId} />
         ))}
       </ol>
+      <EmailDetailModal
+        emailId={openEmailId}
+        onClose={() => setOpenEmailId(null)}
+        onSwitch={setOpenEmailId}
+      />
     </section>
   );
 }

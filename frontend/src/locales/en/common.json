@@ -159,7 +159,8 @@
     "stageChangeTo": "Stage: {{to}}",
     "dealPrefix": "Deal “{{dealName}}”",
     "showAll": "Show all ({{count}})",
-    "hide": "Hide"
+    "hide": "Hide",
+    "openEmail": "View email"
   },
   "nav": {
     "overview": "Overview",
@@ -167,6 +168,7 @@
     "companies": "Companies",
     "contacts": "Contacts",
     "deals": "Deals",
+    "emails": "Emails",
     "calendar": "Calendar",
     "reports": "Reports",
     "settings": "Settings",

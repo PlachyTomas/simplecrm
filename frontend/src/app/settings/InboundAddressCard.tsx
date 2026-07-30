@@ -6,9 +6,9 @@
  * matching company/contact/deal timeline. This card is the only place that
  * address is surfaced — reading it is what mints the token server-side.
  *
- * There is deliberately no "unmatched inbox" screen: a message whose
- * correspondent matches no contact is stored but linked to no company, so it
- * appears on no company page. The help text says that out loud instead.
+ * A message whose correspondent matches no contact is stored but linked to
+ * no company, so it appears on no company page — the Mail page's
+ * "Nepřiřazené" filter is where those surface (/app/emails?type=unmatched).
  */
 
 import { Check, Copy, Inbox, RefreshCw } from "lucide-react";
