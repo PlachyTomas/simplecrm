@@ -165,7 +165,10 @@ async def _scoped_deals_query(
     if deal_status == "open":
         # Still in play: an open-type stage AND not yet closed. A LOST deal
         # lives in an open-type stage with `closed_at` set (see pipelines.py),
-        # so the closed_at check is what keeps it out.
+        # so the closed_at check is what keeps it out. Mirrored per-row (not
+        # shared, since this is a SQL predicate over many rows) by
+        # `DealListItemOut`'s `status` field — see `_derive_deal_status` in
+        # `app.schemas.deal`.
         base = base.where(Stage.stage_type == StageType.open, Deal.closed_at.is_(None))
     elif deal_status == "won":
         base = base.where(Stage.stage_type == StageType.won)
@@ -698,6 +701,84 @@ async def mark_deal_lost(
             "from_stage_id": str(previous_stage_id),
             "to_stage_id": str(deal.stage_id),
             "lost_reason": payload.lost_reason,
+        },
+    )
+    await session.commit()
+    await session.refresh(deal)
+    return deal
+
+
+@router.post("/{deal_id}/reopen", response_model=DealDetailOut)
+async def reopen_deal(
+    deal_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Deal:
+    """Bring a closed deal back into play.
+
+    A lost deal sitting in an open-type stage just loses its terminal stamp
+    (`closed_at` + `lost_reason`) and stays where it was. A deal parked in a
+    won/lost-type stage also needs a playable home, so it moves to the
+    pipeline's first open-type stage. The old detail-page "reopen" PATCHed
+    only `{lost_reason: null}`, which cannot clear `closed_at` — the deal
+    stayed terminal while the UI claimed success; this endpoint is the
+    real thing.
+    """
+    deal = await _get_scoped(session, user, deal_id)
+    if not await can_write_row(session, user, deal.owner_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot mark deals outside your visibility scope",
+        )
+
+    current_stage = await session.get(Stage, deal.stage_id)
+    current_type = current_stage.stage_type if current_stage else StageType.open
+    if current_type is StageType.open and deal.closed_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Deal is not closed.",
+        )
+
+    previous_stage_id = deal.stage_id
+    previous_lost_reason = deal.lost_reason
+    if current_type is not StageType.open:
+        stmt = (
+            select(Stage)
+            .join(Pipeline, Pipeline.id == Stage.pipeline_id)
+            .where(
+                Pipeline.organization_id == user.organization_id,
+                Stage.stage_type == StageType.open,
+            )
+            .order_by(Stage.position)
+        )
+        open_stage = (await session.execute(stmt)).scalars().first()
+        if open_stage is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="No open stage configured in your pipeline.",
+            )
+        deal.stage_id = open_stage.id
+
+    deal.closed_at = None
+    deal.lost_reason = None
+    # `is_paid` only carries meaning while the deal sits in a won stage —
+    # a reopened deal is outstanding again, not collected revenue.
+    deal.is_paid = False
+    deal.paid_at = None
+
+    record_activity(
+        session,
+        organization_id=deal.organization_id,
+        entity_type=ActivityEntityType.deal,
+        entity_id=deal.id,
+        company_id=deal.company_id,
+        user_id=user.id,
+        activity_type=ActivityType.deal_reopened,
+        payload={
+            "deal_name": deal.name,
+            "from_stage_id": str(previous_stage_id),
+            "to_stage_id": str(deal.stage_id),
+            "lost_reason": previous_lost_reason,
         },
     )
     await session.commit()

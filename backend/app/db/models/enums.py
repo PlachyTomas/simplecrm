@@ -80,6 +80,10 @@ class ActivityType(StrEnum):
     # happened, with an optional summary. Distinct from `note` so the
     # timeline can tell "we spoke" from "I wrote something down".
     call_logged = "call_logged"
+    # A closed (won/lost) deal brought back to play via POST /deals/{id}/reopen.
+    # Distinct from `stage_change` because a lost deal in an open-type stage
+    # reopens without moving anywhere.
+    deal_reopened = "deal_reopened"
 
 
 class EmailRecipientStatus(StrEnum):

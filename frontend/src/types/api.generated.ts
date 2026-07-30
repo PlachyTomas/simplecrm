@@ -1007,6 +1007,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/deals/{deal_id}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reopen Deal
+         * @description Bring a closed deal back into play.
+         *
+         *     A lost deal sitting in an open-type stage just loses its terminal stamp
+         *     (`closed_at` + `lost_reason`) and stays where it was. A deal parked in a
+         *     won/lost-type stage also needs a playable home, so it moves to the
+         *     pipeline's first open-type stage. The old detail-page "reopen" PATCHed
+         *     only `{lost_reason: null}`, which cannot clear `closed_at` — the deal
+         *     stayed terminal while the UI claimed success; this endpoint is the
+         *     real thing.
+         */
+        post: operations["reopen_deal_api_v1_deals__deal_id__reopen_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/deals/{deal_id}/payment": {
         parameters: {
             query?: never;
@@ -3397,7 +3425,7 @@ export interface components {
          * ActivityType
          * @enum {string}
          */
-        ActivityType: "note" | "stage_change" | "owner_change" | "deal_won" | "deal_lost" | "company_freed" | "ownership_reassigned" | "subscription_change" | "email_sent" | "email_received" | "deal_created" | "deal_updated" | "company_updated" | "event_created" | "call_logged";
+        ActivityType: "note" | "stage_change" | "owner_change" | "deal_won" | "deal_lost" | "company_freed" | "ownership_reassigned" | "subscription_change" | "email_sent" | "email_received" | "deal_created" | "deal_updated" | "company_updated" | "event_created" | "call_logged" | "deal_reopened";
         /** AdminAccessLogList */
         AdminAccessLogList: {
             /** Items */
@@ -5159,6 +5187,11 @@ export interface components {
             primary_contact_name?: string | null;
             /** Primary Contact Email */
             primary_contact_email?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "won" | "lost";
         };
         /** DealMarkLost */
         DealMarkLost: {
@@ -9836,6 +9869,37 @@ export interface operations {
                 "application/json": components["schemas"]["DealMarkLost"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reopen_deal_api_v1_deals__deal_id__reopen_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

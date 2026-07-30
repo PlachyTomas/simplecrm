@@ -3,9 +3,11 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.db.models.enums import StageType
 
 if TYPE_CHECKING:
     from app.db.models import Deal
@@ -106,6 +108,25 @@ class DealDetailOut(DealOut):
     note: str | None = None
 
 
+def _derive_deal_status(
+    stage_type: StageType, closed_at: datetime | None
+) -> Literal["open", "won", "lost"]:
+    """Single-object mirror of the `deal_status` filter branches in
+    `app.api.v1.deals._scoped_deals_query` — keep the two in sync. That
+    query builds a SQL predicate over many rows; this derives the same
+    partition for one already-loaded deal, so the shapes don't unify into
+    one function, but the semantics must stay identical:
+    won = won-type stage; lost = lost-type stage, or an open-type stage
+    already closed (the house convention for "lost without its own
+    stage"); open = open-type stage and not yet closed.
+    """
+    if stage_type == StageType.won:
+        return "won"
+    if stage_type == StageType.lost:
+        return "lost"
+    return "lost" if closed_at is not None else "open"
+
+
 class DealListItemOut(DealOut):
     """`DealOut` plus denormalized display fields so list views (Firmy →
     obchody, the all-deals table) can render names — not UUIDs — without a
@@ -118,6 +139,7 @@ class DealListItemOut(DealOut):
     owner_name: str | None = None
     primary_contact_name: str | None = None
     primary_contact_email: str | None = None
+    status: Literal["open", "won", "lost"]
 
     @classmethod
     def from_deal(cls, deal: Deal) -> DealListItemOut:
@@ -133,4 +155,5 @@ class DealListItemOut(DealOut):
             owner_name=deal.owner.name if deal.owner else None,
             primary_contact_name=contact_name,
             primary_contact_email=contact.email if contact else None,
+            status=_derive_deal_status(deal.stage.stage_type, deal.closed_at),
         )

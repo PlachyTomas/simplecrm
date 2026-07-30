@@ -826,6 +826,101 @@ async def test_mark_lost_requires_reason(
     assert body["lost_reason"] == "Klient vybral konkurenci"
 
 
+async def test_reopen_lost_deal_in_open_stage(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """A lost deal in an open-type stage (house convention: no dedicated lost
+    stage) reopens in place: terminal stamp cleared, stage untouched, and a
+    `deal_reopened` activity carrying the old reason lands on the timeline."""
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=admin.id,
+        name="Back from the dead",
+        value=Decimal("0"),
+        currency="CZK",
+        closed_at=datetime.now(tz=UTC),
+        lost_reason="Konkurence",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    ok = await client.post(f"/api/v1/deals/{deal.id}/reopen", headers=_auth(admin))
+    assert ok.status_code == 200
+    body = ok.json()
+    assert body["closed_at"] is None
+    assert body["lost_reason"] is None
+    assert body["stage_id"] == str(stage.id)
+
+    listed = await client.get("/api/v1/deals?status=open", headers=_auth(admin))
+    assert "Back from the dead" in {it["name"] for it in listed.json()["items"]}
+
+    acts = await client.get(
+        f"/api/v1/activities?entity_type=deal&entity_id={deal.id}", headers=_auth(admin)
+    )
+    reopened = [a for a in acts.json()["items"] if a["activity_type"] == "deal_reopened"]
+    assert len(reopened) == 1
+    assert reopened[0]["payload"]["lost_reason"] == "Konkurence"
+
+
+async def test_reopen_won_deal_moves_to_first_open_stage(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, open_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    won_stage = await _won_stage_for(db_session, org.id)
+    company = await _seed_company(db_session, org)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=won_stage.id,
+        owner_user_id=admin.id,
+        name="Unwon",
+        value=Decimal("100"),
+        currency="CZK",
+        closed_at=datetime.now(tz=UTC),
+        is_paid=True,
+        paid_at=datetime.now(tz=UTC),
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    ok = await client.post(f"/api/v1/deals/{deal.id}/reopen", headers=_auth(admin))
+    assert ok.status_code == 200
+    body = ok.json()
+    assert body["closed_at"] is None
+    assert body["stage_id"] == str(open_stage.id)
+    # A reopened deal is outstanding again, not collected revenue.
+    assert body["is_paid"] is False
+    assert body["paid_at"] is None
+
+
+async def test_reopen_open_deal_conflicts(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=admin.id,
+        name="Nothing to reopen",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    resp = await client.post(f"/api/v1/deals/{deal.id}/reopen", headers=_auth(admin))
+    assert resp.status_code == 409
+
+
 async def test_mark_won_rejects_foreign_deal(
     client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
 ) -> None:
@@ -1324,6 +1419,57 @@ async def test_list_deals_status_lost_open_stage_with_closed_at(
 
     open_only = await client.get("/api/v1/deals?status=open", headers=_auth(admin))
     assert {it["name"] for it in open_only.json()["items"]} == {"Still open"}
+
+
+async def test_list_deals_response_includes_computed_status(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """`DealListItemOut.status` must match the `deal_status` filter's own
+    partition (see `_scoped_deals_query` / `_derive_deal_status`): an
+    open-type stage with no `closed_at` is "open", a won-type stage is
+    "won", and an open-type stage stamped with `closed_at` — the house
+    convention with no dedicated lost stage — is "lost"."""
+    org, open_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    won_stage = await _won_stage_for(db_session, org.id)
+    company = await _seed_company(db_session, org)
+    db_session.add_all(
+        [
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                name="Still open",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=won_stage.id,
+                name="Won",
+                value=Decimal("1"),
+                currency="CZK",
+                closed_at=datetime.now(tz=UTC),
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                name="Lost",
+                value=Decimal("1"),
+                currency="CZK",
+                closed_at=datetime.now(tz=UTC),
+                lost_reason="Konkurence",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    r = await client.get("/api/v1/deals", headers=_auth(admin))
+    assert r.status_code == 200
+    status_by_name = {it["name"]: it["status"] for it in r.json()["items"]}
+    assert status_by_name == {"Still open": "open", "Won": "won", "Lost": "lost"}
 
 
 async def test_list_deals_sort_by_value_asc_and_desc(
