@@ -70,6 +70,10 @@
       "sales-goals": {
         "label": "Sales goals",
         "description": "Monthly targets for salespeople and the whole company."
+      },
+      "shortcuts": {
+        "label": "Keyboard shortcuts",
+        "description": "Drive the app without the mouse — the complete list."
       }
     },
     "importItem": {
@@ -700,5 +704,9 @@
       "duplicate": "A goal for this person, month and metric already exists.",
       "generic": "The goal could not be saved. Please try again."
     }
+  },
+  "shortcutsSection": {
+    "title": "Keyboard shortcuts",
+    "subtitle": "Open this list anywhere in the app with the ? key."
   }
 }

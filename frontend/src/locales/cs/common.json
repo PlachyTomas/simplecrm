@@ -210,7 +210,7 @@
       "overview": {
         "welcome": {
           "title": "Vítejte v SimpleCRM",
-          "body": "Každá stránka má vlastní prohlídku pokročilých funkcí — spustíte ji kdykoli ikonou ? nahoře. Na Přehledu si teď ukážeme widgety a rychlé akce."
+          "body": "Každá stránka má vlastní prohlídku pokročilých funkcí — spustíte ji kdykoli ikonou ? nahoře. Aplikace jede i bez myši: ⌘K hledá, N založí obchod a klávesa ? ukáže všechny zkratky."
         },
         "widgets": {
           "title": "Poskládejte si Přehled po svém",
@@ -218,7 +218,7 @@
         },
         "quickActions": {
           "title": "Rychlé akce",
-          "body": "Widget Rychlé akce založí nový obchod na jedno kliknutí. Stejné dlaždice pro firmu, kontakt i událost si přidáte přes Upravit rozložení → Přidat widget."
+          "body": "Widget Rychlé akce založí nový obchod na jedno kliknutí — a klávesa N to udělá odkudkoli. Dlaždice pro firmu, kontakt i událost si přidáte přes Upravit rozložení → Přidat widget."
         }
       },
       "pipeline": {
@@ -369,5 +369,28 @@
   },
   "toast": {
     "dismissAriaLabel": "Zavřít oznámení"
+  },
+  "shortcuts": {
+    "title": "Klávesové zkratky",
+    "orSeparator": "nebo",
+    "editableHint": "Zkratky se nespouštějí při psaní do polí a při otevřeném dialogu.",
+    "groups": {
+      "actions": "Akce",
+      "navigation": "Navigace"
+    },
+    "items": {
+      "search": "Hledat",
+      "newDeal": "Nový obchod",
+      "help": "Zobrazit zkratky",
+      "goOverview": "Přejít na Přehled",
+      "goPipeline": "Přejít na Pipeline",
+      "goCompanies": "Přejít na Firmy",
+      "goContacts": "Přejít na Kontakty",
+      "goDeals": "Přejít na Obchody",
+      "goEmails": "Přejít na E-maily",
+      "goCalendar": "Přejít na Kalendář",
+      "goReports": "Přejít na Reporty",
+      "goSettings": "Přejít do Nastavení"
+    }
   }
 }

@@ -107,6 +107,12 @@ export const testIds = {
     clearFilters: "deals-clear-filters",
     sortHeader: (key: string) => `deals-sort-${key}`,
     row: (id: string) => `deals-row-${id}`,
+    bulk: {
+      bar: "deals-bulk-bar",
+      selectAll: "deals-bulk-select-all",
+      selectOne: (id: string) => `deals-bulk-select-${id}`,
+      markLost: "deals-bulk-mark-lost",
+    },
     detail: {
       dialog: "deals-detail-dialog",
       timeline: "deals-detail-timeline",
@@ -156,6 +162,9 @@ export const testIds = {
     wonWindow: "pipeline-won-window",
     noNextStepFilter: "pipeline-no-next-step-filter",
   },
+  shortcuts: {
+    helpDialog: "shortcuts-help-dialog",
+  },
   confirmDialog: {
     confirm: "confirm-dialog-confirm",
     cancel: "confirm-dialog-cancel",
@@ -179,6 +188,9 @@ export const testIds = {
       linkCreateToggle: "mail-link-create-toggle",
       linkCompanyName: "mail-link-company-name",
       linkDealName: "mail-link-deal-name",
+      bulkBar: "mail-bulk-bar",
+      bulkSelectAll: "mail-bulk-select-all",
+      bulkAssign: "mail-bulk-assign",
     },
     compose: {
       toInput: "email-compose-to-input",

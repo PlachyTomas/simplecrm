@@ -4,6 +4,7 @@ import {
   Building2,
   CreditCard,
   Kanban,
+  Keyboard,
   Lock,
   MailPlus,
   Mails,
@@ -30,6 +31,7 @@ export type SettingsSectionKey =
   | "organization"
   | "billing"
   | "integrations"
+  | "shortcuts"
   | "privacy";
 
 export type SettingsGroup = "personal" | "organization" | "sales" | "billing";
@@ -71,6 +73,14 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
     descriptionKey: "nav.sections.integrations.description",
     group: "personal",
     icon: Plug,
+    personal: true,
+  },
+  {
+    key: "shortcuts",
+    labelKey: "nav.sections.shortcuts.label",
+    descriptionKey: "nav.sections.shortcuts.description",
+    group: "personal",
+    icon: Keyboard,
     personal: true,
   },
   {

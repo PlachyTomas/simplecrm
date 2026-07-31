@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { MobileTabBar } from "@/app/MobileTabBar";
 import { InstallNudge } from "@/app/pwa/InstallNudge";
 import { GlobalSearch } from "@/app/search/GlobalSearch";
+import { GlobalShortcuts } from "@/app/shortcuts/useGlobalShortcuts";
 import { Sidebar } from "@/app/Sidebar";
 import { TourOverlay, TourReplayButton } from "@/app/tutorial";
 import { TrialBanner } from "@/app/TrialBanner";
@@ -194,6 +195,7 @@ export function AppShell() {
       <MobileTabBar />
       <InstallNudge />
       <TourOverlay />
+      <GlobalShortcuts />
     </div>
   );
 }

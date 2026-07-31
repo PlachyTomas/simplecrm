@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { MIN_SEARCH_LENGTH, type SearchHit, useGlobalSearch } from "@/app/search/useGlobalSearch";
+import { FOCUS_SEARCH_EVENT } from "@/lib/shortcuts";
 import { testIds } from "@/lib/testids";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,17 @@ export function GlobalSearch() {
   useEffect(() => {
     setActiveIndex(-1);
   }, [flat]);
+
+  // ⌘K / "/" from the global shortcut layer — jump into the field. On
+  // small screens the input mounts only after the toggle flips.
+  useEffect(() => {
+    const onFocusRequest = () => {
+      setMobileOpen(true);
+      window.setTimeout(() => inputRef.current?.focus(), 0);
+    };
+    window.addEventListener(FOCUS_SEARCH_EVENT, onFocusRequest);
+    return () => window.removeEventListener(FOCUS_SEARCH_EVENT, onFocusRequest);
+  }, []);
 
   // Any click outside dismisses the dropdown (and re-collapses the mobile
   // field), matching every other popover in the app.

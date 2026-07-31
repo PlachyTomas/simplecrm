@@ -14,6 +14,7 @@ import { OrganizationSection } from "@/app/settings/sections/OrganizationSection
 import { PermissionsSection } from "@/app/settings/sections/PermissionsSection";
 import { PipelineSection } from "@/app/settings/sections/PipelineSection";
 import { SalesGoalsSection } from "@/app/settings/sections/SalesGoalsSection";
+import { ShortcutsSection } from "@/app/settings/sections/ShortcutsSection";
 import {
   defaultSectionKey,
   isSettingsSectionKey,
@@ -39,6 +40,7 @@ const SECTION_COMPONENTS: Record<SettingsSectionKey, ComponentType> = {
   organization: OrganizationSection,
   billing: BillingSection,
   integrations: IntegrationsSection,
+  shortcuts: ShortcutsSection,
   privacy: PrivacySection,
 };
 

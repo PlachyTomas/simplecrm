@@ -8,8 +8,8 @@ import {
 } from "@/app/settings/settingsNav";
 
 describe("settingsNav", () => {
-  it("admins see all 13 sections", () => {
-    expect(visibleSectionKeys("admin", false)).toHaveLength(13);
+  it("admins see all 14 sections", () => {
+    expect(visibleSectionKeys("admin", false)).toHaveLength(14);
   });
 
   it("salespeople see personal sections plus the read-for-all ones", () => {
@@ -19,6 +19,7 @@ describe("settingsNav", () => {
     expect(visibleSectionKeys("salesperson", false)).toEqual([
       "appearance",
       "integrations",
+      "shortcuts",
       "email-templates",
       "sales-goals",
     ]);
@@ -28,6 +29,7 @@ describe("settingsNav", () => {
     expect(visibleSectionKeys("salesperson", true)).toEqual([
       "appearance",
       "integrations",
+      "shortcuts",
       "email-templates",
       "sales-goals",
       "invitations",

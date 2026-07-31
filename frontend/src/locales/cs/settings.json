@@ -70,6 +70,10 @@
       "sales-goals": {
         "label": "Prodejní cíle",
         "description": "Měsíční cíle pro obchodníky i celou firmu."
+      },
+      "shortcuts": {
+        "label": "Klávesové zkratky",
+        "description": "Ovládejte aplikaci bez myši — kompletní přehled zkratek."
       }
     },
     "importItem": {
@@ -705,5 +709,9 @@
       "duplicate": "Cíl pro tuto osobu, měsíc a metriku už existuje.",
       "generic": "Cíl se nepodařilo uložit. Zkuste to prosím znovu."
     }
+  },
+  "shortcutsSection": {
+    "title": "Klávesové zkratky",
+    "subtitle": "Stejný přehled otevřete kdekoli v aplikaci klávesou ?."
   }
 }

@@ -208,7 +208,7 @@
       "overview": {
         "welcome": {
           "title": "Welcome to SimpleCRM",
-          "body": "Every page has its own tour of the advanced features — start it anytime with the ? icon up top. On the Overview we'll look at widgets and quick actions."
+          "body": "Every page has its own tour of the advanced features — start it anytime with the ? icon up top. The app runs without a mouse too: ⌘K searches, N starts a deal, and the ? key shows every shortcut."
         },
         "widgets": {
           "title": "Arrange the Overview your way",
@@ -216,7 +216,7 @@
         },
         "quickActions": {
           "title": "Quick actions",
-          "body": "The Quick actions widget starts a new deal in one click. Add matching tiles for a company, contact or event via Edit layout → Add widget."
+          "body": "The Quick actions widget starts a new deal in one click — and the N key does it from anywhere. Add tiles for a company, contact or event via Edit layout → Add widget."
         }
       },
       "pipeline": {
@@ -367,5 +367,28 @@
   },
   "toast": {
     "dismissAriaLabel": "Dismiss notification"
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "orSeparator": "or",
+    "editableHint": "Shortcuts stay quiet while you type in a field or a dialog is open.",
+    "groups": {
+      "actions": "Actions",
+      "navigation": "Navigation"
+    },
+    "items": {
+      "search": "Search",
+      "newDeal": "New deal",
+      "help": "Show shortcuts",
+      "goOverview": "Go to Overview",
+      "goPipeline": "Go to Pipeline",
+      "goCompanies": "Go to Companies",
+      "goContacts": "Go to Contacts",
+      "goDeals": "Go to Deals",
+      "goEmails": "Go to Emails",
+      "goCalendar": "Go to Calendar",
+      "goReports": "Go to Reports",
+      "goSettings": "Go to Settings"
+    }
   }
 }
