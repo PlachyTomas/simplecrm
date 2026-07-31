@@ -32,7 +32,10 @@ export function DealTimelineSection({ dealId }: { dealId: string }) {
   const page = data ?? lastPage.current;
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-4">
+    <section
+      data-testid={testIds.deals.detail.timeline}
+      className="rounded-lg border border-border bg-surface p-4"
+    >
       <h2 className="text-base font-semibold">{t("dealDetail.timeline.title")}</h2>
       {!page ? (
         isError ? (

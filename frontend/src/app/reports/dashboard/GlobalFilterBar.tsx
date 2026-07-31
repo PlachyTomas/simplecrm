@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useOrgTeams, useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { useLocale } from "@/lib/i18n/useLocale";
+import { testIds } from "@/lib/testids";
 import { cn } from "@/lib/utils";
 
 import {
@@ -126,6 +127,7 @@ export function GlobalFilterBar({ value, onChange }: GlobalFilterBarProps) {
     <div
       className="sticky top-0 z-10 -mx-4 border-b border-border bg-bg/90 px-4 py-3 backdrop-blur md:-mx-8 md:px-8"
       role="toolbar"
+      data-testid={testIds.reports.filterBar}
       aria-label={t("globalFilterBar.ariaLabel")}
     >
       <div className="flex flex-wrap items-center gap-3">

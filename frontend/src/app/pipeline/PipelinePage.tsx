@@ -243,6 +243,7 @@ function DealCard({
       {...listeners}
       {...attributes}
       {...preview.hoverHandlers}
+      data-testid={testIds.pipeline.deal(deal.id)}
       aria-describedby={preview.open ? preview.tooltipId : undefined}
       role="button"
       tabIndex={0}
@@ -1034,6 +1035,7 @@ export function PipelinePage() {
           <label className="flex flex-col text-xs font-medium text-text-tertiary">
             {t("pipelinePage.toolbar.wonWindowLabel")}
             <select
+              data-testid={testIds.pipeline.wonWindow}
               value={String(wonWindow)}
               onChange={(e) => {
                 const raw = e.target.value;

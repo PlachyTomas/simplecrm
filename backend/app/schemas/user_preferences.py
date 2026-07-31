@@ -13,8 +13,9 @@ key — lets QA reset the tour with one PATCH and avoids a separate
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class PreferencesPatch(BaseModel):
@@ -38,6 +39,28 @@ class PreferencesPatch(BaseModel):
     # tour overlay mid-flow. Re-opening resumes from this step. `None`
     # clears the cursor (next open starts from 0).
     tutorial_step_index: int | None = Field(default=None, ge=0, le=20)
+
+    # Per-page tour outcomes, keyed by tour id (e.g. "pipeline", "emails").
+    # Replaces the single global tour above (whose keys stay accepted for
+    # legacy clients/rows). The frontend sends the whole updated map;
+    # `None` clears every per-page record (full tutorial reset).
+    tutorial_tours: dict[str, Literal["done", "dismissed"]] | None = Field(default=None)
+
+    @field_validator("tutorial_tours")
+    @classmethod
+    def _cap_tour_map(
+        cls, value: dict[str, Literal["done", "dismissed"]] | None
+    ) -> dict[str, Literal["done", "dismissed"]] | None:
+        """Keep the JSONB blob bounded: tour ids are short slugs and there
+        are only ever a handful of pages."""
+        if value is None:
+            return None
+        if len(value) > 24:
+            raise ValueError("too many tour entries")
+        for key in value:
+            if not key or len(key) > 40 or not key.replace("-", "").isalnum():
+                raise ValueError(f"invalid tour id: {key!r}")
+        return value
 
     def to_merge_dict(self, *, fields_set: set[str]) -> dict[str, object | None]:
         """Materialize a merge-patch dict.

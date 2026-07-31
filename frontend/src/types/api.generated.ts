@@ -6644,6 +6644,10 @@ export interface components {
             tutorial_dismissed_at?: string | null;
             /** Tutorial Step Index */
             tutorial_step_index?: number | null;
+            /** Tutorial Tours */
+            tutorial_tours?: {
+                [key: string]: "done" | "dismissed";
+            } | null;
         };
         /**
          * ProviderOut

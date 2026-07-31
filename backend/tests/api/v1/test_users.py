@@ -257,3 +257,40 @@ async def test_patch_language_rejects_unsupported(
 async def test_patch_language_requires_auth(client: AsyncClient) -> None:
     r = await client.patch("/api/v1/users/me/language", json={"language": "en"})
     assert r.status_code == 401
+
+
+async def test_patch_preferences_tutorial_tours_map(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Per-page tour map: accepted, merged alongside legacy keys, cleared
+    by explicit null, and value-validated."""
+    _, _, sales = await _seed(db_session, owned_cleanup)
+    r = await client.patch(
+        "/api/v1/users/me/preferences",
+        headers=_auth(sales),
+        json={"tutorial_tours": {"pipeline": "done", "emails": "dismissed"}},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["tutorial_tours"] == {"pipeline": "done", "emails": "dismissed"}
+
+    # Whole-map semantics: a follow-up PATCH replaces the map as one key.
+    r = await client.patch(
+        "/api/v1/users/me/preferences",
+        headers=_auth(sales),
+        json={"tutorial_tours": {"pipeline": "done"}},
+    )
+    assert r.json()["tutorial_tours"] == {"pipeline": "done"}
+
+    bad = await client.patch(
+        "/api/v1/users/me/preferences",
+        headers=_auth(sales),
+        json={"tutorial_tours": {"pipeline": "maybe"}},
+    )
+    assert bad.status_code == 422
+
+    cleared = await client.patch(
+        "/api/v1/users/me/preferences",
+        headers=_auth(sales),
+        json={"tutorial_tours": None},
+    )
+    assert "tutorial_tours" not in cleared.json()

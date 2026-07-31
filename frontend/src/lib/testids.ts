@@ -44,6 +44,8 @@ export const testIds = {
   },
   companies: {
     addButton: "companies-add-button",
+    bulkEmailButton: "companies-bulk-email-button",
+    ownerFilter: "companies-owner-filter",
     openDealsFilter: "companies-open-deals-filter",
     deleteButton: "companies-delete-button",
     contactRowView: (id: string) => `company-contact-view-${id}`,
@@ -104,7 +106,10 @@ export const testIds = {
     statusFilter: "deals-status-filter",
     clearFilters: "deals-clear-filters",
     sortHeader: (key: string) => `deals-sort-${key}`,
+    row: (id: string) => `deals-row-${id}`,
     detail: {
+      dialog: "deals-detail-dialog",
+      timeline: "deals-detail-timeline",
       // The standing description (`deals.note`), not the activity timeline.
       noteEdit: "deals-detail-note-edit",
       noteInput: "deals-detail-note-input",
@@ -145,6 +150,7 @@ export const testIds = {
     },
     loseZone: "pipeline-lose-zone",
     rottingBadge: (dealId: string) => `pipeline-rotting-${dealId}`,
+    wonWindow: "pipeline-won-window",
   },
   confirmDialog: {
     confirm: "confirm-dialog-confirm",
@@ -225,6 +231,9 @@ export const testIds = {
   },
   reports: {
     addWidget: "reports-add-widget",
+    editLayout: "reports-edit-layout",
+    exportCsv: "reports-export-csv",
+    filterBar: "reports-filter-bar",
   },
   dashboard: {
     editLayout: "dashboard-edit-layout",

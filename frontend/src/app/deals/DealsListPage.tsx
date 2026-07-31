@@ -453,6 +453,7 @@ export function DealsListPage() {
                       <td className="px-4 py-3 text-sm">
                         <button
                           type="button"
+                          data-testid={testIds.deals.row(deal.id)}
                           onClick={(e) => {
                             e.stopPropagation();
                             openDeal(deal.id);

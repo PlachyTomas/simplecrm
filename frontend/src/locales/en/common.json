@@ -195,33 +195,133 @@
     }
   },
   "tutorial": {
-    "welcome": {
-      "title": "Welcome to SimpleCRM",
-      "body": "We'll walk you through five steps to get oriented in a minute. You can skip the tour anytime and restart it via the ? icon in the top-right corner."
-    },
-    "companies": {
-      "title": "Companies are the foundation",
-      "body": "Start with a company. Just enter the Company ID (IČO) — we'll fill in the name, address, and legal form from the ARES registry."
-    },
-    "pipeline": {
-      "title": "A deal belongs in the pipeline",
-      "body": "The Pipeline shows a Kanban board of your deals. Add your first one via \"+ Add deal\" in the top right, and drag deals between stages as they progress."
-    },
-    "reports": {
-      "title": "Reports will guide you",
-      "body": "Once you have data, you'll see who's leading the leaderboard, how fast deals close, and what isn't selling. Switching your role in Settings unlocks extra widgets for managers."
-    },
-    "settings": {
-      "title": "Invite your team so it's not just you",
-      "body": "In Settings you can customize the pipeline, invite salespeople, and fill in your billing details. Done — you're ready to go!"
-    },
     "stepCounter": "Step {{current}} / {{total}}",
-    "closeAriaLabel": "Close tour",
+    "closeAriaLabel": "Close the guide",
     "back": "Back",
-    "skip": "Skip",
+    "skip": "Skip tour",
     "next": "Next",
     "done": "Done",
-    "replayAriaLabel": "Restart tour"
+    "skipStep": "Skip step",
+    "actionHint": "Continue by doing it on the page",
+    "replayAriaLabel": "Start this page's tour",
+    "tours": {
+      "overview": {
+        "welcome": {
+          "title": "Welcome to SimpleCRM",
+          "body": "Every page has its own tour of the advanced features — start it anytime with the ? icon up top. On the Overview we'll look at widgets and quick actions."
+        },
+        "widgets": {
+          "title": "Arrange the Overview your way",
+          "body": "The Edit layout button lets you rearrange, add and remove widgets — the catalog holds Weighted pipeline value, Sales cycle length or Goal progress. In edit mode a widget also gets its own date-range picker."
+        },
+        "quickActions": {
+          "title": "Quick actions",
+          "body": "The Quick actions widget starts a new deal in one click. Add matching tiles for a company, contact or event via Edit layout → Add widget."
+        }
+      },
+      "pipeline": {
+        "cardActions": {
+          "title": "Cards do more than they show",
+          "body": "Hover a card: the crown marks a win, the red cross a loss — we'll ask for the reason. Dragging a card onto the bottom bar loses it too."
+        },
+        "quickActions": {
+          "title": "The bolt = act without leaving the board",
+          "body": "Open ⚡ on any card: email, event, note or a logged call — everything lands in the deal's timeline."
+        },
+        "preview": {
+          "title": "Peek without clicking",
+          "body": "Hold the cursor over a card — you'll see the last action, notes and any upcoming events."
+        },
+        "filters": {
+          "title": "Filters above the board",
+          "body": "The Won within… switch trims ONLY the Won column — the other stages stay whole. Next to it, flip the board to My deals or a colleague's."
+        },
+        "health": {
+          "title": "We watch forgotten deals",
+          "body": "A badge lights up on a deal that hasn't moved for a while — set the day threshold in Settings."
+        }
+      },
+      "companies": {
+        "ares": {
+          "title": "Just the ID — ARES fills the rest",
+          "body": "When adding a company, enter only its registration number (IČO) — we pull the name, address and legal form from the public ARES registry."
+        },
+        "bulkEmail": {
+          "title": "Bulk email with merge fields",
+          "body": "Select companies and send a personalized bulk email — fields like {kontakt_jmeno} or {firma} resolve per recipient. Take the text from a saved template; the History link shows how past sends did."
+        },
+        "ownership": {
+          "title": "Companies don't rot in drawers",
+          "body": "A company with no orders frees up for colleagues after the configured period — the date shows in the Lock expires column. See who's unowned via Owner → Unclaimed."
+        }
+      },
+      "contacts": {
+        "csv": {
+          "title": "Export exactly what you see",
+          "body": "Download CSV honors the active filters and search — you export precisely the list on your screen."
+        },
+        "mainContact": {
+          "title": "A company's main contact",
+          "body": "The star in a company's detail (Contacts tab) sets the main contact — it then prefills into emails and new deals."
+        }
+      },
+      "deals": {
+        "status": {
+          "title": "Every deal — including lost ones",
+          "body": "The table keeps open, won and lost deals together. Hover the red Lost chip to see the loss reason; this filter switches between states."
+        },
+        "csv": {
+          "title": "Filtered export",
+          "body": "Download CSV exports exactly what you've filtered — status, stage and owner included."
+        },
+        "openDetail": {
+          "title": "Open a detail",
+          "body": "Click a deal's name — the detail opens right here, full history included, without losing your filters."
+        },
+        "timeline": {
+          "title": "The timeline is the deal's whole story",
+          "body": "Stage changes, emails, calls and notes on one timeline — edits even show what exactly changed. And a won or lost deal comes back via the Reopen button in the header."
+        }
+      },
+      "emails": {
+        "bcc": {
+          "title": "Get your regular mail in here too",
+          "body": "Click the ? next to the page title — it holds your personal BCC address. Add it as a BCC on customer messages and the email files itself under the right company and deal."
+        },
+        "filters": {
+          "title": "Nothing gets lost",
+          "body": "Mail without a matched company waits under the Unmatched filter. The Company and Deal filters pull up one case's correspondence, and search covers message text and addresses too."
+        },
+        "tracking": {
+          "title": "Know what they read",
+          "body": "Switch the filter to Sent: messages show Opened and Clicked chips, and a failed delivery shows an Error chip. Click a subject to open the whole thread."
+        }
+      },
+      "calendar": {
+        "google": {
+          "title": "Google Calendar connection",
+          "body": "Connect the calendar to Google in Settings → Integrations. Your Google events then show up here as well."
+        },
+        "deals": {
+          "title": "Events belong to deals",
+          "body": "Attach an event to a deal — it shows in the deal's timeline and in the card preview on the board. One checkbox also sends it to your Google Calendar."
+        }
+      },
+      "reports": {
+        "catalog": {
+          "title": "Widgets you won't find elsewhere",
+          "body": "The reports catalog also holds Loss reasons, Stale deals, Won vs. paid and Lead → deal conversion. Add them via the Edit layout button."
+        },
+        "period": {
+          "title": "Period and team",
+          "body": "The bar up top switches the period for the whole report — custom date ranges included. With manager rights you can narrow the report to a team or a single salesperson."
+        },
+        "deltaCsv": {
+          "title": "Comparison and export",
+          "body": "Every metric is compared to the equally long previous period — the arrow next to a number is that change. Download the whole report with the CSV button."
+        }
+      }
+    }
   },
   "feedback": {
     "pageTitle": "Feedback",

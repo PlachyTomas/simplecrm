@@ -572,6 +572,7 @@ export function CompaniesListPage() {
           <button
             type="button"
             onClick={onBulkClick}
+            data-testid={testIds.companies.bulkEmailButton}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:text-text-primary"
           >
             <Mail size={16} strokeWidth={1.75} /> {t("companiesList.bulkEmailButton")}
@@ -579,6 +580,7 @@ export function CompaniesListPage() {
           <button
             type="button"
             onClick={() => setModalOpen(true)}
+            data-testid={testIds.companies.addButton}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
           >
             <Plus size={16} strokeWidth={1.75} /> {t("companiesList.addButton")}
@@ -606,6 +608,7 @@ export function CompaniesListPage() {
         <div className="flex flex-wrap items-center gap-2">
           <select
             aria-label={t("companiesList.ownerFilterLabel")}
+            data-testid={testIds.companies.ownerFilter}
             value={ownerFilter}
             onChange={(e) => patchParams({ owner: e.target.value })}
             className={FILTER_SELECT_CLASS}

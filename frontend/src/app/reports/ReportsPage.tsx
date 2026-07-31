@@ -196,6 +196,7 @@ export function ReportsPage() {
                   });
                 }}
                 disabled={!working || exportCsv.isPending}
+                data-testid={testIds.reports.exportCsv}
                 className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium text-text-secondary hover:border-accent hover:text-accent disabled:opacity-50"
               >
                 <Download size={14} strokeWidth={1.75} aria-hidden />
@@ -204,6 +205,7 @@ export function ReportsPage() {
               <button
                 type="button"
                 onClick={editor.enterEdit}
+                data-testid={testIds.reports.editLayout}
                 className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium text-text-secondary hover:border-accent hover:text-accent"
               >
                 <Pencil size={14} strokeWidth={1.75} aria-hidden /> {tw("editor.editLayout")}

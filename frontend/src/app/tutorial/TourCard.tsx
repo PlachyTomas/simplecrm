@@ -1,20 +1,21 @@
 /**
  * Tooltip card rendered next to (or over) the anchored element.
  *
- * Visuals follow the design brief — indigo accent border for steps 1–4,
- * magenta accent only on the final celebratory step. The card uses a
- * solid surface (not a translucent glass) because the design tokens are
- * stored as hex CSS variables, which Tailwind cannot apply alpha to via
- * the `bg-X/<n>` syntax — the result is a fully transparent card and
- * unreadable text. The blurred scrim still gives the surrounding
- * glass-ish feel.
+ * Indigo accent for regular steps; magenta only on a tour's final,
+ * celebratory step (one magenta moment per screen — design brief).
+ * Solid surface on purpose: the tokens are hex CSS variables, so
+ * Tailwind's `bg-X/<n>` alpha would render fully transparent.
+ *
+ * Action-gated steps (`advanceOnAppear`) swap the Next button for a
+ * "do it on the page" hint plus a quiet skip — the page stays clickable
+ * through the overlay, so the user performs the action for real.
  */
 
-import { Sparkles, X } from "lucide-react";
+import { MousePointerClick, Sparkles, X } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { TourStep } from "@/app/tutorial/tutorialSteps";
+import type { TourStep } from "@/app/tutorial/tours";
 import { cn } from "@/lib/utils";
 
 interface TourCardProps {
@@ -33,24 +34,30 @@ interface TourCardProps {
 
 const CARD_WIDTH = 360;
 const CARD_MARGIN = 16;
+/** Estimated card height for the above/below flip decision only. */
+const CARD_HEIGHT_ESTIMATE = 230;
 
 export function TourCard(props: TourCardProps) {
   const { t } = useTranslation("common");
   const cardRef = useRef<HTMLDivElement | null>(null);
-  // Focus the title on each step change so screen readers announce it
-  // and Esc / Enter keyboard handling lands on the card.
+  // Focus the card on each step change so screen readers announce it —
+  // but never steal focus from an open app modal: a step that follows an
+  // action-gated one appears while the modal the user just opened is
+  // still up, and yanking focus would break its Esc/focus-trap handling.
   useEffect(() => {
-    cardRef.current?.focus();
+    const appModalOpen = document.querySelector('[role="dialog"]:not([data-tour-card])') != null;
+    if (!appModalOpen) cardRef.current?.focus();
   }, [props.index]);
 
   const position = computePosition(props.anchorRect);
   const isMagenta = props.step.accent === "magenta";
+  const isActionStep = !!props.step.advanceOnAppear;
 
   return (
     <div
       ref={cardRef}
       role="dialog"
-      aria-modal="true"
+      data-tour-card
       aria-labelledby={`tour-step-title-${props.step.id}`}
       tabIndex={-1}
       className={cn(
@@ -60,8 +67,6 @@ export function TourCard(props: TourCardProps) {
       style={
         {
           ...position,
-          // Expose card width to children as a CSS var so the math up here
-          // stays the single source of truth.
           "--tour-card-w": `${CARD_WIDTH}px`,
         } as React.CSSProperties
       }
@@ -102,6 +107,13 @@ export function TourCard(props: TourCardProps) {
       </h2>
       <p className="text-sm leading-snug text-text-secondary">{t(props.step.bodyKey)}</p>
 
+      {isActionStep ? (
+        <p className="mt-3 inline-flex items-center gap-2 rounded-md bg-accent-subtle px-3 py-1.5 text-sm font-medium text-accent">
+          <MousePointerClick size={15} strokeWidth={1.75} aria-hidden />
+          {t("tutorial.actionHint")}
+        </p>
+      ) : null}
+
       <footer className="mt-4 flex items-center justify-between gap-2">
         <button
           type="button"
@@ -120,13 +132,27 @@ export function TourCard(props: TourCardProps) {
           >
             {t("tutorial.skip")}
           </button>
-          <PrimaryButton
-            isLast={props.isLast}
-            isPersisting={props.isPersisting}
-            onClick={props.onNext}
-          >
-            {t(props.isLast ? "tutorial.done" : "tutorial.next")}
-          </PrimaryButton>
+          {isActionStep ? (
+            // The action itself advances; the quiet skip covers pages
+            // where the ask can't be performed (e.g. no data yet).
+            <button
+              type="button"
+              onClick={props.onNext}
+              disabled={props.isPersisting}
+              data-testid="tour-skip-step"
+              className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {t("tutorial.skipStep")}
+            </button>
+          ) : (
+            <PrimaryButton
+              isLast={props.isLast}
+              isPersisting={props.isPersisting}
+              onClick={props.onNext}
+            >
+              {t(props.isLast ? "tutorial.done" : "tutorial.next")}
+            </PrimaryButton>
+          )}
         </div>
       </footer>
     </div>
@@ -139,10 +165,6 @@ function PrimaryButton(props: {
   onClick: () => void;
   children: ReactNode;
 }) {
-  // Final step keeps the magenta accent only on the icon background —
-  // the button itself stays indigo, both because we want one magenta
-  // *moment* per screen and because the magenta "+" CTA pattern is
-  // reserved for the "Mark as won" action elsewhere.
   return (
     <button
       type="button"
@@ -156,19 +178,25 @@ function PrimaryButton(props: {
   );
 }
 
+/**
+ * Anchors are no longer only in the sidebar — page tours point at
+ * buttons, filters and rows anywhere on screen. Prefer a card below the
+ * anchor (left-aligned, clamped to the viewport); flip above when the
+ * bottom would overflow; center when there is no anchor at all.
+ */
 function computePosition(anchor: DOMRect | null): React.CSSProperties {
   if (!anchor) {
-    // Center on the viewport — used for the welcome step.
     return { left: "50%", top: "50%", transform: "translate(-50%, -50%)" };
   }
-  // Anchor is the sidebar nav link — drop the card to the right of it,
-  // vertically aligned. If the card would overflow the right edge
-  // (narrow viewport but still desktop), clamp to a safe margin.
-  const top = Math.max(CARD_MARGIN, anchor.top);
-  const left = anchor.right + 12;
-  const overflow = left + CARD_WIDTH - window.innerWidth + CARD_MARGIN;
-  return {
-    top,
-    left: overflow > 0 ? left - overflow : left,
-  };
+  let left = anchor.left;
+  const overflowRight = left + CARD_WIDTH - window.innerWidth + CARD_MARGIN;
+  if (overflowRight > 0) left -= overflowRight;
+  left = Math.max(CARD_MARGIN, left);
+
+  const below = anchor.bottom + 12;
+  if (below + CARD_HEIGHT_ESTIMATE < window.innerHeight - CARD_MARGIN) {
+    return { top: below, left };
+  }
+  const above = anchor.top - 12 - CARD_HEIGHT_ESTIMATE;
+  return { top: Math.max(CARD_MARGIN, above), left };
 }

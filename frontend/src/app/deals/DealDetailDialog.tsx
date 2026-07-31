@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 
+import { testIds } from "@/lib/testids";
 import { useModalDialog } from "@/lib/useModalDialog";
 
 import { DealDetail } from "./DealDetail";
@@ -25,6 +26,7 @@ export function DealDetailDialog({ dealId, onClose }: DealDetailDialogProps) {
       role="dialog"
       aria-modal="true"
       aria-label={t("dealDetailDialog.ariaLabel")}
+      data-testid={testIds.deals.detail.dialog}
       className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 py-6 backdrop-blur-sm sm:py-10"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();

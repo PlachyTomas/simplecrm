@@ -1,25 +1,23 @@
 /**
- * `?` icon button in the AppShell header — re-opens the tutorial from
- * step 1 on click. Hidden while the tour is actively visible to avoid
- * competing with itself.
+ * `?` icon button in the AppShell header — replays the CURRENT page's
+ * tour from step 1. Hidden on routes without a tour and while a tour is
+ * on screen (the overlay already carries its own controls).
  */
 
 import { HelpCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "react-router-dom";
 
-import { useTutorial, useTutorialIsClosed } from "@/app/tutorial/useTutorial";
+import { tourForPath } from "@/app/tutorial/tours";
+import { usePageTour } from "@/app/tutorial/useTutorial";
 
 export function TourReplayButton() {
   const { t } = useTranslation("common");
-  const tour = useTutorial();
-  const isClosed = useTutorialIsClosed();
-  // While the tour is on screen, the overlay already carries the
-  // dismiss / next controls — a second entry point would clutter.
+  const location = useLocation();
+  const tour = usePageTour(tourForPath(location.pathname));
+  if (!tour.tourId) return null;
+  // While the tour is on screen the overlay carries the controls.
   if (tour.shouldShow) return null;
-  // Hide the button when there is nothing to "replay" yet (user hasn't
-  // dismissed or completed). In practice this branch fires only for
-  // freshly-loaded sessions before `useTutorial` has rendered once.
-  if (!isClosed) return null;
   return (
     <button
       type="button"

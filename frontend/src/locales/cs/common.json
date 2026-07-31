@@ -197,33 +197,133 @@
     }
   },
   "tutorial": {
-    "welcome": {
-      "title": "Vítejte v SimpleCRM",
-      "body": "Provedeme Vás pěti kroky, kterými se za minutu zorientujete v aplikaci. Tour kdykoli přeskočíte a znovu spustíte přes ikonu ? v pravém horním rohu."
-    },
-    "companies": {
-      "title": "Firmy jsou základ",
-      "body": "Začněte u firmy. Stačí zadat IČO — název, adresu i právní formu doplníme z registru ARES."
-    },
-    "pipeline": {
-      "title": "Obchod patří do pipeline",
-      "body": "V Pipeline najdete Kanban s vašimi obchody. Přidejte první přes „+ Přidat obchod\" vpravo nahoře a přetahujte je mezi fázemi podle vývoje."
-    },
-    "reports": {
-      "title": "Reporty Vám napoví",
-      "body": "Až budete mít data, uvidíte tady, kdo vede žebříček, jak rychle se obchody zavírají a co se neprodává. Manažerům odemkne extra widgety přepnutí role v Nastavení."
-    },
-    "settings": {
-      "title": "Pozvěte tým, ať to nezůstane jen u Vás",
-      "body": "V Nastavení upravíte pipeline na míru, pozvete obchodníky a doplníte fakturační údaje. Hotovo, můžete jít na věc!"
-    },
     "stepCounter": "Krok {{current}} / {{total}}",
     "closeAriaLabel": "Zavřít průvodce",
     "back": "Zpět",
-    "skip": "Přeskočit",
+    "skip": "Přeskočit prohlídku",
     "next": "Další",
     "done": "Hotovo",
-    "replayAriaLabel": "Spustit průvodce znovu"
+    "skipStep": "Přeskočit krok",
+    "actionHint": "Pokračujte akcí přímo na stránce",
+    "replayAriaLabel": "Spustit prohlídku této stránky",
+    "tours": {
+      "overview": {
+        "welcome": {
+          "title": "Vítejte v SimpleCRM",
+          "body": "Každá stránka má vlastní prohlídku pokročilých funkcí — spustíte ji kdykoli ikonou ? nahoře. Na Přehledu si teď ukážeme widgety a rychlé akce."
+        },
+        "widgets": {
+          "title": "Poskládejte si Přehled po svém",
+          "body": "Tlačítkem Upravit rozložení widgety přeskládáte, přidáte i odeberete — v katalogu čeká třeba Vážená hodnota pipeline, Délka prodejního cyklu nebo Plnění cíle. V režimu úprav má vybraný widget navíc vlastní volbu období."
+        },
+        "quickActions": {
+          "title": "Rychlé akce",
+          "body": "Widget Rychlé akce založí nový obchod na jedno kliknutí. Stejné dlaždice pro firmu, kontakt i událost si přidáte přes Upravit rozložení → Přidat widget."
+        }
+      },
+      "pipeline": {
+        "cardActions": {
+          "title": "Karta umí víc, než se zdá",
+          "body": "Najeďte na kartu: korunka označí výhru, červený křížek prohru — zeptáme se na důvod. Prohrát jde i přetažením karty na spodní lištu."
+        },
+        "quickActions": {
+          "title": "Blesk = akce bez opuštění boardu",
+          "body": "Otevřete ⚡ na libovolné kartě: e-mail, událost, poznámka i záznam hovoru — vše se uloží do Průběhu obchodu."
+        },
+        "preview": {
+          "title": "Náhled bez klikání",
+          "body": "Podržte kurzor na kartě — ukáže se poslední akce, poznámky a případné nadcházející události."
+        },
+        "filters": {
+          "title": "Filtry nad boardem",
+          "body": "Přepínač Vyhrané za… ořezává jen sloupec Vyhráno — ostatní fáze zůstávají celé. Vedle přepnete board na Moje obchody nebo na kolegu."
+        },
+        "health": {
+          "title": "Hlídáme zapomenuté obchody",
+          "body": "Štítek se rozsvítí u obchodu, který se dlouho nepohnul — práh dní si nastavíte v Nastavení."
+        }
+      },
+      "companies": {
+        "ares": {
+          "title": "Stačí IČO, zbytek doplní ARES",
+          "body": "Při přidání firmy zadejte jen IČO — název, adresu i právní formu natáhneme z veřejného registru ARES."
+        },
+        "bulkEmail": {
+          "title": "Hromadný e-mail s poli",
+          "body": "Vyberte firmy a pošlete personalizovaný hromadný e-mail — pole jako {kontakt_jmeno} nebo {firma} doplníme za každého příjemce. Text vezmete z uložené šablony a výsledky rozeslání ukáže odkaz Historie."
+        },
+        "ownership": {
+          "title": "Firmy se v šuplíku neztrácejí",
+          "body": "Firma bez objednávky se po nastavené době uvolní kolegům — datum ukazuje sloupec Zámek vyprší. Koho nikdo nevlastní, najdete filtrem Vlastník → Nezabrané."
+        }
+      },
+      "contacts": {
+        "csv": {
+          "title": "Export přesně toho, co vidíte",
+          "body": "Stáhnout CSV respektuje zapnuté filtry i hledání — vyexportujete přesně ten seznam, který máte na obrazovce."
+        },
+        "mainContact": {
+          "title": "Hlavní kontakt firmy",
+          "body": "Hvězdičkou v detailu firmy (záložka Kontakty) určíte hlavní kontakt — ten se pak předvyplňuje do e-mailů i nových obchodů."
+        }
+      },
+      "deals": {
+        "status": {
+          "title": "Všechny obchody — i ty prohrané",
+          "body": "Tabulka drží otevřené, vyhrané i prohrané obchody pohromadě. Najeďte na červený štítek Prohrané a uvidíte důvod prohry; stavy přepíná tento filtr."
+        },
+        "csv": {
+          "title": "Export s filtry",
+          "body": "Stáhnout CSV vyexportuje přesně to, co máte odfiltrované — včetně stavu, fáze i vlastníka."
+        },
+        "openDetail": {
+          "title": "Otevřete si detail",
+          "body": "Klikněte na název obchodu — detail se otevře přímo tady, i s celou historií, a neztratíte přitom zapnuté filtry."
+        },
+        "timeline": {
+          "title": "Průběh = celý příběh obchodu",
+          "body": "Změny fází, e-maily, hovory i poznámky na jedné ose — u úprav vidíte i co přesně se změnilo. A vyhraný či prohraný obchod vrátí do hry tlačítko Znovu otevřít v hlavičce."
+        }
+      },
+      "emails": {
+        "bcc": {
+          "title": "Dostaňte sem i poštu z vašeho e-mailu",
+          "body": "Klepněte na ? vedle nadpisu — najdete tam svou osobní BCC adresu. Přidejte ji do skryté kopie zprávy zákazníkovi a e-mail se sám uloží ke správné firmě i obchodu."
+        },
+        "filters": {
+          "title": "Nic se neztratí",
+          "body": "Pošta bez napárované firmy čeká pod filtrem Nepřiřazené. Filtry Firma a Obchod vyberou korespondenci k jednomu případu a hledání prochází i text zprávy a adresy."
+        },
+        "tracking": {
+          "title": "Víte, co si přečetli",
+          "body": "Přepněte filtr na Odeslané: u zpráv uvidíte štítky Otevřeno a Prokliknuto, a když doručení selže, štítek Chyba. Kliknutím na předmět otevřete celé vlákno."
+        }
+      },
+      "calendar": {
+        "google": {
+          "title": "Propojení s Google kalendářem",
+          "body": "Kalendář propojíte s Googlem v Nastavení → Integrace. Vaše googlovské události se pak ukážou i tady."
+        },
+        "deals": {
+          "title": "Události patří k obchodům",
+          "body": "Událost připojíte k obchodu — objeví se v jeho Průběhu i v náhledu karty na boardu. Jedním zaškrtnutím ji pošlete i do Google kalendáře."
+        }
+      },
+      "reports": {
+        "catalog": {
+          "title": "Widgety, které jinde nejsou",
+          "body": "Katalog reportů má i Důvody proher, Zaseknuté obchody, Vyhráno vs. zaplaceno nebo Konverzi lead → obchod. Přidáte je tlačítkem Upravit rozložení."
+        },
+        "period": {
+          "title": "Období a tým",
+          "body": "Lišta nahoře přepíná období celého reportu — včetně vlastního rozsahu dat. Máte-li práva manažera, přepnete report na konkrétní tým i obchodníka."
+        },
+        "deltaCsv": {
+          "title": "Srovnání a export",
+          "body": "Každý ukazatel porovnáváme se stejně dlouhým předchozím obdobím — šipka u čísla je ta změna. Celý report stáhnete tlačítkem Stáhnout CSV."
+        }
+      }
+    }
   },
   "feedback": {
     "pageTitle": "Zpětná vazba",
