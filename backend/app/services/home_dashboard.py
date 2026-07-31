@@ -28,7 +28,7 @@ from app.schemas.home_dashboard import (
     VelocityConfig,
     WidgetPosition,
 )
-from app.schemas.reports.widgets import SalesLeaderboardConfig
+from app.schemas.reports.widgets import DealsWithoutNextStepConfig, SalesLeaderboardConfig
 
 
 def default_home_dashboard_config(
@@ -94,6 +94,18 @@ def default_home_dashboard_config(
                 id="default_velocity",
                 position=WidgetPosition(x=6, y=y, w=6, h=4),
                 config=VelocityConfig(),
+            )
+        )
+        y += 4
+        # Activity-based selling: start the day with what has no plan.
+        # Manager-gated like the other analytics (the widget endpoint
+        # requires the manager role); salespeople get the same signal from
+        # the board's next-step badges and filter instead.
+        widgets.append(
+            HomeWidgetEntry(
+                id="default_deals_without_next_step",
+                position=WidgetPosition(x=0, y=y, w=12, h=4),
+                config=DealsWithoutNextStepConfig(),
             )
         )
 
