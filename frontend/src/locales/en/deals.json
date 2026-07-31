@@ -69,6 +69,10 @@
       "paymentSaveError": "Failed to save the payment status.",
       "lostSuccess": "Deal {{name}} marked as lost.",
       "lostError": "Failed to mark the deal as lost."
+    },
+    "nextStep": {
+      "label": "Next step: {{date}}",
+      "missing": "No next step"
     }
   },
   "dealsList": {
@@ -352,6 +356,12 @@
       "saving": "Saving…",
       "toastSaved": "Call logged.",
       "toastError": "The call could not be logged."
+    },
+    "followup": {
+      "title": "Saved — what's the next step?",
+      "body": "This deal has nothing planned. Line up the next step while the conversation is fresh.",
+      "schedule": "Schedule an event",
+      "dismiss": "Not now"
     }
   },
   "cardPreview": {

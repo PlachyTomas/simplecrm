@@ -12,7 +12,7 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.db.models import Company, Deal, Organization, User, UserRole
+from app.db.models import CalendarEvent, Company, Deal, Organization, User, UserRole
 from app.db.session import AsyncSessionLocal
 from app.services.pipeline import create_default_pipeline
 
@@ -511,3 +511,77 @@ async def test_pipeline_board_won_column_orders_unpaid_first_then_paid_by_paid_a
         "paid-yesterday",
         "paid-week-ago",
     ]
+
+
+async def test_pipeline_board_carries_next_event_at(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Activity-based selling: each open board deal carries the start of its
+    earliest UPCOMING event (`next_event_at`); a deal with only past events —
+    or none — carries NULL, which is what the card warns about."""
+    from datetime import UTC, datetime, timedelta
+
+    org, user, stages = await _seed(db_session, owned_cleanup)
+    company = Company(organization_id=org.id, name="Next Step Co")
+    db_session.add(company)
+    await db_session.commit()
+    planned = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stages[0].id,
+        name="Planned",
+        value=Decimal("10.00"),
+        currency="CZK",
+    )
+    unplanned = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stages[0].id,
+        name="Unplanned",
+        value=Decimal("10.00"),
+        currency="CZK",
+    )
+    db_session.add_all([planned, unplanned])
+    await db_session.commit()
+
+    now = datetime.now(tz=UTC)
+    soon = now + timedelta(days=2)
+    later = now + timedelta(days=9)
+    db_session.add_all(
+        [
+            # Two upcoming events — the EARLIEST one must win.
+            CalendarEvent(
+                organization_id=org.id,
+                deal_id=planned.id,
+                owner_user_id=user.id,
+                title="Later call",
+                starts_at=later,
+                ends_at=later + timedelta(hours=1),
+            ),
+            CalendarEvent(
+                organization_id=org.id,
+                deal_id=planned.id,
+                owner_user_id=user.id,
+                title="Next call",
+                starts_at=soon,
+                ends_at=soon + timedelta(hours=1),
+            ),
+            # A finished meeting doesn't count as a next step.
+            CalendarEvent(
+                organization_id=org.id,
+                deal_id=unplanned.id,
+                owner_user_id=user.id,
+                title="Old meeting",
+                starts_at=now - timedelta(days=3),
+                ends_at=now - timedelta(days=3) + timedelta(hours=1),
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    response = await client.get("/api/v1/pipelines/default/board", headers=_auth(user))
+    assert response.status_code == 200
+    deals = {d["name"]: d for d in response.json()["stages"][0]["deals"]}
+    assert deals["Planned"]["next_event_at"] is not None
+    assert deals["Planned"]["next_event_at"].startswith(soon.date().isoformat())
+    assert deals["Unplanned"]["next_event_at"] is None

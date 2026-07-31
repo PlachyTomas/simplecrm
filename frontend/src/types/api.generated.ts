@@ -4201,6 +4201,8 @@ export interface components {
             company_name: string;
             /** Days Since Last Move */
             days_since_last_move?: number | null;
+            /** Next Event At */
+            next_event_at?: string | null;
         };
         /** BoardStage */
         BoardStage: {

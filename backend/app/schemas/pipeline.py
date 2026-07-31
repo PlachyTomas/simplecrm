@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import uuid
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -37,6 +38,11 @@ class BoardDealOut(DealOut):
     # is finished, not rotting. The card compares this against the org's
     # `deal_rotting_days` to decide whether to show the badge.
     days_since_last_move: int | None = None
+    # Start of the deal's earliest upcoming calendar event — the "next
+    # step" of activity-based selling. NULL on an open deal means nobody
+    # has planned what happens next (the card shows a quiet warning);
+    # NULL on closed deals always (a finished deal needs no next step).
+    next_event_at: datetime | None = None
 
 
 class BoardStage(BaseModel):

@@ -16,7 +16,7 @@ from sqlalchemy.orm import selectinload
 from app.core.deps import get_current_user, require_role
 from app.core.scoping import scope_by_owner
 from app.db import get_db
-from app.db.models import Deal, Organization, Pipeline, Stage, User, UserRole
+from app.db.models import CalendarEvent, Deal, Organization, Pipeline, Stage, User, UserRole
 from app.db.models.enums import StageType
 from app.schemas.deal import DealOut
 from app.schemas.pipeline import (
@@ -101,9 +101,24 @@ async def get_default_pipeline_board(
     # report uses, so the board and the report can't drift apart.
     last_change_subq = last_stage_change_subquery()
 
+    # "Next step" for activity-based selling: the deal's earliest calendar
+    # event that hasn't ended yet. Same grouped-subquery shape as rotting —
+    # one LEFT JOIN, never a per-card lookup.
+    board_now = datetime.now(tz=UTC)
+    next_event_subq = (
+        select(
+            CalendarEvent.deal_id.label("deal_id"),
+            func.min(CalendarEvent.starts_at).label("next_event_at"),
+        )
+        .where(CalendarEvent.deal_id.is_not(None), CalendarEvent.ends_at >= board_now)
+        .group_by(CalendarEvent.deal_id)
+        .subquery()
+    )
+
     stmt = (
-        select(Deal, last_change_subq.c.last_change_at)
+        select(Deal, last_change_subq.c.last_change_at, next_event_subq.c.next_event_at)
         .join(last_change_subq, last_change_subq.c.deal_id == Deal.id, isouter=True)
+        .join(next_event_subq, next_event_subq.c.deal_id == Deal.id, isouter=True)
         .where(
             Deal.organization_id == user.organization_id,
             Deal.stage_id.in_([s.id for s in pipeline.stages]),
@@ -120,10 +135,12 @@ async def get_default_pipeline_board(
     grouped: dict[str, list[Deal]] = defaultdict(list)
     totals: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     rotting_days: dict[uuid.UUID, int] = {}
-    for deal, last_change_at in rows:
+    next_events: dict[uuid.UUID, datetime | None] = {}
+    for deal, last_change_at, next_event_at in rows:
         key = str(deal.stage_id)
         grouped[key].append(deal)
         rotting_days[deal.id] = days_since_last_move(last_change_at, deal.updated_at, now=now)
+        next_events[deal.id] = next_event_at
         # Only add to the stage total if the deal is in the org's currency;
         # cross-currency deals contribute to the list but not the total.
         if deal.currency == org.currency:
@@ -167,6 +184,13 @@ async def get_default_pipeline_board(
                     # Only open-stage, still-open deals carry a day count.
                     days_since_last_move=(
                         rotting_days.get(d.id)
+                        if stage.stage_type is StageType.open and d.closed_at is None
+                        else None
+                    ),
+                    # Mirrors the rotting rule: a closed deal needs no next
+                    # step, so the card never warns about one.
+                    next_event_at=(
+                        next_events.get(d.id)
                         if stage.stage_type is StageType.open and d.closed_at is None
                         else None
                     ),

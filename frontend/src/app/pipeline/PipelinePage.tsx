@@ -26,6 +26,7 @@ import { useDealDialog } from "@/app/deals/useDealDialog";
 import { stageColor } from "@/app/pipeline/colors";
 import { DealCardPreview, useDealCardPreview } from "@/app/pipeline/DealCardPreview";
 import { DealQuickActionsModal } from "@/app/pipeline/DealQuickActionsModal";
+import { NextStepBadge } from "@/app/pipeline/NextStepBadge";
 import { RottingBadge } from "@/app/pipeline/RottingBadge";
 import {
   type BoardDeal,
@@ -297,6 +298,11 @@ function DealCard({
         days={deal.days_since_last_move}
         threshold={rottingThreshold}
       />
+      {/* Open deals only — a closed deal (won column, or lost awaiting
+          refresh) needs no next step. */}
+      {!deal.closed_at ? (
+        <NextStepBadge dealId={deal.id} nextEventAt={deal.next_event_at} locale={locale} />
+      ) : null}
       {onTogglePaid ? (
         <label
           // Stop dnd-kit from kicking in when the user clicks the checkbox.
@@ -469,6 +475,9 @@ function MobileDealCard({
         days={deal.days_since_last_move}
         threshold={rottingThreshold}
       />
+      {stageType !== "won" && !deal.closed_at ? (
+        <NextStepBadge dealId={deal.id} nextEventAt={deal.next_event_at} locale={locale} />
+      ) : null}
       {stageType === "won" ? (
         <label className="mt-2 inline-flex select-none items-center gap-2 text-xs text-text-secondary">
           <input

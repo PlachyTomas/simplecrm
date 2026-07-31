@@ -73,6 +73,10 @@
       "paymentSaveError": "Nepodařilo se uložit stav platby.",
       "lostSuccess": "Obchod {{name}} označen jako neúspěch.",
       "lostError": "Obchod se nepodařilo označit jako neúspěch."
+    },
+    "nextStep": {
+      "label": "Další krok: {{date}}",
+      "missing": "Bez dalšího kroku"
     }
   },
   "dealsList": {
@@ -356,6 +360,12 @@
       "saving": "Ukládám…",
       "toastSaved": "Hovor zaznamenán.",
       "toastError": "Hovor se nepodařilo zaznamenat."
+    },
+    "followup": {
+      "title": "Uloženo — jaký je další krok?",
+      "body": "Tento obchod nemá nic naplánovaného. Domluvte další krok, dokud je jednání čerstvé.",
+      "schedule": "Naplánovat událost",
+      "dismiss": "Teď ne"
     }
   },
   "cardPreview": {

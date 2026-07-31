@@ -144,12 +144,15 @@ export const testIds = {
       callInput: "pipeline-quick-actions-call-input",
       callSave: "pipeline-quick-actions-call-save",
       close: "pipeline-quick-actions-close",
+      followupSchedule: "pipeline-quick-actions-followup-schedule",
+      followupDismiss: "pipeline-quick-actions-followup-dismiss",
     },
     preview: {
       popover: "pipeline-deal-preview",
     },
     loseZone: "pipeline-lose-zone",
     rottingBadge: (dealId: string) => `pipeline-rotting-${dealId}`,
+    nextStep: (dealId: string) => `pipeline-next-step-${dealId}`,
     wonWindow: "pipeline-won-window",
   },
   confirmDialog: {

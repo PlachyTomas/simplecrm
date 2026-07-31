@@ -17,6 +17,9 @@ export interface QuickActionsDeal {
   name: string;
   company_id: string;
   company_name?: string;
+  /** Start of the earliest upcoming event; drives the post-save nudge —
+   *  a deal that already has a next step planned is never nagged. */
+  next_event_at?: string | null;
 }
 
 interface DealQuickActionsModalProps {
@@ -32,7 +35,7 @@ interface DealQuickActionsModalProps {
  * focus traps would fight over Tab and Escape. Closing the spawned modal
  * closes the flow, putting the user back on the board.
  */
-type View = "menu" | "note" | "call" | "email" | "event";
+type View = "menu" | "note" | "call" | "email" | "event" | "followup";
 
 function ActionRow({
   icon: Icon,
@@ -126,6 +129,14 @@ export function DealQuickActionsModal({ deal, open, onClose }: DealQuickActionsM
     return <EventFormModal open onClose={onClose} dealId={deal.id} dealName={deal.name} />;
   }
 
+  // Activity-based selling: completing an activity is the moment to plan
+  // the next one. A deal that already has an upcoming event closes as
+  // before; one without gets a single, skippable nudge (no new fields).
+  const afterActivitySaved = () => {
+    if (deal.next_event_at) onClose();
+    else setView("followup");
+  };
+
   const handleSaveNote = (event: FormEvent) => {
     event.preventDefault();
     const body = note.trim();
@@ -133,7 +144,7 @@ export function DealQuickActionsModal({ deal, open, onClose }: DealQuickActionsM
     createNote.mutate(body, {
       onSuccess: () => {
         toast.success(t("quickActions.note.toastSaved"));
-        onClose();
+        afterActivitySaved();
       },
       onError: () => toast.error(t("quickActions.note.toastError")),
     });
@@ -147,7 +158,7 @@ export function DealQuickActionsModal({ deal, open, onClose }: DealQuickActionsM
     createCall.mutate(note, {
       onSuccess: () => {
         toast.success(t("quickActions.call.toastSaved"));
-        onClose();
+        afterActivitySaved();
       },
       onError: () => toast.error(t("quickActions.call.toastError")),
     });
@@ -189,7 +200,38 @@ export function DealQuickActionsModal({ deal, open, onClose }: DealQuickActionsM
           </button>
         </div>
 
-        {view === "menu" ? (
+        {view === "followup" ? (
+          // Post-save nudge, only for deals with no upcoming event: the
+          // moment an activity completes is when the next one gets planned
+          // (activity-based selling). One click or one dismissal — never a
+          // form, never blocking.
+          <div className="mt-5">
+            <p className="text-sm font-medium text-text-primary">
+              {t("quickActions.followup.title")}
+            </p>
+            <p className="mt-1 text-sm text-text-secondary">{t("quickActions.followup.body")}</p>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                data-testid={testIds.pipeline.quickActions.followupDismiss}
+                className="rounded-md px-3 py-1.5 text-sm text-text-tertiary transition-colors duration-fast hover:text-text-primary"
+              >
+                {t("quickActions.followup.dismiss")}
+              </button>
+              <button
+                type="button"
+                autoFocus
+                onClick={() => setView("event")}
+                data-testid={testIds.pipeline.quickActions.followupSchedule}
+                className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
+              >
+                <CalendarPlus size={14} strokeWidth={1.75} aria-hidden />
+                {t("quickActions.followup.schedule")}
+              </button>
+            </div>
+          </div>
+        ) : view === "menu" ? (
           <ul className="mt-5 space-y-2">
             <ActionRow
               icon={Mail}
