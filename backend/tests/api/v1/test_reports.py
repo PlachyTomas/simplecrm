@@ -2335,6 +2335,7 @@ async def test_widgets_export_csv_renders_new_widget_sections(
     assert "700.00" in text
     assert "300.00" in text
 
+
 async def test_widget_deals_without_next_step(
     client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
 ) -> None:
