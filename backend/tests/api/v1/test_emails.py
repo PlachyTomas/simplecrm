@@ -647,3 +647,70 @@ async def test_send_activity_payload_carries_email_id(
             .one()
         )
         assert activity.payload["email_id"] == sent_id
+
+
+async def test_link_unmatched_email_files_it_and_writes_activity(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """POST /emails/{id}/link: unmatched mail gets a company+deal, the
+    timeline activity the ingest would have written appears (clickable via
+    email_id), and re-linking or cross-company deals are rejected."""
+    admin, company, deal = await _seed(db_session, owned_cleanup, verified_smtp=False)
+    stray = _mk_mail(
+        admin.organization_id,
+        sender_user_id=admin.id,
+        subject="Poptávka ze slepé kopie",
+        direction=EmailDirection.inbound,
+        from_email="novy@zakaznik.cz",
+    )
+    db_session.add(stray)
+    await db_session.commit()
+
+    ok = await client.post(
+        f"/api/v1/emails/{stray.id}/link",
+        headers=_auth(admin),
+        json={"company_id": str(company.id), "deal_id": str(deal.id)},
+    )
+    assert ok.status_code == 200, ok.text
+    body = ok.json()
+    assert body["company_id"] == str(company.id)
+    assert body["deal_id"] == str(deal.id)
+    assert body["company_name"] == "Acme"
+    assert body["deal_name"] == "Deal"
+
+    acts = await client.get(
+        f"/api/v1/activities?entity_type=deal&entity_id={deal.id}", headers=_auth(admin)
+    )
+    received = [a for a in acts.json()["items"] if a["activity_type"] == "email_received"]
+    assert len(received) == 1
+    assert received[0]["payload"]["email_id"] == str(stray.id)
+    assert received[0]["payload"]["from"] == "novy@zakaznik.cz"
+
+    # Filed mail can't be re-filed — that would duplicate timeline entries.
+    again = await client.post(
+        f"/api/v1/emails/{stray.id}/link",
+        headers=_auth(admin),
+        json={"company_id": str(company.id)},
+    )
+    assert again.status_code == 409
+
+
+async def test_link_email_rejects_foreign_company_deal_pair(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    admin, _company, deal = await _seed(db_session, owned_cleanup, verified_smtp=False)
+    other_company = Company(organization_id=admin.organization_id, name="Jiná firma")
+    db_session.add(other_company)
+    await db_session.commit()
+    await db_session.refresh(other_company)
+
+    stray = _mk_mail(admin.organization_id, sender_user_id=admin.id, subject="Zabloudilý")
+    db_session.add(stray)
+    await db_session.commit()
+
+    resp = await client.post(
+        f"/api/v1/emails/{stray.id}/link",
+        headers=_auth(admin),
+        json={"company_id": str(other_company.id), "deal_id": str(deal.id)},
+    )
+    assert resp.status_code == 409

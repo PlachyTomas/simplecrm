@@ -21,14 +21,16 @@ from app.core.deps import get_current_user
 from app.core.scoping import scope_by_owner
 from app.db import get_db
 from app.db.models import Company, Deal, SentEmail, User, UserRole
-from app.db.models.enums import EmailDirection
+from app.db.models.enums import ActivityEntityType, ActivityType, EmailDirection
 from app.schemas.pagination import Page, PaginationParams
 from app.schemas.sent_email import (
     SentEmailCreate,
     SentEmailDetail,
+    SentEmailLink,
     SentEmailListItemOut,
     SentEmailOut,
 )
+from app.services.activity_log import record_activity
 from app.services.email import EmailAttachment
 from app.services.mailer import SmtpNotVerifiedError, send_user_email
 
@@ -281,3 +283,72 @@ async def get_email(
     detail = SentEmailDetail.model_validate(_email_list_item(email).model_dump())
     detail.thread = [SentEmailOut.model_validate(t) for t in thread]
     return detail
+
+
+@router.post("/{email_id}/link", response_model=SentEmailListItemOut)
+async def link_email(
+    email_id: uuid.UUID,
+    payload: SentEmailLink,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> SentEmailListItemOut:
+    """File an unmatched captured mail under a company (and optionally a deal).
+
+    Smart BCC stores mail whose correspondent matches no contact with no
+    company link — it surfaces only under the Mail page's "Nepřiřazené"
+    filter. Linking is the missing verb: it sets the company/deal on the
+    row AND writes the email activity the ingest pipeline would have
+    written on a match, so the mail appears on the timelines from now on.
+    Already-filed mail 409s — re-filing would duplicate timeline entries.
+    """
+    email = (
+        await session.execute(
+            _scope_history(select(SentEmail).where(SentEmail.id == email_id), user)
+        )
+    ).scalar_one_or_none()
+    if email is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Email not found")
+    if email.company_id is not None or email.deal_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email is already filed under a company or deal.",
+        )
+
+    company = await _visible_company(session, user, payload.company_id)
+    deal = None
+    if payload.deal_id is not None:
+        deal = await _visible_deal(session, user, payload.deal_id)
+        if deal.company_id != company.id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Deal belongs to a different company.",
+            )
+
+    email.company_id = company.id
+    email.deal_id = deal.id if deal else None
+
+    # Mirror the ingest pipeline's activity (services/inbound_email.py /
+    # services/mailer.py): deal-linked mail lands on the deal's timeline,
+    # company-only mail on the company's; `email_id` makes the row clickable.
+    activity_payload: dict[str, object] = {"subject": email.subject, "email_id": str(email.id)}
+    if email.direction is EmailDirection.inbound and email.from_email:
+        activity_payload["from"] = email.from_email
+    if deal is not None:
+        activity_payload["deal_name"] = deal.name
+    record_activity(
+        session,
+        organization_id=email.organization_id,
+        entity_type=ActivityEntityType.deal if deal else ActivityEntityType.company,
+        entity_id=deal.id if deal else company.id,
+        company_id=company.id,
+        user_id=user.id,
+        activity_type=(
+            ActivityType.email_received
+            if email.direction is EmailDirection.inbound
+            else ActivityType.email_sent
+        ),
+        payload=activity_payload,
+    )
+    await session.commit()
+    await session.refresh(email, attribute_names=["company", "deal", "sender"])
+    return _email_list_item(email)

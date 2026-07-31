@@ -69,6 +69,14 @@ class SentEmailOut(BaseModel):
     click_count: int = 0
 
 
+class SentEmailLink(BaseModel):
+    """Body of POST /emails/{id}/link — file an unmatched captured mail
+    under a company (and optionally one of its deals)."""
+
+    company_id: uuid.UUID
+    deal_id: uuid.UUID | None = None
+
+
 class SentEmailListItemOut(SentEmailOut):
     """`SentEmailOut` plus display names so the Mail page can render
     company/deal/sender links without per-row fetches (mirrors the

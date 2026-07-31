@@ -163,6 +163,31 @@ describe("Mail page", () => {
     expect(screen.getByTestId(testIds.emails.mail.detailReply)).toBeInTheDocument();
   });
 
+  it("offers Přiřadit only on unmatched rows and opens the link dialog", async () => {
+    stubApi([
+      makeMail(),
+      makeMail({
+        id: "e9",
+        subject: "Poptávka bez firmy",
+        direction: "inbound",
+        from_email: "kdosi@nezname.cz",
+        company_id: null,
+        deal_id: null,
+        company_name: null,
+        deal_name: null,
+      }),
+    ]);
+    renderAt("/app/emails");
+    await screen.findByRole("button", { name: "Poptávka bez firmy" });
+
+    // Matched row has no assign chip; unmatched does.
+    expect(screen.queryByTestId(testIds.emails.mail.linkButton("e1"))).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId(testIds.emails.mail.linkButton("e9")));
+    expect(await screen.findByTestId(testIds.emails.mail.linkDialog)).toBeInTheDocument();
+    // No company picked yet -> submit disabled.
+    expect(screen.getByTestId(testIds.emails.mail.linkSubmit)).toBeDisabled();
+  });
+
   it("shows the personal Smart-BCC address behind the ? help", async () => {
     stubApi([makeMail()]);
     renderAt("/app/emails");

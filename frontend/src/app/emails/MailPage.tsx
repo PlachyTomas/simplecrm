@@ -7,6 +7,7 @@ import { useSearchParams } from "react-router-dom";
 import { useDeals } from "@/app/deals/useDeals";
 import { EmailComposeModal } from "@/app/emails/EmailComposeModal";
 import { EmailDetailModal } from "@/app/emails/EmailDetailModal";
+import { LinkEmailDialog } from "@/app/emails/LinkEmailDialog";
 import { EngagementChips, StatusBadge } from "@/app/emails/EmailHistorySection";
 import { SmartBccHelp } from "@/app/emails/SmartBccHelp";
 import {
@@ -72,6 +73,7 @@ export function MailPage() {
 
   const [openEmailId, setOpenEmailId] = useState<string | null>(null);
   const [replyTarget, setReplyTarget] = useState<SentEmailOut | null>(null);
+  const [linkTarget, setLinkTarget] = useState<SentEmailListItem | null>(null);
 
   // Immutably patch the query string; changing any filter resets pagination.
   const patchParams = (updates: Record<string, string | null>, resetPage = true) => {
@@ -294,6 +296,18 @@ export function MailPage() {
                         </button>
                         <StatusBadge email={email} />
                         <EngagementChips email={email} locale={locale} />
+                        {/* Unmatched mail is a lead nobody can act on yet —
+                            filing it is the row's one action. */}
+                        {!email.company_id && !email.deal_id ? (
+                          <button
+                            type="button"
+                            data-testid={testIds.emails.mail.linkButton(email.id)}
+                            onClick={() => setLinkTarget(email)}
+                            className="inline-flex items-center rounded-full border border-accent px-2 py-0.5 text-xs font-medium text-accent transition-colors duration-fast hover:bg-accent-subtle"
+                          >
+                            {t("mailPage.assign")}
+                          </button>
+                        ) : null}
                       </div>
                       <p className="mt-0.5 truncate text-xs text-text-tertiary md:hidden">
                         {counterparty(email, t)}
@@ -362,6 +376,7 @@ export function MailPage() {
       {replyTarget ? (
         <EmailComposeModal open onClose={() => setReplyTarget(null)} replyTo={replyTarget} />
       ) : null}
+      <LinkEmailDialog email={linkTarget} onClose={() => setLinkTarget(null)} />
     </div>
   );
 }
