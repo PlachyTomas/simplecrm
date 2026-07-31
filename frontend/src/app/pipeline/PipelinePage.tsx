@@ -150,7 +150,8 @@ function CardActionButton({
         aria-label={ariaLabel}
         data-testid={testId}
         className={cn(
-          "inline-flex h-6 w-6 items-center justify-center rounded-md shadow-sm transition-colors duration-fast disabled:cursor-not-allowed disabled:opacity-50",
+          // 28px targets — Fitts audit (UI/UX research): 24px was the floor.
+          "inline-flex h-7 w-7 items-center justify-center rounded-md shadow-sm transition-colors duration-fast disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
       >
@@ -946,6 +947,18 @@ export function PipelinePage() {
     });
   }, [board, ownerFilter, noNextStepOnly, searchTerm, user?.id]);
 
+  // Peak-end: clearing the last unplanned deal deserves a sentence, not
+  // an empty board (docs/research/2026-07-31-ui-ux-best-practices.md).
+  const unplannedCount = useMemo(
+    () =>
+      (board?.stages ?? [])
+        .filter((s) => s.stage_type === "open")
+        .flatMap((s) => s.deals)
+        .filter((d) => !d.closed_at && !d.next_event_at).length,
+    [board],
+  );
+  const showAllPlannedEnding = noNextStepOnly && unplannedCount === 0;
+
   const activeDeal = useMemo(() => {
     if (!activeDealId || !board) return null;
     for (const stage of board.stages) {
@@ -1151,6 +1164,14 @@ export function PipelinePage() {
         </div>
       ) : (
         <>
+          {showAllPlannedEnding ? (
+            <p
+              role="status"
+              className="mb-3 rounded-lg border border-success bg-success-subtle px-4 py-2.5 text-sm font-medium text-success"
+            >
+              {t("pipelinePage.allPlanned")}
+            </p>
+          ) : null}
           {/* Desktop: drag-and-drop kanban. */}
           <DndContext
             sensors={sensors}

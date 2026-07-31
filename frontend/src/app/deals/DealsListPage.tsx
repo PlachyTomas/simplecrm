@@ -15,6 +15,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { DealDetailDialog } from "@/app/deals/DealDetailDialog";
+import { MarkLostDialog } from "@/app/deals/MarkLostDialog";
+import { useMarkAnyDealLost } from "@/app/deals/useDealActions";
 import { useDealDialog } from "@/app/deals/useDealDialog";
 import {
   type DealListFilters,
@@ -31,6 +33,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { formatMoney } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { testIds } from "@/lib/testids";
+import { useToast } from "@/lib/toast";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
@@ -239,6 +242,12 @@ export function DealsListPage() {
   const { data: board } = usePipelineBoard();
   const { data: usersPage } = useOrgUsers();
   const exportCsv = useExportDealsCsv();
+  // Bulk selection (open deals only — closed ones can't be marked lost).
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkLoseOpen, setBulkLoseOpen] = useState(false);
+  const [bulkPending, setBulkPending] = useState(false);
+  const bulkLose = useMarkAnyDealLost();
+  const toast = useToast();
 
   const locale = useLocale();
   const dateFmt = useMemo(() => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }), [locale]);
@@ -250,6 +259,32 @@ export function DealsListPage() {
     for (const s of board?.stages ?? []) map.set(s.id, stageColor(s.position, s.color));
     return map;
   }, [board]);
+
+  const openOnPage = (deals?.items ?? []).filter((d) => d.status === "open");
+  const allOpenSelected = openOnPage.length > 0 && openOnPage.every((d) => selected.has(d.id));
+  const toggleAllOpen = () =>
+    setSelected(allOpenSelected ? new Set() : new Set(openOnPage.map((d) => d.id)));
+  const toggleOne = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const handleBulkLose = async (reason: string) => {
+    setBulkPending(true);
+    const ids = [...selected];
+    const results = await Promise.allSettled(
+      ids.map((dealId) => bulkLose.mutateAsync({ dealId, lost_reason: reason })),
+    );
+    setBulkPending(false);
+    setBulkLoseOpen(false);
+    setSelected(new Set());
+    const failed = results.filter((r) => r.status === "rejected").length;
+    if (failed === 0) toast.success(t("dealsList.bulk.loseSuccess", { count: ids.length }));
+    else toast.error(t("dealsList.bulk.loseError", { count: failed }));
+  };
 
   const total = deals?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -384,185 +419,243 @@ export function DealsListPage() {
           )}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border bg-surface">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border-subtle">
-              <thead>
-                <tr>
-                  <SortHeader
-                    label={t("dealsList.columns.name")}
-                    sortKey="name"
-                    activeKey={sortKey}
-                    order={order}
-                    onSort={onSort}
-                  />
-                  <SortHeader
-                    label={t("dealsList.columns.company")}
-                    sortKey="company_name"
-                    activeKey={sortKey}
-                    order={order}
-                    onSort={onSort}
-                    className="hidden md:table-cell"
-                  />
-                  <SortHeader
-                    label={t("dealsList.columns.value")}
-                    sortKey="value"
-                    activeKey={sortKey}
-                    order={order}
-                    onSort={onSort}
-                    align="right"
-                  />
-                  <SortHeader
-                    label={t("dealsList.columns.stage")}
-                    sortKey="stage"
-                    activeKey={sortKey}
-                    order={order}
-                    onSort={onSort}
-                    className="hidden md:table-cell"
-                  />
-                  <th scope="col" className={TH}>
-                    {t("dealsList.columns.status")}
-                  </th>
-                  <th scope="col" className={`${TH} hidden lg:table-cell`}>
-                    {t("dealsList.columns.nextStep")}
-                  </th>
-                  <th scope="col" className={`${TH} hidden lg:table-cell`}>
-                    {t("dealsList.columns.owner")}
-                  </th>
-                  <SortHeader
-                    label={t("dealsList.columns.closed")}
-                    sortKey="expected_close_date"
-                    activeKey={sortKey}
-                    order={order}
-                    onSort={onSort}
-                    className="hidden md:table-cell"
-                  />
-                </tr>
-              </thead>
-              <tbody
-                className={cn(
-                  "divide-y divide-border-subtle",
-                  isFetching && "opacity-70 transition-opacity",
-                )}
-              >
-                {items.map((deal) => {
-                  const dotColor = stageColorById.get(deal.stage_id);
-                  return (
-                    <tr
-                      key={deal.id}
-                      onClick={() => openDeal(deal.id)}
-                      className="cursor-pointer transition-colors duration-fast hover:bg-surface-overlay"
-                    >
-                      <td className="px-4 py-3 text-sm">
-                        <button
-                          type="button"
-                          data-testid={testIds.deals.row(deal.id)}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openDeal(deal.id);
-                          }}
-                          className="text-left font-medium text-text-primary hover:text-accent"
-                        >
-                          {deal.name}
-                        </button>
-                      </td>
-                      <td className="hidden px-4 py-3 text-sm text-text-secondary md:table-cell">
-                        {deal.company_name}
-                      </td>
-                      <td className="px-4 py-3 text-right text-sm tabular-nums text-text-primary">
-                        {Number(deal.value) > 0 ? (
-                          formatMoney(deal.value, deal.currency, locale)
-                        ) : (
-                          <span className="text-text-tertiary">—</span>
-                        )}
-                      </td>
-                      <td className="hidden px-4 py-3 text-sm md:table-cell">
-                        {dotColor ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-overlay px-2 py-0.5 text-xs">
-                            <span
-                              aria-hidden
-                              className="inline-block h-1.5 w-1.5 rounded-full"
-                              style={{ backgroundColor: dotColor }}
-                            />
-                            <span className="text-text-secondary">{deal.stage_name}</span>
-                          </span>
-                        ) : (
-                          <span className="text-text-secondary">{deal.stage_name}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <StatusChip status={deal.status} lostReason={deal.lost_reason} />
-                      </td>
-                      <td className="hidden whitespace-nowrap px-4 py-3 text-sm lg:table-cell">
-                        {/* Mirrors the board's next-step rule: only open
-                            deals can (and must) have a plan. */}
-                        {deal.status !== "open" ? (
-                          <span className="text-text-tertiary">—</span>
-                        ) : deal.next_event_at ? (
-                          <span className="tabular-nums text-text-secondary">
-                            {dateFmt.format(new Date(deal.next_event_at))}
-                          </span>
-                        ) : (
-                          <span className="font-medium text-warning">
-                            {t("dealsList.nextStep.missing")}
-                          </span>
-                        )}
-                      </td>
-                      <td className="hidden px-4 py-3 text-sm text-text-secondary lg:table-cell">
-                        {deal.owner_name ?? "—"}
-                      </td>
-                      <td className="hidden px-4 py-3 text-sm md:table-cell">
-                        {deal.closed_at ? (
-                          <span className="text-text-secondary">
-                            {dateFmt.format(new Date(deal.closed_at))}
-                          </span>
-                        ) : deal.expected_close_date ? (
-                          <span className="text-text-tertiary">
-                            ~{dateFmt.format(new Date(deal.expected_close_date))}
-                          </span>
-                        ) : (
-                          <span className="text-text-tertiary">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {pageCount > 1 ? (
-            <div className="flex items-center justify-between border-t border-border-subtle px-4 py-3 text-sm text-text-tertiary">
-              <span className="tabular-nums">
-                {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)}{" "}
-                {t("dealsList.paginationOf")} {t("dealCount", { count: total })}
-              </span>
+        <>
+          {selected.size > 0 ? (
+            <div
+              data-testid={testIds.deals.bulk.bar}
+              className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-accent bg-accent-subtle px-4 py-2.5"
+            >
+              <p className="text-sm font-medium text-text-primary">
+                {t("dealsList.bulk.selectedCount", { count: selected.size })}
+              </p>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  disabled={page === 0}
-                  aria-label={t("dealsList.prevPage")}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-surface-overlay text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  data-testid={testIds.deals.bulk.markLost}
+                  onClick={() => setBulkLoseOpen(true)}
+                  className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-surface px-3 text-sm font-medium text-text-secondary transition-colors duration-fast hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger"
                 >
-                  <ChevronLeft size={16} strokeWidth={1.75} />
+                  <X size={14} strokeWidth={2} aria-hidden /> {t("dealsList.bulk.markLost")}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-                  disabled={page >= pageCount - 1}
-                  aria-label={t("dealsList.nextPage")}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-surface-overlay text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => setSelected(new Set())}
+                  className="h-9 rounded-md px-2 text-sm text-text-tertiary transition-colors duration-fast hover:text-text-primary"
                 >
-                  <ChevronRight size={16} strokeWidth={1.75} />
+                  {t("dealsList.bulk.clear")}
                 </button>
               </div>
             </div>
           ) : null}
-        </div>
+          <div className="overflow-hidden rounded-lg border border-border bg-surface">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-border-subtle">
+                <thead>
+                  <tr>
+                    <th scope="col" className="w-10 px-4 py-3">
+                      <input
+                        type="checkbox"
+                        aria-label={t("dealsList.bulk.selectAll")}
+                        data-testid={testIds.deals.bulk.selectAll}
+                        checked={allOpenSelected}
+                        disabled={openOnPage.length === 0}
+                        onChange={toggleAllOpen}
+                        className="h-3.5 w-3.5 rounded border-border text-accent focus:ring-accent"
+                      />
+                    </th>
+                    <SortHeader
+                      label={t("dealsList.columns.name")}
+                      sortKey="name"
+                      activeKey={sortKey}
+                      order={order}
+                      onSort={onSort}
+                    />
+                    <SortHeader
+                      label={t("dealsList.columns.company")}
+                      sortKey="company_name"
+                      activeKey={sortKey}
+                      order={order}
+                      onSort={onSort}
+                      className="hidden md:table-cell"
+                    />
+                    <SortHeader
+                      label={t("dealsList.columns.value")}
+                      sortKey="value"
+                      activeKey={sortKey}
+                      order={order}
+                      onSort={onSort}
+                      align="right"
+                    />
+                    <SortHeader
+                      label={t("dealsList.columns.stage")}
+                      sortKey="stage"
+                      activeKey={sortKey}
+                      order={order}
+                      onSort={onSort}
+                      className="hidden md:table-cell"
+                    />
+                    <th scope="col" className={TH}>
+                      {t("dealsList.columns.status")}
+                    </th>
+                    <th scope="col" className={`${TH} hidden lg:table-cell`}>
+                      {t("dealsList.columns.nextStep")}
+                    </th>
+                    <th scope="col" className={`${TH} hidden lg:table-cell`}>
+                      {t("dealsList.columns.owner")}
+                    </th>
+                    <SortHeader
+                      label={t("dealsList.columns.closed")}
+                      sortKey="expected_close_date"
+                      activeKey={sortKey}
+                      order={order}
+                      onSort={onSort}
+                      className="hidden md:table-cell"
+                    />
+                  </tr>
+                </thead>
+                <tbody
+                  className={cn(
+                    "divide-y divide-border-subtle",
+                    isFetching && "opacity-70 transition-opacity",
+                  )}
+                >
+                  {items.map((deal) => {
+                    const dotColor = stageColorById.get(deal.stage_id);
+                    return (
+                      <tr
+                        key={deal.id}
+                        onClick={() => openDeal(deal.id)}
+                        className="cursor-pointer transition-colors duration-fast hover:bg-surface-overlay"
+                      >
+                        <td className="w-10 px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          {deal.status === "open" ? (
+                            <input
+                              type="checkbox"
+                              aria-label={t("dealsList.bulk.selectOne", { name: deal.name })}
+                              data-testid={testIds.deals.bulk.selectOne(deal.id)}
+                              checked={selected.has(deal.id)}
+                              onChange={() => toggleOne(deal.id)}
+                              className="h-3.5 w-3.5 rounded border-border text-accent focus:ring-accent"
+                            />
+                          ) : null}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <button
+                            type="button"
+                            data-testid={testIds.deals.row(deal.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openDeal(deal.id);
+                            }}
+                            className="text-left font-medium text-text-primary hover:text-accent"
+                          >
+                            {deal.name}
+                          </button>
+                        </td>
+                        <td className="hidden px-4 py-3 text-sm text-text-secondary md:table-cell">
+                          {deal.company_name}
+                        </td>
+                        <td className="px-4 py-3 text-right text-sm tabular-nums text-text-primary">
+                          {Number(deal.value) > 0 ? (
+                            formatMoney(deal.value, deal.currency, locale)
+                          ) : (
+                            <span className="text-text-tertiary">—</span>
+                          )}
+                        </td>
+                        <td className="hidden px-4 py-3 text-sm md:table-cell">
+                          {dotColor ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-overlay px-2 py-0.5 text-xs">
+                              <span
+                                aria-hidden
+                                className="inline-block h-1.5 w-1.5 rounded-full"
+                                style={{ backgroundColor: dotColor }}
+                              />
+                              <span className="text-text-secondary">{deal.stage_name}</span>
+                            </span>
+                          ) : (
+                            <span className="text-text-secondary">{deal.stage_name}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <StatusChip status={deal.status} lostReason={deal.lost_reason} />
+                        </td>
+                        <td className="hidden whitespace-nowrap px-4 py-3 text-sm lg:table-cell">
+                          {/* Mirrors the board's next-step rule: only open
+                            deals can (and must) have a plan. */}
+                          {deal.status !== "open" ? (
+                            <span className="text-text-tertiary">—</span>
+                          ) : deal.next_event_at ? (
+                            <span className="tabular-nums text-text-secondary">
+                              {dateFmt.format(new Date(deal.next_event_at))}
+                            </span>
+                          ) : (
+                            <span className="font-medium text-warning">
+                              {t("dealsList.nextStep.missing")}
+                            </span>
+                          )}
+                        </td>
+                        <td className="hidden px-4 py-3 text-sm text-text-secondary lg:table-cell">
+                          {deal.owner_name ?? "—"}
+                        </td>
+                        <td className="hidden px-4 py-3 text-sm md:table-cell">
+                          {deal.closed_at ? (
+                            <span className="text-text-secondary">
+                              {dateFmt.format(new Date(deal.closed_at))}
+                            </span>
+                          ) : deal.expected_close_date ? (
+                            <span className="text-text-tertiary">
+                              ~{dateFmt.format(new Date(deal.expected_close_date))}
+                            </span>
+                          ) : (
+                            <span className="text-text-tertiary">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {pageCount > 1 ? (
+              <div className="flex items-center justify-between border-t border-border-subtle px-4 py-3 text-sm text-text-tertiary">
+                <span className="tabular-nums">
+                  {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)}{" "}
+                  {t("dealsList.paginationOf")} {t("dealCount", { count: total })}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={page === 0}
+                    aria-label={t("dealsList.prevPage")}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-surface-overlay text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <ChevronLeft size={16} strokeWidth={1.75} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                    disabled={page >= pageCount - 1}
+                    aria-label={t("dealsList.nextPage")}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-surface-overlay text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <ChevronRight size={16} strokeWidth={1.75} />
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </>
       )}
 
       {dialogDealId ? <DealDetailDialog dealId={dialogDealId} onClose={closeDeal} /> : null}
+      <MarkLostDialog
+        open={bulkLoseOpen}
+        onClose={() => setBulkLoseOpen(false)}
+        pending={bulkPending}
+        onConfirm={(reason) => void handleBulkLose(reason)}
+      />
     </div>
   );
 }

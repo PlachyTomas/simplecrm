@@ -189,7 +189,18 @@
     "pageInfo": "{{from}}–{{to}} of {{total}}",
     "prevPage": "Previous page",
     "nextPage": "Next page",
-    "assign": "Assign"
+    "assign": "Assign",
+    "bulk": {
+      "selectAll": "Select all unmatched emails on this page",
+      "selectOne": "Select email {{subject}}",
+      "selectedCount_one": "{{count}} email selected",
+      "selectedCount_other": "{{count}} emails selected",
+      "assign_one": "Assign ({{count}})",
+      "assign_other": "Assign ({{count}})",
+      "clear": "Clear selection"
+    },
+    "unmatchedClearTitle": "Everything assigned",
+    "unmatchedClearBody": "No email is waiting to be filed. Great work!"
   },
   "detail": {
     "title": "Email detail",
@@ -240,6 +251,8 @@
     "withDealLabel": "Also create a deal",
     "dealNameLabel": "Deal name",
     "submitCreate": "Create and assign",
-    "contactFailed": "The contact could not be created — the company and deal were."
+    "contactFailed": "The contact could not be created — the company and deal were.",
+    "bulkSubtitle_one": "{{count}} selected email",
+    "bulkSubtitle_other": "{{count}} selected emails"
   }
 }

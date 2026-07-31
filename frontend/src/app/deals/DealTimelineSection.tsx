@@ -6,7 +6,10 @@ import { type ActivitiesPage, useActivities } from "@/app/activities/useActiviti
 import { EmailDetailModal } from "@/app/emails/EmailDetailModal";
 import { testIds } from "@/lib/testids";
 
-const PAGE_SIZE = 20;
+// Small first page — the timeline opens the detail and research says the
+// whole thing should fit a laptop viewport; recency carries the story.
+const INITIAL_PAGE = 4;
+const PAGE_STEP = 15;
 
 /**
  * The deal's narrative — every activity logged against it, newest first, in the
@@ -16,7 +19,7 @@ const PAGE_SIZE = 20;
  */
 export function DealTimelineSection({ dealId }: { dealId: string }) {
   const { t } = useTranslation("deals");
-  const [limit, setLimit] = useState(PAGE_SIZE);
+  const [limit, setLimit] = useState(INITIAL_PAGE);
   const [openEmailId, setOpenEmailId] = useState<string | null>(null);
   const { data, isError, isFetching } = useActivities({
     entityType: "deal",
@@ -51,7 +54,7 @@ export function DealTimelineSection({ dealId }: { dealId: string }) {
         <p className="mt-3 text-sm text-text-secondary">{t("dealDetail.timeline.empty")}</p>
       ) : (
         <>
-          <ol className="mt-3 space-y-3 border-l border-border-subtle pl-5">
+          <ol className="mt-3 space-y-2 border-l border-border-subtle pl-5">
             {page.items.map((activity) => (
               <ActivityRow
                 key={activity.id}
@@ -64,7 +67,7 @@ export function DealTimelineSection({ dealId }: { dealId: string }) {
           {page.items.length < page.total ? (
             <button
               type="button"
-              onClick={() => setLimit((current) => current + PAGE_SIZE)}
+              onClick={() => setLimit((current) => current + PAGE_STEP)}
               disabled={isFetching}
               data-testid={testIds.deals.detail.timelineLoadMore}
               className="mt-3 inline-flex h-9 items-center justify-center rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-60"

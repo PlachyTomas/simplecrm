@@ -12,6 +12,8 @@ import { useCreateDeal } from "@/app/deals/useCreateDeal";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { ApiError } from "@/lib/api";
+import { FieldError, INVALID_INPUT_CLASS } from "@/components/ui/FieldError";
+import { cn } from "@/lib/utils";
 import { testIds } from "@/lib/testids";
 import { useDismissGuard } from "@/lib/useDismissGuard";
 import { useModalDialog } from "@/lib/useModalDialog";
@@ -21,6 +23,13 @@ import { useDebouncedValue } from "@/lib/useDebouncedValue";
 interface PipelineStageOption {
   id: string;
   name: string;
+}
+
+/** Value is optional; when present it must be a non-negative number. */
+function isValueInvalid(raw: string): boolean {
+  if (raw.trim() === "") return false;
+  const n = Number(raw.replace(/\s/g, ""));
+  return Number.isNaN(n) || n < 0;
 }
 
 interface AddDealModalProps {
@@ -136,6 +145,7 @@ export function AddDealModal({
   const [form, setForm] = useState<FormState>(() =>
     buildEmptyForm(initialStageId, stages, lockedCompanyId),
   );
+  const [valueError, setValueError] = useState<string | null>(null);
   // Inline "create new firma" sub-form. The salesperson opens it from
   // the search miss state — same company ID + ARES autofill as AddCompanyModal,
   // but inlined so a deal can be created in a single submit.
@@ -264,7 +274,11 @@ export function AddDealModal({
     event.preventDefault();
     if (!canSubmit) return;
     const valueNumber = form.value.trim() === "" ? 0 : Number(form.value.replace(/\s/g, ""));
-    if (Number.isNaN(valueNumber) || valueNumber < 0) return;
+    if (Number.isNaN(valueNumber) || valueNumber < 0) {
+      // Contract: an invalid state must never be a silent no-op.
+      setValueError(t("addDealModal.valueInvalid"));
+      return;
+    }
 
     // If the salesperson opened the inline new-firma panel, save the
     // company first so the deal create call has a real company_id. We
@@ -595,10 +609,22 @@ export function AddDealModal({
                 type="text"
                 inputMode="decimal"
                 value={form.value}
-                onChange={(e) => setForm((prev) => ({ ...prev, value: e.target.value }))}
-                className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 font-mono text-sm tabular-nums text-text-primary focus:border-accent focus:outline-none"
+                onChange={(e) => {
+                  setForm((prev) => ({ ...prev, value: e.target.value }));
+                  // Contract: the error clears the moment the input is valid.
+                  if (valueError && !isValueInvalid(e.target.value)) setValueError(null);
+                }}
+                onBlur={() =>
+                  setValueError(isValueInvalid(form.value) ? t("addDealModal.valueInvalid") : null)
+                }
+                aria-invalid={valueError ? true : undefined}
+                className={cn(
+                  "mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 font-mono text-sm tabular-nums text-text-primary focus:border-accent focus:outline-none",
+                  valueError && INVALID_INPUT_CLASS,
+                )}
                 placeholder="0"
               />
+              <FieldError>{valueError}</FieldError>
             </label>
             <label className="block">
               <span className="text-xs font-medium text-text-secondary">

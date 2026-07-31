@@ -74,7 +74,8 @@
     "nextStep": {
       "label": "Next step: {{date}}",
       "missing": "No next step"
-    }
+    },
+    "allPlanned": "Every open deal has a next step planned. Great work!"
   },
   "dealsList": {
     "pageTitle": "Deals",
@@ -117,6 +118,18 @@
     "nextPage": "Next page",
     "nextStep": {
       "missing": "No next step"
+    },
+    "bulk": {
+      "selectAll": "Select all open deals on this page",
+      "selectOne": "Select deal {{name}}",
+      "selectedCount_one": "{{count}} deal selected",
+      "selectedCount_other": "{{count}} deals selected",
+      "markLost": "Mark as lost",
+      "clear": "Clear selection",
+      "loseSuccess_one": "{{count}} deal marked as lost.",
+      "loseSuccess_other": "{{count}} deals marked as lost.",
+      "loseError_one": "{{count}} deal could not be marked.",
+      "loseError_other": "{{count}} deals could not be marked."
     }
   },
   "addDealModal": {
@@ -175,7 +188,8 @@
     "saveError": "Failed to save the deal. Try again.",
     "cancel": "Cancel",
     "saving": "Saving…",
-    "submit": "Save deal"
+    "submit": "Save deal",
+    "valueInvalid": "Value must be a non-negative number — e.g. 25 000."
   },
   "markLostDialog": {
     "title": "Mark as lost",
@@ -273,7 +287,9 @@
     "cancel": "Cancel",
     "saveSuccess": "Description saved.",
     "saveError": "Failed to save the description.",
-    "empty": "This deal has no description yet."
+    "empty": "This deal has no description yet.",
+    "expand": "Show full description",
+    "collapse": "Hide"
   },
   "eventsSection": {
     "title": "Events",

@@ -73,7 +73,9 @@ export function MailPage() {
 
   const [openEmailId, setOpenEmailId] = useState<string | null>(null);
   const [replyTarget, setReplyTarget] = useState<SentEmailOut | null>(null);
-  const [linkTarget, setLinkTarget] = useState<SentEmailListItem | null>(null);
+  const [linkTarget, setLinkTarget] = useState<SentEmailListItem[] | null>(null);
+  // Bulk selection — unmatched rows only (matched mail is already filed).
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // Immutably patch the query string; changing any filter resets pagination.
   const patchParams = (updates: Record<string, string | null>, resetPage = true) => {
@@ -129,6 +131,19 @@ export function MailPage() {
     () => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }),
     [locale],
   );
+
+  const unmatchedOnPage = (data?.items ?? []).filter((e) => !e.company_id && !e.deal_id);
+  const allUnmatchedSelected =
+    unmatchedOnPage.length > 0 && unmatchedOnPage.every((e) => selected.has(e.id));
+  const toggleAllUnmatched = () =>
+    setSelected(allUnmatchedSelected ? new Set() : new Set(unmatchedOnPage.map((e) => e.id)));
+  const toggleOne = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const total = data?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -253,18 +268,65 @@ export function MailPage() {
           {t("mailPage.loadError")}
         </p>
       ) : items.length === 0 ? (
-        <EmptyState
-          icon={Inbox}
-          title={hasActiveFilters ? t("mailPage.emptyFilteredTitle") : t("mailPage.emptyTitle")}
-          body={hasActiveFilters ? t("mailPage.emptyFilteredBody") : t("mailPage.emptyBody")}
-          tone={hasActiveFilters ? "filtered" : "default"}
-        />
+        typeFilter === "unmatched" && !debouncedSearch && !companyFilter && !dealFilter ? (
+          // Peak-end: an empty Nepřiřazené is an achievement, not a dead end.
+          <EmptyState
+            icon={Inbox}
+            title={t("mailPage.unmatchedClearTitle")}
+            body={t("mailPage.unmatchedClearBody")}
+          />
+        ) : (
+          <EmptyState
+            icon={Inbox}
+            title={hasActiveFilters ? t("mailPage.emptyFilteredTitle") : t("mailPage.emptyTitle")}
+            body={hasActiveFilters ? t("mailPage.emptyFilteredBody") : t("mailPage.emptyBody")}
+            tone={hasActiveFilters ? "filtered" : "default"}
+          />
+        )
       ) : (
         <>
+          {selected.size > 0 ? (
+            <div
+              data-testid={testIds.emails.mail.bulkBar}
+              className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-accent bg-accent-subtle px-4 py-2.5"
+            >
+              <p className="text-sm font-medium text-text-primary">
+                {t("mailPage.bulk.selectedCount", { count: selected.size })}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  data-testid={testIds.emails.mail.bulkAssign}
+                  onClick={() => setLinkTarget(unmatchedOnPage.filter((e) => selected.has(e.id)))}
+                  className="inline-flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-white transition-colors duration-fast hover:bg-accent-hover"
+                >
+                  {t("mailPage.bulk.assign", { count: selected.size })}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelected(new Set())}
+                  className="h-9 rounded-md px-2 text-sm text-text-tertiary transition-colors duration-fast hover:text-text-primary"
+                >
+                  {t("mailPage.bulk.clear")}
+                </button>
+              </div>
+            </div>
+          ) : null}
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="min-w-full divide-y divide-border-subtle">
               <thead>
                 <tr>
+                  <th scope="col" className="w-10 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      aria-label={t("mailPage.bulk.selectAll")}
+                      data-testid={testIds.emails.mail.bulkSelectAll}
+                      checked={allUnmatchedSelected}
+                      disabled={unmatchedOnPage.length === 0}
+                      onChange={toggleAllUnmatched}
+                      className="h-3.5 w-3.5 rounded border-border text-accent focus:ring-accent"
+                    />
+                  </th>
                   <th scope="col" className={TH}>
                     {t("mailPage.columns.subject")}
                   </th>
@@ -285,6 +347,17 @@ export function MailPage() {
               <tbody className="divide-y divide-border-subtle bg-surface">
                 {items.map((email) => (
                   <tr key={email.id} data-testid={testIds.emails.mail.row(email.id)}>
+                    <td className="w-10 px-4 py-3">
+                      {!email.company_id && !email.deal_id ? (
+                        <input
+                          type="checkbox"
+                          aria-label={t("mailPage.bulk.selectOne", { subject: email.subject })}
+                          checked={selected.has(email.id)}
+                          onChange={() => toggleOne(email.id)}
+                          className="h-3.5 w-3.5 rounded border-border text-accent focus:ring-accent"
+                        />
+                      ) : null}
+                    </td>
                     <td className="max-w-md px-4 py-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <button
@@ -302,7 +375,7 @@ export function MailPage() {
                           <button
                             type="button"
                             data-testid={testIds.emails.mail.linkButton(email.id)}
-                            onClick={() => setLinkTarget(email)}
+                            onClick={() => setLinkTarget([email])}
                             className="inline-flex items-center rounded-full border border-accent px-2 py-0.5 text-xs font-medium text-accent transition-colors duration-fast hover:bg-accent-subtle"
                           >
                             {t("mailPage.assign")}
@@ -376,7 +449,13 @@ export function MailPage() {
       {replyTarget ? (
         <EmailComposeModal open onClose={() => setReplyTarget(null)} replyTo={replyTarget} />
       ) : null}
-      <LinkEmailDialog email={linkTarget} onClose={() => setLinkTarget(null)} />
+      <LinkEmailDialog
+        emails={linkTarget}
+        onClose={() => {
+          setLinkTarget(null);
+          setSelected(new Set());
+        }}
+      />
     </div>
   );
 }

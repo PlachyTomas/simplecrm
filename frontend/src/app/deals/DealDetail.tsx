@@ -29,7 +29,7 @@ import { useToast } from "@/lib/toast";
  */
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="min-w-0 py-1">
+    <div className="min-w-0 py-0.5">
       <dt className="text-xs font-medium text-text-tertiary">{label}</dt>
       <dd className="mt-0.5 text-sm text-text-primary">{children}</dd>
     </div>
@@ -337,7 +337,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
         <DealTimelineSection dealId={deal.id} />
 
         <section className="mt-4 rounded-lg border border-border bg-surface p-4">
-          <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
             {/* The header carries name, value and status in view mode; edit mode
                 still needs every field, so those rows come back with the form. */}
             {editing && edit ? (
@@ -526,6 +526,7 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
         <EmailHistorySection
           dealId={deal.id}
           locale={locale}
+          collapsible
           onReply={(email) => {
             setReplyTarget(email);
             setComposeOpen(true);
@@ -608,6 +609,7 @@ function DealNoteField({ dealId, note }: { dealId: string; note: string | null }
   const toast = useToast();
   const [draft, setDraft] = useState(note ?? "");
   const [editing, setEditing] = useState(false);
+  const [noteExpanded, setNoteExpanded] = useState(false);
 
   useEffect(() => {
     setDraft(note ?? "");
@@ -675,12 +677,28 @@ function DealNoteField({ dealId, note }: { dealId: string; note: string | null }
             </div>
           </div>
         ) : note ? (
-          <p className="whitespace-pre-wrap text-sm text-text-primary">{note}</p>
-        ) : (
           <>
-            <p className="text-sm text-text-secondary">{t("noteSection.empty")}</p>
-            <p className="mt-1 text-xs text-text-tertiary">{t("noteSection.subtitle")}</p>
+            <p
+              className={
+                noteExpanded
+                  ? "whitespace-pre-wrap text-sm text-text-primary"
+                  : "line-clamp-3 whitespace-pre-wrap text-sm text-text-primary"
+              }
+            >
+              {note}
+            </p>
+            {note.length > 220 || note.split("\n").length > 3 ? (
+              <button
+                type="button"
+                onClick={() => setNoteExpanded((v) => !v)}
+                className="mt-1 text-xs font-medium text-accent hover:text-accent-hover"
+              >
+                {noteExpanded ? t("noteSection.collapse") : t("noteSection.expand")}
+              </button>
+            ) : null}
           </>
+        ) : (
+          <p className="text-sm text-text-secondary">{t("noteSection.empty")}</p>
         )}
       </dd>
     </div>

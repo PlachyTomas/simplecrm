@@ -1,4 +1,4 @@
-import { Reply } from "lucide-react";
+import { ChevronDown, Reply } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -12,6 +12,9 @@ interface EmailHistorySectionProps {
   companyId?: string;
   locale: string;
   onReply: (email: SentEmailOut) => void;
+  /** Deal detail collapses the section by default (viewport-fit research);
+   *  the company Emails tab exists to show it, so it stays expanded there. */
+  collapsible?: boolean;
 }
 
 /** Smart-BCC capture — the row was received, not sent from the CRM. */
@@ -93,6 +96,7 @@ export function EmailHistorySection({
   companyId,
   locale,
   onReply,
+  collapsible = false,
 }: EmailHistorySectionProps) {
   const { t } = useTranslation("emails");
   // Exactly one of dealId/companyId is provided; the unused hook stays disabled.
@@ -100,6 +104,7 @@ export function EmailHistorySection({
   const companyEmails = useCompanyEmails(companyId);
   const query = dealId ? dealEmails : companyEmails;
   const [openEmailId, setOpenEmailId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(!collapsible);
   const dt = useMemo(
     () => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }),
     [locale],
@@ -109,8 +114,28 @@ export function EmailHistorySection({
 
   return (
     <section className="mt-4">
-      <h3 className="text-sm font-semibold text-text-primary">{t("history.title")}</h3>
-      {query.isPending ? (
+      {collapsible ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className="flex items-center gap-1.5 text-sm font-semibold text-text-primary"
+        >
+          <ChevronDown
+            size={14}
+            strokeWidth={1.75}
+            aria-hidden
+            className={expanded ? "" : "-rotate-90"}
+          />
+          {t("history.title")}
+          {!query.isPending ? (
+            <span className="font-normal text-text-tertiary">({items.length})</span>
+          ) : null}
+        </button>
+      ) : (
+        <h3 className="text-sm font-semibold text-text-primary">{t("history.title")}</h3>
+      )}
+      {!expanded ? null : query.isPending ? (
         <p className="mt-2 text-sm text-text-tertiary">{t("history.loading")}</p>
       ) : items.length === 0 ? (
         <p className="mt-2 text-sm text-text-secondary">{t("history.empty")}</p>

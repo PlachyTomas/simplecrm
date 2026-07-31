@@ -30,8 +30,10 @@ import { useToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 interface LinkEmailDialogProps {
-  /** Null keeps the dialog unmounted. */
-  email: SentEmailListItem | null;
+  /** Null/empty keeps the dialog unmounted; more than one email = bulk
+   *  filing (existing-company path only — creating one new company from
+   *  many unrelated mails would file them all wrong). */
+  emails: SentEmailListItem[] | null;
   onClose: () => void;
 }
 
@@ -58,10 +60,12 @@ function companyFromAddress(address: string | null | undefined): string {
   return capitalize(base);
 }
 
-export function LinkEmailDialog({ email, onClose }: LinkEmailDialogProps) {
+export function LinkEmailDialog({ emails, onClose }: LinkEmailDialogProps) {
   const { t } = useTranslation("emails");
   const toast = useToast();
-  const open = email !== null;
+  const open = emails !== null && emails.length > 0;
+  const email = emails?.[0] ?? null;
+  const isBulk = (emails?.length ?? 0) > 1;
   const dialogRef = useModalDialog<HTMLDivElement>(onClose, open);
 
   // The address the mail is really "about": sender on inbound, first
@@ -93,7 +97,7 @@ export function LinkEmailDialog({ email, onClose }: LinkEmailDialogProps) {
       setSubmitting(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, email?.id]);
+  }, [open, emails?.map((e) => e.id).join(",")]);
 
   const link = useLinkEmail();
   const createCompany = useCreateCompany();
@@ -123,7 +127,7 @@ export function LinkEmailDialog({ email, onClose }: LinkEmailDialogProps) {
     setDealId(openDeals[0]?.id ?? "");
   }, [companyId, openDeals]);
 
-  if (!open || !email) return null;
+  if (!open || !email || !emails) return null;
 
   const canSubmit =
     mode === "existing"
@@ -133,7 +137,11 @@ export function LinkEmailDialog({ email, onClose }: LinkEmailDialogProps) {
         (!correspondent || (firstName.trim() !== "" && lastName.trim() !== ""));
 
   const submitExisting = async () => {
-    await link.mutateAsync({ emailId: email.id, companyId, dealId: dealId || null });
+    const results = await Promise.allSettled(
+      emails.map((e) => link.mutateAsync({ emailId: e.id, companyId, dealId: dealId || null })),
+    );
+    const failed = results.filter((r) => r.status === "rejected").length;
+    if (failed > 0) throw new Error(`${failed} failed`);
   };
 
   const submitCreate = async () => {
@@ -205,7 +213,9 @@ export function LinkEmailDialog({ email, onClose }: LinkEmailDialogProps) {
         <h2 id="link-email-title" className="text-lg font-semibold">
           {t("linkDialog.title")}
         </h2>
-        <p className="mt-1 truncate text-sm text-text-tertiary">{email.subject}</p>
+        <p className="mt-1 truncate text-sm text-text-tertiary">
+          {isBulk ? t("linkDialog.bulkSubtitle", { count: emails.length }) : email.subject}
+        </p>
 
         {mode === "existing" ? (
           <>
@@ -246,6 +256,7 @@ export function LinkEmailDialog({ email, onClose }: LinkEmailDialogProps) {
 
             <button
               type="button"
+              hidden={isBulk}
               onClick={() => setMode("create")}
               data-testid={testIds.emails.mail.linkCreateToggle}
               className="mt-4 text-sm font-medium text-accent hover:text-accent-hover"

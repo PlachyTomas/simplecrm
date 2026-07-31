@@ -59,7 +59,10 @@ function renderDetail(detail: ActivityDetailValue, t: TFunction<"common">): stri
 }
 
 function DetailLine({ children }: { children: ReactNode }) {
-  return <p className="mt-0.5 text-sm text-text-secondary">{children}</p>;
+  // Clamped: note/email bodies are unbounded user text, and the timeline
+  // is a feed, not a reader — two lines carry the gist, the entity's own
+  // sections carry the full text (viewport-fit research).
+  return <p className="mt-0.5 line-clamp-2 text-sm text-text-secondary">{children}</p>;
 }
 
 /**

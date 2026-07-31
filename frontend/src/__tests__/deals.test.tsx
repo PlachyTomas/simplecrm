@@ -186,12 +186,15 @@ describe("Deals list + detail", () => {
     const user = userEvent.setup();
 
     expect(await screen.findByText("Průběh")).toBeInTheDocument();
-    // First page = 20 of 21 rows, so the pager is offered.
-    await waitFor(() => expect(screen.getAllByText("Poznámka").length).toBe(19));
-    expect(limits).toContain("20");
+    // First page = 4 of 21 rows (viewport-fit densification), pager offered.
+    await waitFor(() => expect(screen.getAllByText("Poznámka").length).toBe(3));
+    expect(limits).toContain("4");
 
     await user.click(screen.getByTestId("deals-detail-timeline-load-more"));
-    await waitFor(() => expect(limits).toContain("40"));
+    await waitFor(() => expect(limits).toContain("19"));
+    // 19 of 21 still leaves two — page once more to drain them.
+    await user.click(screen.getByTestId("deals-detail-timeline-load-more"));
+    await waitFor(() => expect(limits).toContain("34"));
     // Everything fits now — the pager disappears instead of looping.
     await waitFor(() =>
       expect(screen.queryByTestId("deals-detail-timeline-load-more")).not.toBeInTheDocument(),
@@ -280,7 +283,9 @@ describe("Deals list + detail", () => {
     // subtitle still sends running commentary to the timeline instead.
     expect(await screen.findByText(/Popis obchodu/)).toBeInTheDocument();
     expect(screen.getByText(/K tomuto obchodu zatím není žádný popis/)).toBeInTheDocument();
-    expect(screen.getByText(/Průběžné poznámky z hovorů/)).toBeInTheDocument();
+    // The two-line explainer moved into edit mode (viewport-fit) — it must
+    // NOT render in the resting empty state anymore.
+    expect(screen.queryByText(/Průběžné poznámky z hovorů/)).not.toBeInTheDocument();
 
     await user.click(screen.getByTestId("deals-detail-note-edit"));
     await user.type(screen.getByTestId("deals-detail-note-input"), "Region: Morava");

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { EventFormModal } from "@/app/events/EventFormModal";
 import { type CalendarEventOut, useDeleteEvent, useEvents } from "@/app/events/useEvents";
+import { ChevronDown } from "lucide-react";
 import { useToast } from "@/lib/toast";
 
 interface DealEventsSectionProps {
@@ -85,6 +86,7 @@ export function DealEventsSection({ dealId, dealName, locale }: DealEventsSectio
   const { t } = useTranslation("deals");
   const toast = useToast();
   const { data, isPending } = useEvents({ dealId });
+  const [expanded, setExpanded] = useState(false);
   const deleteEvent = useDeleteEvent();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEventOut | null>(null);
@@ -107,13 +109,33 @@ export function DealEventsSection({ dealId, dealName, locale }: DealEventsSectio
     });
   }
 
+  const count = data?.items.length ?? 0;
+
   return (
     <section className="mt-4 rounded-lg border border-border bg-surface">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle px-4 py-3">
-        <div>
-          <h2 className="text-base font-semibold">{t("eventsSection.title")}</h2>
-          <p className="mt-0.5 text-sm text-text-tertiary">{t("eventsSection.subtitle")}</p>
-        </div>
+        {/* Collapsed by default so a typical deal fits the viewport —
+            the count keeps the section glanceable without expanding. */}
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className="min-w-0 text-left"
+        >
+          <h2 className="flex items-center gap-1.5 text-base font-semibold">
+            <ChevronDown
+              size={16}
+              strokeWidth={1.75}
+              aria-hidden
+              className={expanded ? "" : "-rotate-90"}
+            />
+            {t("eventsSection.title")}
+            {!isPending ? <span className="font-normal text-text-tertiary">({count})</span> : null}
+          </h2>
+          {expanded ? (
+            <p className="mt-0.5 text-sm text-text-tertiary">{t("eventsSection.subtitle")}</p>
+          ) : null}
+        </button>
         <button
           type="button"
           onClick={() => {
@@ -126,7 +148,7 @@ export function DealEventsSection({ dealId, dealName, locale }: DealEventsSectio
         </button>
       </header>
 
-      {isPending ? (
+      {!expanded ? null : isPending ? (
         <p className="px-4 py-3 text-sm text-text-tertiary" role="status">
           {t("eventsSection.loading")}
         </p>

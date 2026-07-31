@@ -27,12 +27,12 @@ export function DealDetailDialog({ dealId, onClose }: DealDetailDialogProps) {
       aria-modal="true"
       aria-label={t("dealDetailDialog.ariaLabel")}
       data-testid={testIds.deals.detail.dialog}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 py-6 backdrop-blur-sm sm:py-10"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 py-4 backdrop-blur-sm sm:py-6"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
+      <div className="flex max-h-[94vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
         <DealDetail dealId={dealId} onClose={onClose} />
       </div>
     </div>

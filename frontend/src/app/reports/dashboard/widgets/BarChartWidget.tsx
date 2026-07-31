@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useContainerWidth } from "react-grid-layout";
 import { useTranslation } from "react-i18next";
 import {
   Bar,
@@ -97,6 +98,7 @@ export function BarChartWidget({
   emptyMessage,
 }: BarChartWidgetProps) {
   const { t } = useTranslation("reports");
+  const { width: chartWidth, containerRef: chartRef } = useContainerWidth();
   const resolvedEmptyMessage = emptyMessage ?? t("barChart.defaultEmptyMessage");
   const data = useMemo(
     () =>
@@ -163,54 +165,65 @@ export function BarChartWidget({
           ))}
         </tbody>
       </table>
-      <div className="my-auto w-full shrink-0" style={{ height: chartHeight }}>
-        <ResponsiveContainer>
-          <BarChart
-            data={data}
-            layout="vertical"
-            margin={{
-              top: CHART_VERTICAL_PADDING_PX,
-              right: rightMargin,
-              bottom: CHART_VERTICAL_PADDING_PX,
-              left: 0,
-            }}
-          >
-            {/* Function form so an all-zero data set (common for
+      <div
+        ref={chartRef as React.RefObject<HTMLDivElement>}
+        className="my-auto w-full shrink-0"
+        style={{ height: chartHeight }}
+      >
+        {/* Recharts warns (width -1) when it mounts before layout — render
+            only once the wrapper has a real width. */}
+        {chartWidth > 0 ? (
+          <ResponsiveContainer>
+            <BarChart
+              data={data}
+              layout="vertical"
+              margin={{
+                top: CHART_VERTICAL_PADDING_PX,
+                right: rightMargin,
+                bottom: CHART_VERTICAL_PADDING_PX,
+                left: 0,
+              }}
+            >
+              {/* Function form so an all-zero data set (common for
                 rep_activity / sales_leaderboard with no activity in the
                 period) never degenerates the domain to [0, 0] — that
                 collapsed every bar to 0×0 and hid the value labels too. */}
-            <XAxis type="number" hide domain={[0, (dataMax: number) => Math.max(dataMax, 1)]} />
-            <YAxis
-              type="category"
-              dataKey="name"
-              width={yAxisWidth}
-              tick={{ fontSize: 12, fill: "currentColor" }}
-              axisLine={false}
-              tickLine={false}
-              className="text-text-secondary"
-            />
-            <Tooltip
-              cursor={{ fill: "var(--color-surface-overlay, transparent)" }}
-              formatter={(_v: unknown, _n: unknown, ctx: { payload?: { display?: string } }) =>
-                ctx.payload?.display ?? "—"
-              }
-              labelFormatter={(
-                label: unknown,
-                payload: ReadonlyArray<{ payload?: { fullName?: string } }>,
-              ) => String(payload?.[0]?.payload?.fullName ?? label ?? "")}
-            />
-            <Bar dataKey="value" radius={4} barSize={16} minPointSize={2}>
-              {data.map((d, i) => (
-                <Cell key={i} className={cn(d.highlighted ? "fill-brand-accent" : "fill-accent")} />
-              ))}
-              <LabelList
-                dataKey="display"
-                position="right"
-                className="fill-text-secondary text-[11px] tabular-nums"
+              <XAxis type="number" hide domain={[0, (dataMax: number) => Math.max(dataMax, 1)]} />
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={yAxisWidth}
+                tick={{ fontSize: 12, fill: "currentColor" }}
+                axisLine={false}
+                tickLine={false}
+                className="text-text-secondary"
               />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+              <Tooltip
+                cursor={{ fill: "var(--color-surface-overlay, transparent)" }}
+                formatter={(_v: unknown, _n: unknown, ctx: { payload?: { display?: string } }) =>
+                  ctx.payload?.display ?? "—"
+                }
+                labelFormatter={(
+                  label: unknown,
+                  payload: ReadonlyArray<{ payload?: { fullName?: string } }>,
+                ) => String(payload?.[0]?.payload?.fullName ?? label ?? "")}
+              />
+              <Bar dataKey="value" radius={4} barSize={16} minPointSize={2}>
+                {data.map((d, i) => (
+                  <Cell
+                    key={i}
+                    className={cn(d.highlighted ? "fill-brand-accent" : "fill-accent")}
+                  />
+                ))}
+                <LabelList
+                  dataKey="display"
+                  position="right"
+                  className="fill-text-secondary text-[11px] tabular-nums"
+                />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        ) : null}
       </div>
     </div>
   );

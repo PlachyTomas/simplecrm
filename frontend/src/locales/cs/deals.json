@@ -78,7 +78,8 @@
     "nextStep": {
       "label": "Další krok: {{date}}",
       "missing": "Bez dalšího kroku"
-    }
+    },
+    "allPlanned": "Každý otevřený obchod má naplánovaný další krok. Skvělá práce!"
   },
   "dealsList": {
     "pageTitle": "Obchody",
@@ -121,6 +122,21 @@
     "nextPage": "Další stránka",
     "nextStep": {
       "missing": "Bez dalšího kroku"
+    },
+    "bulk": {
+      "selectAll": "Vybrat všechny otevřené obchody na stránce",
+      "selectOne": "Vybrat obchod {{name}}",
+      "selectedCount_one": "Vybrán {{count}} obchod",
+      "selectedCount_few": "Vybrány {{count}} obchody",
+      "selectedCount_other": "Vybráno {{count}} obchodů",
+      "markLost": "Označit jako prohrané",
+      "clear": "Zrušit výběr",
+      "loseSuccess_one": "{{count}} obchod označen jako prohraný.",
+      "loseSuccess_few": "{{count}} obchody označeny jako prohrané.",
+      "loseSuccess_other": "{{count}} obchodů označeno jako prohraných.",
+      "loseError_one": "{{count}} obchod se nepodařilo označit.",
+      "loseError_few": "{{count}} obchody se nepodařilo označit.",
+      "loseError_other": "{{count}} obchodů se nepodařilo označit."
     }
   },
   "addDealModal": {
@@ -179,7 +195,8 @@
     "saveError": "Obchod se nepodařilo uložit. Zkuste to znovu.",
     "cancel": "Zrušit",
     "saving": "Ukládám…",
-    "submit": "Uložit obchod"
+    "submit": "Uložit obchod",
+    "valueInvalid": "Hodnota musí být nezáporné číslo — např. 25 000."
   },
   "markLostDialog": {
     "title": "Označit jako neúspěch",
@@ -277,7 +294,9 @@
     "cancel": "Zrušit",
     "saveSuccess": "Popis uložen.",
     "saveError": "Popis se nepodařilo uložit.",
-    "empty": "K tomuto obchodu zatím není žádný popis."
+    "empty": "K tomuto obchodu zatím není žádný popis.",
+    "expand": "Zobrazit celý popis",
+    "collapse": "Skrýt"
   },
   "eventsSection": {
     "title": "Události",

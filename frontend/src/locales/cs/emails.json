@@ -191,7 +191,20 @@
     "pageInfo": "{{from}}–{{to}} z {{total}}",
     "prevPage": "Předchozí stránka",
     "nextPage": "Další stránka",
-    "assign": "Přiřadit"
+    "assign": "Přiřadit",
+    "bulk": {
+      "selectAll": "Vybrat všechny nepřiřazené e-maily na stránce",
+      "selectOne": "Vybrat e-mail {{subject}}",
+      "selectedCount_one": "Vybrán {{count}} e-mail",
+      "selectedCount_few": "Vybrány {{count}} e-maily",
+      "selectedCount_other": "Vybráno {{count}} e-mailů",
+      "assign_one": "Přiřadit ({{count}})",
+      "assign_few": "Přiřadit ({{count}})",
+      "assign_other": "Přiřadit ({{count}})",
+      "clear": "Zrušit výběr"
+    },
+    "unmatchedClearTitle": "Vše přiřazeno",
+    "unmatchedClearBody": "Žádný e-mail nečeká na přiřazení. Skvělá práce!"
   },
   "detail": {
     "title": "Detail e-mailu",
@@ -242,6 +255,9 @@
     "withDealLabel": "Založit i obchod",
     "dealNameLabel": "Název obchodu",
     "submitCreate": "Založit a přiřadit",
-    "contactFailed": "Kontakt se nepodařilo vytvořit — firma a obchod ale vznikly."
+    "contactFailed": "Kontakt se nepodařilo vytvořit — firma a obchod ale vznikly.",
+    "bulkSubtitle_one": "{{count}} vybraný e-mail",
+    "bulkSubtitle_few": "{{count}} vybrané e-maily",
+    "bulkSubtitle_other": "{{count}} vybraných e-mailů"
   }
 }
