@@ -5242,6 +5242,8 @@ export interface components {
              * @enum {string}
              */
             status: "open" | "won" | "lost";
+            /** Next Event At */
+            next_event_at?: string | null;
         };
         /** DealMarkLost */
         DealMarkLost: {

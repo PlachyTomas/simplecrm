@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -17,6 +18,7 @@ from app.db import get_db
 from app.db.models import (
     ActivityEntityType,
     ActivityType,
+    CalendarEvent,
     Company,
     Contact,
     Deal,
@@ -255,8 +257,35 @@ async def list_deals(
         order,
     ).limit(pagination.limit)
     items = (await session.execute(items_stmt.offset(pagination.offset))).scalars().all()
+
+    # "Next step" for the page's rows in one grouped query (never per-row) —
+    # the same earliest-upcoming-event rule as the pipeline board.
+    next_events: dict[uuid.UUID, datetime] = {}
+    if items:
+        now = datetime.now(tz=UTC)
+        rows = await session.execute(
+            select(CalendarEvent.deal_id, func.min(CalendarEvent.starts_at))
+            .where(
+                CalendarEvent.deal_id.in_([d.id for d in items]),
+                CalendarEvent.ends_at >= now,
+            )
+            .group_by(CalendarEvent.deal_id)
+        )
+        # `deal_id` is typed nullable on the model; the IN-filter above
+        # guarantees it here — the guard is for the type checker.
+        next_events = {
+            deal_id: starts_at for deal_id, starts_at in rows.all() if deal_id is not None
+        }
+
+    out_items = []
+    for d in items:
+        out = DealListItemOut.from_deal(d)
+        # Closed deals need no next step — mirror the board's rule.
+        if out.status == "open":
+            out.next_event_at = next_events.get(d.id)
+        out_items.append(out)
     return Page[DealListItemOut](
-        items=[DealListItemOut.from_deal(d) for d in items],
+        items=out_items,
         total=total,
         limit=pagination.limit,
         offset=pagination.offset,

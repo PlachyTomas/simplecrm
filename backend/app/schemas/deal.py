@@ -140,6 +140,11 @@ class DealListItemOut(DealOut):
     primary_contact_name: str | None = None
     primary_contact_email: str | None = None
     status: Literal["open", "won", "lost"]
+    # Start of the earliest upcoming calendar event (see the board's
+    # `next_event_at`); NULL on open deals means no next step is planned,
+    # NULL always on closed deals. Filled by the list endpoint, not
+    # `from_deal` — it comes from one grouped query over the page.
+    next_event_at: datetime | None = None
 
     @classmethod
     def from_deal(cls, deal: Deal) -> DealListItemOut:

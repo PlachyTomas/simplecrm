@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -1718,3 +1718,52 @@ async def test_export_deals_csv_respects_status_filter(
     text = r.content.decode("utf-8")
     assert "Won deal unique" in text
     assert "Open deal unique" not in text
+
+
+async def test_list_deals_carries_next_event_at(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Obchody rows mirror the board's next-step rule: earliest upcoming
+    event on open deals, NULL when nothing is planned."""
+    from app.db.models import CalendarEvent
+
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+    planned = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=admin.id,
+        name="Planned",
+        value=Decimal("1"),
+        currency="CZK",
+    )
+    unplanned = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=admin.id,
+        name="Unplanned",
+        value=Decimal("1"),
+        currency="CZK",
+    )
+    db_session.add_all([planned, unplanned])
+    await db_session.commit()
+    soon = datetime.now(tz=UTC) + timedelta(days=3)
+    db_session.add(
+        CalendarEvent(
+            organization_id=org.id,
+            deal_id=planned.id,
+            owner_user_id=admin.id,
+            title="Next",
+            starts_at=soon,
+            ends_at=soon + timedelta(hours=1),
+        )
+    )
+    await db_session.commit()
+
+    resp = await client.get("/api/v1/deals", headers=_auth(admin))
+    rows = {d["name"]: d for d in resp.json()["items"]}
+    assert rows["Planned"]["next_event_at"] is not None
+    assert rows["Unplanned"]["next_event_at"] is None

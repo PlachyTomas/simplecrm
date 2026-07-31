@@ -95,7 +95,8 @@
       "stage": "Fáze",
       "status": "Stav",
       "owner": "Vlastník",
-      "closed": "Uzavření"
+      "closed": "Uzavření",
+      "nextStep": "Další krok"
     },
     "searchLabel": "Hledat obchod",
     "searchPlaceholder": "Název obchodu nebo firmy…",
@@ -117,7 +118,10 @@
     "emptyFilteredBody": "Zkuste upravit hledaný výraz nebo filtry.",
     "paginationOf": "z",
     "prevPage": "Předchozí stránka",
-    "nextPage": "Další stránka"
+    "nextPage": "Další stránka",
+    "nextStep": {
+      "missing": "Bez dalšího kroku"
+    }
   },
   "addDealModal": {
     "title": "Přidat obchod",

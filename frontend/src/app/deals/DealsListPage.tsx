@@ -424,6 +424,9 @@ export function DealsListPage() {
                     {t("dealsList.columns.status")}
                   </th>
                   <th scope="col" className={`${TH} hidden lg:table-cell`}>
+                    {t("dealsList.columns.nextStep")}
+                  </th>
+                  <th scope="col" className={`${TH} hidden lg:table-cell`}>
                     {t("dealsList.columns.owner")}
                   </th>
                   <SortHeader
@@ -489,6 +492,21 @@ export function DealsListPage() {
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <StatusChip status={deal.status} lostReason={deal.lost_reason} />
+                      </td>
+                      <td className="hidden whitespace-nowrap px-4 py-3 text-sm lg:table-cell">
+                        {/* Mirrors the board's next-step rule: only open
+                            deals can (and must) have a plan. */}
+                        {deal.status !== "open" ? (
+                          <span className="text-text-tertiary">—</span>
+                        ) : deal.next_event_at ? (
+                          <span className="tabular-nums text-text-secondary">
+                            {dateFmt.format(new Date(deal.next_event_at))}
+                          </span>
+                        ) : (
+                          <span className="font-medium text-warning">
+                            {t("dealsList.nextStep.missing")}
+                          </span>
+                        )}
                       </td>
                       <td className="hidden px-4 py-3 text-sm text-text-secondary lg:table-cell">
                         {deal.owner_name ?? "—"}
