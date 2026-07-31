@@ -188,7 +188,8 @@
     "moreRecipients": "(+{{count}})",
     "pageInfo": "{{from}}–{{to}} of {{total}}",
     "prevPage": "Previous page",
-    "nextPage": "Next page"
+    "nextPage": "Next page",
+    "assign": "Assign"
   },
   "detail": {
     "title": "Email detail",
@@ -219,5 +220,16 @@
     "stepForward": "Forward received messages to it, or set up an auto-forward rule in your email client (Seznam, Outlook and Gmail all support it).",
     "settingsLink": "Manage the address in Settings → Integrations",
     "close": "Got it"
+  },
+  "linkDialog": {
+    "title": "Assign email",
+    "companyLabel": "Company",
+    "dealLabel": "Deal (optional)",
+    "noDeal": "— no deal —",
+    "cancel": "Cancel",
+    "submit": "Assign",
+    "saving": "Assigning…",
+    "toastSuccess": "Email assigned — it will show on the timeline.",
+    "toastError": "The email could not be assigned."
   }
 }

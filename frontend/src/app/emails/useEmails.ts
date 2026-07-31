@@ -112,6 +112,30 @@ export function useMailList(filters: MailListFilters) {
   });
 }
 
+/** File an unmatched captured mail under a company (and optionally a deal). */
+export function useLinkEmail() {
+  const { accessToken } = useAuth();
+  const qc = useQueryClient();
+  return useMutation<
+    SentEmailListItem,
+    Error,
+    { emailId: string; companyId: string; dealId?: string | null }
+  >({
+    mutationFn: ({ emailId, companyId, dealId }) =>
+      apiFetch<SentEmailListItem>(`/api/v1/emails/${emailId}/link`, {
+        method: "POST",
+        token: accessToken,
+        body: { company_id: companyId, deal_id: dealId ?? null },
+      }),
+    onSuccess: (_data, { emailId }) => {
+      void qc.invalidateQueries({ queryKey: ["emails"] });
+      void qc.invalidateQueries({ queryKey: ["email", emailId] });
+      // Linking writes the email activity onto the company/deal timeline.
+      void qc.invalidateQueries({ queryKey: ["activities"] });
+    },
+  });
+}
+
 export function useEmail(emailId: string | undefined) {
   const { accessToken } = useAuth();
   return useQuery<SentEmailDetail>({

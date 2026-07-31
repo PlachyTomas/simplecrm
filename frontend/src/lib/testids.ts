@@ -168,6 +168,10 @@ export const testIds = {
       row: (id: string) => `mail-row-${id}`,
       detailDialog: "mail-detail-dialog",
       detailReply: "mail-detail-reply",
+      linkButton: (id: string) => `mail-link-${id}`,
+      linkDialog: "mail-link-dialog",
+      linkDealSelect: "mail-link-deal-select",
+      linkSubmit: "mail-link-submit",
     },
     compose: {
       toInput: "email-compose-to-input",

@@ -190,7 +190,8 @@
     "moreRecipients": "(+{{count}})",
     "pageInfo": "{{from}}–{{to}} z {{total}}",
     "prevPage": "Předchozí stránka",
-    "nextPage": "Další stránka"
+    "nextPage": "Další stránka",
+    "assign": "Přiřadit"
   },
   "detail": {
     "title": "Detail e-mailu",
@@ -221,5 +222,16 @@
     "stepForward": "Přijaté zprávy na ni přepošlete, nebo si v e-mailovém klientu nastavte pravidlo automatického přeposílání (umí ho Seznam, Outlook i Gmail).",
     "settingsLink": "Správa adresy v Nastavení → Integrace",
     "close": "Rozumím"
+  },
+  "linkDialog": {
+    "title": "Přiřadit e-mail",
+    "companyLabel": "Firma",
+    "dealLabel": "Obchod (volitelné)",
+    "noDeal": "— bez obchodu —",
+    "cancel": "Zrušit",
+    "submit": "Přiřadit",
+    "saving": "Přiřazuji…",
+    "toastSuccess": "E-mail přiřazen — objeví se na časové ose.",
+    "toastError": "E-mail se nepodařilo přiřadit."
   }
 }

@@ -1144,6 +1144,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/emails/{email_id}/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Link Email
+         * @description File an unmatched captured mail under a company (and optionally a deal).
+         *
+         *     Smart BCC stores mail whose correspondent matches no contact with no
+         *     company link — it surfaces only under the Mail page's "Nepřiřazené"
+         *     filter. Linking is the missing verb: it sets the company/deal on the
+         *     row AND writes the email activity the ingest pipeline would have
+         *     written on a match, so the mail appears on the timelines from now on.
+         *     Already-filed mail 409s — re-filing would duplicate timeline entries.
+         */
+        post: operations["link_email_api_v1_emails__email_id__link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/email-templates": {
         parameters: {
             query?: never;
@@ -7160,6 +7187,20 @@ export interface components {
             thread?: components["schemas"]["SentEmailOut"][];
         };
         /**
+         * SentEmailLink
+         * @description Body of POST /emails/{id}/link — file an unmatched captured mail
+         *     under a company (and optionally one of its deals).
+         */
+        SentEmailLink: {
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Deal Id */
+            deal_id?: string | null;
+        };
+        /**
          * SentEmailListItemOut
          * @description `SentEmailOut` plus display names so the Mail page can render
          *     company/deal/sender links without per-row fetches (mirrors the
@@ -10207,6 +10248,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SentEmailDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_email_api_v1_emails__email_id__link_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                email_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SentEmailLink"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentEmailListItemOut"];
                 };
             };
             /** @description Validation Error */
