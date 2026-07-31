@@ -232,6 +232,16 @@
     "submit": "Přiřadit",
     "saving": "Přiřazuji…",
     "toastSuccess": "E-mail přiřazen — objeví se na časové ose.",
-    "toastError": "E-mail se nepodařilo přiřadit."
+    "toastError": "E-mail se nepodařilo přiřadit.",
+    "createToggle": "Založit novou firmu z tohoto e-mailu",
+    "backToExisting": "Vybrat existující firmu",
+    "newCompanyLabel": "Název nové firmy",
+    "contactLegend": "Kontakt ({{address}})",
+    "firstNamePlaceholder": "Jméno",
+    "lastNamePlaceholder": "Příjmení",
+    "withDealLabel": "Založit i obchod",
+    "dealNameLabel": "Název obchodu",
+    "submitCreate": "Založit a přiřadit",
+    "contactFailed": "Kontakt se nepodařilo vytvořit — firma a obchod ale vznikly."
   }
 }

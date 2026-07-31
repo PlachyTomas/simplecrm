@@ -230,6 +230,16 @@
     "submit": "Assign",
     "saving": "Assigning…",
     "toastSuccess": "Email assigned — it will show on the timeline.",
-    "toastError": "The email could not be assigned."
+    "toastError": "The email could not be assigned.",
+    "createToggle": "Create a new company from this email",
+    "backToExisting": "Pick an existing company",
+    "newCompanyLabel": "New company name",
+    "contactLegend": "Contact ({{address}})",
+    "firstNamePlaceholder": "First name",
+    "lastNamePlaceholder": "Last name",
+    "withDealLabel": "Also create a deal",
+    "dealNameLabel": "Deal name",
+    "submitCreate": "Create and assign",
+    "contactFailed": "The contact could not be created — the company and deal were."
   }
 }

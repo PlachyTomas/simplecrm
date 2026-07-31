@@ -176,6 +176,9 @@ export const testIds = {
       linkDialog: "mail-link-dialog",
       linkDealSelect: "mail-link-deal-select",
       linkSubmit: "mail-link-submit",
+      linkCreateToggle: "mail-link-create-toggle",
+      linkCompanyName: "mail-link-company-name",
+      linkDealName: "mail-link-deal-name",
     },
     compose: {
       toInput: "email-compose-to-input",
