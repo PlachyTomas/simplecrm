@@ -1823,6 +1823,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/widgets/deals-without-next-step": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Widget Deals Without Next Step
+         * @description Snapshot widget — `from`/`to` ride along for the shared signature
+         *     but a "no next step right now" list has no window.
+         */
+        get: operations["widget_deals_without_next_step_api_v1_reports_widgets_deals_without_next_step_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reports/widgets/companies-at-risk": {
         parameters: {
             query?: never;
@@ -5251,6 +5272,33 @@ export interface components {
             note?: string | null;
         };
         /**
+         * DealsWithoutNextStepConfig
+         * @description Open deals with no upcoming calendar event — nobody has planned what
+         *     happens next. The leading-indicator sibling of `stale_deals` (which is
+         *     the lagging "nothing has happened"); see
+         *     docs/research/2026-07-31-crm-user-wants-research.md.
+         */
+        DealsWithoutNextStepConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "deals_without_next_step";
+        };
+        /**
+         * DealsWithoutNextStepResponse
+         * @description Rows share `StaleDealItem` — same columns, different predicate
+         *     (no upcoming event vs. no stage movement).
+         */
+        DealsWithoutNextStepResponse: {
+            /** Items */
+            items: components["schemas"]["StaleDealItem"][];
+            /** Total */
+            total: number;
+        };
+        /**
          * DealsWonConfig
          * @description Count + total value of deals closed-won in the date range.
          */
@@ -5543,7 +5591,7 @@ export interface components {
             id: string;
             position: components["schemas"]["WidgetPosition"];
             /** Config */
-            config: components["schemas"]["PipelineValueConfig"] | components["schemas"]["WeightedPipelineConfig"] | components["schemas"]["NewCompaniesConfig"] | components["schemas"]["DealsWonConfig"] | components["schemas"]["WonVsPaidConfig"] | components["schemas"]["SalesForecastConfig"] | components["schemas"]["WinRateConfig"] | components["schemas"]["AvgDealSizeConfig"] | components["schemas"]["SalesCycleLengthConfig"] | components["schemas"]["LeadToDealConversionConfig"] | components["schemas"]["LostReasonsBreakdownConfig"] | components["schemas"]["SalesLeaderboardConfig"] | components["schemas"]["RepActivityConfig"] | components["schemas"]["StaleDealsConfig"] | components["schemas"]["CompaniesAtRiskConfig"] | components["schemas"]["SalesGoalConfig"] | components["schemas"]["KpiOpenDealsConfig"] | components["schemas"]["KpiPipelineValueConfig"] | components["schemas"]["KpiWonMonthConfig"] | components["schemas"]["KpiRevenueMonthConfig"] | components["schemas"]["ActionNewDealConfig"] | components["schemas"]["ActionNewCompanyConfig"] | components["schemas"]["ActionNewContactConfig"] | components["schemas"]["ActionNewActivityConfig"] | components["schemas"]["InviteTeammatesConfig"] | components["schemas"]["VelocityConfig"];
+            config: components["schemas"]["PipelineValueConfig"] | components["schemas"]["WeightedPipelineConfig"] | components["schemas"]["NewCompaniesConfig"] | components["schemas"]["DealsWonConfig"] | components["schemas"]["WonVsPaidConfig"] | components["schemas"]["SalesForecastConfig"] | components["schemas"]["WinRateConfig"] | components["schemas"]["AvgDealSizeConfig"] | components["schemas"]["SalesCycleLengthConfig"] | components["schemas"]["LeadToDealConversionConfig"] | components["schemas"]["LostReasonsBreakdownConfig"] | components["schemas"]["SalesLeaderboardConfig"] | components["schemas"]["RepActivityConfig"] | components["schemas"]["DealsWithoutNextStepConfig"] | components["schemas"]["StaleDealsConfig"] | components["schemas"]["CompaniesAtRiskConfig"] | components["schemas"]["SalesGoalConfig"] | components["schemas"]["KpiOpenDealsConfig"] | components["schemas"]["KpiPipelineValueConfig"] | components["schemas"]["KpiWonMonthConfig"] | components["schemas"]["KpiRevenueMonthConfig"] | components["schemas"]["ActionNewDealConfig"] | components["schemas"]["ActionNewCompanyConfig"] | components["schemas"]["ActionNewContactConfig"] | components["schemas"]["ActionNewActivityConfig"] | components["schemas"]["InviteTeammatesConfig"] | components["schemas"]["VelocityConfig"];
         };
         /**
          * ImpersonateOut
@@ -8071,7 +8119,7 @@ export interface components {
             id: string;
             position: components["schemas"]["WidgetPosition"];
             /** Config */
-            config: components["schemas"]["PipelineValueConfig"] | components["schemas"]["WeightedPipelineConfig"] | components["schemas"]["NewCompaniesConfig"] | components["schemas"]["DealsWonConfig"] | components["schemas"]["WonVsPaidConfig"] | components["schemas"]["WinRateConfig"] | components["schemas"]["AvgDealSizeConfig"] | components["schemas"]["SalesCycleLengthConfig"] | components["schemas"]["LeadToDealConversionConfig"] | components["schemas"]["LostReasonsBreakdownConfig"] | components["schemas"]["SalesLeaderboardConfig"] | components["schemas"]["SalesForecastConfig"] | components["schemas"]["RepActivityConfig"] | components["schemas"]["StaleDealsConfig"] | components["schemas"]["CompaniesAtRiskConfig"] | components["schemas"]["SalesGoalConfig"];
+            config: components["schemas"]["PipelineValueConfig"] | components["schemas"]["WeightedPipelineConfig"] | components["schemas"]["NewCompaniesConfig"] | components["schemas"]["DealsWonConfig"] | components["schemas"]["WonVsPaidConfig"] | components["schemas"]["WinRateConfig"] | components["schemas"]["AvgDealSizeConfig"] | components["schemas"]["SalesCycleLengthConfig"] | components["schemas"]["LeadToDealConversionConfig"] | components["schemas"]["LostReasonsBreakdownConfig"] | components["schemas"]["SalesLeaderboardConfig"] | components["schemas"]["SalesForecastConfig"] | components["schemas"]["RepActivityConfig"] | components["schemas"]["DealsWithoutNextStepConfig"] | components["schemas"]["StaleDealsConfig"] | components["schemas"]["CompaniesAtRiskConfig"] | components["schemas"]["SalesGoalConfig"];
         };
         /** WidgetPosition */
         WidgetPosition: {
@@ -11591,6 +11639,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StaleDealsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    widget_deals_without_next_step_api_v1_reports_widgets_deals_without_next_step_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                team_id?: string | null;
+                owner_user_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealsWithoutNextStepResponse"];
                 };
             };
             /** @description Validation Error */

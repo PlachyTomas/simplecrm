@@ -22,7 +22,8 @@
       "visibilityLabel": "Show",
       "visibilityAll": "Everything in my scope",
       "visibilityMine": "Only my deals",
-      "clearFilter": "Clear filter"
+      "clearFilter": "Clear filter",
+      "noNextStepOnly": "Only without next step"
     },
     "emptyState": {
       "title": "Add your first deal",

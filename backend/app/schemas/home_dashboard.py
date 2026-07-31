@@ -32,6 +32,7 @@ from app.schemas.reports.dashboard import (
 from app.schemas.reports.widgets import (
     AvgDealSizeConfig,
     CompaniesAtRiskConfig,
+    DealsWithoutNextStepConfig,
     DealsWonConfig,
     LeadToDealConversionConfig,
     LostReasonsBreakdownConfig,
@@ -113,6 +114,7 @@ HomeWidgetConfig = Annotated[
     | LostReasonsBreakdownConfig
     | SalesLeaderboardConfig
     | RepActivityConfig
+    | DealsWithoutNextStepConfig
     | StaleDealsConfig
     | CompaniesAtRiskConfig
     | SalesGoalConfig

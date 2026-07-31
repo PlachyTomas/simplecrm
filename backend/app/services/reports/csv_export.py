@@ -40,6 +40,7 @@ from app.schemas.reports import (
 )
 from app.services.reports.avg_deal_size import compute_avg_deal_size
 from app.services.reports.companies_at_risk import compute_companies_at_risk
+from app.services.reports.deals_without_next_step import compute_deals_without_next_step
 from app.services.reports.deals_won import compute_deals_won
 from app.services.reports.lead_to_deal_conversion import (
     compute_lead_to_deal_conversion,
@@ -73,6 +74,7 @@ WIDGET_LABEL = {
     "sales_leaderboard": "Žebříček obchodníků",
     "rep_activity": "Aktivita obchodníků",
     "stale_deals": "Stagnující obchody",
+    "deals_without_next_step": "Obchody bez dalšího kroku",
     "companies_at_risk": "Firmy ohrožené uvolněním",
 }
 
@@ -272,6 +274,32 @@ async def _render_section(
     elif widget_type == "stale_deals":
         cfg = StaleDealsConfig(**raw_config)
         r = await compute_stale_deals(**common, config=cfg)
+        writer.writerow(
+            [
+                "obchod",
+                "firma",
+                "fáze",
+                "hodnota",
+                "měna",
+                "obchodník",
+                "dní_bez_pohybu",
+            ]
+        )
+        for item in r.items:
+            writer.writerow(
+                [
+                    item.deal_name,
+                    item.company_name,
+                    item.stage_name,
+                    _fmt(item.value),
+                    item.currency,
+                    item.owner_name,
+                    item.days_since_change,
+                ]
+            )
+
+    elif widget_type == "deals_without_next_step":
+        r = await compute_deals_without_next_step(**common)
         writer.writerow(
             [
                 "obchod",

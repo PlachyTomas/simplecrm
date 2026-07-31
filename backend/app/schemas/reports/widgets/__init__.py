@@ -10,6 +10,7 @@ from typing import Literal
 
 from app.schemas.reports.widgets.avg_deal_size import AvgDealSizeConfig
 from app.schemas.reports.widgets.companies_at_risk import CompaniesAtRiskConfig
+from app.schemas.reports.widgets.deals_without_next_step import DealsWithoutNextStepConfig
 from app.schemas.reports.widgets.deals_won import DealsWonConfig
 from app.schemas.reports.widgets.lead_to_deal_conversion import (
     LeadToDealConversionConfig,
@@ -51,6 +52,7 @@ WidgetType = Literal[
 __all__ = [
     "AvgDealSizeConfig",
     "CompaniesAtRiskConfig",
+    "DealsWithoutNextStepConfig",
     "DealsWonConfig",
     "LeadToDealConversionConfig",
     "LostReasonsBreakdownConfig",

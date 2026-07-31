@@ -154,6 +154,7 @@ export const testIds = {
     rottingBadge: (dealId: string) => `pipeline-rotting-${dealId}`,
     nextStep: (dealId: string) => `pipeline-next-step-${dealId}`,
     wonWindow: "pipeline-won-window",
+    noNextStepFilter: "pipeline-no-next-step-filter",
   },
   confirmDialog: {
     confirm: "confirm-dialog-confirm",

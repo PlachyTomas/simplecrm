@@ -30,6 +30,7 @@ import {
 } from "@/app/reports/dashboard/widgets/kpi-widgets";
 import {
   CompaniesAtRiskWidget,
+  DealsWithoutNextStepWidget,
   StaleDealsWidget,
 } from "@/app/reports/dashboard/widgets/list-widgets";
 import { SalesGoalWidget } from "@/app/reports/dashboard/widgets/SalesGoalWidget";
@@ -74,6 +75,8 @@ export function WidgetByType(props: Props) {
       return <LostReasonsBreakdownWidget {...props} />;
     case "stale_deals":
       return <StaleDealsWidget {...props} />;
+    case "deals_without_next_step":
+      return <DealsWithoutNextStepWidget {...props} />;
     case "companies_at_risk":
       return <CompaniesAtRiskWidget {...props} />;
     case "sales_goal":

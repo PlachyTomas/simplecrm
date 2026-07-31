@@ -42,7 +42,8 @@
     "rep_activity": "Aktivita obchodníků",
     "stale_deals": "Stagnující obchody",
     "companies_at_risk": "Firmy ohrožené uvolněním",
-    "sales_goal": "Plnění cíle"
+    "sales_goal": "Plnění cíle",
+    "deals_without_next_step": "Bez dalšího kroku"
   },
   "widgetDescriptions": {
     "pipeline_value": "Součet hodnoty otevřených obchodů.",
@@ -60,7 +61,8 @@
     "rep_activity": "Počet nových obchodů podle obchodníka.",
     "stale_deals": "Obchody bez pohybu delší dobu.",
     "companies_at_risk": "Firmy s blížícím se koncem vlastnictví.",
-    "sales_goal": "Postup k měsíčnímu prodejnímu cíli."
+    "sales_goal": "Postup k měsíčnímu prodejnímu cíli.",
+    "deals_without_next_step": "Otevřené obchody bez naplánované události — nikdo nerozhodl, co bude dál."
   },
   "widgetPicker": {
     "groupKpi": "Ukazatele",
@@ -149,6 +151,10 @@
       "columnDaysRemaining": "Zbývá dní",
       "columnLastActivity": "Poslední aktivita",
       "empty": "Žádné firmy s vlastnictvím končícím do {{count}} dní."
+    },
+    "dealsWithoutNextStep": {
+      "empty": "Každý otevřený obchod má naplánovaný další krok. Skvělá práce!",
+      "more": "…a dalších {{count}}"
     }
   },
   "days_one": "{{value}} den",

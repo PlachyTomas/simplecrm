@@ -220,3 +220,104 @@ export function CompaniesAtRiskWidget(props: BaseWidgetProps) {
     </WidgetFrame>
   );
 }
+
+// ---------- deals_without_next_step ----------
+
+/**
+ * Activity-based selling's leading indicator: open deals where nobody has
+ * planned the next event. Same columns as stale_deals (shared row schema);
+ * the count line surfaces the server-side 20-row cap honestly.
+ */
+export function DealsWithoutNextStepWidget(props: BaseWidgetProps) {
+  const config = narrowConfig(props.entry.config, "deals_without_next_step");
+  const navigate = useNavigate();
+  const { t } = useTranslation("reports");
+  const locale = useLocale();
+  const q = useWidgetQuery<ApiSchemas["DealsWithoutNextStepResponse"]>({
+    type: "deals_without_next_step",
+    endpoint: "deals-without-next-step",
+    config,
+    globalFilters: props.globalFilters,
+  });
+
+  type Row = ApiSchemas["StaleDealItem"];
+
+  const columns: ListColumn<Row>[] = [
+    {
+      header: t("list.staleDeals.columnDeal"),
+      render: (r) => <span className="font-medium text-text-primary">{r.deal_name}</span>,
+    },
+    {
+      header: t("list.staleDeals.columnCompany"),
+      render: (r) => <span className="text-text-secondary">{r.company_name}</span>,
+    },
+    {
+      header: t("list.staleDeals.columnStage"),
+      render: (r) => <span className="text-text-tertiary">{r.stage_name}</span>,
+      nowrap: true,
+    },
+    {
+      header: t("list.staleDeals.columnValue"),
+      align: "right",
+      nowrap: true,
+      render: (r) => (
+        <span className="tabular-nums text-text-secondary">
+          {formatMoney(r.value, r.currency, locale)}
+        </span>
+      ),
+    },
+    {
+      header: t("list.staleDeals.columnOwner"),
+      render: (r) => <span className="text-text-tertiary">{r.owner_name}</span>,
+      nowrap: true,
+    },
+    {
+      header: t("list.staleDeals.columnDaysSinceChange"),
+      align: "right",
+      nowrap: true,
+      render: (r) => (
+        <span
+          className={cn(
+            "inline-flex tabular-nums",
+            r.days_since_change >= 30 && "font-medium text-warning",
+            r.days_since_change >= 60 && "font-medium text-danger",
+          )}
+        >
+          {formatNumber(r.days_since_change, locale)}
+        </span>
+      ),
+    },
+  ];
+
+  return (
+    <WidgetFrame
+      label={t(WIDGET_LABEL_KEY.deals_without_next_step)}
+      isEditMode={props.isEditMode}
+      onRemove={props.onRemove}
+      onConfigClick={props.onConfigClick}
+    >
+      {q.isPending ? (
+        <WidgetSkeleton />
+      ) : q.isError || !q.data ? (
+        <WidgetError onRetry={() => void q.refetch()} />
+      ) : (
+        <>
+          <ListWidget<Row>
+            rows={q.data.items}
+            columns={columns}
+            rowKey={(r) => r.deal_id}
+            onRowClick={(r) => navigate(`/app/deals/${r.deal_id}`)}
+            emptyMessage={t("list.dealsWithoutNextStep.empty")}
+          />
+          {q.data.total > q.data.items.length ? (
+            <p className="mt-2 text-xs text-text-tertiary">
+              {t("list.dealsWithoutNextStep.more", {
+                count: q.data.total - q.data.items.length,
+              })}
+            </p>
+          ) : null}
+        </>
+      )}
+    </WidgetFrame>
+  );
+}

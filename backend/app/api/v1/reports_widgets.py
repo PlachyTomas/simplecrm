@@ -32,6 +32,7 @@ from app.db.models.enums import UserRole
 from app.schemas.reports import (
     AvgDealSizeResponse,
     CompaniesAtRiskResponse,
+    DealsWithoutNextStepResponse,
     DealsWonResponse,
     LeadToDealConversionResponse,
     LostReasonsBreakdownResponse,
@@ -65,6 +66,7 @@ from app.schemas.reports.widgets import (
 )
 from app.services.reports.avg_deal_size import compute_avg_deal_size
 from app.services.reports.companies_at_risk import compute_companies_at_risk
+from app.services.reports.deals_without_next_step import compute_deals_without_next_step
 from app.services.reports.deals_won import compute_deals_won
 from app.services.reports.lead_to_deal_conversion import (
     compute_lead_to_deal_conversion,
@@ -456,6 +458,30 @@ async def widget_stale_deals(
         team_id=team_id,
         owner_user_id=owner_user_id,
         config=StaleDealsConfig(threshold=threshold),  # type: ignore[arg-type]
+    )
+
+
+@router.get("/deals-without-next-step", response_model=DealsWithoutNextStepResponse)
+async def widget_deals_without_next_step(
+    from_: date = Query(alias="from"),
+    to: date = Query(),
+    team_id: UUID | None = Query(default=None),
+    owner_user_id: UUID | None = Query(default=None),
+    user: User = Depends(require_role(UserRole.manager)),
+    session: AsyncSession = Depends(get_db),
+) -> DealsWithoutNextStepResponse:
+    """Snapshot widget — `from`/`to` ride along for the shared signature
+    but a "no next step right now" list has no window."""
+    _validate_window(from_, to)
+    if user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return await compute_deals_without_next_step(
+        session,
+        organization_id=user.organization_id,
+        from_=from_,
+        to=to,
+        team_id=team_id,
+        owner_user_id=owner_user_id,
     )
 
 

@@ -2334,3 +2334,54 @@ async def test_widgets_export_csv_renders_new_widget_sections(
     # Won vs paid: 300 paid of 700 won.
     assert "700.00" in text
     assert "300.00" in text
+
+async def test_widget_deals_without_next_step(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Open deal with no upcoming event → listed; one with a future event →
+    not; `total` carries the uncapped count."""
+    from app.db.models import CalendarEvent
+
+    org, user, open_stage, _won, company = await _setup(db_session, owned_cleanup)
+    now = datetime.now(tz=UTC)
+    planned = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=open_stage.id,
+        owner_user_id=user.id,
+        name="Planned",
+        value=Decimal("10"),
+        currency=org.currency,
+    )
+    unplanned = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=open_stage.id,
+        owner_user_id=user.id,
+        name="Unplanned",
+        value=Decimal("10"),
+        currency=org.currency,
+    )
+    db_session.add_all([planned, unplanned])
+    await db_session.commit()
+    db_session.add(
+        CalendarEvent(
+            organization_id=org.id,
+            deal_id=planned.id,
+            owner_user_id=user.id,
+            title="Next call",
+            starts_at=now + timedelta(days=1),
+            ends_at=now + timedelta(days=1, hours=1),
+        )
+    )
+    await db_session.commit()
+
+    resp = await client.get(
+        "/api/v1/reports/widgets/deals-without-next-step",
+        headers=_auth(user),
+        params=_window_params(),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["total"] == 1
+    assert [i["deal_name"] for i in body["items"]] == ["Unplanned"]

@@ -42,7 +42,8 @@
     "rep_activity": "Rep activity",
     "stale_deals": "Stale deals",
     "companies_at_risk": "Companies at risk",
-    "sales_goal": "Goal progress"
+    "sales_goal": "Goal progress",
+    "deals_without_next_step": "No next step"
   },
   "widgetDescriptions": {
     "pipeline_value": "Total value of open deals.",
@@ -60,7 +61,8 @@
     "rep_activity": "New deals created per salesperson.",
     "stale_deals": "Deals with no movement for a while.",
     "companies_at_risk": "Companies with ownership ending soon.",
-    "sales_goal": "Progress toward this month's sales goal."
+    "sales_goal": "Progress toward this month's sales goal.",
+    "deals_without_next_step": "Open deals with no upcoming event — nobody has decided what happens next."
   },
   "widgetPicker": {
     "groupKpi": "Metrics",
@@ -145,6 +147,10 @@
       "columnDaysRemaining": "Days remaining",
       "columnLastActivity": "Last activity",
       "empty": "No companies with ownership ending within {{count}} days."
+    },
+    "dealsWithoutNextStep": {
+      "empty": "Every open deal has a next step planned. Great work!",
+      "more": "…and {{count}} more"
     }
   },
   "days_one": "{{value}} day",

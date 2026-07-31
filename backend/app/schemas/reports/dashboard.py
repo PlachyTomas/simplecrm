@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.schemas.reports.widgets import (
     AvgDealSizeConfig,
     CompaniesAtRiskConfig,
+    DealsWithoutNextStepConfig,
     DealsWonConfig,
     LeadToDealConversionConfig,
     LostReasonsBreakdownConfig,
@@ -53,6 +54,7 @@ WidgetConfig = Annotated[
     | SalesLeaderboardConfig
     | SalesForecastConfig
     | RepActivityConfig
+    | DealsWithoutNextStepConfig
     | StaleDealsConfig
     | CompaniesAtRiskConfig
     | SalesGoalConfig,

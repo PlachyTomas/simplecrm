@@ -12,6 +12,7 @@ import {
   Banknote,
   Building2,
   CalendarClock,
+  CalendarOff,
   Clock,
   Filter,
   Medal,
@@ -48,6 +49,7 @@ const ANALYTICS_TYPES = [
   "rep_activity",
   "lost_reasons_breakdown",
   "stale_deals",
+  "deals_without_next_step",
   "companies_at_risk",
   "sales_goal",
 ] as const satisfies readonly WidgetType[];
@@ -89,6 +91,7 @@ export const WIDGET_ICONS: Record<WidgetType, LucideIcon> = {
   sales_leaderboard: Medal,
   rep_activity: Activity,
   stale_deals: Clock,
+  deals_without_next_step: CalendarOff,
   companies_at_risk: AlertTriangle,
   sales_goal: Target,
 };
@@ -108,6 +111,7 @@ export const WIDGET_DESCRIPTION_KEY: Record<WidgetType, ParseKeys<"reports">> = 
   sales_leaderboard: "widgetDescriptions.sales_leaderboard",
   rep_activity: "widgetDescriptions.rep_activity",
   stale_deals: "widgetDescriptions.stale_deals",
+  deals_without_next_step: "widgetDescriptions.deals_without_next_step",
   companies_at_risk: "widgetDescriptions.companies_at_risk",
   sales_goal: "widgetDescriptions.sales_goal",
 };

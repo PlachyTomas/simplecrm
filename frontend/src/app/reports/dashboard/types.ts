@@ -29,6 +29,7 @@ export type WidgetType =
   | "sales_forecast"
   | "rep_activity"
   | "stale_deals"
+  | "deals_without_next_step"
   | "companies_at_risk"
   | "sales_goal";
 
@@ -53,6 +54,7 @@ export const WIDGET_LABEL_KEY: Record<WidgetType, ParseKeys<"reports">> = {
   sales_leaderboard: "widgetLabels.sales_leaderboard",
   rep_activity: "widgetLabels.rep_activity",
   stale_deals: "widgetLabels.stale_deals",
+  deals_without_next_step: "widgetLabels.deals_without_next_step",
   companies_at_risk: "widgetLabels.companies_at_risk",
   sales_goal: "widgetLabels.sales_goal",
 };

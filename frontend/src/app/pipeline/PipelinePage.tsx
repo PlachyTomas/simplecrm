@@ -777,6 +777,9 @@ export function PipelinePage() {
   const { t } = useTranslation("deals");
   usePageTitle("Pipeline");
   const [wonWindow, setWonWindow] = useState<WonWindow>(() => loadWonWindow());
+  // Activity-based selling filter: only open deals with no planned next
+  // event. Won columns are untouched — a finished deal has no next step.
+  const [noNextStepOnly, setNoNextStepOnly] = useState(false);
   const { data: board, isPending, isError } = usePipelineBoard(wonWindow);
   const { data: user } = useCurrentUser();
   const { data: usersPage } = useOrgUsers();
@@ -921,6 +924,13 @@ export function PipelinePage() {
           return false;
         }
         if (normalized && !deal.name.toLowerCase().includes(normalized)) return false;
+        if (
+          noNextStepOnly &&
+          stage.stage_type === "open" &&
+          (deal.next_event_at || deal.closed_at)
+        ) {
+          return false;
+        }
         return true;
       });
       const total = deals.reduce((acc, d) => {
@@ -934,7 +944,7 @@ export function PipelinePage() {
         total_value: String(total),
       };
     });
-  }, [board, ownerFilter, searchTerm, user?.id]);
+  }, [board, ownerFilter, noNextStepOnly, searchTerm, user?.id]);
 
   const activeDeal = useMemo(() => {
     if (!activeDealId || !board) return null;
@@ -1064,6 +1074,16 @@ export function PipelinePage() {
                 </option>
               ))}
             </select>
+          </label>
+          <label className="flex select-none items-center gap-2 self-end pb-2 text-xs font-medium text-text-secondary">
+            <input
+              type="checkbox"
+              data-testid={testIds.pipeline.noNextStepFilter}
+              checked={noNextStepOnly}
+              onChange={(e) => setNoNextStepOnly(e.target.checked)}
+              className="h-3.5 w-3.5 rounded border-border text-accent focus:ring-accent"
+            />
+            {t("pipelinePage.toolbar.noNextStepOnly")}
           </label>
           {canPickOwner ? (
             <label className="flex flex-col text-xs font-medium text-text-tertiary">

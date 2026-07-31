@@ -24,7 +24,8 @@
       "visibilityLabel": "Zobrazit",
       "visibilityAll": "Vše v mém rozsahu",
       "visibilityMine": "Pouze moje obchody",
-      "clearFilter": "Zrušit filtr"
+      "clearFilter": "Zrušit filtr",
+      "noNextStepOnly": "Jen bez dalšího kroku"
     },
     "emptyState": {
       "title": "Přidejte první obchod",

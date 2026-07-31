@@ -168,6 +168,15 @@ class StaleDealsResponse(_BaseResponse):
     threshold_days: int
 
 
+class DealsWithoutNextStepResponse(_BaseResponse):
+    """Rows share `StaleDealItem` — same columns, different predicate
+    (no upcoming event vs. no stage movement)."""
+
+    items: list[StaleDealItem]
+    # Uncapped count (items caps at 20) so the widget can say "…a dalších N".
+    total: int
+
+
 class CompanyAtRiskItem(_BaseResponse):
     company_id: uuid.UUID
     company_name: str
