@@ -77,7 +77,8 @@
     },
     "nextStep": {
       "label": "Další krok: {{date}}",
-      "missing": "Bez dalšího kroku"
+      "missing": "Bez dalšího kroku",
+      "schedule": "Naplánovat další krok"
     },
     "allPlanned": "Každý otevřený obchod má naplánovaný další krok. Skvělá práce!"
   },

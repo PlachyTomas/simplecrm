@@ -73,7 +73,8 @@
     },
     "nextStep": {
       "label": "Next step: {{date}}",
-      "missing": "No next step"
+      "missing": "No next step",
+      "schedule": "Schedule next step"
     },
     "allPlanned": "Every open deal has a next step planned. Great work!"
   },

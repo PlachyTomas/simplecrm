@@ -44,6 +44,10 @@ export function useEvents({
 
 function invalidateEvents(qc: ReturnType<typeof useQueryClient>) {
   void qc.invalidateQueries({ queryKey: ["events"] });
+  // Events ARE the "next step" — the board badges and the Obchody column
+  // both derive from them, so they must refresh with every event write.
+  void qc.invalidateQueries({ queryKey: ["pipeline", "default", "board"] });
+  void qc.invalidateQueries({ queryKey: ["deals"] });
 }
 
 export function useCreateEvent() {

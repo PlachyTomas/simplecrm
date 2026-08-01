@@ -26,6 +26,7 @@ import { useDealDialog } from "@/app/deals/useDealDialog";
 import { stageColor } from "@/app/pipeline/colors";
 import { DealCardPreview, useDealCardPreview } from "@/app/pipeline/DealCardPreview";
 import { DealQuickActionsModal } from "@/app/pipeline/DealQuickActionsModal";
+import { EventFormModal } from "@/app/events/EventFormModal";
 import { NextStepBadge } from "@/app/pipeline/NextStepBadge";
 import { RottingBadge } from "@/app/pipeline/RottingBadge";
 import {
@@ -191,6 +192,8 @@ interface DealCardProps {
   onOpen?: (id: string) => void;
   /** Open the quick-actions modal (e-mail / event / note) for this deal. */
   onQuickActions?: (deal: BoardDeal) => void;
+  /** Opens the event form — the actionable 'Bez dalšího kroku' badge. */
+  onScheduleNextStep?: (deal: BoardDeal) => void;
   winning?: boolean;
   losing?: boolean;
   paymentPending?: boolean;
@@ -206,6 +209,7 @@ function DealCard({
   onTogglePaid,
   onOpen,
   onQuickActions,
+  onScheduleNextStep,
   winning,
   losing,
   paymentPending,
@@ -302,7 +306,12 @@ function DealCard({
       {/* Open deals only — a closed deal (won column, or lost awaiting
           refresh) needs no next step. */}
       {!deal.closed_at ? (
-        <NextStepBadge dealId={deal.id} nextEventAt={deal.next_event_at} locale={locale} />
+        <NextStepBadge
+          dealId={deal.id}
+          nextEventAt={deal.next_event_at}
+          locale={locale}
+          onSchedule={onScheduleNextStep ? () => onScheduleNextStep(deal) : undefined}
+        />
       ) : null}
       {onTogglePaid ? (
         <label
@@ -395,6 +404,7 @@ function MobileDealCard({
   onMove,
   onOpen,
   onQuickActions,
+  onScheduleNextStep,
   winning,
   losing,
   paymentPending,
@@ -410,6 +420,8 @@ function MobileDealCard({
   onMove: (dealId: string, stageId: string) => void;
   onOpen?: (id: string) => void;
   onQuickActions?: (deal: BoardDeal) => void;
+  /** Opens the event form — the actionable 'Bez dalšího kroku' badge. */
+  onScheduleNextStep?: (deal: BoardDeal) => void;
   winning?: boolean;
   losing?: boolean;
   paymentPending?: boolean;
@@ -477,7 +489,12 @@ function MobileDealCard({
         threshold={rottingThreshold}
       />
       {stageType !== "won" && !deal.closed_at ? (
-        <NextStepBadge dealId={deal.id} nextEventAt={deal.next_event_at} locale={locale} />
+        <NextStepBadge
+          dealId={deal.id}
+          nextEventAt={deal.next_event_at}
+          locale={locale}
+          onSchedule={onScheduleNextStep ? () => onScheduleNextStep(deal) : undefined}
+        />
       ) : null}
       {stageType === "won" ? (
         <label className="mt-2 inline-flex select-none items-center gap-2 text-xs text-text-secondary">
@@ -546,6 +563,7 @@ interface MobileBoardProps {
   onMoveDeal: (dealId: string, stageId: string) => void;
   onOpenDeal: (id: string) => void;
   onQuickActions: (deal: BoardDeal) => void;
+  onScheduleDeal: (deal: BoardDeal) => void;
   winningDealId: string | null;
   losingDealId: string | null;
   payingDealId: string | null;
@@ -567,6 +585,7 @@ function MobileBoard({
   onMoveDeal,
   onOpenDeal,
   onQuickActions,
+  onScheduleDeal,
   winningDealId,
   losingDealId,
   payingDealId,
@@ -640,6 +659,7 @@ function MobileBoard({
                     onMove={onMoveDeal}
                     onOpen={onOpenDeal}
                     onQuickActions={onQuickActions}
+                    onScheduleNextStep={onScheduleDeal}
                     winning={winningDealId === deal.id}
                     losing={losingDealId === deal.id}
                     paymentPending={payingDealId === deal.id}
@@ -666,6 +686,7 @@ interface StageColumnProps {
   onTogglePayment: (deal: BoardDeal, next: boolean) => void;
   onOpenDeal: (id: string) => void;
   onQuickActions: (deal: BoardDeal) => void;
+  onScheduleDeal: (deal: BoardDeal) => void;
   winningDealId: string | null;
   losingDealId: string | null;
   payingDealId: string | null;
@@ -683,6 +704,7 @@ function StageColumn({
   onTogglePayment,
   onOpenDeal,
   onQuickActions,
+  onScheduleDeal,
   winningDealId,
   losingDealId,
   payingDealId,
@@ -758,6 +780,7 @@ function StageColumn({
               dragging={draggingId === deal.id}
               onOpen={onOpenDeal}
               onQuickActions={onQuickActions}
+              onScheduleNextStep={onScheduleDeal}
               onWin={stage.stage_type === "won" ? undefined : (anchor) => onWinDeal(deal, anchor)}
               onLose={stage.stage_type === "won" ? undefined : () => onLoseDeal(deal)}
               onTogglePaid={
@@ -809,6 +832,8 @@ export function PipelinePage() {
   const [payingDealId, setPayingDealId] = useState<string | null>(null);
   // The deal whose quick actions (e-mail / event / note) are open, if any.
   const [quickActionsDeal, setQuickActionsDeal] = useState<BoardDeal | null>(null);
+  // „Bez dalšího kroku“ badge → straight into the event form for that deal.
+  const [schedulingDeal, setSchedulingDeal] = useState<BoardDeal | null>(null);
 
   // Mouse: drag activates on a small movement (distance:6) so power users
   // get instant feedback. Touch: drag requires a 250ms long-press, so a
@@ -1212,6 +1237,7 @@ export function PipelinePage() {
                   onTogglePayment={handleTogglePayment}
                   onOpenDeal={openDeal}
                   onQuickActions={handleQuickActions}
+                  onScheduleDeal={setSchedulingDeal}
                   winningDealId={winningDealId}
                   losingDealId={losingDealTarget?.id ?? null}
                   payingDealId={payingDealId}
@@ -1240,6 +1266,7 @@ export function PipelinePage() {
             onMoveDeal={handleMoveDeal}
             onOpenDeal={openDeal}
             onQuickActions={handleQuickActions}
+            onScheduleDeal={setSchedulingDeal}
             winningDealId={winningDealId}
             losingDealId={losingDealTarget?.id ?? null}
             payingDealId={payingDealId}
@@ -1285,6 +1312,15 @@ export function PipelinePage() {
         dealName={losingDealTarget?.name}
         onConfirm={handleConfirmLose}
       />
+
+      {schedulingDeal ? (
+        <EventFormModal
+          open
+          onClose={() => setSchedulingDeal(null)}
+          dealId={schedulingDeal.id}
+          dealName={schedulingDeal.name}
+        />
+      ) : null}
 
       <DealQuickActionsModal
         deal={quickActionsDeal}

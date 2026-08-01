@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { DealDetailDialog } from "@/app/deals/DealDetailDialog";
+import { EventFormModal } from "@/app/events/EventFormModal";
 import { MarkLostDialog } from "@/app/deals/MarkLostDialog";
 import { useMarkAnyDealLost } from "@/app/deals/useDealActions";
 import { useDealDialog } from "@/app/deals/useDealDialog";
@@ -245,6 +246,8 @@ export function DealsListPage() {
   // Bulk selection (open deals only — closed ones can't be marked lost).
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkLoseOpen, setBulkLoseOpen] = useState(false);
+  // Warning cell in the "Další krok" column doubles as the fix — click → event form.
+  const [schedulingDeal, setSchedulingDeal] = useState<{ id: string; name: string } | null>(null);
   const [bulkPending, setBulkPending] = useState(false);
   const bulkLose = useMarkAnyDealLost();
   const toast = useToast();
@@ -589,9 +592,16 @@ export function DealsListPage() {
                               {dateFmt.format(new Date(deal.next_event_at))}
                             </span>
                           ) : (
-                            <span className="font-medium text-warning">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSchedulingDeal({ id: deal.id, name: deal.name });
+                              }}
+                              className="font-medium text-warning underline-offset-2 hover:underline"
+                            >
                               {t("dealsList.nextStep.missing")}
-                            </span>
+                            </button>
                           )}
                         </td>
                         <td className="hidden px-4 py-3 text-sm text-text-secondary lg:table-cell">
@@ -650,6 +660,14 @@ export function DealsListPage() {
       )}
 
       {dialogDealId ? <DealDetailDialog dealId={dialogDealId} onClose={closeDeal} /> : null}
+      {schedulingDeal ? (
+        <EventFormModal
+          open
+          onClose={() => setSchedulingDeal(null)}
+          dealId={schedulingDeal.id}
+          dealName={schedulingDeal.name}
+        />
+      ) : null}
       <MarkLostDialog
         open={bulkLoseOpen}
         onClose={() => setBulkLoseOpen(false)}

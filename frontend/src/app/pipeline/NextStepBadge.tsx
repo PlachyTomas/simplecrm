@@ -23,10 +23,14 @@ export function NextStepBadge({
   dealId,
   nextEventAt,
   locale,
+  onSchedule,
 }: {
   dealId: string;
   nextEventAt: string | null | undefined;
   locale: string;
+  /** Makes the warning state actionable — a warning without its remedy
+   *  is a dead end. Opens the event form for this deal. */
+  onSchedule?: () => void;
 }) {
   const { t } = useTranslation("deals");
   if (nextEventAt) {
@@ -44,6 +48,28 @@ export function NextStepBadge({
           }),
         })}
       </p>
+    );
+  }
+  if (onSchedule) {
+    return (
+      <button
+        type="button"
+        data-testid={testIds.pipeline.nextStep(dealId)}
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          onSchedule();
+        }}
+        // The card is draggable; without these the press starts a drag
+        // instead of a click (same guards as CardActionButton).
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        className="mt-1.5 inline-flex items-center gap-1 rounded text-xs font-medium text-warning underline-offset-2 hover:underline"
+      >
+        <CalendarOff size={12} strokeWidth={1.75} aria-hidden />
+        {t("pipelinePage.nextStep.schedule")}
+      </button>
     );
   }
   return (
