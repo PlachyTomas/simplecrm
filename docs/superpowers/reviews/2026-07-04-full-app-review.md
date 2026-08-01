@@ -277,6 +277,22 @@ handling, headers. CORS default is safe (`["http://localhost:5173"]`; prod
 must set `CORS_ORIGINS` or the frontend can't call the API — fails loud).
 `debug` is off, FastAPI hides tracebacks, so no stack-trace leakage.
 
+> **FIX STATUS:** The scheduler-duplication P1 below is **FIXED** in two
+> layers. (1) d906fe6: every sweep is single-flighted behind a Postgres
+> advisory lock (`_single_flight` in services/scheduler.py) — concurrent
+> workers/replicas skip the tick; regression test holds the lock and asserts
+> the sweep skips. (2) 2026-08-01 hardening: the advisory lock can't stop a
+> *back-to-back* run (second worker waking after the first finished, or the
+> next hourly tick while the ComGate webhook that advances
+> `next_renewal_charge_at` is still in flight/lost) — `run_recurring_charges`
+> now also carries a per-period idempotency guard (skip subs with a
+> pending/paid `renewal` Charge for the current `period_ends_at`; `failed`
+> doesn't block, so dunning backoff retries still fire). Bonus find while
+> testing: the sweep lazy-loaded `sub.plan` in async context →
+> `MissingGreenlet` killed the whole sweep on the FIRST due row (it had zero
+> tests; renewals could never have charged in prod) — fixed with
+> `selectinload`, 3 regression tests added in tests/services/test_scheduler.py.
+
 - [P1] backend/app/main.py:45-64 + docker-compose.prod.yml:55
   (`--workers 2`) — **Schedulers run in every worker process → duplicated
   billing side effects.** The lifespan starts all six background schedulers

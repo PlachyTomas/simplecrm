@@ -232,16 +232,42 @@ async def run_recurring_charges() -> int:
         # (next_renewal_charge_at IS NULL), skip those without a saved
         # card, skip non-monthly/annual plans (trial / enterprise / comp
         # don't auto-renew through this path).
+        # Per-period idempotency: `next_renewal_charge_at` only advances
+        # when the ComGate webhook lands, so between our request and that
+        # webhook the sub still *looks* due. The advisory lock stops
+        # concurrent sweeps, but not the next tick (or a second worker
+        # waking after this one finished) — without this guard either
+        # would charge the card again. A `failed` charge doesn't block:
+        # dunning retries re-enter via the backoff-bumped
+        # `next_renewal_charge_at`.
+        already_charged_this_period = (
+            select(Charge.id)
+            .where(
+                Charge.organization_id == Subscription.organization_id,
+                Charge.kind == "renewal",
+                Charge.status.in_(("pending", "paid")),
+                Charge.period_ends_at == Subscription.current_period_ends_at,
+            )
+            .exists()
+        )
+        from sqlalchemy.orm import selectinload
+
         due_stmt = (
             select(Subscription, PaymentMethod)
             .join(
                 PaymentMethod,
                 PaymentMethod.organization_id == Subscription.organization_id,
             )
+            # Eager-load the plan: the loop reads sub.plan.{code,currency,
+            # display_name_cs}, and a lazy load inside the async loop dies
+            # with MissingGreenlet — which killed the whole sweep on the
+            # first due row.
+            .options(selectinload(Subscription.plan))
             .where(Subscription.status == "active")
             .where(Subscription.is_comp.is_(False))
             .where(Subscription.next_renewal_charge_at.is_not(None))
             .where(Subscription.next_renewal_charge_at <= now)
+            .where(~already_charged_this_period)
         )
         due_rows = (await session.execute(due_stmt)).all()
 

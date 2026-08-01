@@ -1,4 +1,29 @@
 NOT A PROMPT its for me, the human, only
+
+=== Co dál (plán z 1. 8. 2026) ===
+
+1. SECURITY FIRST — červencová code review našla 1 P0 (invite account
+   takeover!) + 4 P1, fixy NIKDY nebyly aplikovány. Report:
+   docs/superpowers/reviews/2026-07-04-full-app-review.md.
+   → říct Claudovi "fix the P0 and P1s from the July review".
+2. SHIP — prod běží kód z 24. 7., všechno od té doby je mrtvé:
+   a) proklikat branch feature/next-step-discipline (lokálně běží)
+   b) merge do main + smazat feature branche
+   c) Coolify redeploy (migrace se pustí samy)
+   d) 2 smoke testy co můžu jen já: poslat 1 mail na svou BCC adresu
+      (? na stránce E-maily), reconnect Google Calendar v prod
+3. LEARN — všechna další rozhodnutí (EmailEngine $995/rok, email sync
+   Stage 1) čekají na důkaz používání: nasadit 1-3 pilotní týmy nebo
+   používat sám denně; případně nechat Clauda přidat lehké (EU-friendly)
+   počítadlo použití.
+4. PAK teprve features (pořadí dle doporučení): reports widgety
+   (goals/digest/funnel/pool), email Stage 1 (IMAP+Graph, až po 3),
+   landing SUTNAR + logo (čeká na můj pokyn), mobile polish.
+
+Drobnosti: weasyprint PYSEC-2026-3412 (hlídat advisory), vypnout
+playwright plugin, scripts/start-local.sh neumí host-mode Mac (chce
+Docker; Claude spouští uvicorn+vite ručně — viz CLAUDE.md Dev env).
+
 Setup real payment method.
 Setup real company email for invoices emailing.
 Implement feedback window into the app

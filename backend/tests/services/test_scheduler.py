@@ -11,8 +11,19 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.token_crypto import decrypt_token, encrypt_token
-from app.db.models import Company, GoogleCalendarConnection, Organization, User, UserRole
+from app.db.models import (
+    Charge,
+    Company,
+    GoogleCalendarConnection,
+    Organization,
+    PaymentMethod,
+    Plan,
+    Subscription,
+    User,
+    UserRole,
+)
 from app.db.session import AsyncSessionLocal
+from app.services.comgate import RecurringChargeResult
 from app.services.email import Email, build_freed_company_email
 from app.services.google_calendar import GoogleCalendarAuthError
 from app.services.scheduler import (
@@ -20,6 +31,7 @@ from app.services.scheduler import (
     _seconds_until_next_run,
     run_freeing_sweep,
     run_google_calendar_keepalive,
+    run_recurring_charges,
 )
 
 
@@ -265,6 +277,159 @@ async def test_keepalive_skips_already_broken_connections(
     await run_google_calendar_keepalive()
     # A connection already flagged broken is never touched by the keep-alive.
     assert rt not in fake.calls
+
+
+# --------------------------------------------------------------------------
+# Recurring-charge sweep — per-period idempotency (review R5 P1 hardening)
+# --------------------------------------------------------------------------
+
+
+class _FakeRecurringComgate:
+    """Accepts every recurring charge; records ref_ids. Distinct trans_ids
+    keep the unique `charges.comgate_trans_id` constraint happy."""
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    async def create_recurring_payment(
+        self, *, initial_trans_id: str, amount_minor: int, currency: str, ref_id: str, label: str
+    ) -> RecurringChargeResult:
+        self.calls.append(ref_id)
+        return RecurringChargeResult(trans_id=f"RC-{uuid.uuid4().hex[:10]}", accepted=True)
+
+
+async def _seed_due_subscription(
+    owned_cleanup: dict[str, list],
+) -> tuple[uuid.UUID, uuid.UUID]:
+    """Org with an active monthly sub that is due for renewal NOW and has a
+    saved card. Returns (org_id, subscription_id)."""
+    async with AsyncSessionLocal() as s:
+        org = Organization(name=f"Renew-{uuid.uuid4().hex[:6]}")
+        s.add(org)
+        await s.flush()
+        owned_cleanup["orgs"].append(org.id)
+
+        plan_id = (await s.execute(select(Plan.id).where(Plan.code == "monthly"))).scalar_one()
+        now = datetime.now(tz=UTC)
+        sub = Subscription(
+            organization_id=org.id,
+            plan_id=plan_id,
+            status="active",
+            started_at=now - timedelta(days=30),
+            current_period_starts_at=now - timedelta(days=30),
+            current_period_ends_at=now - timedelta(minutes=5),
+            seat_count=3,
+            contracted_seat_count=3,
+            next_renewal_charge_at=now - timedelta(minutes=5),
+        )
+        s.add(sub)
+        s.add(
+            PaymentMethod(
+                organization_id=org.id,
+                comgate_initial_trans_id=f"INIT-{uuid.uuid4().hex[:8]}",
+                card_brand="visa",
+                card_last4="4242",
+            )
+        )
+        await s.commit()
+        return org.id, sub.id
+
+
+async def _org_renewal_charges(org_id: uuid.UUID) -> list[Charge]:
+    async with AsyncSessionLocal() as s:
+        rows = (
+            await s.execute(
+                select(Charge)
+                .where(Charge.organization_id == org_id)
+                .where(Charge.kind == "renewal")
+                .order_by(Charge.created_at)
+            )
+        ).scalars()
+        return list(rows)
+
+
+async def test_recurring_sweep_charges_once_per_period(
+    owned_cleanup: dict[str, list], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression (review R5 P1): the webhook is what advances
+    `next_renewal_charge_at`, so until it lands the sub still looks due.
+    A second sweep (next worker's tick, back-to-back wake) must NOT
+    create a second ComGate charge for the same period."""
+    org_id, _sub_id = await _seed_due_subscription(owned_cleanup)
+    fake = _FakeRecurringComgate()
+    monkeypatch.setattr("app.services.scheduler.get_comgate_client", lambda: fake)
+
+    first = await run_recurring_charges()
+    second = await run_recurring_charges()
+
+    ours = await _org_renewal_charges(org_id)
+    assert len(ours) == 1, "exactly one pending renewal charge for the period"
+    assert ours[0].status == "pending"
+    assert first >= 1 and str(ours[0].id) in fake.calls
+    assert second == 0 or str(ours[0].id) == fake.calls[-1]
+    assert len([r for r in fake.calls if r == str(ours[0].id)]) == 1
+
+
+async def test_recurring_sweep_retries_after_failed_charge(
+    owned_cleanup: dict[str, list], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A `failed` charge must not block the dunning retry: once the
+    backoff-bumped `next_renewal_charge_at` elapses, the sweep charges
+    again for the same period."""
+    org_id, sub_id = await _seed_due_subscription(owned_cleanup)
+    fake = _FakeRecurringComgate()
+    monkeypatch.setattr("app.services.scheduler.get_comgate_client", lambda: fake)
+
+    await run_recurring_charges()
+
+    async with AsyncSessionLocal() as s:
+        charge = (
+            await s.execute(select(Charge).where(Charge.organization_id == org_id))
+        ).scalar_one()
+        charge.status = "failed"
+        sub = await s.get(Subscription, sub_id)
+        assert sub is not None
+        sub.next_renewal_charge_at = datetime.now(tz=UTC) - timedelta(minutes=1)
+        await s.commit()
+
+    retried = await run_recurring_charges()
+    assert retried >= 1
+    ours = await _org_renewal_charges(org_id)
+    assert len(ours) == 2
+    assert {c.status for c in ours} == {"failed", "pending"}
+
+
+async def test_recurring_sweep_charges_again_after_period_rollover(
+    owned_cleanup: dict[str, list], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """After the webhook rolls the period forward (apply_renewal_success),
+    the next due date must produce a fresh charge — the idempotency guard
+    is scoped to a single period, not forever."""
+    org_id, sub_id = await _seed_due_subscription(owned_cleanup)
+    fake = _FakeRecurringComgate()
+    monkeypatch.setattr("app.services.scheduler.get_comgate_client", lambda: fake)
+
+    await run_recurring_charges()
+
+    # Simulate the paid webhook: period rolls forward, then a month later
+    # the new period is due.
+    now = datetime.now(tz=UTC)
+    async with AsyncSessionLocal() as s:
+        charge = (
+            await s.execute(select(Charge).where(Charge.organization_id == org_id))
+        ).scalar_one()
+        charge.status = "paid"
+        sub = await s.get(Subscription, sub_id)
+        assert sub is not None
+        sub.current_period_starts_at = now - timedelta(days=30)
+        sub.current_period_ends_at = now - timedelta(minutes=1)
+        sub.next_renewal_charge_at = now - timedelta(minutes=1)
+        await s.commit()
+
+    attempts = await run_recurring_charges()
+    assert attempts >= 1
+    ours = await _org_renewal_charges(org_id)
+    assert len(ours) == 2
 
 
 async def test_freeing_sweep_skips_when_another_worker_holds_lock(
