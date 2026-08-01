@@ -2,10 +2,10 @@ NOT A PROMPT its for me, the human, only
 
 === Co dál (plán z 1. 8. 2026) ===
 
-1. SECURITY FIRST — červencová code review našla 1 P0 (invite account
-   takeover!) + 4 P1, fixy NIKDY nebyly aplikovány. Report:
-   docs/superpowers/reviews/2026-07-04-full-app-review.md.
-   → říct Claudovi "fix the P0 and P1s from the July review".
+1. SECURITY — HOTOVO 1. 8. Celá červencová review je fixnutá (P0 i
+   všechny P1). Poslední kus: renewal charge je teď idempotentní per
+   období + opraven crash sweepu (lazy-load) kvůli kterému by ComGate
+   obnovy nikdy nedoběhly. Detail: review doc, sekce R5.
 2. SHIP — prod běží kód z 24. 7., všechno od té doby je mrtvé:
    a) proklikat branch feature/next-step-discipline (lokálně běží)
    b) merge do main + smazat feature branche
