@@ -190,3 +190,38 @@ async def test_sweep_is_idempotent_on_rerun(cleanup_orgs: list[uuid.UUID]) -> No
             .all()
         )
         assert len(invoices) == 1, "second sweep created a duplicate draft"
+
+
+async def test_draft_projects_pending_plan_and_seats(cleanup_orgs: list[uuid.UUID]) -> None:
+    """Money-review R3 P2: the founder's review draft must be priced from
+    the QUEUED plan + seat count — the same next-period values the
+    recurring-charge sweep bills — or every queued change produces a draft
+    that disagrees with the eventual charge."""
+    async with AsyncSessionLocal() as s:
+        org = await _seed_org_with_active_sub(
+            s,
+            period_ends_at=datetime.now(tz=UTC) + timedelta(days=RENEWAL_DRAFT_LEAD_DAYS - 1),
+        )
+        cleanup_orgs.append(org.id)
+        annual = (await s.execute(select(Plan).where(Plan.code == "annual"))).scalar_one()
+        sub = (
+            await s.execute(select(Subscription).where(Subscription.organization_id == org.id))
+        ).scalar_one()
+        sub.pending_plan_id = annual.id
+        sub.pending_seat_count = 2
+        annual_price = annual.price_per_user_minor
+        await s.commit()
+        org_id = org.id
+
+    created = await run_renewal_draft_sweep()
+    assert created >= 1
+
+    async with AsyncSessionLocal() as s:
+        draft = (
+            await s.execute(
+                select(Invoice).where(Invoice.organization_id == org_id, Invoice.status == "draft")
+            )
+        ).scalar_one()
+    assert draft.total_minor == 2 * annual_price, (
+        "draft must project pending seats × pending plan price"
+    )

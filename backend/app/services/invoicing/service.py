@@ -269,7 +269,11 @@ class InvoiceService:
                 f"Subscription {subscription.id} points at missing organization"
             )
 
-        plan = await session.get(Plan, subscription.plan_id)
+        # Project from the NEXT period's plan + seats (queued pending_*
+        # values win) so the founder's review draft matches the amount the
+        # recurring-charge sweep will actually bill — see
+        # billing.next_period_plan_and_seats.
+        plan = await session.get(Plan, subscription.pending_plan_id or subscription.plan_id)
         if plan is None or plan.code not in {"monthly", "annual"}:
             raise InvoiceServiceError(f"Subscription {subscription.id} has no renewable plan")
 
@@ -277,8 +281,12 @@ class InvoiceService:
         # line-builder can reuse its logic.
         from app.services import billing as billing_module
 
-        seats = subscription.seat_count
-        unit_price = billing_module.get_effective_price_per_user_minor(subscription) or 0
+        seats = (
+            subscription.pending_seat_count
+            if subscription.pending_seat_count is not None
+            else subscription.seat_count
+        )
+        unit_price = billing_module.get_effective_price_for_plan(subscription, plan) or 0
         total = unit_price * seats
 
         synthetic = Charge(

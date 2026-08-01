@@ -102,6 +102,36 @@ def get_effective_price_per_user_minor(sub: Subscription) -> int | None:
     return sub.plan.price_per_user_minor
 
 
+def next_period_plan_and_seats(sub: Subscription) -> tuple[Plan, int]:
+    """The plan and seat count contracted for the NEXT billing period —
+    queued (`pending_*`) values win over current ones.
+
+    `apply_renewal_success` applies `pending_plan_id` and
+    `pending_seat_count` when it rolls the period forward, so anything
+    that PRICES the next period (the recurring-charge sweep, the
+    renewal-draft projection) must read the same pending-first values —
+    otherwise the money charged and the period delivered disagree
+    (money-review 2026-08-01, R2 P1s: a queued monthly→annual swap was
+    billed at the monthly price for a 12-month period, and a queued
+    downsize was billed at the old seat count for the period in which
+    the seats disappear).
+
+    Caller must have loaded `sub.plan` and `sub.pending_plan`.
+    """
+    plan = sub.pending_plan if sub.pending_plan_id is not None else sub.plan
+    seats = sub.pending_seat_count if sub.pending_seat_count is not None else sub.seat_count
+    return plan or sub.plan, seats
+
+
+def get_effective_price_for_plan(sub: Subscription, plan: Plan) -> int | None:
+    """Effective per-user price when billing `sub` against `plan`
+    (which may be the queued next-period plan). A negotiated override
+    survives plan swaps, matching `get_effective_price_per_user_minor`."""
+    if sub.override_price_per_user_minor is not None:
+        return sub.override_price_per_user_minor
+    return plan.price_per_user_minor
+
+
 def compute_savings(user_count: int) -> SavingsBreakdown:
     """Annual-vs-monthly savings for `user_count` seats.
 

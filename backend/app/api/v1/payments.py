@@ -141,20 +141,29 @@ async def initial_payment_init(
             status_code=status.HTTP_409_CONFLICT,
             detail={"code": "already_active"},
         )
-    already_paid = (
-        await session.execute(
-            select(Charge.id).where(
-                Charge.organization_id == org_id,
-                Charge.kind == "initial",
-                Charge.status == "paid",
+    # Scope the paid-before guard to non-lapsed states (money-review
+    # 2026-08-01 R2 P1): a canceled or past_due org that once paid is
+    # exactly the customer the product tells to "choose a plan again"
+    # (reactivate_self_serve's own error copy), and a fresh initial
+    # payment is also the ONLY way to register a replacement card. For
+    # those states a new checkout is legitimate; the guard's job is only
+    # to stop a double-activation while trialing/pending (webhook in
+    # flight or already landed).
+    if sub.status not in {"canceled", "past_due"}:
+        already_paid = (
+            await session.execute(
+                select(Charge.id).where(
+                    Charge.organization_id == org_id,
+                    Charge.kind == "initial",
+                    Charge.status == "paid",
+                )
             )
-        )
-    ).first()
-    if already_paid is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={"code": "already_active"},
-        )
+        ).first()
+        if already_paid is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"code": "already_active"},
+            )
     # Reject a second checkout while a recent one is still pending (review R2 P1
     # residual: two tabs both completing double-captures the card). A pending
     # charge older than the window is treated as abandoned so an abandoned
@@ -346,6 +355,28 @@ async def seat_change_init(
                     "No saved card on file. Choose a plan first to register a payment method."
                 ),
             },
+        )
+
+    # Reject a second upgrade while one is in flight (money-review
+    # 2026-08-01 R1 P1). Unlike the hosted-page initial flow,
+    # create_recurring_payment CAPTURES the card immediately — a
+    # double-click or network retry would charge the proration twice.
+    # A pending charge older than the window is a lost webhook; let the
+    # customer retry then.
+    recent_pending_upgrade = (
+        await session.execute(
+            select(Charge.id).where(
+                Charge.organization_id == org_id,
+                Charge.kind == "seat_upgrade",
+                Charge.status == "pending",
+                Charge.created_at >= datetime.now(tz=UTC) - timedelta(minutes=10),
+            )
+        )
+    ).first()
+    if recent_pending_upgrade is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "payment_in_progress"},
         )
 
     amount_minor = billing.compute_seat_proration(sub, new_seat_count=payload.seat_count)

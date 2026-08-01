@@ -1114,3 +1114,248 @@ async def test_demo_order_rate_limited_per_ip(client: AsyncClient) -> None:
     finally:
         app.dependency_overrides.pop(get_comgate_client, None)
         app.dependency_overrides.pop(get_demo_order_rate_limiter, None)
+
+
+# ---------------------------------------------------------------------------
+# Money-review 2026-08-01 regressions
+# ---------------------------------------------------------------------------
+
+
+async def test_initial_payment_init_allows_canceled_org_recheckout(
+    client: AsyncClient,
+    owned_payments_emails: list[str],
+) -> None:
+    """Money-review R2 P1: a canceled org that paid in the past must be able
+    to start a fresh checkout — reactivation after a lapse IS an initial
+    payment (it also re-registers the card). The old guard 409'd forever."""
+    async with AsyncSessionLocal() as session:
+        org = Organization(
+            name="Payments Test Org",
+            ico="12345678",
+            address_street="Testovací 1",
+            address_city="Praha",
+            address_zip="100 00",
+        )
+        session.add(org)
+        await session.flush()
+        email = f"recheck-{uuid.uuid4().hex[:8]}@ex.cz"
+        owned_payments_emails.append(email)
+        admin = User(email=email, name="A", role=UserRole.admin, organization_id=org.id)
+        session.add(admin)
+        monthly_plan_id = (
+            await session.execute(select(Plan.id).where(Plan.code == "monthly"))
+        ).scalar_one()
+        now = datetime.now(tz=UTC)
+        session.add(
+            Subscription(
+                organization_id=org.id,
+                plan_id=monthly_plan_id,
+                status="canceled",
+                started_at=now - timedelta(days=60),
+                current_period_starts_at=now - timedelta(days=60),
+                current_period_ends_at=now - timedelta(days=30),
+                canceled_at=now - timedelta(days=30),
+                seat_count=3,
+                contracted_seat_count=3,
+            )
+        )
+        # The historical paid initial charge that used to trip the guard.
+        session.add(
+            Charge(
+                organization_id=org.id,
+                kind="initial",
+                amount_minor=29_700,
+                currency="CZK",
+                status="paid",
+                seats=3,
+                comgate_trans_id=f"OLD-{uuid.uuid4().hex[:8]}",
+            )
+        )
+        await session.commit()
+        token = create_access_token(admin.id, org.id, UserRole.admin)
+
+    class _FakeCreateComgate:
+        async def create_initial_payment(self, **_kwargs: object) -> object:
+            from app.services.comgate import CreatedPayment
+
+            return CreatedPayment(
+                trans_id=f"NEW-{uuid.uuid4().hex[:8]}",
+                redirect_url="https://payments.comgate.cz/init",
+            )
+
+    app.dependency_overrides[get_comgate_client] = lambda: _FakeCreateComgate()
+    try:
+        resp = await client.post(
+            "/api/v1/payments/initial-payment-init",
+            json={"plan_code": "monthly"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    finally:
+        app.dependency_overrides.pop(get_comgate_client, None)
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["redirect_url"].startswith("https://payments.comgate.cz/")
+
+
+async def test_seat_change_init_rejects_second_pending_upgrade(
+    client: AsyncClient,
+    owned_payments_emails: list[str],
+) -> None:
+    """Money-review R1 P1: create_recurring_payment captures immediately, so
+    a double-click on the upgrade button must not double-charge — the second
+    request 409s while the first charge is pending."""
+    async with AsyncSessionLocal() as session:
+        org, admin, _sub = await _seed_active_org_with_card(session, owned_payments_emails)
+        token = create_access_token(admin.id, org.id, UserRole.admin)
+
+    class _FakeRecurring:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def create_recurring_payment(self, **_kwargs: object) -> object:
+            from app.services.comgate import RecurringChargeResult
+
+            self.calls += 1
+            return RecurringChargeResult(trans_id=f"UP-{uuid.uuid4().hex[:8]}", accepted=True)
+
+    fake = _FakeRecurring()
+    app.dependency_overrides[get_comgate_client] = lambda: fake
+    try:
+        first = await client.post(
+            "/api/v1/payments/seat-change-init",
+            json={"seat_count": 8},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        second = await client.post(
+            "/api/v1/payments/seat-change-init",
+            json={"seat_count": 8},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    finally:
+        app.dependency_overrides.pop(get_comgate_client, None)
+
+    assert first.status_code == 200, first.text
+    assert second.status_code == 409, second.text
+    assert second.json()["detail"]["code"] == "payment_in_progress"
+    assert fake.calls == 1, "the card must be charged exactly once"
+
+
+async def test_webhook_renewal_paid_rolls_period_and_applies_pending(
+    client: AsyncClient,
+    owned_payments_emails: list[str],
+    comgate_status: dict,
+) -> None:
+    """End-to-end renewal success (money-review R6 gap: apply_renewal_success
+    had zero coverage): a PAID renewal webhook rolls the period forward by
+    the QUEUED plan's length and applies the queued seat downsize."""
+    trans_id = f"RENEW-OK-{uuid.uuid4().hex[:8]}"
+    async with AsyncSessionLocal() as session:
+        org, _admin, sub = await _seed_active_org_with_card(session, owned_payments_emails)
+        annual_id = (
+            await session.execute(select(Plan.id).where(Plan.code == "annual"))
+        ).scalar_one()
+        sub.pending_plan_id = annual_id
+        sub.pending_seat_count = 2
+        charge = Charge(
+            organization_id=org.id,
+            kind="renewal",
+            amount_minor=2 * 99_600,
+            currency="CZK",
+            status="pending",
+            seats=2,
+            comgate_trans_id=trans_id,
+            period_starts_at=sub.current_period_starts_at,
+            period_ends_at=sub.current_period_ends_at,
+        )
+        session.add(charge)
+        await session.commit()
+        charge_id = charge.id
+        sub_id = sub.id
+
+    comgate_status[trans_id] = _paid(trans_id, charge_id)
+    resp = await client.post(
+        "/api/v1/payments/webhook",
+        content=f"transId={trans_id}",
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert resp.status_code == 204, resp.text
+
+    async with AsyncSessionLocal() as session:
+        refreshed = await session.get(Subscription, sub_id)
+        assert refreshed is not None
+        await session.refresh(refreshed, attribute_names=["plan"])
+        paid_charge = await session.get(Charge, charge_id)
+        assert paid_charge is not None
+
+    assert paid_charge.status == "paid"
+    assert refreshed.status == "active"
+    assert refreshed.plan.code == "annual", "queued plan swap applied at rollover"
+    assert refreshed.pending_plan_id is None
+    assert refreshed.seat_count == 2 and refreshed.contracted_seat_count == 2
+    assert refreshed.pending_seat_count is None
+    assert refreshed.dunning_attempts == 0
+    ends = refreshed.current_period_ends_at
+    assert ends is not None
+    days = (ends - datetime.now(tz=UTC)).days
+    assert 350 <= days <= 380, f"period must roll ~12 months, got {days} days"
+    assert refreshed.next_renewal_charge_at == ends
+
+
+async def test_webhook_renewal_failures_walk_dunning_ladder(
+    client: AsyncClient,
+    owned_payments_emails: list[str],
+    comgate_status: dict,
+) -> None:
+    """Money-review R6 gap: mark_charge_failed's renewal branch had zero
+    coverage. Three failed renewal webhooks: attempts 1-2 keep status
+    'active' with 1d/2d backoff; the 3rd flips past_due."""
+    async with AsyncSessionLocal() as session:
+        org, _admin, sub = await _seed_active_org_with_card(session, owned_payments_emails)
+        sub_id = sub.id
+        org_id = org.id
+
+    for attempt, expected_status, expected_backoff_days in (
+        (1, "active", 1),
+        (2, "active", 2),
+        (3, "past_due", 4),
+    ):
+        trans_id = f"RENEW-FAIL-{attempt}-{uuid.uuid4().hex[:8]}"
+        async with AsyncSessionLocal() as session:
+            charge = Charge(
+                organization_id=org_id,
+                kind="renewal",
+                amount_minor=5 * 9_900,
+                currency="CZK",
+                status="pending",
+                seats=5,
+                comgate_trans_id=trans_id,
+            )
+            session.add(charge)
+            await session.commit()
+            charge_id = charge.id
+
+        comgate_status[trans_id] = PaymentStatus(
+            trans_id=trans_id, found=True, status="CANCELLED", ref_id=str(charge_id)
+        )
+        resp = await client.post(
+            "/api/v1/payments/webhook",
+            content=f"transId={trans_id}",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        assert resp.status_code == 204, resp.text
+
+        async with AsyncSessionLocal() as session:
+            refreshed = await session.get(Subscription, sub_id)
+            assert refreshed is not None
+            failed_charge = await session.get(Charge, charge_id)
+            assert failed_charge is not None
+
+        assert failed_charge.status == "failed"
+        assert refreshed.dunning_attempts == attempt
+        assert refreshed.status == expected_status, f"attempt {attempt}"
+        assert refreshed.next_renewal_charge_at is not None
+        backoff = refreshed.next_renewal_charge_at - datetime.now(tz=UTC)
+        assert (
+            timedelta(days=expected_backoff_days, hours=-1)
+            < backoff
+            < timedelta(days=expected_backoff_days, hours=1)
+        ), f"attempt {attempt}: backoff {backoff}"

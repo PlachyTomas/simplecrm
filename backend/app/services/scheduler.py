@@ -258,11 +258,11 @@ async def run_recurring_charges() -> int:
                 PaymentMethod,
                 PaymentMethod.organization_id == Subscription.organization_id,
             )
-            # Eager-load the plan: the loop reads sub.plan.{code,currency,
-            # display_name_cs}, and a lazy load inside the async loop dies
-            # with MissingGreenlet — which killed the whole sweep on the
-            # first due row.
-            .options(selectinload(Subscription.plan))
+            # Eager-load both plans: the loop reads plan fields, and a lazy
+            # load inside the async loop dies with MissingGreenlet — which
+            # killed the whole sweep on the first due row. pending_plan is
+            # needed because the charge prices the NEXT period.
+            .options(selectinload(Subscription.plan), selectinload(Subscription.pending_plan))
             .where(Subscription.status == "active")
             .where(Subscription.is_comp.is_(False))
             .where(Subscription.next_renewal_charge_at.is_not(None))
@@ -275,25 +275,34 @@ async def run_recurring_charges() -> int:
             plan_code = sub.plan.code if sub.plan else None
             if plan_code not in {"monthly", "annual"}:
                 continue
-            price = billing.get_effective_price_per_user_minor(sub)
+            # Price the charge for the period it PAYS FOR: the webhook's
+            # apply_renewal_success applies pending_plan/pending_seat_count
+            # when it rolls the period forward, so the money must be
+            # computed from those same next-period values (money-review
+            # 2026-08-01 R2 P1s — a queued monthly→annual swap was billed
+            # at the monthly price for a 12-month period).
+            next_plan, next_seats = billing.next_period_plan_and_seats(sub)
+            if next_plan.code not in {"monthly", "annual"}:
+                continue
+            price = billing.get_effective_price_for_plan(sub, next_plan)
             if price is None or price <= 0:
                 continue
-            amount_minor = price * sub.seat_count
+            amount_minor = price * next_seats
 
             charge = Charge(
                 organization_id=sub.organization_id,
                 kind="renewal",
                 amount_minor=amount_minor,
-                currency=sub.plan.currency,
+                currency=next_plan.currency,
                 status="pending",
-                seats=sub.seat_count,
+                seats=next_seats,
                 period_starts_at=sub.current_period_starts_at,
                 period_ends_at=sub.current_period_ends_at,
             )
             session.add(charge)
             await session.flush()
 
-            label = f"SimpleCRM {sub.plan.display_name_cs} – obnovení"
+            label = f"SimpleCRM {next_plan.display_name_cs} – obnovení"
             try:
                 result = await comgate.create_recurring_payment(
                     initial_trans_id=payment_method.comgate_initial_trans_id,

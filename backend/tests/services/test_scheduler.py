@@ -399,6 +399,64 @@ async def test_recurring_sweep_retries_after_failed_charge(
     assert {c.status for c in ours} == {"failed", "pending"}
 
 
+async def test_recurring_sweep_bills_pending_seat_count(
+    owned_cleanup: dict[str, list], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Money-review R2 P1: a queued downsize (pending_seat_count) must be
+    billed at the DOWNSIZED count — the renewal charge pays for the very
+    period in which apply_renewal_success applies the queue."""
+    org_id, sub_id = await _seed_due_subscription(owned_cleanup)
+    async with AsyncSessionLocal() as s:
+        sub = await s.get(Subscription, sub_id)
+        assert sub is not None
+        sub.pending_seat_count = 1  # downsize 3 → 1 queued for the rollover
+        await s.commit()
+
+    fake = _FakeRecurringComgate()
+    monkeypatch.setattr("app.services.scheduler.get_comgate_client", lambda: fake)
+    await run_recurring_charges()
+
+    ours = await _org_renewal_charges(org_id)
+    assert len(ours) == 1
+    async with AsyncSessionLocal() as s:
+        price = (
+            await s.execute(select(Plan.price_per_user_minor).where(Plan.code == "monthly"))
+        ).scalar_one()
+    assert ours[0].amount_minor == price * 1, "renewal must bill the queued (downsized) count"
+    assert ours[0].seats == 1
+
+
+async def test_recurring_sweep_bills_pending_plan_swap(
+    owned_cleanup: dict[str, list], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Money-review R2 P1: a queued monthly→annual swap must be billed at
+    the ANNUAL price — apply_renewal_success will roll the period 12
+    months forward off this charge."""
+    org_id, sub_id = await _seed_due_subscription(owned_cleanup)
+    async with AsyncSessionLocal() as s:
+        annual_id = (await s.execute(select(Plan.id).where(Plan.code == "annual"))).scalar_one()
+        sub = await s.get(Subscription, sub_id)
+        assert sub is not None
+        sub.pending_plan_id = annual_id
+        await s.commit()
+
+    fake = _FakeRecurringComgate()
+    monkeypatch.setattr("app.services.scheduler.get_comgate_client", lambda: fake)
+    await run_recurring_charges()
+
+    ours = await _org_renewal_charges(org_id)
+    assert len(ours) == 1
+    async with AsyncSessionLocal() as s:
+        annual_price = (
+            await s.execute(select(Plan.price_per_user_minor).where(Plan.code == "annual"))
+        ).scalar_one()
+    assert ours[0].amount_minor == annual_price * 3, (
+        "renewal must bill the queued (annual) plan's price, "
+        "not the outgoing monthly price, because the webhook rolls the "
+        "period forward by the new plan's 12 months"
+    )
+
+
 async def test_recurring_sweep_charges_again_after_period_rollover(
     owned_cleanup: dict[str, list], monkeypatch: pytest.MonkeyPatch
 ) -> None:
