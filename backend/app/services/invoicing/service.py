@@ -41,7 +41,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.i18n import language_for_locale
@@ -78,8 +78,18 @@ class InvoiceIssuerNotConfiguredError(InvoiceServiceError):
 
 
 class CreditNoteExceedsOriginalError(InvoiceServiceError):
-    """|credit-note total| > original invoice total. Partial credits
-    are allowed; full negation is allowed; over-credit is not."""
+    """|credit-note total| (cumulative across all credit notes for the
+    original) > original invoice total. Partial credits are allowed;
+    full negation is allowed; over-credit is not."""
+
+
+class InvoiceNotPayableError(InvoiceServiceError):
+    """mark_paid called on an invoice that isn't in a payable state
+    (draft — never issued, no PDF; voided; or already paid)."""
+
+
+class InvoiceNotDraftError(InvoiceServiceError):
+    """confirm_draft called on an invoice that isn't a draft."""
 
 
 # --------------------------------------------------------------------------- #
@@ -153,6 +163,35 @@ class InvoiceService:
 
         subscription, plan = await self._load_sub_and_plan(session, charge.organization_id)
         lines = self._build_lines_for_charge(charge, plan, billing)
+
+        # A paid renewal charge makes any outstanding renewal DRAFT for
+        # this subscription obsolete — the real invoice supersedes the
+        # projection. Void it (keeping its consumed number, Fakturoid
+        # style) so drafts don't pile up as zombies in /admin/faktury
+        # (money-review R4 P2).
+        if charge.kind == "renewal" and subscription is not None:
+            stale_drafts = (
+                (
+                    await session.execute(
+                        select(Invoice).where(
+                            Invoice.subscription_id == subscription.id,
+                            Invoice.status == "draft",
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            for stale in stale_drafts:
+                stale.status = "voided"
+                session.add(
+                    InvoiceAuditLog(
+                        invoice_id=stale.id,
+                        event="voided",
+                        actor_user_id=by_admin_id,
+                        payload={"reason": f"superseded by charge {charge.id} auto-issuance"},
+                    )
+                )
 
         return await self._issue_internal(
             session,
@@ -244,21 +283,24 @@ class InvoiceService:
         counter — matches Fakturoid; voiding a draft just leaves a
         consumed number per §3 of INVOICES_TASK.md.
 
-        Idempotent on `(subscription_id, status='draft')` — re-running
-        the scheduler returns the existing row.
+        Idempotent on `(subscription_id, status='draft', period start)`
+        — re-running the scheduler within the same lead window returns
+        the existing row, while a leftover draft from a PREVIOUS period
+        no longer suppresses the new period's draft (money-review R4
+        P2; the period start is what we stamp as taxable_supply_date).
         """
-        existing = (
-            (
-                await session.execute(
-                    select(Invoice).where(
-                        Invoice.subscription_id == subscription.id,
-                        Invoice.status == "draft",
-                    )
-                )
-            )
-            .scalars()
-            .first()
+        projected_start = (
+            subscription.current_period_ends_at.date()
+            if subscription.current_period_ends_at is not None
+            else None
         )
+        existing_stmt = select(Invoice).where(
+            Invoice.subscription_id == subscription.id,
+            Invoice.status == "draft",
+        )
+        if projected_start is not None:
+            existing_stmt = existing_stmt.where(Invoice.taxable_supply_date == projected_start)
+        existing = (await session.execute(existing_stmt)).scalars().first()
         if existing is not None:
             return existing
 
@@ -330,7 +372,25 @@ class InvoiceService:
         paid_at: datetime | None,
         by_admin_id: uuid.UUID | None = None,
     ) -> Invoice:
-        invoice = await self._get_or_404(session, invoice_id)
+        # Row lock + in-service status guard (money-review R4 P2): the
+        # router's pre-check is read-then-act, so two concurrent
+        # mark-paid requests (double-click) could both pass it and
+        # extend the subscription twice for one payment. The FOR UPDATE
+        # serialises them; the loser re-reads a 'paid' row and errors.
+        invoice = (
+            await session.execute(select(Invoice).where(Invoice.id == invoice_id).with_for_update())
+        ).scalar_one_or_none()
+        if invoice is None:
+            raise InvoiceServiceError(f"Invoice {invoice_id} not found")
+        if invoice.status != "issued":
+            # 'draft' has no PDF and was never issued — paying it would
+            # jam it forever (the immutability trigger locks pdf_*
+            # columns once status leaves 'draft'). 'paid'/'voided' are
+            # double-click or misuse.
+            raise InvoiceNotPayableError(
+                f"Invoice {invoice.number} is {invoice.status!r}; only an "
+                "issued invoice can be marked paid"
+            )
         ts = paid_at or datetime.now(tz=UTC)
         invoice.status = "paid"
         invoice.paid_at = ts
@@ -429,11 +489,24 @@ class InvoiceService:
         materialised = [
             self._materialise_line(li, billing, position=i + 1) for i, li in enumerate(lines_in)
         ]
-        # Sum the materialised lines to a credit total in minor units.
+        # Cap the CUMULATIVE credit against the original (money-review R4
+        # P2): each note alone passing the check would let N sequential
+        # full negations manufacture an N× refund paper trail. Voided
+        # notes don't count.
+        prior_credit_minor = (
+            await session.execute(
+                select(func.coalesce(func.sum(Invoice.total_minor), 0)).where(
+                    Invoice.related_invoice_id == original.id,
+                    Invoice.kind == "credit_note",
+                    Invoice.status != "voided",
+                )
+            )
+        ).scalar_one()
         credit_total_minor = sum(line.line_total_minor for line in materialised)
-        if abs(credit_total_minor) > abs(original.total_minor):
+        if abs(credit_total_minor) + abs(prior_credit_minor) > abs(original.total_minor):
             raise CreditNoteExceedsOriginalError(
-                f"Credit total {credit_total_minor} exceeds original {original.total_minor}"
+                f"Credit total {credit_total_minor} plus prior credits "
+                f"{prior_credit_minor} exceeds original {original.total_minor}"
             )
 
         return await self._issue_internal(
@@ -463,7 +536,7 @@ class InvoiceService:
             missing.append("issuer_name")
         if not billing.issuer_address_street:
             missing.append("issuer_address_street")
-        if not billing.issuer_ico if hasattr(billing, "issuer_ico") else not billing.seller_ico:
+        if not billing.seller_ico:
             missing.append("seller_ico")
         if not billing.seller_iban:
             missing.append("seller_iban")
@@ -541,14 +614,22 @@ class InvoiceService:
     def _materialise_line(
         line_in: ManualLineIn, billing: BillingSettings, *, position: int
     ) -> InvoiceLine:
-        rate = (
-            line_in.vat_rate_percent
-            if line_in.vat_rate_percent is not None
-            else (billing.vat_rate_percent if billing.is_vat_payer else Decimal("0.00"))
+        # A neplátce never invoices VAT: clamp the rate so a stray
+        # per-line override can't stamp a rate onto a zero-VAT line.
+        if not billing.is_vat_payer:
+            rate = Decimal("0.00")
+        elif line_in.vat_rate_percent is not None:
+            rate = line_in.vat_rate_percent
+        else:
+            rate = billing.vat_rate_percent
+        # Money math in minor units only; banker's rounding to match
+        # _build_lines_for_charge (int() truncation biased toward zero).
+        subtotal = int((line_in.quantity * Decimal(line_in.unit_price_minor)).to_integral_value())
+        vat = (
+            int((Decimal(subtotal) * rate / Decimal(100)).to_integral_value())
+            if billing.is_vat_payer
+            else 0
         )
-        # Money math in minor units only.
-        subtotal = int(line_in.quantity * Decimal(line_in.unit_price_minor))
-        vat = int(Decimal(subtotal) * rate / Decimal(100)) if billing.is_vat_payer else 0
         return InvoiceLine(
             position=position,
             description=line_in.description,
@@ -631,7 +712,7 @@ class InvoiceService:
             issuer_name=billing.issuer_name,
             issuer_address=issuer_address,
             issuer_ico=billing.seller_ico or "",
-            issuer_dic=None,  # set later when seller becomes plátce
+            issuer_dic=billing.seller_dic,
             issuer_iban=billing.seller_iban or "",
             issuer_account_domestic=billing.issuer_account_domestic,
             issuer_register_text=billing.issuer_register_text,
@@ -673,9 +754,37 @@ class InvoiceService:
             await session.flush()
             return invoice
 
-        # Render + store BEFORE flipping status, because the immutability
-        # trigger blocks UPDATE of pdf_*/isdoc_* columns once status leaves
-        # 'draft'. The PDF language follows the customer org's locale.
+        session.add(
+            InvoiceAuditLog(
+                invoice_id=invoice.id,
+                event="allocated",
+                actor_user_id=by_admin_id,
+                payload={"number": number, "year": year},
+            )
+        )
+        await self._render_store_and_flip(
+            session,
+            invoice=invoice,
+            lines=lines,
+            organization=organization,
+            by_admin_id=by_admin_id,
+        )
+        return invoice
+
+    async def _render_store_and_flip(
+        self,
+        session: AsyncSession,
+        *,
+        invoice: Invoice,
+        lines: list[InvoiceLine],
+        organization: Organization,
+        by_admin_id: uuid.UUID | None,
+    ) -> None:
+        """Render PDF (+ ISDOC for CZK), store, write storage refs, flip
+        to 'issued', and audit. Shared by `_issue_internal` and
+        `confirm_draft`. MUST run while status is still 'draft' — the
+        immutability trigger blocks UPDATE of pdf_*/isdoc_* columns once
+        status leaves 'draft' (same UPDATE, same transaction is fine)."""
         pdf_bytes = self._renderer.render_pdf(
             invoice, lines, lang=language_for_locale(organization.locale)
         )
@@ -693,12 +802,12 @@ class InvoiceService:
             invoice.isdoc_sha256 = isdoc_result.sha256
         invoice.status = "issued"
 
-        # Audit trail. Three rows for the issuance flow; mark_paid /
-        # void / send add their own later.
         for event, payload in (
-            ("allocated", {"number": number, "year": year}),
             ("pdf_stored", {"sha256": pdf_result.sha256, "size_bytes": pdf_result.size_bytes}),
-            ("issued", {"total_minor": total, "currency": currency}),
+            (
+                "issued",
+                {"total_minor": invoice.total_minor, "currency": invoice.currency},
+            ),
         ):
             session.add(
                 InvoiceAuditLog(
@@ -709,6 +818,75 @@ class InvoiceService:
                 )
             )
         await session.flush()
+
+    async def confirm_draft(
+        self,
+        session: AsyncSession,
+        invoice_id: uuid.UUID,
+        *,
+        by_admin_id: uuid.UUID,
+    ) -> Invoice:
+        """Draft → issued: the missing exit of the renewal-draft pipeline
+        (money-review R4 P2). Re-validates + re-snapshots the ISSUER
+        identity from BillingSettings (drafts skip issuer validation, so
+        the draft-time snapshot may be empty), refreshes `issued_at` and
+        `due_at` to confirmation time, renders + stores the PDF/ISDOC,
+        and flips to 'issued'. Amounts stay as drafted — if the VAT
+        situation changed since, void the draft and issue manually."""
+        invoice = (
+            await session.execute(select(Invoice).where(Invoice.id == invoice_id).with_for_update())
+        ).scalar_one_or_none()
+        if invoice is None:
+            raise InvoiceServiceError(f"Invoice {invoice_id} not found")
+        if invoice.status != "draft":
+            raise InvoiceNotDraftError(
+                f"Invoice {invoice.number} is {invoice.status!r}; only drafts can be confirmed"
+            )
+
+        billing = await self._load_billing_settings(session)
+        self._require_issuer_configured(billing)
+        org = await session.get(Organization, invoice.organization_id)
+        if org is None:
+            raise InvoiceServiceError(
+                f"Invoice {invoice.id} points at missing organization {invoice.organization_id}"
+            )
+
+        now = datetime.now(tz=UTC)
+        invoice.issued_at = now
+        invoice.due_at = now.date() + timedelta(days=billing.default_payment_term_days)
+        invoice.issuer_name = billing.issuer_name
+        invoice.issuer_address = "\n".join(
+            part
+            for part in (
+                billing.issuer_address_street,
+                f"{billing.issuer_address_zip} {billing.issuer_address_city}".strip(),
+            )
+            if part
+        )
+        invoice.issuer_ico = billing.seller_ico or ""
+        invoice.issuer_dic = billing.seller_dic
+        invoice.issuer_iban = billing.seller_iban or ""
+        invoice.issuer_account_domestic = billing.issuer_account_domestic
+        invoice.issuer_register_text = billing.issuer_register_text
+
+        lines = (
+            (
+                await session.execute(
+                    select(InvoiceLine)
+                    .where(InvoiceLine.invoice_id == invoice.id)
+                    .order_by(InvoiceLine.position)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        await self._render_store_and_flip(
+            session,
+            invoice=invoice,
+            lines=list(lines),
+            organization=org,
+            by_admin_id=by_admin_id,
+        )
         return invoice
 
     @staticmethod
@@ -727,12 +905,14 @@ class InvoiceService:
 def _advance_period(end: datetime | None, plan_code: str) -> datetime | None:
     """Project the next billing period's end from the current one.
     Returns None if `end` is None (e.g. comp / fresh-trial subscriptions
-    without a period anchor)."""
+    without a period anchor). Calendar months via billing._add_months so
+    the draft's period label matches what apply_renewal_success will
+    actually set (365/30-day arithmetic drifted a few days)."""
     if end is None:
         return None
-    if plan_code == "annual":
-        return end + timedelta(days=365)
-    return end + timedelta(days=30)
+    from app.services.billing import _add_months
+
+    return _add_months(end, 12 if plan_code == "annual" else 1)
 
 
 def _user_word(n: int) -> str:

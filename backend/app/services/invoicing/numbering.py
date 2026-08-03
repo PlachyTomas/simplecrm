@@ -22,12 +22,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import InvoiceCounter
 
+# Postgres advisory locks accept bigint. The key is namespaced (money-
+# review R4 P3): the app has other advisory locks (scheduler sweeps use
+# 918 27xx), and a bare `year` (~2026) sat in the same easily-collided
+# small-int space. "INV" in hex, shifted past any plausible year.
+_NAMESPACE = 0x494E56 << 16  # "INV"
 
-# Postgres advisory locks accept bigint; year fits comfortably.
-# Defined as a function so callers can compose multiple keys later if
-# we ever need finer-grained locking (e.g. per-org).
+
 def _lock_key(year: int) -> int:
-    return year
+    return _NAMESPACE | year
 
 
 async def allocate_invoice_number(session: AsyncSession, year: int) -> tuple[int, str, str]:

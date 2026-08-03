@@ -208,7 +208,15 @@ async def initial_payment_init(
         seats=sub.seat_count,
     )
     session.add(charge)
-    await session.flush()
+    # Commit BEFORE talking to ComGate (money-review R1 P2), mirroring
+    # seat-change-init: once ComGate has a hosted page whose refId points
+    # at this charge, the row must exist no matter what happens to this
+    # request — otherwise a customer paying that page hits the webhook's
+    # "unknown charge → ACK and ignore" path and their money vanishes
+    # from our books. A ComGate failure below marks the charge failed
+    # (auditable), which the 15-min pending 409 guard ignores, so retry
+    # UX is unchanged.
+    await session.commit()
 
     label = f"SimpleCRM {plan.display_name_cs} – {org.name}".strip()
     try:
@@ -220,7 +228,9 @@ async def initial_payment_init(
             email=user.email,
         )
     except ComGateError as exc:
-        await session.rollback()
+        charge.status = "failed"
+        charge.failure_reason = str(exc)[:500]
+        await session.commit()
         logger.warning("ComGate create_initial_payment failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -623,6 +633,21 @@ async def comgate_webhook(
     # Avoid double-processing if a charge somehow reaches a terminal
     # state twice (belt-and-suspenders alongside the webhook_events row).
     if charge.status in {"paid", "failed", "refunded"}:
+        if cg_status in _TERMINAL_SUCCESS and charge.status != "paid":
+            # Money was captured against a checkout we had already
+            # written off (e.g. a superseded sibling initial checkout
+            # whose hosted page outlived the 15-min window). Nothing to
+            # apply — but the customer's card WAS charged, so shout for
+            # a manual refund via the ComGate portal.
+            logger.error(
+                "ComGate PAID for charge %s already in state %r "
+                "(org %s, transId %s) — customer money captured on a "
+                "dead checkout; refund manually in the ComGate portal.",
+                charge.id,
+                charge.status,
+                charge.organization_id,
+                trans_id,
+            )
         event.processed_at = datetime.now(tz=UTC)
         await session.commit()
         return
@@ -658,17 +683,55 @@ async def _dispatch_success(
     org_id = charge.organization_id
     charge.status = "paid"
     charge.paid_at = datetime.now(tz=UTC)
+    duplicate_initial = False
 
     if charge.kind == "initial":
         # The plan_code lives on the org's subscription — chosen by the
         # customer in `choose_plan` before the webhook lands.
         sub = await billing.get_current_subscription(session, org_id)
+        # Already active ⇒ another initial checkout won this race (two
+        # tabs, both eventually paid). apply_initial_payment_success
+        # below is an idempotent no-op in that case; record the charge
+        # as paid for the refund trail, skip the duplicate invoice, and
+        # shout for a manual refund.
+        duplicate_initial = sub.status == "active"
+        if duplicate_initial:
+            logger.error(
+                "Duplicate initial payment for org %s (charge %s, "
+                "transId %s) — subscription already active; refund "
+                "manually in the ComGate portal.",
+                org_id,
+                charge.id,
+                comgate_trans_id,
+            )
         await billing.apply_initial_payment_success(
             session,
             org_id=org_id,
             plan_code=sub.plan.code,
             comgate_trans_id=comgate_trans_id,
         )
+        # Retire sibling pending initial checkouts (money-review R1 P2):
+        # their hosted pages may outlive the 15-min guard window. Once
+        # one checkout wins, a late payment on a sibling must hit the
+        # terminal-charge guard (which logs for manual refund), never
+        # re-activate or re-invoice.
+        siblings = (
+            (
+                await session.execute(
+                    select(Charge).where(
+                        Charge.organization_id == org_id,
+                        Charge.kind == "initial",
+                        Charge.status == "pending",
+                        Charge.id != charge.id,
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for sibling in siblings:
+            sibling.status = "failed"
+            sibling.failure_reason = f"superseded by paid initial charge {charge.id}"
         # Persist the saved-card record so future recurring charges
         # can replay this transId. Card details (brand/last4/expiry)
         # come from ComGate's `payment` GET — fetched lazily later if
@@ -713,7 +776,7 @@ async def _dispatch_success(
     # webhook flow shouldn't even land here for a comp org because
     # ComGate isn't billing them, but we double-check defensively.
     sub_for_invoicing = await billing.get_current_subscription(session, org_id)
-    if not sub_for_invoicing.is_comp:
+    if not sub_for_invoicing.is_comp and not duplicate_initial:
         from app.services.invoicing.mailer import InvoiceMailer, InvoiceMailerError
         from app.services.invoicing.service import (
             InvoiceIssuerNotConfiguredError,

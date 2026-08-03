@@ -453,6 +453,20 @@ async def update_billing_settings(
 ) -> BillingSettings:
     settings = (await session.execute(select(BillingSettings))).scalar_one()
     updates = payload.model_dump(exclude_unset=True)
+    # A plátce DPH must carry a DIČ — every daňový doklad issued while
+    # `is_vat_payer=True` legally requires it (money-review R4 P2).
+    # Evaluate against the post-update state so either field can be set
+    # first, but the combination (payer, no DIČ) can never be saved.
+    effective_vat_payer = updates.get("is_vat_payer", settings.is_vat_payer)
+    effective_dic = updates.get("seller_dic", settings.seller_dic)
+    if effective_vat_payer and not effective_dic:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "dic_required_for_vat_payer",
+                "message": "Set seller_dic before enabling is_vat_payer.",
+            },
+        )
     for field, value in updates.items():
         setattr(settings, field, value)
     await session.commit()

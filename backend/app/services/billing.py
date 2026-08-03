@@ -334,7 +334,6 @@ async def choose_plan(
 
     sub.plan_id = plan.id
     sub.plan = plan
-    sub.plan = plan
     sub.status = "pending_activation"
     await session.flush()
 
@@ -539,6 +538,8 @@ async def extend_trial(
     org = await session.get(Organization, org_id)
     if org is None:
         raise BillingError(f"organization {org_id} not found")
+    if org.trial_ends_at is None:
+        raise BillingError(f"organization {org_id} has no trial anchor (trial_ends_at is NULL)")
     delta = timedelta(days=days)
     org.trial_ends_at = org.trial_ends_at + delta
     if sub.current_period_ends_at is not None:

@@ -9,6 +9,7 @@ import { CreditNoteModal } from "@/admin/CreditNoteModal";
 import {
   type AdminInvoiceAuditEntry,
   useAdminInvoiceDetail,
+  useConfirmDraftInvoice,
   useMarkInvoicePaid,
   useSendInvoice,
   useVoidInvoice,
@@ -40,6 +41,7 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
   const markPaid = useMarkInvoicePaid();
   const voidInvoice = useVoidInvoice();
   const sendInvoice = useSendInvoice();
+  const confirmDraft = useConfirmDraftInvoice();
 
   const [voidReason, setVoidReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
@@ -96,6 +98,17 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
       {
         onError: (err) =>
           setActionError(extractMessage(err) ?? t("invoiceDetail.actions.sendError")),
+      },
+    );
+  }
+
+  function handleConfirmDraft() {
+    setActionError(null);
+    confirmDraft.mutate(
+      { invoiceId, body: {} },
+      {
+        onError: (err) =>
+          setActionError(extractMessage(err) ?? t("invoiceDetail.actions.confirmError")),
       },
     );
   }
@@ -176,10 +189,20 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
           </p>
         ) : null}
         <div className="flex flex-wrap gap-2">
+          {inv.status === "draft" ? (
+            <button
+              type="button"
+              onClick={handleConfirmDraft}
+              disabled={confirmDraft.isPending}
+              className="rounded-md border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t("invoiceDetail.actions.confirmDraft")}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={handleMarkPaid}
-            disabled={inv.status === "paid" || inv.status === "voided" || markPaid.isPending}
+            disabled={inv.status !== "issued" || markPaid.isPending}
             className="hover:bg-bg-elevated rounded-md border border-border bg-surface px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
           >
             {t("invoiceDetail.actions.markPaid")}

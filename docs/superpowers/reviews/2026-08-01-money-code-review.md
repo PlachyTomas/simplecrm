@@ -21,13 +21,27 @@ comgate 90 %, scheduler 79 %, invoicing 91 % (per-file in tracker).
 > `payment_in_progress`) so a double-click can't double-capture.
 > R6's headline gap is closed too: `apply_renewal_success` and the
 > renewal dunning ladder now have end-to-end webhook tests.
-> **OPEN (triaged, not fixed):** the P2s — draft-pipeline-has-no-exit
-> (worst of them), mark_paid row-lock race, initial-init
-> commit-before-ComGate ordering, two-pending-initials >15 min, DIČ
-> field for VAT-payer mode, credit-note sum cap, S3 storage-path test
-> coverage — and all P3s. Fix order suggestion: draft pipeline →
-> mark_paid lock → commit-before-create trio, then the P3 cleanups
-> opportunistically.
+> **P2/P3 STATUS (2026-08-03, second fix pass):** all P2s FIXED +
+> tested (suite 1043 green): draft pipeline got its exit
+> (`confirm_draft` service + POST /admin/invoices/{id}/confirm +
+> "Vystavit fakturu" button in the drawer; mark-paid 409s drafts;
+> draft idempotency scoped by period; auto-issuance voids stale
+> drafts), mark_paid runs under FOR UPDATE with an issued-only guard,
+> initial-init commits the charge before calling ComGate and marks it
+> failed on gateway error, a winning initial checkout supersedes
+> sibling pendings (late PAID on a dead checkout → ERROR log for
+> manual refund, no re-activation/invoice), BillingSettings.seller_dic
+> added (migration 43bae7c54192; is_vat_payer without DIČ → 422; DIČ
+> snapshots onto invoices; admin UI field), credit-note cap is
+> cumulative across prior notes, S3 storage path covered by fake-boto3
+> tests. P3s fixed: seller_ico hasattr booby-trap, duplicated
+> `sub.plan` line, extend_trial None guard, namespaced numbering lock
+> key, _materialise_line rounding + non-payer rate clamp,
+> calendar-month draft periods. **Deliberately left:** void-on-paid
+> stays allowed (it is the only escape for a mis-marked invoice until
+> an unmark flow exists), unit×qty display rounding on multi-seat
+> lines, webhook rate limit (re-query is the gate), per-call httpx
+> client, mailer-inside-transaction, invoices.py org-member visibility.
 
 ## R0 — recon
 

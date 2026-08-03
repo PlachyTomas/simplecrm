@@ -1359,3 +1359,171 @@ async def test_webhook_renewal_failures_walk_dunning_ladder(
             < backoff
             < timedelta(days=expected_backoff_days, hours=1)
         ), f"attempt {attempt}: backoff {backoff}"
+
+
+async def test_initial_payment_init_persists_failed_charge_when_gateway_down(
+    client: AsyncClient,
+    owned_payments_emails: list[str],
+) -> None:
+    """Money-review R1 P2: the pending charge is committed BEFORE the
+    ComGate call, and a gateway failure marks it failed (auditable) —
+    never rolled back — so a hosted page can never point at a charge row
+    that doesn't exist. A failed charge must not trip the 15-min 409."""
+    async with AsyncSessionLocal() as session:
+        org = Organization(
+            name="Payments Test Org",
+            ico="12345678",
+            address_street="Testovací 1",
+            address_city="Praha",
+            address_zip="100 00",
+        )
+        session.add(org)
+        await session.flush()
+        email = f"gwdown-{uuid.uuid4().hex[:8]}@ex.cz"
+        owned_payments_emails.append(email)
+        admin = User(email=email, name="A", role=UserRole.admin, organization_id=org.id)
+        session.add(admin)
+        monthly_plan_id = (
+            await session.execute(select(Plan.id).where(Plan.code == "monthly"))
+        ).scalar_one()
+        now = datetime.now(tz=UTC)
+        session.add(
+            Subscription(
+                organization_id=org.id,
+                plan_id=monthly_plan_id,
+                status="trialing",
+                started_at=now,
+                current_period_starts_at=now,
+                current_period_ends_at=now + timedelta(days=10),
+                seat_count=2,
+                contracted_seat_count=2,
+            )
+        )
+        await session.commit()
+        token = create_access_token(admin.id, org.id, UserRole.admin)
+        org_id = org.id
+
+    from app.services.comgate import ComGateError
+
+    class _DownComgate:
+        async def create_initial_payment(self, **_kwargs: object) -> object:
+            raise ComGateError("upstream down")
+
+    app.dependency_overrides[get_comgate_client] = lambda: _DownComgate()
+    try:
+        resp = await client.post(
+            "/api/v1/payments/initial-payment-init",
+            json={"plan_code": "monthly"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    finally:
+        app.dependency_overrides.pop(get_comgate_client, None)
+    assert resp.status_code == 502, resp.text
+
+    async with AsyncSessionLocal() as session:
+        charge = (
+            await session.execute(
+                select(Charge).where(Charge.organization_id == org_id, Charge.kind == "initial")
+            )
+        ).scalar_one()
+    assert charge.status == "failed", "gateway failure must leave an auditable failed charge"
+    assert "upstream down" in (charge.failure_reason or "")
+
+
+async def test_paid_sibling_initial_checkout_is_superseded(
+    client: AsyncClient,
+    owned_payments_emails: list[str],
+    comgate_status: dict,
+) -> None:
+    """Money-review R1 P2: two pending initial checkouts, one wins → the
+    sibling is retired; a late PAID webhook for the retired sibling must
+    neither re-activate nor extend anything (it only logs for a manual
+    refund)."""
+    async with AsyncSessionLocal() as session:
+        org = Organization(
+            name="Payments Test Org",
+            ico="12345678",
+            address_street="Testovací 1",
+            address_city="Praha",
+            address_zip="100 00",
+        )
+        session.add(org)
+        await session.flush()
+        email = f"twin-{uuid.uuid4().hex[:8]}@ex.cz"
+        owned_payments_emails.append(email)
+        admin = User(email=email, name="A", role=UserRole.admin, organization_id=org.id)
+        session.add(admin)
+        monthly_plan_id = (
+            await session.execute(select(Plan.id).where(Plan.code == "monthly"))
+        ).scalar_one()
+        now = datetime.now(tz=UTC)
+        sub = Subscription(
+            organization_id=org.id,
+            plan_id=monthly_plan_id,
+            status="trialing",
+            started_at=now,
+            current_period_starts_at=now,
+            current_period_ends_at=now + timedelta(days=10),
+            seat_count=2,
+            contracted_seat_count=2,
+        )
+        session.add(sub)
+        winner_tid = f"TWIN-WIN-{uuid.uuid4().hex[:8]}"
+        loser_tid = f"TWIN-LOSE-{uuid.uuid4().hex[:8]}"
+        winner = Charge(
+            organization_id=org.id,
+            kind="initial",
+            amount_minor=19_800,
+            currency="CZK",
+            status="pending",
+            seats=2,
+            comgate_trans_id=winner_tid,
+        )
+        loser = Charge(
+            organization_id=org.id,
+            kind="initial",
+            amount_minor=19_800,
+            currency="CZK",
+            status="pending",
+            seats=2,
+            comgate_trans_id=loser_tid,
+        )
+        session.add_all([winner, loser])
+        await session.commit()
+        winner_id, loser_id, sub_id = winner.id, loser.id, sub.id
+
+    comgate_status[winner_tid] = _paid(winner_tid, winner_id)
+    resp = await client.post(
+        "/api/v1/payments/webhook",
+        content=f"transId={winner_tid}",
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert resp.status_code == 204, resp.text
+
+    async with AsyncSessionLocal() as session:
+        retired = await session.get(Charge, loser_id)
+        assert retired is not None
+        sub_after = await session.get(Subscription, sub_id)
+        assert sub_after is not None
+    assert retired.status == "failed"
+    assert "superseded" in (retired.failure_reason or "")
+    assert sub_after.status == "active"
+    first_period_end = sub_after.current_period_ends_at
+
+    # The customer pays the stale hosted page anyway → ACKed, logged for
+    # refund, and NOTHING moves.
+    comgate_status[loser_tid] = _paid(loser_tid, loser_id)
+    resp = await client.post(
+        "/api/v1/payments/webhook",
+        content=f"transId={loser_tid}",
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert resp.status_code == 204, resp.text
+
+    async with AsyncSessionLocal() as session:
+        retired = await session.get(Charge, loser_id)
+        assert retired is not None
+        sub_final = await session.get(Subscription, sub_id)
+        assert sub_final is not None
+    assert retired.status == "failed", "late payment on a superseded checkout stays failed"
+    assert sub_final.current_period_ends_at == first_period_end, "no double extension"

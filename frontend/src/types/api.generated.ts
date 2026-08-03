@@ -3203,6 +3203,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/invoices/{invoice_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Draft Invoice
+         * @description Draft → issued: renders + stores the PDF/ISDOC and flips status.
+         *     The exit the renewal-draft pipeline was missing (money-review R4
+         *     P2) — used by the founder after eyeballing a draft, typically for
+         *     the bank-transfer renewal cycle.
+         */
+        post: operations["confirm_draft_invoice_api_v1_admin_invoices__invoice_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/invoices/{invoice_id}/void": {
         parameters: {
             query?: never;
@@ -4037,6 +4060,8 @@ export interface components {
             seller_iban: string | null;
             /** Seller Ico */
             seller_ico: string | null;
+            /** Seller Dic */
+            seller_dic: string | null;
             /** Contact Email */
             contact_email: string;
             /** Issuer Name */
@@ -4090,6 +4115,8 @@ export interface components {
             seller_iban?: string | null;
             /** Seller Ico */
             seller_ico?: string | null;
+            /** Seller Dic */
+            seller_dic?: string | null;
             /** Contact Email */
             contact_email?: string | null;
             /** Issuer Name */
@@ -13916,6 +13943,37 @@ export interface operations {
                 "application/json": components["schemas"]["AdminMarkPaidIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminInvoiceDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_draft_invoice_api_v1_admin_invoices__invoice_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

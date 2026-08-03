@@ -269,12 +269,17 @@ async def test_put_billing_settings_super_admin(
     response = await client.put(
         "/api/v1/admin/billing-settings",
         headers={"Authorization": f"Bearer {token}"},
-        json={"is_vat_payer": True, "seller_iban": "CZ6508000000192000145399"},
+        json={
+            "is_vat_payer": True,
+            "seller_iban": "CZ6508000000192000145399",
+            "seller_dic": "CZ12345678",
+        },
     )
     assert response.status_code == 200
     body = response.json()
     assert body["is_vat_payer"] is True
     assert body["seller_iban"] == "CZ6508000000192000145399"
+    assert body["seller_dic"] == "CZ12345678"
 
 
 async def test_put_billing_settings_rejects_non_super_admin(
@@ -754,3 +759,53 @@ async def test_audit_logged_on_list_users_view_invoices_activity_subscription(
     assert SuperAdminAction.view_invoices in actions
     assert SuperAdminAction.view_activity in actions
     assert SuperAdminAction.view_subscription in actions
+
+
+async def test_put_billing_settings_requires_dic_for_vat_payer(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    """Money-review R4 P2: a plátce DPH without a DIČ would issue legally
+    invalid daňové doklady — the combination is rejected at save time,
+    whichever order the fields arrive in."""
+    _org, admin = await _seed_org_with_super_admin(db_session, owned_emails)
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Known baseline: non-payer, no DIČ.
+    reset = await client.put(
+        "/api/v1/admin/billing-settings",
+        headers=headers,
+        json={"is_vat_payer": False, "seller_dic": None},
+    )
+    assert reset.status_code == 200, reset.text
+
+    # Enabling the flag without a DIČ → 422.
+    response = await client.put(
+        "/api/v1/admin/billing-settings",
+        headers=headers,
+        json={"is_vat_payer": True},
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["detail"]["code"] == "dic_required_for_vat_payer"
+
+    # Clearing the DIČ while the flag is on is equally rejected.
+    ok = await client.put(
+        "/api/v1/admin/billing-settings",
+        headers=headers,
+        json={"is_vat_payer": True, "seller_dic": "CZ12345678"},
+    )
+    assert ok.status_code == 200, ok.text
+    strip = await client.put(
+        "/api/v1/admin/billing-settings",
+        headers=headers,
+        json={"seller_dic": None},
+    )
+    assert strip.status_code == 422, strip.text
+
+    # Leave the singleton in the default non-payer state for other tests.
+    cleanup = await client.put(
+        "/api/v1/admin/billing-settings",
+        headers=headers,
+        json={"is_vat_payer": False, "seller_dic": None},
+    )
+    assert cleanup.status_code == 200, cleanup.text

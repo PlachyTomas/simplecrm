@@ -32,6 +32,10 @@ class BillingSettings(Base):
 
     seller_iban: Mapped[str | None] = mapped_column(String(34))
     seller_ico: Mapped[str | None] = mapped_column(String(8))
+    # DIČ — legally REQUIRED on every daňový doklad once the seller is a
+    # plátce DPH. `is_vat_payer=True` without this set is rejected at the
+    # settings endpoint (money-review R4 P2).
+    seller_dic: Mapped[str | None] = mapped_column(String(14))
     contact_email: Mapped[str] = mapped_column(
         String(120), default="podpora@simplecrm.cz", nullable=False
     )

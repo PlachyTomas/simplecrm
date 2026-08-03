@@ -239,6 +239,7 @@
     },
     "actions": {
       "title": "Actions",
+      "confirmDraft": "Issue invoice",
       "markPaid": "Mark as paid",
       "send": "Send",
       "voidPlaceholder": "Void reason…",
@@ -247,7 +248,8 @@
       "markPaidError": "Marking as paid failed.",
       "sendError": "Sending failed.",
       "voidError": "Voiding failed.",
-      "voidReasonRequired": "A void reason is required (min. 3 characters)."
+      "voidReasonRequired": "A void reason is required (min. 3 characters).",
+      "confirmError": "Confirming the draft failed."
     },
     "auditLog": {
       "title": "Audit log",
@@ -325,6 +327,8 @@
     "vatRatePercent": "VAT rate (%)",
     "iban": "IBAN",
     "ico": "Company ID (IČO)",
+    "dic": "Tax ID (DIČ)",
+    "dicHint": "Required once VAT-payer mode is on — the setting won't save without it.",
     "contactEmail": "Contact email",
     "invoiceEmailSubjectTemplateEn": "Invoice email subject template (English)",
     "invoiceEmailSubjectTemplateEnHint": "Used for organizations whose language is English. Same variables as the Czech template above.",

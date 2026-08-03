@@ -53,6 +53,8 @@ from app.services.invoicing.mailer import InvoiceMailer, InvoiceMailerError
 from app.services.invoicing.service import (
     CreditNoteExceedsOriginalError,
     InvoiceIssuerNotConfiguredError,
+    InvoiceNotDraftError,
+    InvoiceNotPayableError,
     InvoiceService,
     InvoiceServiceError,
     ManualLineIn,
@@ -241,8 +243,60 @@ async def mark_paid(
             status_code=status.HTTP_409_CONFLICT,
             detail={"code": "invoice_voided", "message": "Cannot mark voided invoice as paid."},
         )
+    if invoice.status == "draft":
+        # A draft was never issued (no PDF); paying it would jam it —
+        # confirm it first (money-review R4 P2).
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "invoice_is_draft",
+                "message": "Confirm the draft first, then mark it paid.",
+            },
+        )
     svc = InvoiceService()
-    await svc.mark_paid(session, invoice_id, paid_at=body.paid_at, by_admin_id=admin.id)
+    try:
+        await svc.mark_paid(session, invoice_id, paid_at=body.paid_at, by_admin_id=admin.id)
+    except InvoiceNotPayableError as exc:
+        # In-service backstop under FOR UPDATE — catches the concurrent
+        # double-click the read-then-act guards above cannot.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "invoice_not_payable", "message": str(exc)},
+        ) from exc
+    await session.commit()
+    return await get_invoice_detail(invoice_id, _admin=admin, session=session)
+
+
+@router.post("/{invoice_id}/confirm", response_model=AdminInvoiceDetail)
+async def confirm_draft_invoice(
+    invoice_id: uuid.UUID,
+    admin: User = Depends(require_super_admin),
+    session: AsyncSession = Depends(get_db),
+) -> AdminInvoiceDetail:
+    """Draft → issued: renders + stores the PDF/ISDOC and flips status.
+    The exit the renewal-draft pipeline was missing (money-review R4
+    P2) — used by the founder after eyeballing a draft, typically for
+    the bank-transfer renewal cycle."""
+    svc = InvoiceService()
+    try:
+        await svc.confirm_draft(session, invoice_id, by_admin_id=admin.id)
+    except InvoiceNotDraftError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "invoice_not_draft", "message": str(exc)},
+        ) from exc
+    except InvoiceIssuerNotConfiguredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "issuer_not_configured", "message": str(exc)},
+        ) from exc
+    except InvoiceServiceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND
+            if "not found" in str(exc)
+            else status.HTTP_400_BAD_REQUEST,
+            detail={"code": "confirm_failed", "message": str(exc)},
+        ) from exc
     await session.commit()
     return await get_invoice_detail(invoice_id, _admin=admin, session=session)
 

@@ -193,6 +193,7 @@ class BillingSettingsOut(BaseModel):
     vat_rate_percent: Decimal
     seller_iban: str | None
     seller_ico: str | None
+    seller_dic: str | None
     contact_email: str
 
     # Issuer snapshot fields used by the tax-invoice pipeline. Empty strings
@@ -219,6 +220,7 @@ class BillingSettingsUpdate(BaseModel):
     vat_rate_percent: Decimal | None = Field(default=None, ge=Decimal("0"), le=Decimal("100"))
     seller_iban: str | None = Field(default=None, max_length=34)
     seller_ico: str | None = Field(default=None, max_length=8)
+    seller_dic: str | None = Field(default=None, max_length=14)
     contact_email: str | None = Field(default=None, max_length=120)
 
     # Issuer fields. All optional on PUT — partial updates are allowed

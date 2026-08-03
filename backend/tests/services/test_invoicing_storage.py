@@ -196,3 +196,113 @@ def test_store_pdf_is_idempotent_for_same_input(tmp_path: Path) -> None:
     a = storage.store_pdf(invoice, pdf)
     b = storage.store_pdf(invoice, pdf)
     assert a == b
+
+
+# --------------------------------------------------------------------------- #
+# S3 backend (money-review R6: the PRODUCTION path had zero coverage)
+# --------------------------------------------------------------------------- #
+
+
+class _FakeS3Client:
+    """In-memory stand-in for the boto3 S3 client — only the two calls
+    InvoiceStorage makes. Injected via the instance cache
+    (`storage._s3_client`), so no boto3 import happens at all."""
+
+    def __init__(self) -> None:
+        self.objects: dict[tuple[str, str], bytes] = {}
+        self.put_calls: list[dict] = []
+
+    def put_object(self, **kwargs: object) -> dict:
+        # boto3 passes CamelCase kwargs (Bucket/Key/Body/...); accept them
+        # verbatim via **kwargs so ruff's N803 stays quiet.
+        self.objects[(str(kwargs["Bucket"]), str(kwargs["Key"]))] = kwargs["Body"]  # type: ignore[assignment]
+        self.put_calls.append(
+            {
+                "Bucket": kwargs["Bucket"],
+                "Key": kwargs["Key"],
+                "ContentType": kwargs["ContentType"],
+                "Metadata": kwargs["Metadata"],
+            }
+        )
+        return {}
+
+    def get_object(self, **kwargs: object) -> dict:
+        body = self.objects[(str(kwargs["Bucket"]), str(kwargs["Key"]))]
+
+        class _Body:
+            def read(self, _b: bytes = body) -> bytes:
+                return _b
+
+        return {"Body": _Body()}
+
+
+def _s3_settings() -> Settings:
+    return Settings(
+        s3_endpoint_url="https://fsn1.your-objectstorage.example",
+        s3_bucket_invoices="simplecrm-invoices-test",
+        s3_access_key_id="k",
+        s3_secret_access_key="s",
+    )
+
+
+def _s3_storage() -> tuple[InvoiceStorage, _FakeS3Client]:
+    storage = InvoiceStorage(settings=_s3_settings())
+    fake = _FakeS3Client()
+    storage._s3_client = fake  # pre-empt the lazy boto3 init
+    return storage, fake
+
+
+def test_s3_store_puts_object_with_sha_metadata() -> None:
+    storage, fake = _s3_storage()
+    invoice = _make_invoice()
+    data = b"%PDF-1.7 s3 test"
+
+    result = storage.store_pdf(invoice, data)
+
+    assert result.sha256 == hashlib.sha256(data).hexdigest()
+    assert result.size_bytes == len(data)
+    assert len(fake.put_calls) == 1
+    call = fake.put_calls[0]
+    assert call["Bucket"] == "simplecrm-invoices-test"
+    assert call["Key"] == result.object_key
+    assert call["ContentType"] == "application/pdf"
+    assert call["Metadata"] == {"sha256": result.sha256}
+
+
+def test_s3_fetch_round_trips_and_verifies_hash() -> None:
+    storage, _fake = _s3_storage()
+    invoice = _make_invoice()
+    data = b"%PDF-1.7 round trip"
+
+    result = storage.store_pdf(invoice, data)
+    invoice.pdf_object_key = result.object_key
+    invoice.pdf_sha256 = result.sha256
+
+    assert storage.fetch_pdf(invoice) == data
+
+
+def test_s3_fetch_raises_integrity_error_on_tamper() -> None:
+    storage, fake = _s3_storage()
+    invoice = _make_invoice()
+    data = b"%PDF-1.7 original"
+
+    result = storage.store_pdf(invoice, data)
+    invoice.pdf_object_key = result.object_key
+    invoice.pdf_sha256 = result.sha256
+    # Tamper with the stored object behind the metadata's back.
+    fake.objects[("simplecrm-invoices-test", result.object_key)] = b"%PDF-1.7 EVIL"
+
+    with pytest.raises(IntegrityError) as excinfo:
+        storage.fetch_pdf(invoice)
+    assert excinfo.value.expected == result.sha256
+    assert excinfo.value.actual == hashlib.sha256(b"%PDF-1.7 EVIL").hexdigest()
+
+
+def test_s3_isdoc_uses_xml_content_type() -> None:
+    storage, fake = _s3_storage()
+    invoice = _make_invoice()
+
+    result = storage.store_isdoc(invoice, b"<Invoice/>")
+
+    assert result.object_key.endswith(".isdoc.xml")
+    assert fake.put_calls[0]["ContentType"] == "application/xml"

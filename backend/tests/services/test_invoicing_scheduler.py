@@ -225,3 +225,93 @@ async def test_draft_projects_pending_plan_and_seats(cleanup_orgs: list[uuid.UUI
     assert draft.total_minor == 2 * annual_price, (
         "draft must project pending seats × pending plan price"
     )
+
+
+async def test_stale_draft_does_not_suppress_next_period(
+    cleanup_orgs: list[uuid.UUID],
+) -> None:
+    """Money-review R4 P2: the draft idempotency key is scoped by period —
+    a leftover draft from the previous period must not swallow the new
+    period's draft."""
+    from app.services.invoicing.service import InvoiceService
+
+    async with AsyncSessionLocal() as s:
+        org = await _seed_org_with_active_sub(
+            s,
+            period_ends_at=datetime.now(tz=UTC) + timedelta(days=2),
+        )
+        cleanup_orgs.append(org.id)
+        sub = (
+            await s.execute(select(Subscription).where(Subscription.organization_id == org.id))
+        ).scalar_one()
+        stale = await InvoiceService().prepare_renewal_draft(s, subscription=sub)
+        # Simulate the period rolling forward while the old draft lingers.
+        sub.current_period_starts_at = datetime.now(tz=UTC)
+        sub.current_period_ends_at = datetime.now(tz=UTC) + timedelta(days=30)
+        await s.commit()
+        org_id, stale_id = org.id, stale.id
+
+    async with AsyncSessionLocal() as s:
+        sub = (
+            await s.execute(select(Subscription).where(Subscription.organization_id == org_id))
+        ).scalar_one()
+        fresh = await InvoiceService().prepare_renewal_draft(s, subscription=sub)
+        await s.commit()
+        fresh_id = fresh.id
+
+    assert fresh_id != stale_id, "new period must get its own draft"
+
+
+async def test_auto_issuance_voids_leftover_draft(cleanup_orgs: list[uuid.UUID]) -> None:
+    """Money-review R4 P2: when the ComGate webhook auto-issues the real
+    renewal invoice, the projection draft is voided instead of lingering
+    as a zombie in /admin/faktury."""
+    from app.db.models import Charge, InvoiceAuditLog
+    from app.services.invoicing.service import InvoiceService
+
+    async with AsyncSessionLocal() as s:
+        org = await _seed_org_with_active_sub(
+            s,
+            period_ends_at=datetime.now(tz=UTC) + timedelta(days=2),
+        )
+        cleanup_orgs.append(org.id)
+        sub = (
+            await s.execute(select(Subscription).where(Subscription.organization_id == org.id))
+        ).scalar_one()
+        draft = await InvoiceService().prepare_renewal_draft(s, subscription=sub)
+        charge = Charge(
+            organization_id=org.id,
+            kind="renewal",
+            amount_minor=3 * 9_900,
+            currency="CZK",
+            status="paid",
+            seats=3,
+            paid_at=datetime.now(tz=UTC),
+            period_starts_at=sub.current_period_starts_at,
+            period_ends_at=sub.current_period_ends_at,
+        )
+        s.add(charge)
+        await s.flush()
+        issued = await InvoiceService().issue_for_charge(s, charge)
+        await s.commit()
+        draft_id, issued_id = draft.id, issued.id
+
+    async with AsyncSessionLocal() as s:
+        stale = await s.get(Invoice, draft_id)
+        real = await s.get(Invoice, issued_id)
+        assert stale is not None and real is not None
+        void_events = (
+            (
+                await s.execute(
+                    select(InvoiceAuditLog).where(
+                        InvoiceAuditLog.invoice_id == draft_id,
+                        InvoiceAuditLog.event == "voided",
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert real.status == "issued"
+    assert stale.status == "voided", "auto-issuance must retire the projection draft"
+    assert len(void_events) == 1

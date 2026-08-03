@@ -240,6 +240,7 @@
     },
     "actions": {
       "title": "Akce",
+      "confirmDraft": "Vystavit fakturu",
       "markPaid": "Označit jako zaplaceno",
       "send": "Odeslat",
       "voidPlaceholder": "Důvod storna…",
@@ -248,7 +249,8 @@
       "markPaidError": "Označení selhalo.",
       "sendError": "Odeslání selhalo.",
       "voidError": "Storno selhalo.",
-      "voidReasonRequired": "Důvod storna je povinný (min. 3 znaky)."
+      "voidReasonRequired": "Důvod storna je povinný (min. 3 znaky).",
+      "confirmError": "Vystavení konceptu se nezdařilo."
     },
     "auditLog": {
       "title": "Audit log",
@@ -326,6 +328,8 @@
     "vatRatePercent": "Sazba DPH (%)",
     "iban": "IBAN",
     "ico": "IČO",
+    "dic": "DIČ",
+    "dicHint": "Povinné, jakmile zapnete plátce DPH — bez DIČ nelze plátcovství uložit.",
     "contactEmail": "Kontaktní e-mail",
     "invoiceEmailSubjectTemplateEn": "Šablona předmětu e-mailu s fakturou (anglicky)",
     "invoiceEmailSubjectTemplateEnHint": "Použije se pro organizace s anglickým jazykem. Stejné proměnné jako u české šablony výše.",

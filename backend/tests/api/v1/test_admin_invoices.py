@@ -29,6 +29,7 @@ from app.db.models import (
     BillingSettings,
     Charge,
     Invoice,
+    InvoiceAuditLog,
     Organization,
     Plan,
     Subscription,
@@ -402,3 +403,116 @@ async def test_manual_invoice_400_for_unknown_org(
     )
     assert response.status_code == 400
     assert response.json()["detail"]["code"] == "manual_issue_failed"
+
+
+# --------------------------------------------------------------------------- #
+# Money-review 2026-08-01 P2 fixes: draft pipeline + credit-note cap
+# --------------------------------------------------------------------------- #
+
+
+async def _seed_renewal_draft(session: AsyncSession, org: Organization) -> Invoice:
+    """Give the org's subscription a period anchor and build a renewal
+    draft the way the nightly sweep does."""
+    sub = (
+        await session.execute(select(Subscription).where(Subscription.organization_id == org.id))
+    ).scalar_one()
+    sub.current_period_starts_at = datetime.now(tz=UTC) - timedelta(days=25)
+    sub.current_period_ends_at = datetime.now(tz=UTC) + timedelta(days=5)
+    await session.flush()
+    draft = await InvoiceService().prepare_renewal_draft(session, subscription=sub)
+    await session.commit()
+    return draft
+
+
+async def test_confirm_draft_issues_pdf_and_flips_status(
+    client: AsyncClient, tmp_path: Path, cleanup_orgs: list[uuid.UUID]
+) -> None:
+    async with AsyncSessionLocal() as session:
+        await _configure_issuer(session)
+        org, admin, _invoice = await _seed(session, tmp_path=tmp_path)
+        cleanup_orgs.append(org.id)
+        draft = await _seed_renewal_draft(session, org)
+        draft_id = draft.id
+
+    resp = await client.post(f"/api/v1/admin/invoices/{draft_id}/confirm", headers=_auth(admin))
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["status"] == "issued"
+
+    # Idempotence guard: a second confirm 409s.
+    again = await client.post(f"/api/v1/admin/invoices/{draft_id}/confirm", headers=_auth(admin))
+    assert again.status_code == 409
+    assert again.json()["detail"]["code"] == "invoice_not_draft"
+
+    async with AsyncSessionLocal() as session:
+        confirmed = await session.get(Invoice, draft_id)
+        assert confirmed is not None
+        assert confirmed.status == "issued"
+        assert confirmed.pdf_object_key and confirmed.pdf_sha256
+        events = (
+            (
+                await session.execute(
+                    select(InvoiceAuditLog.event).where(InvoiceAuditLog.invoice_id == draft_id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert "pdf_stored" in events and "issued" in events
+
+
+async def test_mark_paid_rejects_draft(
+    client: AsyncClient, tmp_path: Path, cleanup_orgs: list[uuid.UUID]
+) -> None:
+    """A draft was never issued (no PDF); paying it directly would jam it
+    forever behind the immutability trigger."""
+    async with AsyncSessionLocal() as session:
+        await _configure_issuer(session)
+        org, admin, _invoice = await _seed(session, tmp_path=tmp_path)
+        cleanup_orgs.append(org.id)
+        draft = await _seed_renewal_draft(session, org)
+        draft_id = draft.id
+
+    resp = await client.post(
+        f"/api/v1/admin/invoices/{draft_id}/mark-paid",
+        json={"paid_at": None},
+        headers=_auth(admin),
+    )
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["detail"]["code"] == "invoice_is_draft"
+
+
+async def test_credit_note_cap_is_cumulative(
+    client: AsyncClient, tmp_path: Path, cleanup_orgs: list[uuid.UUID]
+) -> None:
+    """Two credit notes that individually fit but together exceed the
+    original must be rejected on the second issue."""
+    async with AsyncSessionLocal() as session:
+        await _configure_issuer(session)
+        org, admin, invoice = await _seed(session, tmp_path=tmp_path)
+        cleanup_orgs.append(org.id)
+        invoice_id, total = invoice.id, invoice.total_minor
+
+    line = {
+        "description": "Dobropis",
+        "quantity": "1",
+        "unit_price_minor": -total,
+        "unit_label": None,
+        "vat_rate_percent": None,
+    }
+    first = await client.post(
+        f"/api/v1/admin/invoices/{invoice_id}/credit-note",
+        json={"reason": "full refund", "lines": [line]},
+        headers=_auth(admin),
+    )
+    assert first.status_code == 200, first.text
+
+    second = await client.post(
+        f"/api/v1/admin/invoices/{invoice_id}/credit-note",
+        json={
+            "reason": "oops again",
+            "lines": [{**line, "unit_price_minor": -100}],
+        },
+        headers=_auth(admin),
+    )
+    assert second.status_code == 409, second.text
+    assert second.json()["detail"]["code"] == "credit_exceeds_original"

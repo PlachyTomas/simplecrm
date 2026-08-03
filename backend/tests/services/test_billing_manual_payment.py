@@ -291,3 +291,33 @@ async def test_mark_paid_leaves_subscription_alone_when_unlinked(
         )
         assert "paid" in events
         assert "subscription_extended" not in events
+
+
+async def test_mark_paid_double_call_is_rejected() -> None:
+    """Money-review R4 P2: the second of two mark_paid calls (double-click,
+    concurrent requests) must raise instead of extending the subscription
+    twice for one payment. The in-service FOR UPDATE + status guard is the
+    backstop behind the router's read-then-act pre-checks."""
+    from app.services.invoicing.service import InvoiceNotPayableError
+
+    org_id, sub_id, admin_id = await _seed_org_with_sub(plan_code="monthly", status="past_due")
+    invoice_id = await _issue_manual_linked(org_id, admin_id, link=True)
+
+    svc = InvoiceService()
+    async with AsyncSessionLocal() as s:
+        await svc.mark_paid(s, invoice_id, paid_at=None, by_admin_id=admin_id)
+        await s.commit()
+
+    async with AsyncSessionLocal() as s:
+        sub = await s.get(Subscription, sub_id)
+        assert sub is not None
+        first_ends = sub.current_period_ends_at
+
+    async with AsyncSessionLocal() as s:
+        with pytest.raises(InvoiceNotPayableError):
+            await svc.mark_paid(s, invoice_id, paid_at=None, by_admin_id=admin_id)
+
+    async with AsyncSessionLocal() as s:
+        sub = await s.get(Subscription, sub_id)
+        assert sub is not None
+        assert sub.current_period_ends_at == first_ends, "period must extend exactly once"

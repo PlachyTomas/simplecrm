@@ -11,6 +11,7 @@ interface FormState {
   vat_rate_percent: string;
   seller_iban: string;
   seller_ico: string;
+  seller_dic: string;
   contact_email: string;
   invoice_email_subject_template_en: string;
   invoice_email_body_template_en: string;
@@ -21,6 +22,7 @@ const DEFAULT_FORM: FormState = {
   vat_rate_percent: "21.00",
   seller_iban: "",
   seller_ico: "",
+  seller_dic: "",
   contact_email: "",
   invoice_email_subject_template_en: "",
   invoice_email_body_template_en: "",
@@ -43,6 +45,7 @@ export function AdminBillingSettings() {
       vat_rate_percent: String(data.vat_rate_percent),
       seller_iban: data.seller_iban ?? "",
       seller_ico: data.seller_ico ?? "",
+      seller_dic: data.seller_dic ?? "",
       contact_email: data.contact_email,
       invoice_email_subject_template_en: data.invoice_email_subject_template_en,
       invoice_email_body_template_en: data.invoice_email_body_template_en,
@@ -62,6 +65,11 @@ export function AdminBillingSettings() {
       // empty strings would be coerced to "" rather than null.
       if (form.seller_iban) body.seller_iban = form.seller_iban;
       if (form.seller_ico) body.seller_ico = form.seller_ico;
+      // DIČ is always sent (null when blank): the backend rejects a
+      // plátce without one, so the admin must be able to clear it and
+      // see that validation fire rather than silently keeping the old
+      // value.
+      body.seller_dic = form.seller_dic || null;
       return apiFetch("/api/v1/admin/billing-settings", {
         method: "PUT",
         token: accessToken,
@@ -158,6 +166,21 @@ export function AdminBillingSettings() {
           onChange={(e) => setForm((s) => ({ ...s, seller_ico: e.target.value }))}
           className="mt-1 block h-10 w-32 rounded-md border border-border bg-bg px-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-accent"
         />
+      </label>
+
+      <label className="block text-sm font-medium">
+        {t("billingSettings.dic")}
+        <input
+          type="text"
+          maxLength={14}
+          value={form.seller_dic}
+          onChange={(e) => setForm((s) => ({ ...s, seller_dic: e.target.value }))}
+          placeholder="CZ12345678"
+          className="mt-1 block h-10 w-48 rounded-md border border-border bg-bg px-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+        />
+        <span className="mt-1 block text-xs font-normal text-text-tertiary">
+          {t("billingSettings.dicHint")}
+        </span>
       </label>
 
       <label className="block text-sm font-medium">
