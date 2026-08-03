@@ -189,6 +189,12 @@ export function useConfirmDraftInvoice() {
   return useInvoiceAction<Record<string, never>>((id) => `/api/v1/admin/invoices/${id}/confirm`);
 }
 
+export function useUnmarkInvoicePaid() {
+  return useInvoiceAction<Record<string, never>>(
+    (id) => `/api/v1/admin/invoices/${id}/unmark-paid`,
+  );
+}
+
 export function useSendInvoice() {
   return useInvoiceAction<{ override_to: string | null }>(
     (id) => `/api/v1/admin/invoices/${id}/send`,

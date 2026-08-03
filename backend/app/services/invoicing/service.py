@@ -40,6 +40,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -90,6 +91,11 @@ class InvoiceNotPayableError(InvoiceServiceError):
 
 class InvoiceNotDraftError(InvoiceServiceError):
     """confirm_draft called on an invoice that isn't a draft."""
+
+
+class InvoiceNotVoidableError(InvoiceServiceError):
+    """void called on a paid (reverse via credit note / unmark first)
+    or already-voided invoice."""
 
 
 # --------------------------------------------------------------------------- #
@@ -412,6 +418,10 @@ class InvoiceService:
         if invoice.kind == "invoice" and invoice.subscription_id is not None:
             from app.services import billing as billing_module
 
+            sub_before = await billing_module.get_current_subscription(
+                session, invoice.organization_id
+            )
+            before = _sub_billing_snapshot(sub_before)
             updated = await billing_module.apply_manual_payment_success(
                 session,
                 org_id=invoice.organization_id,
@@ -419,6 +429,8 @@ class InvoiceService:
                 paid_at=ts,
             )
             if updated is not None:
+                # Full before/after snapshot so `unmark_paid` can revert a
+                # mis-click precisely — and refuse when anything moved since.
                 session.add(
                     InvoiceAuditLog(
                         invoice_id=invoice.id,
@@ -431,11 +443,91 @@ class InvoiceService:
                                 else None
                             ),
                             "status": updated.status,
+                            "before": before,
+                            "after": _sub_billing_snapshot(updated),
                         },
                     )
                 )
                 await session.flush()
         return invoice
+
+    async def unmark_paid(
+        self,
+        session: AsyncSession,
+        invoice_id: uuid.UUID,
+        *,
+        by_admin_id: uuid.UUID,
+    ) -> tuple[Invoice, bool]:
+        """Revert a mis-clicked mark-paid: paid → issued, document intact,
+        fully audit-logged. The escape hatch that lets void-on-paid be
+        forbidden (returns policy 2026-08-03: refunds only via dobropis).
+
+        If mark_paid extended the linked subscription, the extension is
+        rolled back — but ONLY when the subscription still exactly matches
+        the post-extension snapshot (nothing else moved since). Otherwise
+        the billing state is left alone and the audit row + return flag
+        say so, so the founder corrects the org manually.
+
+        Returns `(invoice, subscription_reverted)`.
+        """
+        invoice = (
+            await session.execute(select(Invoice).where(Invoice.id == invoice_id).with_for_update())
+        ).scalar_one_or_none()
+        if invoice is None:
+            raise InvoiceServiceError(f"Invoice {invoice_id} not found")
+        if invoice.status != "paid":
+            raise InvoiceNotPayableError(
+                f"Invoice {invoice.number} is {invoice.status!r}; only a paid "
+                "invoice can be unmarked"
+            )
+
+        previous_paid_at = invoice.paid_at
+        invoice.status = "issued"
+        invoice.paid_at = None
+
+        reverted = False
+        extension_recorded = False
+        if invoice.kind == "invoice" and invoice.subscription_id is not None:
+            extension_row = (
+                await session.execute(
+                    select(InvoiceAuditLog)
+                    .where(
+                        InvoiceAuditLog.invoice_id == invoice.id,
+                        InvoiceAuditLog.event == "subscription_extended",
+                    )
+                    .order_by(InvoiceAuditLog.created_at.desc())
+                    .limit(1)
+                )
+            ).scalar_one_or_none()
+            if extension_row is not None:
+                extension_recorded = True
+                from app.services import billing as billing_module
+
+                before = extension_row.payload.get("before")
+                after = extension_row.payload.get("after")
+                sub = await billing_module.get_current_subscription(
+                    session, invoice.organization_id
+                )
+                if before and after and _sub_billing_snapshot(sub) == after:
+                    _restore_sub_billing_snapshot(sub, before)
+                    reverted = True
+
+        session.add(
+            InvoiceAuditLog(
+                invoice_id=invoice.id,
+                event="unmarked_paid",
+                actor_user_id=by_admin_id,
+                payload={
+                    "previous_paid_at": (
+                        previous_paid_at.isoformat() if previous_paid_at else None
+                    ),
+                    "subscription_extension_recorded": extension_recorded,
+                    "subscription_reverted": reverted,
+                },
+            )
+        )
+        await session.flush()
+        return invoice, reverted
 
     async def void(
         self,
@@ -446,8 +538,23 @@ class InvoiceService:
         by_admin_id: uuid.UUID,
     ) -> Invoice:
         """Status → voided. The PDF stays in storage (immutability +
-        audit trail); customer-facing list shows it strikethrough."""
-        invoice = await self._get_or_404(session, invoice_id)
+        audit trail); customer-facing list shows it strikethrough.
+
+        Paid invoices cannot be voided (returns policy 2026-08-03: money
+        that moved is only ever reversed by a dobropis; a mis-clicked
+        mark-paid is undone via `unmark_paid` first). Voiding a voided
+        invoice is equally rejected."""
+        invoice = (
+            await session.execute(select(Invoice).where(Invoice.id == invoice_id).with_for_update())
+        ).scalar_one_or_none()
+        if invoice is None:
+            raise InvoiceServiceError(f"Invoice {invoice_id} not found")
+        if invoice.status in {"paid", "voided"}:
+            raise InvoiceNotVoidableError(
+                f"Invoice {invoice.number} is {invoice.status!r}; a paid invoice "
+                "is reversed by a credit note (or unmark it first if the payment "
+                "flag was a mistake)"
+            )
         invoice.status = "voided"
         session.add(
             InvoiceAuditLog(
@@ -900,6 +1007,42 @@ class InvoiceService:
 # --------------------------------------------------------------------------- #
 # Helpers
 # --------------------------------------------------------------------------- #
+
+
+_SUB_BILLING_SNAPSHOT_FIELDS = (
+    "status",
+    "current_period_starts_at",
+    "current_period_ends_at",
+    "next_renewal_charge_at",
+    "canceled_at",
+    "dunning_attempts",
+    "last_charge_failed_at",
+)
+
+
+def _sub_billing_snapshot(sub: Subscription) -> dict[str, str | int | None]:
+    """JSON-safe snapshot of every Subscription field that
+    `apply_manual_payment_success` mutates — recorded before/after in the
+    `subscription_extended` audit payload so `unmark_paid` can revert a
+    mis-click exactly (or detect drift and refuse)."""
+    out: dict[str, str | int | None] = {}
+    for field in _SUB_BILLING_SNAPSHOT_FIELDS:
+        value = getattr(sub, field)
+        out[field] = value.isoformat() if isinstance(value, datetime) else value
+    return out
+
+
+_SUB_DATETIME_FIELDS = frozenset(_SUB_BILLING_SNAPSHOT_FIELDS) - {"status", "dunning_attempts"}
+
+
+def _restore_sub_billing_snapshot(sub: Subscription, snapshot: dict[str, Any]) -> None:
+    """Inverse of `_sub_billing_snapshot`."""
+    for field in _SUB_BILLING_SNAPSHOT_FIELDS:
+        value = snapshot.get(field)
+        if field in _SUB_DATETIME_FIELDS and isinstance(value, str):
+            setattr(sub, field, datetime.fromisoformat(value))
+        else:
+            setattr(sub, field, value)
 
 
 def _advance_period(end: datetime | None, plan_code: str) -> datetime | None:

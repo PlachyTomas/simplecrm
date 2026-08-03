@@ -55,6 +55,7 @@ from app.services.invoicing.service import (
     InvoiceIssuerNotConfiguredError,
     InvoiceNotDraftError,
     InvoiceNotPayableError,
+    InvoiceNotVoidableError,
     InvoiceService,
     InvoiceServiceError,
     ManualLineIn,
@@ -314,8 +315,52 @@ async def void_invoice(
             status_code=status.HTTP_409_CONFLICT,
             detail={"code": "invoice_already_voided", "message": "Invoice is already voided."},
         )
+    if invoice.status == "paid":
+        # Returns policy (2026-08-03): money that moved is only reversed
+        # by a dobropis; a mis-clicked mark-paid is undone via unmark-paid.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "invoice_paid_use_credit_note",
+                "message": "A paid invoice cannot be voided — issue a credit note, "
+                "or unmark the payment first if it was flagged by mistake.",
+            },
+        )
     svc = InvoiceService()
-    await svc.void(session, invoice_id, reason=body.reason, by_admin_id=admin.id)
+    try:
+        await svc.void(session, invoice_id, reason=body.reason, by_admin_id=admin.id)
+    except InvoiceNotVoidableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "invoice_paid_use_credit_note", "message": str(exc)},
+        ) from exc
+    await session.commit()
+    return await get_invoice_detail(invoice_id, _admin=admin, session=session)
+
+
+@router.post("/{invoice_id}/unmark-paid", response_model=AdminInvoiceDetail)
+async def unmark_paid_invoice(
+    invoice_id: uuid.UUID,
+    admin: User = Depends(require_super_admin),
+    session: AsyncSession = Depends(get_db),
+) -> AdminInvoiceDetail:
+    """Revert a mis-clicked mark-paid (paid → issued). If mark-paid had
+    extended the linked subscription, the extension is rolled back when
+    the subscription hasn't moved since; otherwise the audit row flags
+    that the org needs a manual billing correction."""
+    svc = InvoiceService()
+    try:
+        await svc.unmark_paid(session, invoice_id, by_admin_id=admin.id)
+    except InvoiceNotPayableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "invoice_not_paid", "message": str(exc)},
+        ) from exc
+    except InvoiceServiceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "invoice_not_found", "message": str(exc)},
+        ) from exc
     await session.commit()
     return await get_invoice_detail(invoice_id, _admin=admin, session=session)
 

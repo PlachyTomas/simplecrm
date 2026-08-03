@@ -11,6 +11,7 @@ import {
   useAdminInvoiceDetail,
   useConfirmDraftInvoice,
   useMarkInvoicePaid,
+  useUnmarkInvoicePaid,
   useSendInvoice,
   useVoidInvoice,
 } from "@/admin/useAdminInvoices";
@@ -23,6 +24,8 @@ const EVENT_LABEL_KEY: Record<string, ParseKeys<"admin">> = {
   sent: "invoiceDetail.auditLog.event.sent",
   send_failed: "invoiceDetail.auditLog.event.send_failed",
   paid: "invoiceDetail.auditLog.event.paid",
+  unmarked_paid: "invoiceDetail.auditLog.event.unmarked_paid",
+  subscription_extended: "invoiceDetail.auditLog.event.subscription_extended",
   voided: "invoiceDetail.auditLog.event.voided",
   credit_note_created: "invoiceDetail.auditLog.event.credit_note_created",
   export_run: "invoiceDetail.auditLog.event.export_run",
@@ -42,6 +45,7 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
   const voidInvoice = useVoidInvoice();
   const sendInvoice = useSendInvoice();
   const confirmDraft = useConfirmDraftInvoice();
+  const unmarkPaid = useUnmarkInvoicePaid();
 
   const [voidReason, setVoidReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
@@ -98,6 +102,17 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
       {
         onError: (err) =>
           setActionError(extractMessage(err) ?? t("invoiceDetail.actions.sendError")),
+      },
+    );
+  }
+
+  function handleUnmarkPaid() {
+    setActionError(null);
+    unmarkPaid.mutate(
+      { invoiceId, body: {} },
+      {
+        onError: (err) =>
+          setActionError(extractMessage(err) ?? t("invoiceDetail.actions.unmarkPaidError")),
       },
     );
   }
@@ -199,14 +214,25 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
               {t("invoiceDetail.actions.confirmDraft")}
             </button>
           ) : null}
-          <button
-            type="button"
-            onClick={handleMarkPaid}
-            disabled={inv.status !== "issued" || markPaid.isPending}
-            className="hover:bg-bg-elevated rounded-md border border-border bg-surface px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {t("invoiceDetail.actions.markPaid")}
-          </button>
+          {inv.status === "paid" ? (
+            <button
+              type="button"
+              onClick={handleUnmarkPaid}
+              disabled={unmarkPaid.isPending}
+              className="hover:bg-bg-elevated rounded-md border border-border bg-surface px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t("invoiceDetail.actions.unmarkPaid")}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleMarkPaid}
+              disabled={inv.status !== "issued" || markPaid.isPending}
+              className="hover:bg-bg-elevated rounded-md border border-border bg-surface px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t("invoiceDetail.actions.markPaid")}
+            </button>
+          )}
           <button
             type="button"
             onClick={handleSend}
@@ -216,7 +242,10 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
             {t("invoiceDetail.actions.send")}
           </button>
         </div>
-        {inv.status !== "voided" ? (
+        {inv.status === "paid" ? (
+          <p className="text-xs text-text-tertiary">{t("invoiceDetail.actions.voidPaidHint")}</p>
+        ) : null}
+        {inv.status !== "voided" && inv.status !== "paid" ? (
           <div className="flex flex-wrap items-center gap-2">
             <input
               value={voidReason}

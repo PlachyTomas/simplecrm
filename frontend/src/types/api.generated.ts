@@ -3243,6 +3243,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/invoices/{invoice_id}/unmark-paid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unmark Paid Invoice
+         * @description Revert a mis-clicked mark-paid (paid → issued). If mark-paid had
+         *     extended the linked subscription, the extension is rolled back when
+         *     the subscription hasn't moved since; otherwise the audit row flags
+         *     that the org needs a manual billing correction.
+         */
+        post: operations["unmark_paid_invoice_api_v1_admin_invoices__invoice_id__unmark_paid_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/invoices/{invoice_id}/credit-note": {
         parameters: {
             query?: never;
@@ -14009,6 +14032,37 @@ export interface operations {
                 "application/json": components["schemas"]["AdminVoidIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminInvoiceDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unmark_paid_invoice_api_v1_admin_invoices__invoice_id__unmark_paid_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

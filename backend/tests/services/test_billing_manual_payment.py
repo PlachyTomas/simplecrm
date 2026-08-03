@@ -321,3 +321,79 @@ async def test_mark_paid_double_call_is_rejected() -> None:
         sub = await s.get(Subscription, sub_id)
         assert sub is not None
         assert sub.current_period_ends_at == first_ends, "period must extend exactly once"
+
+
+async def test_unmark_paid_reverts_invoice_and_subscription() -> None:
+    """Returns-policy hardening (2026-08-03): a mis-clicked mark-paid is
+    undone by unmark_paid — invoice back to issued, paid_at cleared, and
+    the subscription extension rolled back because nothing moved since."""
+    org_id, sub_id, admin_id = await _seed_org_with_sub(plan_code="monthly", status="past_due")
+    invoice_id = await _issue_manual_linked(org_id, admin_id, link=True)
+
+    async with AsyncSessionLocal() as s:
+        sub = await s.get(Subscription, sub_id)
+        assert sub is not None
+        ends_before = sub.current_period_ends_at
+        status_before = sub.status
+
+    svc = InvoiceService()
+    async with AsyncSessionLocal() as s:
+        await svc.mark_paid(s, invoice_id, paid_at=None, by_admin_id=admin_id)
+        await s.commit()
+
+    async with AsyncSessionLocal() as s:
+        invoice, reverted = await svc.unmark_paid(s, invoice_id, by_admin_id=admin_id)
+        await s.commit()
+        assert invoice.status == "issued"
+        assert invoice.paid_at is None
+        assert reverted is True
+
+    async with AsyncSessionLocal() as s:
+        sub = await s.get(Subscription, sub_id)
+        assert sub is not None
+        assert sub.status == status_before, "past_due state restored"
+        assert sub.current_period_ends_at == ends_before, "extension rolled back"
+
+
+async def test_unmark_paid_skips_subscription_revert_on_drift() -> None:
+    """If billing state moved after the mis-click (e.g. another payment
+    landed), unmark_paid must NOT blind-restore old values — it flips the
+    invoice only and reports subscription_reverted=False."""
+    org_id, sub_id, admin_id = await _seed_org_with_sub(plan_code="monthly", status="past_due")
+    invoice_id = await _issue_manual_linked(org_id, admin_id, link=True)
+
+    svc = InvoiceService()
+    async with AsyncSessionLocal() as s:
+        await svc.mark_paid(s, invoice_id, paid_at=None, by_admin_id=admin_id)
+        await s.commit()
+
+    # Simulate drift: the period end moves after the mark-paid.
+    async with AsyncSessionLocal() as s:
+        sub = await s.get(Subscription, sub_id)
+        assert sub is not None
+        sub.current_period_ends_at = datetime.now(tz=UTC) + timedelta(days=90)
+        drifted_ends = sub.current_period_ends_at
+        await s.commit()
+
+    async with AsyncSessionLocal() as s:
+        invoice, reverted = await svc.unmark_paid(s, invoice_id, by_admin_id=admin_id)
+        await s.commit()
+        assert invoice.status == "issued"
+        assert reverted is False
+
+    async with AsyncSessionLocal() as s:
+        sub = await s.get(Subscription, sub_id)
+        assert sub is not None
+        assert sub.current_period_ends_at == drifted_ends, "drifted state left untouched"
+
+
+async def test_unmark_paid_rejects_non_paid_invoice() -> None:
+    from app.services.invoicing.service import InvoiceNotPayableError
+
+    org_id, _sub_id, admin_id = await _seed_org_with_sub(plan_code="monthly", status="active")
+    invoice_id = await _issue_manual_linked(org_id, admin_id, link=True)
+
+    svc = InvoiceService()
+    async with AsyncSessionLocal() as s:
+        with pytest.raises(InvoiceNotPayableError):
+            await svc.unmark_paid(s, invoice_id, by_admin_id=admin_id)

@@ -246,10 +246,13 @@
       "void": "Void",
       "issueCreditNote": "Issue credit note",
       "markPaidError": "Marking as paid failed.",
+      "unmarkPaid": "Unmark paid",
+      "unmarkPaidError": "Unmarking the payment failed.",
       "sendError": "Sending failed.",
       "voidError": "Voiding failed.",
       "voidReasonRequired": "A void reason is required (min. 3 characters).",
-      "confirmError": "Confirming the draft failed."
+      "confirmError": "Confirming the draft failed.",
+      "voidPaidHint": "A paid invoice cannot be voided — issue a credit note, or unmark the payment first."
     },
     "auditLog": {
       "title": "Audit log",
@@ -265,7 +268,9 @@
         "voided": "Voided",
         "credit_note_created": "Credit note issued",
         "export_run": "Export run",
-        "integrity_failure": "Integrity failure"
+        "integrity_failure": "Integrity failure",
+        "unmarked_paid": "Payment flag reverted",
+        "subscription_extended": "Subscription extended"
       }
     }
   },

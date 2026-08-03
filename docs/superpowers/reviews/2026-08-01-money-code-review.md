@@ -37,11 +37,26 @@ comgate 90 %, scheduler 79 %, invoicing 91 % (per-file in tracker).
 > tests. P3s fixed: seller_ico hasattr booby-trap, duplicated
 > `sub.plan` line, extend_trial None guard, namespaced numbering lock
 > key, _materialise_line rounding + non-payer rate clamp,
-> calendar-month draft periods. **Deliberately left:** void-on-paid
-> stays allowed (it is the only escape for a mis-marked invoice until
-> an unmark flow exists), unit×qty display rounding on multi-seat
-> lines, webhook rate limit (re-query is the gate), per-call httpx
-> client, mailer-inside-transaction, invoices.py org-member visibility.
+> calendar-month draft periods. **Deliberately left:** unit×qty display
+> rounding on multi-seat lines, webhook rate limit (re-query is the
+> gate), per-call httpx client, mailer-inside-transaction, invoices.py
+> org-member visibility.
+>
+> **Returns-policy follow-up (2026-08-03, owner decision):** legal
+> check confirmed the published policy is already maximum-strict — VOP
+> čl. 1.3 makes the service B2B-only (no consumer withdrawal rights),
+> Reklamační podmínky čl. 5.1 gives no pro-rata refund on cancellation,
+> and the only promised refunds are non-waivable ones (justified defect
+> claims per čl. 3.3–4.1, required by the ComGate/card-scheme review;
+> duplicate payments = bezdůvodné obohacení § 2991 OZ), both settled by
+> dobropis (čl. 4.2). No policy text changes needed. Accordingly
+> **void-on-paid is now FORBIDDEN** (409 `invoice_paid_use_credit_note`
+> at router + service under FOR UPDATE) and the mis-click escape is the
+> new **unmark-paid** flow (POST /admin/invoices/{id}/unmark-paid +
+> drawer button): paid → issued with the subscription extension rolled
+> back iff the sub still matches the post-extension snapshot recorded
+> in the `subscription_extended` audit payload (before/after), else
+> flagged for manual correction. Suite 1048 green.
 
 ## R0 — recon
 

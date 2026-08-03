@@ -247,10 +247,13 @@
       "void": "Stornovat",
       "issueCreditNote": "Vystavit dobropis",
       "markPaidError": "Označení selhalo.",
+      "unmarkPaid": "Zrušit označení zaplaceno",
+      "unmarkPaidError": "Zrušení označení platby se nezdařilo.",
       "sendError": "Odeslání selhalo.",
       "voidError": "Storno selhalo.",
       "voidReasonRequired": "Důvod storna je povinný (min. 3 znaky).",
-      "confirmError": "Vystavení konceptu se nezdařilo."
+      "confirmError": "Vystavení konceptu se nezdařilo.",
+      "voidPaidHint": "Zaplacenou fakturu nelze stornovat — vystavte dobropis, nebo nejdřív zrušte označení platby."
     },
     "auditLog": {
       "title": "Audit log",
@@ -266,7 +269,9 @@
         "voided": "Stornováno",
         "credit_note_created": "Vystaven dobropis",
         "export_run": "Spuštěn export",
-        "integrity_failure": "Selhání integrity"
+        "integrity_failure": "Selhání integrity",
+        "unmarked_paid": "Označení zaplaceno zrušeno",
+        "subscription_extended": "Předplatné prodlouženo"
       }
     }
   },

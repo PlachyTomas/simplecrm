@@ -516,3 +516,76 @@ async def test_credit_note_cap_is_cumulative(
     )
     assert second.status_code == 409, second.text
     assert second.json()["detail"]["code"] == "credit_exceeds_original"
+
+
+async def test_void_rejects_paid_invoice(
+    client: AsyncClient, tmp_path: Path, cleanup_orgs: list[uuid.UUID]
+) -> None:
+    """Returns-policy hardening (2026-08-03): paid money is only reversed
+    by a dobropis — voiding a paid invoice 409s with a pointer at the
+    credit-note / unmark flows."""
+    async with AsyncSessionLocal() as session:
+        await _configure_issuer(session)
+        org, admin, invoice = await _seed(session, tmp_path=tmp_path)
+        cleanup_orgs.append(org.id)
+        invoice_id = invoice.id
+
+    paid = await client.post(
+        f"/api/v1/admin/invoices/{invoice_id}/mark-paid",
+        json={"paid_at": None},
+        headers=_auth(admin),
+    )
+    assert paid.status_code == 200, paid.text
+
+    resp = await client.post(
+        f"/api/v1/admin/invoices/{invoice_id}/void",
+        json={"reason": "changed my mind"},
+        headers=_auth(admin),
+    )
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["detail"]["code"] == "invoice_paid_use_credit_note"
+
+
+async def test_unmark_paid_endpoint_round_trip(
+    client: AsyncClient, tmp_path: Path, cleanup_orgs: list[uuid.UUID]
+) -> None:
+    """paid → unmark → issued → voidable again (the mis-click recovery
+    path that replaces void-on-paid)."""
+    async with AsyncSessionLocal() as session:
+        await _configure_issuer(session)
+        org, admin, invoice = await _seed(session, tmp_path=tmp_path)
+        cleanup_orgs.append(org.id)
+        invoice_id = invoice.id
+
+    paid = await client.post(
+        f"/api/v1/admin/invoices/{invoice_id}/mark-paid",
+        json={"paid_at": None},
+        headers=_auth(admin),
+    )
+    assert paid.status_code == 200, paid.text
+
+    unmark = await client.post(
+        f"/api/v1/admin/invoices/{invoice_id}/unmark-paid", headers=_auth(admin)
+    )
+    assert unmark.status_code == 200, unmark.text
+    body = unmark.json()
+    assert body["status"] == "issued"
+    assert body["paid_at"] is None
+    events = [e["event"] for e in body["audit_log"]]
+    assert "unmarked_paid" in events
+
+    # Unmark on a non-paid invoice → 409.
+    again = await client.post(
+        f"/api/v1/admin/invoices/{invoice_id}/unmark-paid", headers=_auth(admin)
+    )
+    assert again.status_code == 409
+    assert again.json()["detail"]["code"] == "invoice_not_paid"
+
+    # And now void works (issued → voided).
+    voided = await client.post(
+        f"/api/v1/admin/invoices/{invoice_id}/void",
+        json={"reason": "test cleanup"},
+        headers=_auth(admin),
+    )
+    assert voided.status_code == 200, voided.text
+    assert voided.json()["status"] == "voided"
