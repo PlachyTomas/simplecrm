@@ -30,10 +30,12 @@ from app.db.models import (
     Activity,
     AuthActionToken,
     BlockedCompany,
+    CalendarEvent,
     Company,
     Contact,
     Deal,
     EmailCampaign,
+    EmailTemplate,
     GoogleCalendarConnection,
     ImportRun,
     Invitation,
@@ -41,6 +43,8 @@ from app.db.models import (
     PaymentMethod,
     Pipeline,
     RefreshToken,
+    SalesGoal,
+    SentEmail,
     Team,
     User,
     UserSmtpSettings,
@@ -111,6 +115,19 @@ async def erase_organization(
         await session.execute(delete(RefreshToken).where(RefreshToken.user_id.in_(user_ids)))
         await session.execute(delete(AuthActionToken).where(AuthActionToken.user_id.in_(user_ids)))
 
+    # Captured + sent mail carries the richest personal data we hold (full
+    # bodies, subjects, every correspondent address). It must be deleted
+    # EXPLICITLY (security-delta review R4 P0): `sent_emails.deal_id` /
+    # `.company_id` are ON DELETE SET NULL, so removing deals and companies
+    # only detaches these rows, and the `organization_id` CASCADE never fires
+    # because step 4 anonymizes the organizations row instead of deleting it.
+    await session.execute(delete(SentEmail).where(SentEmail.organization_id == org_id))
+    # Calendar events would go transitively (deal_id is ON DELETE CASCADE and
+    # NOT NULL), but deleting them here keeps erasure independent of another
+    # table's cascade rules.
+    await session.execute(delete(CalendarEvent).where(CalendarEvent.organization_id == org_id))
+    await session.execute(delete(EmailTemplate).where(EmailTemplate.organization_id == org_id))
+    await session.execute(delete(SalesGoal).where(SalesGoal.organization_id == org_id))
     await session.execute(delete(Activity).where(Activity.organization_id == org_id))
     await session.execute(delete(Deal).where(Deal.organization_id == org_id))
     await session.execute(delete(Contact).where(Contact.organization_id == org_id))
@@ -175,6 +192,11 @@ async def erase_organization(
         u.email_verified = False
         u.email_verified_at = None
         u.last_login_at = None
+        # The magic Smart-BCC address is a bearer write-credential: without
+        # clearing it, mail BCC'd to a pre-erasure address would keep filing
+        # fresh personal data into the org we just erased (security-delta
+        # review R1 P1).
+        u.inbound_token = None
 
     # 4. Anonymize the org row itself. Keep id + created_at so invoices
     #    stay linkable for the accounting window; everything else is wiped.

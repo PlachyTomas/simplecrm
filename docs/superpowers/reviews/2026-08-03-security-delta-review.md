@@ -7,6 +7,29 @@ Tracker: `docs/superpowers/plans/2026-08-03-security-delta-review-plan.md`.
 
 Baseline: main @ 74feea2, 1048 backend tests green.
 
+> **FIX STATUS (same day):** the P0, P1 and P2 are **FIXED** with
+> regression tests (suite 1051 green).
+> - Erasure now explicitly deletes `SentEmail`, `CalendarEvent`,
+>   `EmailTemplate`, `SalesGoal` and NULLs `inbound_token`. The guard is
+>   a **registry walk**: `test_erasure_leaves_no_org_scoped_rows_anywhere`
+>   enumerates every mapped table carrying `organization_id` and asserts
+>   zero rows survive, so the next new table cannot drift silently.
+>   Verified to have teeth — with the fix reverted it reports
+>   `{'calendar_events': 1, 'email_templates': 1, 'sales_goals': 1,
+>   'sent_emails': 1}`.
+> - `_find_user_by_token` now requires `is_active`, so deactivation /
+>   downsize / erasure revoke the Smart-BCC write capability; the
+>   response stays the indistinguishable `no_token`.
+> - `can_write_row` checks the tenant boundary before the role branches.
+>   Note: the existing test `test_admin_can_write_anything` **asserted
+>   the vulnerable behaviour** (a random UUID passing for an admin) — it
+>   has been rewritten to the correct contract plus a cross-org case.
+> - `_assert_owner_cap` counts within the owner's own org.
+> **Still open (triaged):** the P3s — inbound rate limit, tracking-count
+> inflation, `token_crypto` HMAC domain separation (needs a ciphertext
+> migration), `TokenDecryptError` on the two SMTP send paths, and the
+> absent Art. 20 export.
+
 ## R0 — recon
 
 Surface delta enumerated in the tracker. Highest-risk items by design:
@@ -116,9 +139,15 @@ behind the schema — every table added since it was written survives it.
   - `email_templates` — survives (org FK only).
   - `sales_goals` — survives (org CASCADE dead; `user_id` CASCADE also
     dead because users are anonymized, not deleted).
-  - `calendar_events` — **correctly removed**, but only transitively:
-    `deal_id` is `ondelete="CASCADE"` and `deal_id` is NOT NULL, so
-    deleting deals takes them. Verified, not assumed.
+  - `calendar_events` — **survives too.** (Corrected while writing the
+    regression test: an earlier draft of this finding claimed these were
+    removed transitively because `deal_id` is `ondelete="CASCADE"` and
+    NOT NULL. The FK is CASCADE, but `deal_id` is **nullable** in both
+    the model and the live DB — models/calendar_event.py:55-60 documents
+    exactly why ("not every meeting starts life attached to a deal").
+    So every deal-less event — title, description, location, times —
+    outlives the erasure. `.claude/skills/navigating-simplecrm-code`
+    also states NOT NULL and is stale on this point.)
   Failure scenario: customer exercises Art. 17, UI reports success, and
   their entire mail corpus stays queryable in the database; a later
   subject-access request or audit finds it. Compounded by the R1 P1

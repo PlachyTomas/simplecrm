@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
@@ -14,13 +15,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import create_access_token
 from app.core.token_crypto import encrypt_token
 from app.db.models import (
+    CalendarEvent,
     Charge,
     Company,
     Contact,
     EmailCampaign,
+    EmailDirection,
+    EmailTemplate,
     GoogleCalendarConnection,
     Invoice,
     Organization,
+    SalesGoal,
+    SalesGoalMetric,
+    SentEmail,
+    SentEmailStatus,
     User,
     UserRole,
     UserSmtpSettings,
@@ -307,3 +315,139 @@ async def test_erase_rejects_non_admin(
             await s.execute(select(Organization).where(Organization.id == org.id))
         ).scalar_one()
         assert refreshed.deleted_at is None
+
+
+# --------------------------------------------------------------------------- #
+# Drift guard (security-delta review R4 P0)
+# --------------------------------------------------------------------------- #
+
+# Tables that legitimately keep rows pointing at an erased organization.
+# Everything else must be empty afterwards — see the module docstring of
+# `services/org_erasure` for why the accounting trail survives.
+_ERASURE_RETAINED_TABLES = frozenset(
+    {
+        "organizations",  # anonymized in place so invoices stay linkable
+        "users",  # anonymized + deactivated in place
+        "subscriptions",
+        "charges",
+        "invoices",
+        "invoice_lines",
+        "invoice_audit_log",
+        "billing_audit_log",
+        "super_admin_audit_log",
+        "webhook_events",
+    }
+)
+
+
+async def test_erasure_leaves_no_org_scoped_rows_anywhere(
+    client: AsyncClient, owned_emails: list[str]
+) -> None:
+    """Every org-scoped table is enumerated from the SQLAlchemy registry and
+    asserted empty after erasure.
+
+    Written this way deliberately: the hand-maintained delete list silently
+    fell behind the schema, and `sent_emails` (full message bodies) plus
+    deal-less `calendar_events` survived Art. 17 erasure because the
+    `organization_id` CASCADE never fires — the organizations row is
+    anonymized, not deleted. A registry walk fails the moment someone adds a
+    table and forgets the erasure path.
+
+    Seeds through its own session (not the `db_session` fixture, whose outer
+    transaction would both hide the rows from the API's session and deadlock
+    the cleanup fixture).
+    """
+    from sqlalchemy import func as sa_func
+
+    from app.db.base import Base
+
+    async with AsyncSessionLocal() as s:
+        org, admin = await _seed_admin(s, owned_emails)
+        company = Company(organization_id=org.id, name="Klient s.r.o.", owner_user_id=admin.id)
+        s.add(company)
+        await s.flush()
+        s.add(
+            SentEmail(
+                organization_id=org.id,
+                sender_user_id=admin.id,
+                company_id=company.id,
+                direction=EmailDirection.inbound,
+                from_email="jana@klient.cz",
+                to_emails=["admin@example.com"],
+                subject="Citlivý předmět",
+                body="Tělo zprávy s osobními údaji.",
+                status=SentEmailStatus.sent,
+                message_id=f"<{uuid.uuid4()}@test>",
+                thread_id=uuid.uuid4(),
+                sent_at=datetime.now(tz=UTC),
+            )
+        )
+        # Deal-less event: the case that the deal cascade does NOT cover.
+        s.add(
+            CalendarEvent(
+                organization_id=org.id,
+                owner_user_id=admin.id,
+                title="Schůzka",
+                starts_at=datetime.now(tz=UTC),
+                ends_at=datetime.now(tz=UTC) + timedelta(hours=1),
+            )
+        )
+        s.add(
+            EmailTemplate(
+                organization_id=org.id,
+                created_by_user_id=admin.id,
+                name="Šablona",
+                subject="Předmět",
+                body="Tělo",
+            )
+        )
+        s.add(
+            SalesGoal(
+                organization_id=org.id,
+                user_id=admin.id,
+                period_month=date.today().replace(day=1),
+                metric=SalesGoalMetric.won_value,
+                target_value=Decimal("100000"),
+            )
+        )
+        admin.inbound_token = uuid.uuid4().hex
+        await s.commit()
+        org_id, admin_id, admin_role = org.id, admin.id, admin.role
+        org_name = org.name
+
+    token = create_access_token(admin_id, org_id, admin_role)
+    response = await client.post(
+        "/api/v1/organizations/me/erase",
+        json={"confirmation_name": org_name},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200, response.text
+
+    leftovers: dict[str, int] = {}
+    async with AsyncSessionLocal() as s:
+        # .tables (not .sorted_tables): ordering is irrelevant here and the
+        # topological sort warns on the companies<->contacts FK cycle.
+        for table in Base.metadata.tables.values():
+            if table.name in _ERASURE_RETAINED_TABLES:
+                continue
+            org_col = table.c.get("organization_id")
+            if org_col is None:
+                continue
+            count = (
+                await s.execute(select(sa_func.count()).select_from(table).where(org_col == org_id))
+            ).scalar_one()
+            if count:
+                leftovers[table.name] = count
+
+        # The Smart-BCC address is a bearer write-credential: it must not
+        # survive, or mail keeps arriving into the erased org.
+        surviving_tokens = (
+            await s.execute(
+                select(sa_func.count())
+                .select_from(User)
+                .where(User.organization_id == org_id, User.inbound_token.is_not(None))
+            )
+        ).scalar_one()
+
+    assert leftovers == {}, f"org-scoped rows survived erasure: {leftovers}"
+    assert surviving_tokens == 0, "inbound tokens must be revoked by erasure"

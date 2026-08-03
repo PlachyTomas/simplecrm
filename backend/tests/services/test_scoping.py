@@ -150,17 +150,47 @@ async def test_scope_by_owner_filters_companies_for_salesperson(
     assert names == {"Mine", "Pool"}
 
 
-async def test_admin_can_write_anything(db_session: AsyncSession) -> None:
+async def test_admin_can_write_for_anyone_in_their_org(db_session: AsyncSession) -> None:
+    """Admins are unrestricted *within* their organization.
+
+    This test previously asserted that a random UUID also passed — it
+    encoded the hole that security-delta review R2 P2 found: the admin
+    branch returned True without ever loading the target, so a row could be
+    handed to a user in a different tenant.
+    """
+    import uuid
+
     org = Organization(name="Write admin org")
     db_session.add(org)
     await db_session.flush()
     admin = User(email="a@w.cz", name="A", role=UserRole.admin, organization_id=org.id)
-    db_session.add(admin)
+    colleague = User(email="c@w.cz", name="C", role=UserRole.salesperson, organization_id=org.id)
+    db_session.add_all([admin, colleague])
     await db_session.flush()
-    # Even a random UUID target: admin passes.
-    import uuid
 
-    assert await can_write_row(db_session, admin, uuid.uuid4()) is True
+    assert await can_write_row(db_session, admin, colleague.id) is True
+    assert await can_write_row(db_session, admin, None) is True
+    # A target that doesn't exist is not writable, however privileged you are.
+    assert await can_write_row(db_session, admin, uuid.uuid4()) is False
+
+
+async def test_nobody_can_assign_ownership_across_orgs(db_session: AsyncSession) -> None:
+    """Security-delta review R2 P2: an admin must not be able to hand a row
+    in their org to a user who belongs to another tenant — that leaves a
+    dangling cross-tenant reference and renders the stranger's name through
+    `DealListItemOut.owner_name`."""
+    mine = Organization(name="Write tenant A")
+    theirs = Organization(name="Write tenant B")
+    db_session.add_all([mine, theirs])
+    await db_session.flush()
+    admin = User(email="a@tenant-a.cz", name="A", role=UserRole.admin, organization_id=mine.id)
+    stranger = User(
+        email="s@tenant-b.cz", name="Stranger", role=UserRole.admin, organization_id=theirs.id
+    )
+    db_session.add_all([admin, stranger])
+    await db_session.flush()
+
+    assert await can_write_row(db_session, admin, stranger.id) is False
 
 
 async def test_salesperson_cannot_write_outside_team(db_session: AsyncSession) -> None:

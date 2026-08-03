@@ -475,7 +475,22 @@ async def _find_user_by_token(session: AsyncSession, token: str) -> User | None:
     if not needle:
         return None
     return (
-        await session.execute(select(User).where(func.lower(User.inbound_token) == needle).limit(1))
+        await session.execute(
+            select(User)
+            .where(
+                func.lower(User.inbound_token) == needle,
+                # A magic address is a bearer write-credential, so it must die
+                # with the account exactly like a session does
+                # (`core.deps.get_current_user`) and a login does
+                # (`api.v1.auth`). Without this an offboarded (or
+                # seat-downsized, or erased) user keeps a working channel for
+                # filing mail into their former org. The caller reports the
+                # same `no_token` outcome as an unknown token, so a deactivated
+                # user learns nothing from the response either.
+                User.is_active.is_(True),
+            )
+            .limit(1)
+        )
     ).scalar_one_or_none()
 
 

@@ -87,6 +87,10 @@ async def _assert_owner_cap(
         .select_from(Company)
         .where(
             Company.owner_user_id == new_owner_id,
+            # Count only within the owner's own organization: a cap is a
+            # per-org allowance, and an unscoped count would let rows
+            # elsewhere consume it (security-delta review R2 P3).
+            Company.organization_id == target.organization_id,
         )
     )
     if excluding_company_id is not None:

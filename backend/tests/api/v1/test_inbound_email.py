@@ -623,3 +623,53 @@ async def test_non_ascii_secret_header_is_401_not_500(client: AsyncClient) -> No
         ],
     )
     assert resp.status_code == 401
+
+
+async def test_deactivated_user_token_stops_capturing(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Security-delta review R1 P1: the magic address is a bearer
+    write-credential, so deactivating a user must revoke it exactly like it
+    revokes their sessions and logins. Otherwise an offboarded (or
+    seat-downsized, or erased) account keeps a channel for filing mail into
+    its former organization.
+
+    The response is the same `no_token` a bogus address gets — a deactivated
+    user must not be able to tell their token still exists.
+    """
+    seed = await _seed(db_session, owned_cleanup)
+    raw = _mime(
+        sender="jan@acme.cz",
+        to=[seed.user.email, f"{_PREFIX}+{seed.user.inbound_token}@{_DOMAIN}"],
+    )
+
+    # Sanity: it captures while the account is live.
+    ok = await client.post("/api/v1/inbound-email", **_post_kwargs(raw))
+    assert ok.status_code == 201, ok.text
+
+    async with AsyncSessionLocal() as s:
+        user = await s.get(User, seed.user.id)
+        assert user is not None
+        user.is_active = False
+        await s.commit()
+
+    raw_after = _mime(
+        sender="jan@acme.cz",
+        to=[seed.user.email, f"{_PREFIX}+{seed.user.inbound_token}@{_DOMAIN}"],
+        subject="Po deaktivaci",
+    )
+    res = await client.post("/api/v1/inbound-email", **_post_kwargs(raw_after))
+    assert res.status_code == 202
+    assert res.json()["outcome"] == "no_token"
+
+    async with AsyncSessionLocal() as s:
+        subjects = (
+            (
+                await s.execute(
+                    select(SentEmail.subject).where(SentEmail.organization_id == seed.org.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert "Po deaktivaci" not in subjects, "deactivated account must not accept new mail"

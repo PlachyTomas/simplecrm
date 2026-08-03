@@ -119,13 +119,24 @@ async def can_write_row(
 ) -> bool:
     """Can the caller create/edit a row with the given owner?
 
-    - admin: always.
+    - nobody, for an owner outside the caller's organization.
+    - admin: any member of their own org.
     - manager: yes if `owner_id` is null or within their team membership.
     - salesperson: yes if `owner_id` is null, themselves, or a teammate.
     """
-    if user.role is UserRole.admin:
-        return True
     if owner_id is None:
+        return True
+    # Tenant boundary first, before the role branches (security-delta review
+    # R2 P2): the admin branch used to short-circuit without ever loading the
+    # target, so an admin could hand a row in their org to a user belonging to
+    # a different one — a dangling cross-tenant reference that then renders
+    # that stranger's name via `DealListItemOut.owner_name`. The team-scoped
+    # roles below are implicitly same-org, but checking here keeps the
+    # guarantee in one place.
+    owner = await session.get(User, owner_id)
+    if owner is None or owner.organization_id != user.organization_id:
+        return False
+    if user.role is UserRole.admin:
         return True
     visible_ids = set(await team_member_ids(session, user))
     return owner_id in visible_ids

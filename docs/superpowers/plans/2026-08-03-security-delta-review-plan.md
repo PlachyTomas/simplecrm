@@ -44,5 +44,5 @@ Batches
       comparison, tracking token signing, auth.py delta
 - [x] R4 data lifecycle: org_erasure + data_export completeness vs the
       new tables; import-run undo scoping
-- [ ] R5 test/coverage gaps for all of the above
-- [ ] R6 synthesis + fix pass (P0/P1 immediately, P2/P3 triaged)
+- [x] R5 test/coverage gaps (regression tests written with the fixes) for all of the above
+- [x] R6 synthesis + fix pass (P0/P1 immediately, P2/P3 triaged)
