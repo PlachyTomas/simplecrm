@@ -122,9 +122,9 @@ async def erase_organization(
     # only detaches these rows, and the `organization_id` CASCADE never fires
     # because step 4 anonymizes the organizations row instead of deleting it.
     await session.execute(delete(SentEmail).where(SentEmail.organization_id == org_id))
-    # Calendar events would go transitively (deal_id is ON DELETE CASCADE and
-    # NOT NULL), but deleting them here keeps erasure independent of another
-    # table's cascade rules.
+    # Calendar events: `deal_id` is CASCADE but NULLABLE (deal-less events
+    # exist), so the deal cascade does NOT reach them all — this delete is
+    # load-bearing, not defensive.
     await session.execute(delete(CalendarEvent).where(CalendarEvent.organization_id == org_id))
     await session.execute(delete(EmailTemplate).where(EmailTemplate.organization_id == org_id))
     await session.execute(delete(SalesGoal).where(SalesGoal.organization_id == org_id))

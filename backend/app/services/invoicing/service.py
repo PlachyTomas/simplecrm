@@ -671,9 +671,9 @@ class InvoiceService:
         plan: Plan | None,
         billing: BillingSettings,
     ) -> list[InvoiceLine]:
-        """One Czech-language line per charge. Quantity = seat count;
-        unit price = charge.amount_minor // seats (defends against zero
-        seats if the column is malformed)."""
+        """One Czech-language line per charge: the whole period as a single
+        item (quantity 1, unit "období") so qty × unit reconciles to the
+        subtotal; the seat count lives in the description."""
         seats = charge.seats or 1
         plan_label = plan.display_name_cs if plan else charge.kind
         period_str = ""
