@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.user_smtp import smtp_config_for
 from app.core.i18n import language_for_locale
+from app.core.token_crypto import TokenDecryptError
 from app.db.models import (
     ActivityEntityType,
     ActivityType,
@@ -47,6 +48,17 @@ from app.services.merge_fields import (
 
 class SmtpNotVerifiedError(Exception):
     """Raised when the caller has no verified per-user SMTP configured."""
+
+
+class SmtpCredentialsUnreadableError(SmtpNotVerifiedError):
+    """The stored SMTP password cannot be decrypted — the `jwt_secret` was
+    rotated (Fernet keys derive from it) or the ciphertext was tampered with.
+
+    Subclasses `SmtpNotVerifiedError` on purpose: from the caller's point of
+    view the account is no longer usable for sending and the remedy is
+    identical — re-enter the password in Settings. Existing handlers keep
+    returning their 409 instead of leaking an unhandled 500 out of a send.
+    """
 
 
 def _message_id(from_email: str) -> str:
@@ -128,7 +140,10 @@ async def send_user_email(
     if row is None or row.verified_at is None:
         raise SmtpNotVerifiedError()
 
-    config = smtp_config_for(row)
+    try:
+        config = smtp_config_for(row)
+    except TokenDecryptError as exc:
+        raise SmtpCredentialsUnreadableError() from exc
 
     thread_id = reply_parent.thread_id if reply_parent else uuid.uuid4()
     in_reply_to = reply_parent.message_id if reply_parent else None

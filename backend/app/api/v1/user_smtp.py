@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
-from app.core.token_crypto import decrypt_token, encrypt_token
+from app.core.token_crypto import TokenDecryptError, decrypt_token, encrypt_token
 from app.db import get_db
 from app.db.models import User, UserSmtpSettings
 from app.schemas.user_smtp import SmtpTestResult, UserSmtpSettingsIn, UserSmtpSettingsOut
@@ -133,7 +133,19 @@ async def test_smtp(
     if row is None:
         return SmtpTestResult(ok=False, error="SMTP není nastaveno.")
     try:
-        await asyncio.to_thread(verify_smtp, smtp_config_for(row))
+        config = smtp_config_for(row)
+    except TokenDecryptError:
+        # The stored ciphertext is keyed by `jwt_secret`; after a rotation it
+        # can't be read back. Report it as a failed test (and drop the
+        # verified flag) so the UI prompts for the password instead of
+        # 500-ing here and on every later send.
+        row.verified_at = None
+        await session.commit()
+        return SmtpTestResult(
+            ok=False, error="Uložené heslo nelze přečíst — zadejte ho prosím znovu."
+        )
+    try:
+        await asyncio.to_thread(verify_smtp, config)
     except (smtplib.SMTPException, OSError, ssl.SSLError) as exc:
         return SmtpTestResult(ok=False, error=str(exc))
     row.verified_at = datetime.now(tz=UTC)

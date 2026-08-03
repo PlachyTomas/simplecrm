@@ -103,6 +103,12 @@ async def _tracking_totals(
 ) -> dict[uuid.UUID, tuple[int, int]]:
     """(opened, clicked) recipient counts per campaign, in one grouped query.
 
+    Treat these as indicative, not authoritative (security-delta review R1
+    P3): the open pixel is fetched by anyone who holds the tracking token —
+    the recipient, their mail client's prefetcher, a corporate scanner — so
+    counts can be inflated and image-blocking clients never register at all.
+    That is inherent to pixel tracking, not a defect to fix here.
+
     Kept out of the campaign row itself: opens trickle in for weeks after a
     send, and a denormalized counter would have to be maintained from the
     public (unauthenticated) tracking endpoints.

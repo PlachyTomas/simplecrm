@@ -703,13 +703,18 @@ class InvoiceService:
         else:
             net_base = gross
         vat = gross - net_base
+        # Quantity 1, not `seats` (money-review R4 P3). Per-seat unit price
+        # floors — 10 000 / 3 = 3 333 — so a multi-seat line printed
+        # qty × unit ≠ subtotal, which is the first thing an accountant
+        # queries. The seat count is already spelled out in `description`,
+        # so nothing is lost by billing the period as one item.
         return [
             InvoiceLine(
                 position=1,
                 description=description,
-                quantity=Decimal(seats),
-                unit_label="uživatel",
-                unit_price_minor=net_base // max(seats, 1),
+                quantity=Decimal(1),
+                unit_label="období",
+                unit_price_minor=net_base,
                 vat_rate_percent=rate,
                 line_subtotal_minor=net_base,
                 line_vat_minor=vat,

@@ -25,10 +25,27 @@ Baseline: main @ 74feea2, 1048 backend tests green.
 >   the vulnerable behaviour** (a random UUID passing for an admin) — it
 >   has been rewritten to the correct contract plus a cross-org case.
 > - `_assert_owner_cap` counts within the owner's own org.
-> **Still open (triaged):** the P3s — inbound rate limit, tracking-count
-> inflation, `token_crypto` HMAC domain separation (needs a ciphertext
-> migration), `TokenDecryptError` on the two SMTP send paths, and the
-> absent Art. 20 export.
+> **P3 PASS (same day, suite 1059 green):** all but one are now closed.
+> - SMTP send paths: a stored password that can no longer be decrypted
+>   raises `SmtpCredentialsUnreadableError` (a subclass of
+>   `SmtpNotVerifiedError`, so the existing 409 + "set up and verify
+>   SMTP" copy applies with no new frontend strings); the bulk path
+>   returns a plain Czech message and the /test endpoint clears
+>   `verified_at` so the UI prompts for re-entry instead of 500-ing.
+> - `token_crypto` now derives its key as
+>   `HMAC(jwt_secret, "simplecrm/token-crypto/v1")`, matching the
+>   `email_tracking` pattern. No migration needed: `MultiFernet`
+>   encrypts under the new key and still decrypts legacy
+>   `SHA-256(jwt_secret)` ciphertexts, which quietly migrate as values
+>   are re-saved. Tested both directions, including that the two
+>   derivations genuinely differ.
+> - Inbound capture hook is rate-limited per client IP (600/min — far
+>   above real mail volume; it bounds a looping/compromised worker) and
+>   answers 429 so the message is retried, not dropped.
+> - Tracking-count inflation is documented at `_tracking_totals`, where
+>   the numbers are actually read.
+> **Still open:** no Art. 20 portability export (a product decision, not
+> a defect).
 
 ## R0 — recon
 

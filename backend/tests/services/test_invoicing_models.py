@@ -376,3 +376,45 @@ async def test_invoice_counter_year_isolation(cleanup_counter: None) -> None:
         b = await s.get(InvoiceCounter, year_b)
         assert a is not None and a.last_sequence == 5
         assert b is not None and b.last_sequence == 5
+
+
+def test_charge_line_quantity_times_unit_equals_subtotal() -> None:
+    """Money-review R4 P3: a multi-seat line used quantity=seats with a
+    floored per-seat unit price, so `qty × unit` didn't reconcile to the
+    subtotal on the printed document (3 × 3 333 ≠ 10 000). The period is
+    billed as a single item instead; the seat count stays in the description.
+    """
+    from decimal import Decimal
+
+    from app.db.models import BillingSettings, Charge
+    from app.services.invoicing.service import InvoiceService
+
+    billing = BillingSettings(
+        id=1,
+        is_vat_payer=False,
+        vat_rate_percent=Decimal("0.00"),
+        seller_ico="12345678",
+        seller_iban="CZ6508000000192000145399",
+        issuer_name="T",
+        issuer_address_street="A",
+        issuer_address_city="B",
+        issuer_address_zip="1",
+        issuer_register_text="r",
+    )
+    # 10 000 minor units across 3 seats — the case that used to floor to 3 333.
+    charge = Charge(
+        organization_id=uuid.uuid4(),
+        kind="renewal",
+        amount_minor=10_000,
+        currency="CZK",
+        status="paid",
+        seats=3,
+    )
+
+    lines = InvoiceService()._build_lines_for_charge(charge, None, billing)
+
+    assert len(lines) == 1
+    line = lines[0]
+    assert line.quantity * Decimal(line.unit_price_minor) == Decimal(line.line_subtotal_minor)
+    assert line.line_total_minor == 10_000
+    assert "3 uživatelé" in line.description

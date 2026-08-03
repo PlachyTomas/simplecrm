@@ -49,6 +49,7 @@ from app.schemas.inbound_email import (
 )
 from app.services.inbound_email import inbound_address_for, inbound_local_part
 from app.services.inbound_email import record_inbound_message as _record
+from app.services.lookup_cache import RateLimiter
 
 router = APIRouter(tags=["inbound-email"])
 me_router = APIRouter(prefix="/me/inbound-address", tags=["inbound-email"])
@@ -73,6 +74,20 @@ _DEV_FALLBACK_SECRET = "dev-inbound-secret"  # noqa: S105
 
 # Outcome -> HTTP status. All 2xx (see the module docstring); the distinction
 # only exists so the worker's logs are readable.
+# Back-pressure for the public capture hook (security-delta review R1 P3).
+# The shared secret is the real gate, so this is not an anti-abuse control
+# against the internet — it bounds the damage from a compromised or looping
+# forwarding worker, which would otherwise be free to hammer us (each request
+# costs a full MIME parse). Sized well above the busiest plausible mail volume
+# for one deployment so ordinary bursts never trip it.
+_INBOUND_RATE_LIMITER = RateLimiter(max_calls=600, window_seconds=60)
+
+
+def get_inbound_rate_limiter() -> RateLimiter:
+    """FastAPI dependency — overridable in tests."""
+    return _INBOUND_RATE_LIMITER
+
+
 _STATUS_BY_OUTCOME = {
     InboundOutcome.matched: status.HTTP_201_CREATED,
     InboundOutcome.unmatched: status.HTTP_201_CREATED,
@@ -186,8 +201,18 @@ async def receive_inbound_email(
     response: Response,
     x_inbound_secret: Annotated[str | None, Header()] = None,
     session: AsyncSession = Depends(get_db),
+    rate_limiter: RateLimiter = Depends(get_inbound_rate_limiter),
 ) -> InboundEmailResult:
     _require_secret(x_inbound_secret)
+    # Keyed by client IP: the forwarding worker is a small, stable set of
+    # egress addresses. 429 (not a 2xx) so a looping worker is told to slow
+    # down and the message is retried rather than silently dropped.
+    client_ip = request.client.host if request.client else "unknown"
+    if not await rate_limiter.try_acquire(f"inbound:{client_ip}"):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many inbound messages; retry shortly.",
+        )
     raw = await _read_raw_message(request)
     result = await _record(session, raw=raw)
     response.status_code = _STATUS_BY_OUTCOME[result.outcome]

@@ -673,3 +673,35 @@ async def test_deactivated_user_token_stops_capturing(
             .all()
         )
     assert "Po deaktivaci" not in subjects, "deactivated account must not accept new mail"
+
+
+async def test_capture_hook_is_rate_limited(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Security-delta review R1 P3: bound the damage a compromised or looping
+    forwarding worker can do. 429 rather than a 2xx so the message is retried,
+    not dropped."""
+    from app.api.v1.inbound_email import get_inbound_rate_limiter
+    from app.main import app as fastapi_app
+    from app.services.lookup_cache import RateLimiter
+
+    seed = await _seed(db_session, owned_cleanup)
+    # One shared instance: a lambda that CONSTRUCTS a limiter would hand every
+    # request an empty bucket and never trip.
+    limiter = RateLimiter(max_calls=2, window_seconds=60)
+    fastapi_app.dependency_overrides[get_inbound_rate_limiter] = lambda: limiter
+    try:
+        codes = []
+        for i in range(3):
+            raw = _mime(
+                sender="jan@acme.cz",
+                to=[f"{_PREFIX}+{seed.user.inbound_token}@{_DOMAIN}"],
+                subject=f"Zpráva {i}",
+            )
+            res = await client.post("/api/v1/inbound-email", **_post_kwargs(raw))
+            codes.append(res.status_code)
+    finally:
+        fastapi_app.dependency_overrides.pop(get_inbound_rate_limiter, None)
+
+    assert codes[:2] == [201, 201], codes
+    assert codes[2] == 429, codes

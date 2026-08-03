@@ -28,7 +28,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.i18n import language_for_locale
 from app.core.scoping import scope_by_owner
-from app.core.token_crypto import decrypt_token
+from app.core.token_crypto import TokenDecryptError, decrypt_token
 from app.db.models import (
     Activity,
     ActivityEntityType,
@@ -279,13 +279,22 @@ async def _require_verified_smtp(
     if row is None or row.verified_at is None:
         raise BulkEmailError("Nejdřív nastavte a ověřte odesílání e-mailů (SMTP) v nastavení.")
     sender = f"{row.from_name} <{row.from_email}>" if row.from_name else row.from_email
+    try:
+        password = decrypt_token(row.password_encrypted)
+    except TokenDecryptError as exc:
+        # Same remedy as an unverified account: the stored password can no
+        # longer be read (jwt_secret rotated), so ask for it again rather
+        # than failing the whole campaign with a 500.
+        raise BulkEmailError(
+            "Uložené heslo k SMTP nelze přečíst — zadejte ho prosím znovu v nastavení."
+        ) from exc
     config = SmtpConfig(
         host=row.host,
         port=row.port,
         use_ssl=row.use_ssl,
         use_starttls=row.use_starttls,
         username=row.username,
-        password=decrypt_token(row.password_encrypted),
+        password=password,
         sender=sender,
     )
     return config, row
