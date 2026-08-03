@@ -35,7 +35,7 @@ House map + patterns so sessions don't rediscover the repo. Boot/login/test comm
 
 ## Gotchas that cost real time
 
-- `calendar_events.deal_id` is NOT NULL — no deal-less events; EventFormModal needs a deal (picker ships for unbound create).
+- `calendar_events.deal_id` is NULLABLE (deal-less events exist — a user can block a slot and link the deal later). The FK is `ON DELETE CASCADE`, so deleting a deal takes its events but deal-less ones survive — anything sweeping by org must delete them explicitly. EventFormModal still asks for a deal (picker ships for unbound create), which is what made the old "NOT NULL" note look right.
 - `GET /api/v1/deals` has **no search param** — pickers fetch a page (limit 100) and filter client-side.
 - jsdom lacks `ResizeObserver` → react-grid-layout can't render in vitest; test the mobile (<768px) path instead.
 - Run FE checks with `npx` (`npx vitest run`, `npx tsc -b --noEmit`) — `pnpm vitest`/`typecheck` intermittently die in deps-status-check.
