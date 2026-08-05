@@ -4,6 +4,7 @@ import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
 import { useCompanies } from "@/app/companies/useCompanies";
+import { useCompany } from "@/app/companies/useCompany";
 import { useCreateCompany } from "@/app/companies/useCreateCompany";
 import { useLookupRegistry } from "@/app/companies/useLookupRegistry";
 import { useContacts } from "@/app/contacts/useContacts";
@@ -161,13 +162,24 @@ export function AddDealModal({
   const [showNewContact, setShowNewContact] = useState(false);
   const createContact = useCreateContact();
 
-  // Anything the salesperson actually entered — auto-defaults (owner, stage)
-  // and the locked-company preset don't count as their data.
+  // The picked firma, fetched for its `main_contact` — the star set in the
+  // company detail, which prefills the contact picker below.
+  const selectedCompanyId = lockedCompanyId ?? (form.companyId || undefined);
+  const { data: selectedCompany } = useCompany(selectedCompanyId);
+  // Which company the main-contact prefill has already been applied for, and
+  // the value it wrote. Lets us apply it exactly once per firma (so clearing
+  // the picker sticks) and keep the auto-fill out of the dirty check.
+  const prefilledForCompanyRef = useRef<string | null>(null);
+  const autoContactIdRef = useRef<string>("");
+
+  // Anything the salesperson actually entered — auto-defaults (owner, stage,
+  // the firma's main contact) and the locked-company preset don't count as
+  // their data.
   const dirty =
     form.name.trim() !== "" ||
     form.value.trim() !== "" ||
     form.expectedCloseDate !== "" ||
-    form.primaryContactId !== "" ||
+    (form.primaryContactId !== "" && form.primaryContactId !== autoContactIdRef.current) ||
     (!lockedCompanyId && form.companyId !== "") ||
     companySearch.trim() !== "" ||
     Object.values(newCompany).some((v) => v.trim() !== "") ||
@@ -183,6 +195,8 @@ export function AddDealModal({
       setNewContact(EMPTY_NEW_CONTACT);
       setShowNewContact(false);
       lastFilledIcoRef.current = null;
+      prefilledForCompanyRef.current = null;
+      autoContactIdRef.current = "";
       createDeal.reset();
       createCompany.reset();
     }
@@ -245,7 +259,25 @@ export function AddDealModal({
   // contact almost certainly belonged to a different firma.
   useEffect(() => {
     setForm((prev) => (prev.primaryContactId ? { ...prev, primaryContactId: "" } : prev));
+    prefilledForCompanyRef.current = null;
+    autoContactIdRef.current = "";
   }, [form.companyId]);
+
+  // Prefill the picker with the firma's main contact (the star in the company
+  // detail) — the behaviour the contacts tour promises. Only an *explicit*
+  // pick counts: `main_contact` also carries the API's alphabetically-first
+  // fallback, and silently defaulting to an arbitrary person is worse than
+  // leaving the field empty. Applied once per firma so a deliberate clear
+  // isn't immediately overwritten.
+  useEffect(() => {
+    if (!selectedCompanyId || selectedCompany?.id !== selectedCompanyId) return;
+    if (prefilledForCompanyRef.current === selectedCompanyId) return;
+    const mainId = selectedCompany.main_contact_id;
+    if (!mainId || selectedCompany.main_contact?.id !== mainId) return;
+    prefilledForCompanyRef.current = selectedCompanyId;
+    autoContactIdRef.current = mainId;
+    setForm((prev) => (prev.primaryContactId ? prev : { ...prev, primaryContactId: mainId }));
+  }, [selectedCompany, selectedCompanyId]);
 
   if (!open) return null;
 
@@ -261,9 +293,14 @@ export function AddDealModal({
 
   // Show the new-contact fields when there's no existing contact to pick:
   // a brand-new company, an existing company with no contacts yet, or when
-  // the user explicitly opts to add a fresh person.
+  // the user explicitly opts to add a fresh person. Gated on `showNewCompany`
+  // rather than `newCompanyReady` so the contact fields are offered the moment
+  // the new-firma panel opens — waiting for a company name to be typed hid
+  // them behind a step that reads as "this modal has no contact option".
   const useNewContactFields =
-    newCompanyReady || (!!form.companyId && (showNewContact || companyContacts.length === 0));
+    showNewCompany || (!!form.companyId && (showNewContact || companyContacts.length === 0));
+  // Same reason: the section itself must not wait for `newCompanyReady`.
+  const showContactSection = !!lockedCompanyId || !!form.companyId || showNewCompany;
   const newContactProvided =
     useNewContactFields && !!newContact.firstName.trim() && !!newContact.lastName.trim();
   const resolvedCompanyName = lockedCompany
@@ -546,7 +583,7 @@ export function AddDealModal({
                     }))
                   }
                   placeholder="12345678"
-                  className="mt-2 block h-10 w-full rounded-md border border-border bg-surface px-3 font-mono text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
+                  className="mt-2 block h-10 w-full rounded-md border border-border bg-surface px-3 font-mono text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none"
                 />
                 {newIcoLookupState === "empty" ? (
                   <p className="mt-2 text-xs text-text-tertiary">
@@ -600,48 +637,7 @@ export function AddDealModal({
             </div>
           ) : null}
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="text-xs font-medium text-text-secondary">
-                {t("addDealModal.valueLabel")}
-              </span>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={form.value}
-                onChange={(e) => {
-                  setForm((prev) => ({ ...prev, value: e.target.value }));
-                  // Contract: the error clears the moment the input is valid.
-                  if (valueError && !isValueInvalid(e.target.value)) setValueError(null);
-                }}
-                onBlur={() =>
-                  setValueError(isValueInvalid(form.value) ? t("addDealModal.valueInvalid") : null)
-                }
-                aria-invalid={valueError ? true : undefined}
-                className={cn(
-                  "mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 font-mono text-sm tabular-nums text-text-primary focus:border-accent focus:outline-none",
-                  valueError && INVALID_INPUT_CLASS,
-                )}
-                placeholder="0"
-              />
-              <FieldError>{valueError}</FieldError>
-            </label>
-            <label className="block">
-              <span className="text-xs font-medium text-text-secondary">
-                {t("addDealModal.expectedCloseLabel")}
-              </span>
-              <input
-                type="date"
-                value={form.expectedCloseDate}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, expectedCloseDate: e.target.value }))
-                }
-                className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
-              />
-            </label>
-          </div>
-
-          {hasCompany ? (
+          {showContactSection ? (
             <div className="space-y-2">
               <span className="text-xs font-medium text-text-secondary">
                 {t("addDealModal.contactSectionLabel")}
@@ -742,6 +738,47 @@ export function AddDealModal({
               )}
             </div>
           ) : null}
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-xs font-medium text-text-secondary">
+                {t("addDealModal.valueLabel")}
+              </span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={form.value}
+                onChange={(e) => {
+                  setForm((prev) => ({ ...prev, value: e.target.value }));
+                  // Contract: the error clears the moment the input is valid.
+                  if (valueError && !isValueInvalid(e.target.value)) setValueError(null);
+                }}
+                onBlur={() =>
+                  setValueError(isValueInvalid(form.value) ? t("addDealModal.valueInvalid") : null)
+                }
+                aria-invalid={valueError ? true : undefined}
+                className={cn(
+                  "mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 font-mono text-sm tabular-nums text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none",
+                  valueError && INVALID_INPUT_CLASS,
+                )}
+                placeholder="0"
+              />
+              <FieldError>{valueError}</FieldError>
+            </label>
+            <label className="block">
+              <span className="text-xs font-medium text-text-secondary">
+                {t("addDealModal.expectedCloseLabel")}
+              </span>
+              <input
+                type="date"
+                value={form.expectedCloseDate}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, expectedCloseDate: e.target.value }))
+                }
+                className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary focus:border-accent focus:outline-none"
+              />
+            </label>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">

@@ -544,7 +544,14 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
           }}
           dealId={deal.id}
           companyId={company?.id}
-          defaultTo={primaryContact?.email ?? company?.email ?? null}
+          // This deal's own contact wins; otherwise the firma's main contact
+          // (the star in the company detail — the contacts tour promises it
+          // prefills into e-mails too), and only then the company's generic
+          // inbox. Going straight to the generic inbox skipped a named human
+          // we already knew about.
+          defaultTo={
+            primaryContact?.email ?? company?.main_contact?.email ?? company?.email ?? null
+          }
           replyTo={replyTarget}
         />
       ) : null}
@@ -650,7 +657,7 @@ function DealNoteField({ dealId, note }: { dealId: string; note: string | null }
               maxLength={2000}
               placeholder={t("noteSection.placeholder")}
               data-testid={testIds.deals.detail.noteInput}
-              className="block w-full resize-y rounded-md border border-border bg-surface-overlay p-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
+              className="block w-full resize-y rounded-md border border-border bg-surface-overlay p-3 text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none"
             />
             <p className="text-xs text-text-tertiary">{t("noteSection.subtitle")}</p>
             <div className="flex items-center gap-2">

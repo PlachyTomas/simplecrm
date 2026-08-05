@@ -164,7 +164,7 @@ export function ContactsPage() {
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     placeholder={t("contactsPage.searchPlaceholder")}
-                    className="h-9 w-full rounded-md border border-border bg-surface-overlay pl-8 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
+                    className="h-9 w-full rounded-md border border-border bg-surface-overlay pl-8 pr-3 text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none"
                   />
                 </label>
               ) : null}

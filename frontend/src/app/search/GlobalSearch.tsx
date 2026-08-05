@@ -180,7 +180,7 @@ export function GlobalSearch() {
             onFocus={() => setFocused(true)}
             onKeyDown={onKeyDown}
             placeholder={t("search.placeholder")}
-            className="h-9 w-full rounded-md border border-border bg-surface-overlay pl-9 pr-8 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none md:w-64 lg:w-80"
+            className="h-9 w-full rounded-md border border-border bg-surface-overlay pl-9 pr-8 text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none md:w-64 lg:w-80"
           />
           {mobileOpen ? (
             <button

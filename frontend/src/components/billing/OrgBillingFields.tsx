@@ -123,9 +123,9 @@ export function OrgBillingFields({
           : "success";
 
   const inputClass =
-    "mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none";
+    "mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none";
   const monoInputClass =
-    "mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 font-mono text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none";
+    "mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 font-mono text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none";
 
   return (
     <div className="space-y-5">

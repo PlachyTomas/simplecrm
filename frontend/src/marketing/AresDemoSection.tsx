@@ -264,7 +264,7 @@ export function AresDemoSection() {
                 value={ico}
                 onChange={(e) => setIco(e.target.value.replace(/\D/g, "").slice(0, 8))}
                 placeholder="12345678"
-                className="block h-10 w-full rounded-md border border-border bg-surface px-3 font-mono text-base text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
+                className="block h-10 w-full rounded-md border border-border bg-surface px-3 font-mono text-base text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none"
               />
               {state === "typing" || state === "loading" ? (
                 <span className="font-mono text-xs tabular-nums text-text-tertiary">

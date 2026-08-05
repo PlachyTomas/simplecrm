@@ -199,6 +199,29 @@ describe("EmailComposeModal — company contact recipients", () => {
     expect((to as HTMLInputElement).value).toBe("");
   });
 
+  it("binds the field label to the input, not to a chip's remove button", async () => {
+    // Regression: the whole field used to be wrapped in a <label>. A label's
+    // implicit control is its FIRST labelable descendant, and <button> is
+    // labelable — so as soon as one recipient chip existed, the field's control
+    // was that chip's × button. Clicking the label text (or any non-interactive
+    // part of the field) then deleted a recipient instead of focusing the input,
+    // and the suggestions were unreachable by mouse.
+    stubFetch();
+    wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" />);
+    const to = screen.getByTestId(testIds.emails.compose.toInput);
+    fireEvent.focus(to);
+    fireEvent.click(await screen.findByTestId(testIds.emails.compose.suggestion("to", "ct1")));
+    expect(screen.getByText("jan@acme.cz")).toBeInTheDocument();
+
+    const label = document.querySelector<HTMLLabelElement>('label[for="email-compose-to-field"]');
+    expect(label).not.toBeNull();
+    expect(label!.control).toBe(to);
+
+    // Activating the label must not touch the recipient list.
+    fireEvent.click(label!);
+    expect(screen.getByText("jan@acme.cz")).toBeInTheDocument();
+  });
+
   it("filters diacritics-insensitively and never offers email-less contacts", async () => {
     stubFetch();
     wrap(<EmailComposeModal open onClose={vi.fn()} companyId="c1" />);

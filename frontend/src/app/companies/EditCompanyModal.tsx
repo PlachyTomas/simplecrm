@@ -80,7 +80,7 @@ function buildPatch(company: CompanyOut, form: FormState): CompanyUpdate {
 }
 
 const inputCls =
-  "mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none";
+  "mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none";
 const labelCls = "text-xs font-medium text-text-secondary";
 
 export function EditCompanyModal({ open, onClose, company }: EditCompanyModalProps) {

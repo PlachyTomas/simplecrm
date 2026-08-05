@@ -300,7 +300,7 @@ function NameStep({ name, setName }: { name: string; setName: (v: string) => voi
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("createOrg.nameStep.placeholder")}
-            className="block h-10 w-full rounded-md border border-border bg-surface-overlay pl-10 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
+            className="block h-10 w-full rounded-md border border-border bg-surface-overlay pl-10 pr-3 text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none"
           />
         </div>
       </label>

@@ -38,7 +38,7 @@ const EMPTY: FormState = {
 };
 
 const inputClass =
-  "mt-1 block w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none";
+  "mt-1 block w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none";
 
 export function SmtpSettingsCard() {
   const { t } = useTranslation("settings");

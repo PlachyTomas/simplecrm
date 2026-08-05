@@ -263,7 +263,7 @@ export function AddCompanyModal({ open, onClose, onCreated }: AddCompanyModalPro
                 setForm((prev) => ({ ...prev, ico: e.target.value.replace(/\D/g, "").slice(0, 8) }))
               }
               placeholder="12345678"
-              className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 font-mono text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
+              className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 font-mono text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none"
             />
             {lookupState === "empty" ? (
               <p className="mt-2 text-xs text-text-tertiary">{t("addCompanyModal.icoHintEmpty")}</p>

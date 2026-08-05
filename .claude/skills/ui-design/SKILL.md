@@ -59,6 +59,7 @@ The `-rgb` triple is what `tailwind.config.ts` feeds into `rgb(var(--color-x-rgb
   --color-text-primary-rgb: 245 245 247;    /* headings, critical numbers */
   --color-text-secondary-rgb: 168 168 179;  /* body text, labels */
   --color-text-tertiary-rgb: 144 144 160;   /* captions, metadata — AA-bumped */
+  --color-text-placeholder-rgb: 118 118 133; /* input placeholders — 3:1, not 4.5:1 */
   --color-text-on-accent-rgb: 10 10 11;     /* near-black text on the indigo accent */
   --color-text-on-brand-accent-rgb: 10 10 11; /* near-black text on magenta — never white */
 
@@ -123,6 +124,7 @@ The `-rgb` triple is what `tailwind.config.ts` feeds into `rgb(var(--color-x-rgb
   --color-text-primary-rgb: 10 10 11;
   --color-text-secondary-rgb: 74 74 85;
   --color-text-tertiary-rgb: 90 90 101;     /* AA-bumped from #8a8a95 */
+  --color-text-placeholder-rgb: 134 134 147; /* input placeholders — 3:1, not 4.5:1 */
   --color-text-on-accent-rgb: 255 255 255;  /* white text on the darkened indigo */
   --color-text-on-brand-accent-rgb: 10 10 11; /* near-black on magenta — never white */
 
@@ -342,7 +344,11 @@ Every button carries `transition-colors duration-fast`, relies on the global `fo
 - Background: `bg-surface-overlay` (or `bg-surface` for inputs nested inside an overlay panel)
 - Border: `border border-border`; focus: `focus:border-accent focus:outline-none` (the global focus-visible outline provides the keyboard ring)
 - Radius: `rounded-md`; height: `h-10`; horizontal padding: `px-3`; text `text-sm text-text-primary`
-- Placeholder: `placeholder:text-text-tertiary`
+- Placeholder: nothing to write — `index.css` styles `input::placeholder`/`textarea::placeholder`
+  globally with `--color-text-placeholder`. Do **not** reach for `text-tertiary` here: it is
+  AA-bumped to 4.5:1 for *content*, which in light mode (#5A5A65, a hair off secondary) makes a
+  placeholder read as a filled value. The placeholder token sits at the 3:1 UI-chrome threshold
+  instead, which is the right bar because every input carries a real `<label>` (§10).
 - Error state: `border-danger`, helper text `text-danger`
 - Label above input: 12/500/secondary (`text-xs font-medium text-text-secondary`), `mt-2` gap to input
 - Helper/error text below: 12/regular, `mt-2` gap

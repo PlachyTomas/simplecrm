@@ -68,7 +68,7 @@ function buildPatch(contact: ContactOut, form: FormState, companyEdit: CompanyEd
 }
 
 const inputCls =
-  "mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none";
+  "mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none";
 const labelCls = "text-xs font-medium text-text-secondary";
 
 export function EditContactModal({ open, onClose, contact, companyName }: EditContactModalProps) {
@@ -273,7 +273,7 @@ export function EditContactModal({ open, onClose, contact, companyName }: EditCo
               rows={3}
               value={form.note}
               onChange={set("note")}
-              className="mt-2 block w-full rounded-md border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
+              className="mt-2 block w-full rounded-md border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none"
             />
           </label>
         </div>

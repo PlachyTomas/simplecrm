@@ -130,6 +130,7 @@ function ChipsInput({
 
   const listboxId = `email-compose-${field}-listbox`;
   const optionId = (i: number) => `${listboxId}-option-${i}`;
+  const inputId = `email-compose-${field}-field`;
 
   const pick = (email: string) => {
     onChange([...value, email]);
@@ -148,9 +149,27 @@ function ChipsInput({
   };
 
   return (
-    <label className="relative block">
-      <span className="text-xs font-medium text-text-secondary">{label}</span>
-      <div className="mt-1 flex flex-wrap items-center gap-1 rounded-md border border-border bg-surface-overlay px-2 py-1.5 focus-within:border-accent">
+    // NOT a <label> wrapper. A label's implicit control is its FIRST labelable
+    // descendant, and <button> is labelable — so once a recipient chip existed,
+    // the field's control was that chip's × remove button, not the input.
+    // Clicking the label text (or any non-interactive part of the field) then
+    // removed a recipient instead of focusing the input. Explicit htmlFor/id.
+    <div className="relative">
+      <label htmlFor={inputId} className="block text-xs font-medium text-text-secondary">
+        {label}
+      </label>
+      <div
+        className="mt-1 flex flex-wrap items-center gap-1 rounded-md border border-border bg-surface-overlay px-2 py-1.5 focus-within:border-accent"
+        // Blank space in the field still has to behave like an input: focus it
+        // and show the suggestions. preventDefault stops the press from moving
+        // focus to the wrapper first.
+        onMouseDown={(e) => {
+          if (e.target !== e.currentTarget) return;
+          e.preventDefault();
+          inputRef.current?.focus();
+          setListOpen(true);
+        }}
+      >
         {value.map((addr, i) => (
           <span
             key={`${addr}-${i}`}
@@ -169,6 +188,7 @@ function ChipsInput({
         ))}
         <input
           ref={inputRef}
+          id={inputId}
           type="text"
           value={draft}
           data-testid={inputTestId}
@@ -183,6 +203,10 @@ function ChipsInput({
             setListOpen(true);
           }}
           onFocus={() => setListOpen(true)}
+          // Focus alone isn't enough: the dialog autofocuses a field on open, so
+          // a click on an already-focused input fired no focus event and the
+          // suggestions never appeared — the list looked unreachable by mouse.
+          onMouseDown={() => setListOpen(true)}
           onKeyDown={(e) => {
             if (e.key === "ArrowDown" && rowCount > 0) {
               e.preventDefault();
@@ -276,7 +300,7 @@ function ChipsInput({
           ) : null}
         </ul>
       ) : null}
-    </label>
+    </div>
   );
 }
 

@@ -286,7 +286,7 @@ export function DealQuickActionsModal({ deal, open, onClose }: DealQuickActionsM
                     ? testIds.pipeline.quickActions.callInput
                     : testIds.pipeline.quickActions.noteInput
                 }
-                className="mt-2 block w-full resize-y rounded-md border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
+                className="mt-2 block w-full resize-y rounded-md border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none"
               />
             </label>
             {isCall ? (

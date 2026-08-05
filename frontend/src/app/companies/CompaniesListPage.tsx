@@ -602,7 +602,7 @@ export function CompaniesListPage() {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder={t("companiesList.searchPlaceholder")}
-            className="h-10 w-full rounded-md border border-border bg-surface-overlay pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
+            className="h-10 w-full rounded-md border border-border bg-surface-overlay pl-9 pr-3 text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none"
           />
         </label>
         <div className="flex flex-wrap items-center gap-2">

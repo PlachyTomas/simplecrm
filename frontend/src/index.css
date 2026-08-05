@@ -30,6 +30,18 @@
     border-radius: var(--radius-sm);
   }
 
+  /* Tailwind's preflight defaults placeholders to its own gray-400, which is
+     off-palette and ignores the theme. Point them at the token instead, so the
+     ~80 inputs that never spelled out `placeholder:text-text-placeholder` still
+     match the ones that do. */
+  /* Selector must match preflight's own `input::placeholder, textarea::placeholder`
+     — a bare `::placeholder` is less specific and loses to it. */
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-text-placeholder);
+    opacity: 1;
+  }
+
   ::selection {
     background: var(--color-accent-subtle);
     color: var(--color-text-primary);

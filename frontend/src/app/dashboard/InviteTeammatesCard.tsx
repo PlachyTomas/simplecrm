@@ -255,7 +255,7 @@ export function InviteTeammatesCard({ variant = "standalone" }: InviteTeammatesC
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder={t("inviteTeammatesCard.emailPlaceholder")}
-            className="block h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
+            className="block h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none"
           />
         </label>
         <button

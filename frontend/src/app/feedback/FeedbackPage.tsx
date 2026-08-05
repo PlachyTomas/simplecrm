@@ -198,7 +198,7 @@ export function FeedbackPage() {
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
             placeholder={t("feedback.captionPlaceholder")}
-            className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
+            className="mt-2 block h-10 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none"
           />
         </label>
 
@@ -213,7 +213,7 @@ export function FeedbackPage() {
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder={t("feedback.bodyPlaceholder")}
-            className="mt-2 block w-full rounded-md border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none"
+            className="mt-2 block w-full rounded-md border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none"
           />
         </label>
 

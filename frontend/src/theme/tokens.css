@@ -110,12 +110,17 @@
   --color-text-secondary-rgb: 168 168 179;
   /* Tertiary bumped from #6b6b76 to clear WCAG AA 4.5:1 on the dark surface. */
   --color-text-tertiary-rgb: 144 144 160;
+  /* Placeholders are hints, not content — every input carries a real <label>,
+     so they sit at the 3:1 UI-chrome threshold rather than tertiary's 4.5:1.
+     At tertiary weight a placeholder reads as a filled value. */
+  --color-text-placeholder-rgb: 118 118 133;
   --color-text-on-accent-rgb: 10 10 11;
   /* Solid magenta fills always carry near-black text — never white. */
   --color-text-on-brand-accent-rgb: 10 10 11;
   --color-text-primary: rgb(var(--color-text-primary-rgb));
   --color-text-secondary: rgb(var(--color-text-secondary-rgb));
   --color-text-tertiary: rgb(var(--color-text-tertiary-rgb));
+  --color-text-placeholder: rgb(var(--color-text-placeholder-rgb));
   --color-text-on-accent: rgb(var(--color-text-on-accent-rgb));
   --color-text-on-brand-accent: rgb(var(--color-text-on-brand-accent-rgb));
 
@@ -197,12 +202,17 @@
   --color-text-secondary-rgb: 74 74 85;
   /* Tertiary bumped from #8a8a95 to clear WCAG AA 4.5:1 on the light surface. */
   --color-text-tertiary-rgb: 90 90 101;
+  /* See the dark-theme note: at tertiary weight (7.4:1 on white, barely lighter
+     than secondary) a light-mode placeholder is indistinguishable from a real
+     value. 3.3:1 keeps it perceivable but clearly empty. */
+  --color-text-placeholder-rgb: 134 134 147;
   --color-text-on-accent-rgb: 255 255 255;
   /* Solid magenta fills always carry near-black text — never white. */
   --color-text-on-brand-accent-rgb: 10 10 11;
   --color-text-primary: rgb(var(--color-text-primary-rgb));
   --color-text-secondary: rgb(var(--color-text-secondary-rgb));
   --color-text-tertiary: rgb(var(--color-text-tertiary-rgb));
+  --color-text-placeholder: rgb(var(--color-text-placeholder-rgb));
   --color-text-on-accent: rgb(var(--color-text-on-accent-rgb));
   --color-text-on-brand-accent: rgb(var(--color-text-on-brand-accent-rgb));
 

@@ -26,6 +26,7 @@ const config: Config = {
           primary: "rgb(var(--color-text-primary-rgb) / <alpha-value>)",
           secondary: "rgb(var(--color-text-secondary-rgb) / <alpha-value>)",
           tertiary: "rgb(var(--color-text-tertiary-rgb) / <alpha-value>)",
+          placeholder: "rgb(var(--color-text-placeholder-rgb) / <alpha-value>)",
           "on-accent": "rgb(var(--color-text-on-accent-rgb) / <alpha-value>)",
           "on-brand-accent": "rgb(var(--color-text-on-brand-accent-rgb) / <alpha-value>)",
         },
