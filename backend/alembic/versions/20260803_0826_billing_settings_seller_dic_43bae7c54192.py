@@ -5,16 +5,17 @@ Revises: f7a8b9c0d1e2
 Create Date: 2026-08-03 08:26:28.987220+00:00
 
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
-revision: str = '43bae7c54192'
-down_revision: str | None = 'f7a8b9c0d1e2'
+revision: str = "43bae7c54192"
+down_revision: str | None = "f7a8b9c0d1e2"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
