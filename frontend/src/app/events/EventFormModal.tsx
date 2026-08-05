@@ -4,6 +4,14 @@ import { Link } from "react-router-dom";
 
 import { useDeals } from "@/app/deals/useDeals";
 import { type CalendarEventOut, useCreateEvent, useUpdateEvent } from "@/app/events/useEvents";
+import { LabelPicker } from "@/app/events/LabelPicker";
+import { TimeSelect } from "@/app/events/TimeSelect";
+import type { EventLabelBrief } from "@/app/events/useEventLabels";
+import {
+  buildEndOptions,
+  buildStartOptions,
+  shiftEndPreservingDuration,
+} from "@/app/events/timeOptions";
 import {
   useGoogleCalendarConnect,
   useGoogleCalendarStatus,
@@ -120,6 +128,7 @@ export function EventFormModal({
   const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
+  const [labels, setLabels] = useState<EventLabelBrief[]>([]);
   const [addToGoogle, setAddToGoogle] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -138,6 +147,7 @@ export function EventFormModal({
       location,
       description,
       selectedDeal?.id ?? "",
+      labels.map((label) => label.id),
     ]) !== initialFormRef.current;
   const { onBackdropClick, nudgeClass } = useDismissGuard(onClose, dirty);
 
@@ -151,6 +161,7 @@ export function EventFormModal({
       setEndTime(toLocalTime(event.ends_at));
       setLocation(event.location ?? "");
       setDescription(event.description ?? "");
+      setLabels(event.labels ?? []);
       // `error` means the user wanted the Google copy but the push failed —
       // keep the intent checked so saving retries it.
       setAddToGoogle(event.google_sync_status !== "not_synced" && googleAvailable);
@@ -162,6 +173,7 @@ export function EventFormModal({
         event.location ?? "",
         event.description ?? "",
         "",
+        (event.labels ?? []).map((label) => label.id),
       ]);
     } else {
       // A calendar-driven create pre-selects its day; a non-today day gets a
@@ -178,6 +190,7 @@ export function EventFormModal({
       setEndTime(slot.end);
       setLocation("");
       setDescription("");
+      setLabels([]);
       setAddToGoogle(googleAvailable);
       setSelectedDeal(null);
       lastDefaultTitleRef.current = null;
@@ -189,6 +202,7 @@ export function EventFormModal({
         "",
         "",
         "",
+        [],
       ]);
     }
     // googleAvailable intentionally re-applies when the status loads while
@@ -216,6 +230,16 @@ export function EventFormModal({
       }
       return prev;
     });
+  }
+
+  /**
+   * Google's rule: moving the start drags the end along so the slot keeps
+   * its length (clamped to 23:59 — the form has one date field). Moving the
+   * END is left alone; it never touches the start.
+   */
+  function handleStartChange(next: string) {
+    setEndTime((prevEnd) => shiftEndPreservingDuration(startTime, prevEnd, next));
+    setStartTime(next);
   }
 
   function notifySaved(saved: CalendarEventOut, mode: "created" | "updated") {
@@ -260,6 +284,9 @@ export function EventFormModal({
             starts_at: starts.toISOString(),
             ends_at: ends.toISOString(),
             add_to_google: addToGoogle,
+            // The picker always shows the full set, so sending it is a
+            // replace — `[]` deliberately clears every label.
+            label_ids: labels.map((label) => label.id),
             // Only sent when the user actually picked one — omitting the key
             // leaves the existing link alone (the PUT is exclude_unset).
             ...(selectedDeal ? { deal_id: selectedDeal.id } : {}),
@@ -282,6 +309,7 @@ export function EventFormModal({
           starts_at: starts.toISOString(),
           ends_at: ends.toISOString(),
           add_to_google: addToGoogle,
+          label_ids: labels.map((label) => label.id),
         },
         {
           onSuccess: (saved) => notifySaved(saved, "created"),
@@ -324,6 +352,17 @@ export function EventFormModal({
             ) : (
               <span className="font-medium text-text-secondary">{dealName ?? "—"}</span>
             )}
+            {event?.company_id ? (
+              <>
+                {" · "}
+                <Link
+                  to={`/app/companies/${event.company_id}`}
+                  className="font-medium text-accent hover:text-accent-hover"
+                >
+                  {event.company_name}
+                </Link>
+              </>
+            ) : null}
           </p>
         )}
 
@@ -356,28 +395,22 @@ export function EventFormModal({
                 className={inputCls}
               />
             </label>
-            <label className="block text-sm">
-              <span className="mb-1 block text-text-secondary">
-                {t("eventFormModal.fromLabel")}
-              </span>
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                required
-                className={inputCls}
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="mb-1 block text-text-secondary">{t("eventFormModal.toLabel")}</span>
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                required
-                className={inputCls}
-              />
-            </label>
+            <TimeSelect
+              label={t("eventFormModal.fromLabel")}
+              value={startTime}
+              onChange={handleStartChange}
+              options={buildStartOptions(startTime)}
+              testId={testIds.events.timeStart}
+              inputCls={inputCls}
+            />
+            <TimeSelect
+              label={t("eventFormModal.toLabel")}
+              value={endTime}
+              onChange={setEndTime}
+              options={buildEndOptions(startTime, endTime)}
+              testId={testIds.events.timeEnd}
+              inputCls={inputCls}
+            />
           </div>
 
           <label className="block text-sm">
@@ -404,6 +437,8 @@ export function EventFormModal({
               className="block w-full rounded-md border border-border bg-surface-overlay px-3 py-2 text-sm focus:border-accent focus:outline-none"
             />
           </label>
+
+          <LabelPicker selected={labels} onChange={setLabels} inputCls={inputCls} />
 
           <label className="flex items-start gap-2 text-sm">
             <input

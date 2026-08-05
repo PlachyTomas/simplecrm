@@ -22,6 +22,7 @@ from app.db.models import (
     EmailCampaign,
     EmailDirection,
     EmailTemplate,
+    EventLabel,
     GoogleCalendarConnection,
     Invoice,
     Organization,
@@ -401,6 +402,8 @@ async def test_erasure_leaves_no_org_scoped_rows_anywhere(
                 body="Tělo",
             )
         )
+        # Org vocabulary the users typed themselves — must not survive either.
+        s.add(EventLabel(organization_id=org.id, name="Schůzka", color="#6366F1"))
         s.add(
             SalesGoal(
                 organization_id=org.id,

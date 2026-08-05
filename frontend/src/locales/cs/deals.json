@@ -324,6 +324,7 @@
     "toLabel": "Do",
     "locationLabel": "Místo (volitelné)",
     "descriptionLabel": "Popis (volitelné)",
+    "labelsLabel": "Štítky (volitelné)",
     "addToGoogle": "Přidat do Google kalendáře",
     "connectCalendarLink": "nejprve propojte kalendář v Nastavení",
     "reconnectGoogle": "Google kalendář odpojen — Znovu připojit",
@@ -337,6 +338,21 @@
       "loadError": "Obchody se nepodařilo načíst.",
       "labelOptional": "Obchod (volitelné)",
       "hint": "Bez obchodu je to samostatná událost — obchod můžete přiřadit i později."
+    },
+    "timePicker": {
+      "optionsLabel": "Nabídka časů"
+    },
+    "labelPicker": {
+      "placeholder": "Hledejte nebo vytvořte štítek…",
+      "loading": "Načítání štítků…",
+      "loadError": "Štítky se nepodařilo načíst.",
+      "noMatch": "Žádný štítek neodpovídá hledání.",
+      "alreadyAdded": "Tento štítek už u události máte.",
+      "empty": "Zatím nemáte žádné štítky. Napište název a první vytvoříte.",
+      "create": "Vytvořit štítek „{{name}}“",
+      "creating": "Vytvářím…",
+      "createError": "Štítek se nepodařilo vytvořit.",
+      "remove": "Odebrat štítek {{name}}"
     },
     "cancel": "Zrušit",
     "saving": "Ukládám…",

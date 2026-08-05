@@ -1271,6 +1271,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/event-labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Event Labels
+         * @description Every label in the caller's org, alphabetically. Not paginated: an
+         *     org's label vocabulary is a picker, not a data set.
+         */
+        get: operations["list_event_labels_api_v1_event_labels_get"];
+        put?: never;
+        /**
+         * Create Event Label
+         * @description Any role — labels are created inline from the event form.
+         */
+        post: operations["create_event_label_api_v1_event_labels_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/event-labels/{label_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Event Label
+         * @description Admin only: a rename or recolor changes the label on every event in
+         *     the org, so it isn't a per-user decision.
+         */
+        put: operations["update_event_label_api_v1_event_labels__label_id__put"];
+        post?: never;
+        /**
+         * Delete Event Label
+         * @description Admin only. The join rows cascade — events keep their other labels.
+         */
+        delete: operations["delete_event_label_api_v1_event_labels__label_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invitations": {
         parameters: {
             query?: never;
@@ -4440,6 +4490,8 @@ export interface components {
              * @default false
              */
             add_to_google: boolean;
+            /** Label Ids */
+            label_ids?: string[];
         };
         /** CalendarEventOut */
         CalendarEventOut: {
@@ -4457,6 +4509,10 @@ export interface components {
             deal_id: string | null;
             /** Deal Name */
             deal_name: string | null;
+            /** Company Id */
+            company_id?: string | null;
+            /** Company Name */
+            company_name?: string | null;
             /** Owner User Id */
             owner_user_id: string | null;
             /** Title */
@@ -4478,6 +4534,8 @@ export interface components {
             /** Google Event Id */
             google_event_id: string | null;
             google_sync_status: components["schemas"]["GoogleSyncStatus"];
+            /** Labels */
+            labels?: components["schemas"]["EventLabelBrief"][];
             /**
              * Created At
              * Format: date-time
@@ -4505,6 +4563,8 @@ export interface components {
             ends_at?: string | null;
             /** Add To Google */
             add_to_google?: boolean | null;
+            /** Label Ids */
+            label_ids?: string[] | null;
         };
         /** CampaignDetailOut */
         CampaignDetailOut: {
@@ -5505,6 +5565,60 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * EventLabelBrief
+         * @description The shape embedded in a calendar event — just enough to draw a chip.
+         */
+        EventLabelBrief: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Color */
+            color: string;
+        };
+        /** EventLabelCreate */
+        EventLabelCreate: {
+            /** Name */
+            name: string;
+            /** Color */
+            color: string;
+        };
+        /** EventLabelOut */
+        EventLabelOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /** Name */
+            name: string;
+            /** Color */
+            color: string;
+            /**
+             * Usage Count
+             * @default 0
+             */
+            usage_count: number;
+        };
+        /**
+         * EventLabelUpdate
+         * @description Partial update — omitted fields are left alone (`exclude_unset`).
+         */
+        EventLabelUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Color */
+            color?: string | null;
         };
         /** ExtendTrialIn */
         ExtendTrialIn: {
@@ -10644,6 +10758,123 @@ export interface operations {
             header?: never;
             path: {
                 event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_event_labels_api_v1_event_labels_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventLabelOut"][];
+                };
+            };
+        };
+    };
+    create_event_label_api_v1_event_labels_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EventLabelCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventLabelOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_event_label_api_v1_event_labels__label_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                label_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EventLabelUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventLabelOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_event_label_api_v1_event_labels__label_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                label_id: string;
             };
             cookie?: never;
         };

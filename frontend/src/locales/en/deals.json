@@ -317,6 +317,7 @@
     "toLabel": "To",
     "locationLabel": "Location (optional)",
     "descriptionLabel": "Description (optional)",
+    "labelsLabel": "Labels (optional)",
     "addToGoogle": "Add to Google Calendar",
     "connectCalendarLink": "connect your calendar in Settings first",
     "reconnectGoogle": "Google Calendar disconnected — Reconnect",
@@ -330,6 +331,21 @@
       "loadError": "Failed to load deals.",
       "labelOptional": "Deal (optional)",
       "hint": "With no deal this is a standalone event — you can attach a deal later."
+    },
+    "timePicker": {
+      "optionsLabel": "Time suggestions"
+    },
+    "labelPicker": {
+      "placeholder": "Search or create a label…",
+      "loading": "Loading labels…",
+      "loadError": "Failed to load labels.",
+      "noMatch": "No label matches your search.",
+      "alreadyAdded": "That label is already on this event.",
+      "empty": "No labels yet. Type a name to create your first one.",
+      "create": "Create label “{{name}}”",
+      "creating": "Creating…",
+      "createError": "Failed to create the label.",
+      "remove": "Remove label {{name}}"
     },
     "cancel": "Cancel",
     "saving": "Saving…",

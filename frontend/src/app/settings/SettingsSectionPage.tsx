@@ -9,6 +9,7 @@ import { InvitationsSection } from "@/app/settings/InvitationsSection";
 import { PrivacySection } from "@/app/settings/PrivacySection";
 import { AppearanceSection } from "@/app/settings/sections/AppearanceSection";
 import { BillingSection } from "@/app/settings/sections/BillingSection";
+import { EventLabelsSection } from "@/app/settings/sections/EventLabelsSection";
 import { IntegrationsSection } from "@/app/settings/sections/IntegrationsSection";
 import { OrganizationSection } from "@/app/settings/sections/OrganizationSection";
 import { PermissionsSection } from "@/app/settings/sections/PermissionsSection";
@@ -37,6 +38,7 @@ const SECTION_COMPONENTS: Record<SettingsSectionKey, ComponentType> = {
   "blocked-companies": BlockedCompaniesSection,
   "email-templates": EmailTemplatesSection,
   "sales-goals": SalesGoalsSection,
+  "event-labels": EventLabelsSection,
   organization: OrganizationSection,
   billing: BillingSection,
   integrations: IntegrationsSection,

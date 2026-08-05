@@ -71,6 +71,10 @@
         "label": "Prodejní cíle",
         "description": "Měsíční cíle pro obchodníky i celou firmu."
       },
+      "event-labels": {
+        "label": "Štítky událostí",
+        "description": "Barevné štítky pro kalendářní události sdílené v rámci organizace."
+      },
       "shortcuts": {
         "label": "Klávesové zkratky",
         "description": "Ovládejte aplikaci bez myši — kompletní přehled zkratek."
@@ -713,5 +717,27 @@
   "shortcutsSection": {
     "title": "Klávesové zkratky",
     "subtitle": "Stejný přehled otevřete kdekoli v aplikaci klávesou ?."
+  },
+  "eventLabels": {
+    "title": "Štítky událostí",
+    "subtitle": "Barevné štítky pro kalendářní události, sdílené v rámci celé organizace. Vybírat je může kdokoli, tento seznam spravují správci.",
+    "readOnlyNote": "Přejmenovat, přebarvit nebo smazat štítek může jen správce.",
+    "loading": "Načítám…",
+    "errorLoad": "Štítky se nepodařilo načíst.",
+    "empty": "Zatím nejsou žádné štítky událostí.",
+    "usageCount_one": "Použito na {{count}} události",
+    "usageCount_few": "Použito na {{count}} událostech",
+    "usageCount_other": "Použito na {{count}} událostech",
+    "swatchGroupAriaLabel": "Barva štítku",
+    "swatchAriaLabel": "Nastavit barvu {{color}}",
+    "save": "Uložit",
+    "deleteAriaLabel": "Smazat štítek {{name}}",
+    "deleteConfirm_one": "Smazat štítek \"{{name}}\"? Je použit na {{count}} události.",
+    "deleteConfirm_few": "Smazat štítek \"{{name}}\"? Je použit na {{count}} událostech.",
+    "deleteConfirm_other": "Smazat štítek \"{{name}}\"? Je použit na {{count}} událostech.",
+    "errors": {
+      "duplicate": "Štítek s tímto názvem už existuje.",
+      "generic": "Štítek se nepodařilo uložit. Zkuste to prosím znovu."
+    }
   }
 }

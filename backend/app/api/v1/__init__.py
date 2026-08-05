@@ -13,6 +13,7 @@ from app.api.v1 import (
     deals,
     email_templates,
     emails,
+    event_labels,
     events,
     feedback,
     google_calendar,
@@ -82,6 +83,9 @@ api_router.include_router(emails.router, dependencies=PROTECTED_DEPS)
 # per-route inside the router).
 api_router.include_router(email_templates.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(events.router, dependencies=PROTECTED_DEPS)
+# Org-shared calendar event labels. Everyone reads and creates (inline from
+# the event form); admins rename/recolor/delete (gated per-route inside).
+api_router.include_router(event_labels.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(invitations.router, dependencies=PROTECTED_DEPS)
 # Customer-facing tax-invoice surfaces. Org-membership gated; not trial-
 # gated (a gated org must still be able to download their existing

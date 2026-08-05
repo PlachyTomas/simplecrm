@@ -19,6 +19,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.db.models.enums import GoogleSyncStatus
+from app.db.models.event_label import EventLabel, calendar_event_labels
 
 if TYPE_CHECKING:
     from app.db.models.deal import Deal
@@ -95,3 +96,11 @@ class CalendarEvent(Base):
     organization: Mapped[Organization] = relationship()
     deal: Mapped[Deal] = relationship()
     owner: Mapped[User | None] = relationship()
+    # CRM-only: labels are never pushed into the Google payload. Lazy by
+    # default like the rest of this model — every read path in
+    # `api/v1/events.py` eager-loads them (`selectinload`) because an async
+    # lazy-load after a commit raises MissingGreenlet.
+    labels: Mapped[list[EventLabel]] = relationship(
+        secondary=calendar_event_labels,
+        order_by=EventLabel.name,
+    )

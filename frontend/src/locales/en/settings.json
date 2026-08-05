@@ -71,6 +71,10 @@
         "label": "Sales goals",
         "description": "Monthly targets for salespeople and the whole company."
       },
+      "event-labels": {
+        "label": "Event labels",
+        "description": "Colored labels for calendar events, shared across the organization."
+      },
       "shortcuts": {
         "label": "Keyboard shortcuts",
         "description": "Drive the app without the mouse — the complete list."
@@ -708,5 +712,25 @@
   "shortcutsSection": {
     "title": "Keyboard shortcuts",
     "subtitle": "Open this list anywhere in the app with the ? key."
+  },
+  "eventLabels": {
+    "title": "Event labels",
+    "subtitle": "Colored labels for calendar events, shared across the whole organization. Anyone can pick them; admins manage this list.",
+    "readOnlyNote": "Only an admin can rename, recolor, or delete a label.",
+    "loading": "Loading…",
+    "errorLoad": "Failed to load event labels.",
+    "empty": "There are no event labels yet.",
+    "usageCount_one": "Used on {{count}} event",
+    "usageCount_other": "Used on {{count}} events",
+    "swatchGroupAriaLabel": "Label color",
+    "swatchAriaLabel": "Set color {{color}}",
+    "save": "Save",
+    "deleteAriaLabel": "Delete label {{name}}",
+    "deleteConfirm_one": "Delete the label \"{{name}}\"? It's used on {{count}} event.",
+    "deleteConfirm_other": "Delete the label \"{{name}}\"? It's used on {{count}} events.",
+    "errors": {
+      "duplicate": "A label with this name already exists.",
+      "generic": "Failed to save the label. Please try again."
+    }
   }
 }

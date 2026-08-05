@@ -8,20 +8,22 @@ import {
 } from "@/app/settings/settingsNav";
 
 describe("settingsNav", () => {
-  it("admins see all 14 sections", () => {
-    expect(visibleSectionKeys("admin", false)).toHaveLength(14);
+  it("admins see all 15 sections", () => {
+    expect(visibleSectionKeys("admin", false)).toHaveLength(15);
   });
 
   it("salespeople see personal sections plus the read-for-all ones", () => {
     // Email templates are readable by every role (they pick one when
-    // composing) and so are sales goals (a rep has to see the number they
-    // are measured against); both sections hide their write controls.
+    // composing), and so are sales goals (a rep has to see the number they
+    // are measured against) and event labels (the shared vocabulary they
+    // assign in the event form); these sections hide their write controls.
     expect(visibleSectionKeys("salesperson", false)).toEqual([
       "appearance",
       "integrations",
       "shortcuts",
       "email-templates",
       "sales-goals",
+      "event-labels",
     ]);
   });
 
@@ -32,6 +34,7 @@ describe("settingsNav", () => {
       "shortcuts",
       "email-templates",
       "sales-goals",
+      "event-labels",
       "invitations",
     ]);
   });

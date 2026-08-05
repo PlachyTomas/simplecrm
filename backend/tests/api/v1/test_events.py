@@ -11,6 +11,10 @@ The Google client is stubbed via FastAPI dependency override. Coverage:
     `add_to_google=false` removes the Google copy; a vanished Google copy
     (404) is re-inserted; only the owner or an admin may modify
   - delete: removes the row + best-effort Google delete
+  - labels: `label_ids` round-trip (create / replace / omit / clear),
+    cross-org ids rejected, name ordering
+  - company: `company_id`/`company_name` derived from the deal on every
+    read path, and cleared when the deal link is dropped
 """
 
 from __future__ import annotations
@@ -24,6 +28,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.security import create_access_token
 from app.core.token_crypto import encrypt_token
@@ -31,6 +36,7 @@ from app.db.models import (
     CalendarEvent,
     Company,
     Deal,
+    EventLabel,
     GoogleCalendarConnection,
     GoogleSyncStatus,
     Organization,
@@ -156,6 +162,16 @@ async def _seed_deal(
     await session.commit()
     await session.refresh(deal)
     return deal
+
+
+async def _seed_label(
+    session: AsyncSession, org: Organization, name: str, color: str = "#6366F1"
+) -> EventLabel:
+    label = EventLabel(organization_id=org.id, name=name, color=color)
+    session.add(label)
+    await session.commit()
+    await session.refresh(label)
+    return label
 
 
 async def _seed_connection(session: AsyncSession, user: User) -> GoogleCalendarConnection:
@@ -644,3 +660,227 @@ async def test_delete_event_404_outside_scope(
 
     response = await client.delete(f"{EVENTS}/{event_b.id}", headers=_auth(user_a))
     assert response.status_code == 404
+
+
+# labels ----------------------------------------------------------------------
+
+
+async def test_create_event_with_labels_returns_them_name_ordered(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    org, stage = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org)
+    deal = await _seed_deal(db_session, org, stage)
+    zebra = await _seed_label(db_session, org, "Zebra", "#EF4444")
+    alfa = await _seed_label(db_session, org, "Alfa", "#10B981")
+
+    response = await client.post(
+        EVENTS,
+        json=_body(deal, label_ids=[str(zebra.id), str(alfa.id)]),
+        headers=_auth(user),
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert [label["name"] for label in body["labels"]] == ["Alfa", "Zebra"]
+    assert body["labels"][0] == {"id": str(alfa.id), "name": "Alfa", "color": "#10B981"}
+
+    # Same shape on the list route (which loads the labels eagerly).
+    listed = await client.get(EVENTS, headers=_auth(user))
+    item = next(item for item in listed.json()["items"] if item["id"] == body["id"])
+    assert [label["id"] for label in item["labels"]] == [str(alfa.id), str(zebra.id)]
+
+    # …and the Google payload is untouched by labels (CRM-only).
+    assert fake_gcal.inserted == []
+
+
+async def test_create_event_without_labels_returns_empty_list(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    org, stage = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org)
+    deal = await _seed_deal(db_session, org, stage)
+
+    response = await client.post(EVENTS, json=_body(deal), headers=_auth(user))
+    assert response.status_code == 201, response.text
+    assert response.json()["labels"] == []
+
+
+async def test_create_event_rejects_foreign_org_label(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    org_a, stage_a = await _seed_org(db_session, owned_cleanup)
+    org_b, _stage_b = await _seed_org(db_session, owned_cleanup)
+    user_a = await _seed_user(db_session, owned_cleanup, org_a)
+    deal_a = await _seed_deal(db_session, org_a, stage_a)
+    foreign_label = await _seed_label(db_session, org_b, "Cizí")
+
+    response = await client.post(
+        EVENTS, json=_body(deal_a, label_ids=[str(foreign_label.id)]), headers=_auth(user_a)
+    )
+    assert response.status_code == 400, response.text
+
+    unknown = await client.post(
+        EVENTS, json=_body(deal_a, label_ids=[str(uuid.uuid4())]), headers=_auth(user_a)
+    )
+    assert unknown.status_code == 400, unknown.text
+
+
+async def test_update_event_labels_replace_omit_and_clear(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    org, stage = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org)
+    deal = await _seed_deal(db_session, org, stage)
+    hovor = await _seed_label(db_session, org, "Hovor", "#0EA5E9")
+    schuzka = await _seed_label(db_session, org, "Schůzka", "#6366F1")
+
+    created = await client.post(
+        EVENTS, json=_body(deal, label_ids=[str(hovor.id)]), headers=_auth(user)
+    )
+    event_id = created.json()["id"]
+
+    # replace
+    replaced = await client.put(
+        f"{EVENTS}/{event_id}", json={"label_ids": [str(schuzka.id)]}, headers=_auth(user)
+    )
+    assert replaced.status_code == 200, replaced.text
+    assert [label["id"] for label in replaced.json()["labels"]] == [str(schuzka.id)]
+
+    # omitted → unchanged
+    untouched = await client.put(
+        f"{EVENTS}/{event_id}", json={"title": "Jiný název"}, headers=_auth(user)
+    )
+    assert untouched.status_code == 200, untouched.text
+    assert [label["id"] for label in untouched.json()["labels"]] == [str(schuzka.id)]
+
+    # [] → cleared
+    cleared = await client.put(f"{EVENTS}/{event_id}", json={"label_ids": []}, headers=_auth(user))
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()["labels"] == []
+
+    persisted = (
+        await db_session.execute(
+            select(CalendarEvent)
+            .where(CalendarEvent.id == uuid.UUID(event_id))
+            .options(selectinload(CalendarEvent.labels))
+        )
+    ).scalar_one()
+    assert persisted.labels == []
+
+
+async def test_update_event_rejects_foreign_org_label(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    org_a, stage_a = await _seed_org(db_session, owned_cleanup)
+    org_b, _stage_b = await _seed_org(db_session, owned_cleanup)
+    user_a = await _seed_user(db_session, owned_cleanup, org_a)
+    deal_a = await _seed_deal(db_session, org_a, stage_a)
+    event = await _seed_event(db_session, org_a, deal_a, user_a)
+    foreign_label = await _seed_label(db_session, org_b, "Cizí")
+
+    response = await client.put(
+        f"{EVENTS}/{event.id}",
+        json={"label_ids": [str(foreign_label.id)]},
+        headers=_auth(user_a),
+    )
+    assert response.status_code == 400, response.text
+
+
+# company derivation -----------------------------------------------------------
+
+
+async def test_event_carries_deal_company(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    org, stage = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org)
+    deal = await _seed_deal(db_session, org, stage)
+    company = (
+        await db_session.execute(select(Company).where(Company.id == deal.company_id))
+    ).scalar_one()
+
+    created = await client.post(EVENTS, json=_body(deal), headers=_auth(user))
+    assert created.status_code == 201, created.text
+    assert created.json()["company_id"] == str(company.id)
+    assert created.json()["company_name"] == company.name
+
+    listed = await client.get(EVENTS, headers=_auth(user))
+    item = next(item for item in listed.json()["items"] if item["id"] == created.json()["id"])
+    assert item["company_id"] == str(company.id)
+    assert item["company_name"] == company.name
+
+
+async def test_event_without_deal_has_no_company(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    org, stage = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org)
+    deal = await _seed_deal(db_session, org, stage)
+
+    created = await client.post(EVENTS, json=_body(deal), headers=_auth(user))
+    event_id = created.json()["id"]
+
+    detached = await client.put(f"{EVENTS}/{event_id}", json={"deal_id": None}, headers=_auth(user))
+    assert detached.status_code == 200, detached.text
+    body = detached.json()
+    assert body["deal_id"] is None
+    assert body["deal_name"] is None
+    assert body["company_id"] is None
+    assert body["company_name"] is None
+
+
+async def test_update_event_attaching_deal_sets_company(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    org, stage = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org)
+    deal = await _seed_deal(db_session, org, stage)
+    company = (
+        await db_session.execute(select(Company).where(Company.id == deal.company_id))
+    ).scalar_one()
+
+    starts = datetime.now(tz=UTC) + timedelta(days=3)
+    created = await client.post(
+        EVENTS,
+        json={
+            "title": "Blokace",
+            "starts_at": starts.isoformat(),
+            "ends_at": (starts + timedelta(hours=1)).isoformat(),
+        },
+        headers=_auth(user),
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["company_id"] is None
+
+    attached = await client.put(
+        f"{EVENTS}/{created.json()['id']}",
+        json={"deal_id": str(deal.id)},
+        headers=_auth(user),
+    )
+    assert attached.status_code == 200, attached.text
+    assert attached.json()["company_id"] == str(company.id)
+    assert attached.json()["company_name"] == company.name

@@ -36,6 +36,7 @@ from app.db.models import (
     Deal,
     EmailCampaign,
     EmailTemplate,
+    EventLabel,
     GoogleCalendarConnection,
     ImportRun,
     Invitation,
@@ -126,6 +127,10 @@ async def erase_organization(
     # exist), so the deal cascade does NOT reach them all — this delete is
     # load-bearing, not defensive.
     await session.execute(delete(CalendarEvent).where(CalendarEvent.organization_id == org_id))
+    # Event labels are free-text org vocabulary (users name their own), so
+    # they leave with the events they tagged. The join rows cascade from both
+    # sides; only these parent rows need an explicit delete.
+    await session.execute(delete(EventLabel).where(EventLabel.organization_id == org_id))
     await session.execute(delete(EmailTemplate).where(EmailTemplate.organization_id == org_id))
     await session.execute(delete(SalesGoal).where(SalesGoal.organization_id == org_id))
     await session.execute(delete(Activity).where(Activity.organization_id == org_id))

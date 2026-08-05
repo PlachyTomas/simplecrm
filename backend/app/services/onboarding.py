@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Organization, Plan, Subscription, Team, User, UserRole
+from app.services.event_labels import create_default_event_labels
 from app.services.pipeline import create_default_pipeline
 
 DEFAULT_TEAM_NAME = "Hlavní tým"
@@ -38,6 +39,8 @@ async def create_organization_with_admin(
       - Insert `Organization(name=name)`.
       - Insert default `Team(name="Hlavní tým", is_default=True)`.
       - Provision the default pipeline (delegates to `pipeline.create_default_pipeline`).
+      - Provision the default calendar event labels (delegates to
+        `event_labels.create_default_event_labels`, named per `organization.locale`).
       - Insert a `Subscription(plan='trial', status='trialing', seat_count=…)`
         whose period ends at `organization.trial_ends_at`. When
         `intended_plan_code` is provided ("monthly"/"annual"), the desired
@@ -68,6 +71,7 @@ async def create_organization_with_admin(
     await session.flush()
 
     await create_default_pipeline(session, organization.id)
+    await create_default_event_labels(session, organization.id, organization.locale)
 
     trial_plan_id = (
         await session.execute(select(Plan.id).where(Plan.code == "trial"))

@@ -4,6 +4,11 @@ import { useAuth } from "@/auth/useAuth";
 import { apiFetch } from "@/lib/api";
 import type { components } from "@/types/api.generated";
 
+/**
+ * `CalendarEventOut` carries `labels` (name-ordered chips) plus the
+ * `company_id`/`company_name` derived from the deal; the create/update
+ * payloads carry `label_ids` — a full replace, where `[]` clears them.
+ */
 export type CalendarEventOut = components["schemas"]["CalendarEventOut"];
 export type CalendarEventCreate = components["schemas"]["CalendarEventCreate"];
 export type CalendarEventUpdate = components["schemas"]["CalendarEventUpdate"];
@@ -48,6 +53,9 @@ function invalidateEvents(qc: ReturnType<typeof useQueryClient>) {
   // both derive from them, so they must refresh with every event write.
   void qc.invalidateQueries({ queryKey: ["pipeline", "default", "board"] });
   void qc.invalidateQueries({ queryKey: ["deals"] });
+  // Attaching/detaching labels moves the `usage_count` the settings list
+  // shows in its delete confirmation.
+  void qc.invalidateQueries({ queryKey: ["event-labels"] });
 }
 
 export function useCreateEvent() {

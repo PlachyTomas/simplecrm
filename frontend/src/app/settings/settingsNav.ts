@@ -10,6 +10,7 @@ import {
   Mails,
   Palette,
   Plug,
+  Tags,
   Target,
   ShieldCheck,
   Upload,
@@ -28,6 +29,7 @@ export type SettingsSectionKey =
   | "blocked-companies"
   | "email-templates"
   | "sales-goals"
+  | "event-labels"
   | "organization"
   | "billing"
   | "integrations"
@@ -150,6 +152,16 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
     icon: Target,
     // A salesperson has to be able to see the number they're being measured
     // against; create/edit/delete stay admin/manager (backend-gated).
+    sharedRead: true,
+  },
+  {
+    key: "event-labels",
+    labelKey: "nav.sections.event-labels.label",
+    descriptionKey: "nav.sections.event-labels.description",
+    group: "sales",
+    icon: Tags,
+    // Anyone picks labels on the event form, so anyone must be able to read
+    // this list; rename/recolor/delete stay admin-only (backend-gated).
     sharedRead: true,
   },
   {

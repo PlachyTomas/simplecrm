@@ -1,5 +1,5 @@
 import { AlertTriangle, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
@@ -14,6 +14,7 @@ import {
 } from "@/app/calendar/calendarMath";
 import { EventFormModal } from "@/app/events/EventFormModal";
 import { type CalendarEventOut, useDeleteEvent, useEvents } from "@/app/events/useEvents";
+import { labelTint } from "@/app/events/useEventLabels";
 import {
   useGoogleCalendarConnect,
   useGoogleCalendarStatus,
@@ -48,6 +49,25 @@ function weekdayLabels(locale: string): string[] {
  * `capitalize` ("Středa 22. Července" is wrong Czech). */
 function sentenceCase(value: string): string {
   return value.charAt(0).toLocaleUpperCase() + value.slice(1);
+}
+
+/** Grid chip color: tinted by the event's first label (array order = name
+ * order) via inline style — a data-driven color from the API, the one
+ * exception to the "no inline colors" rule. A broken Google sync still wins
+ * over any label tint so failures stay visually loud. No labels → the
+ * original indigo treatment. */
+function chipTint(event: CalendarEventOut): { className: string; style?: CSSProperties } {
+  if (event.google_sync_status === "error") {
+    return { className: "bg-warning-subtle text-warning" };
+  }
+  const label = event.labels?.[0];
+  if (label) {
+    return {
+      className: "hover:opacity-80",
+      style: { backgroundColor: labelTint(label.color), color: label.color },
+    };
+  }
+  return { className: "bg-accent-subtle text-accent hover:opacity-80" };
 }
 
 function SyncBadge({ status }: { status: CalendarEventOut["google_sync_status"] }) {
@@ -92,21 +112,44 @@ function DayEventsList({
       {events.map((event) => (
         <li key={event.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
           <div>
-            <p className="flex items-center gap-2 text-sm font-medium text-text-primary">
+            <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-text-primary">
               {timeFmt.format(new Date(event.starts_at))}–{timeFmt.format(new Date(event.ends_at))}
               <span>{event.title}</span>
+              {(event.labels ?? []).map((label) => (
+                <span
+                  key={label.id}
+                  className="rounded-full px-2 py-0.5 text-xs font-medium"
+                  style={{ backgroundColor: labelTint(label.color), color: label.color }}
+                >
+                  {label.name}
+                </span>
+              ))}
               <SyncBadge status={event.google_sync_status} />
             </p>
             <p className="mt-0.5 text-sm text-text-tertiary">
               {/* Deal-less events are legitimate now — say so rather than
-                  rendering a link to nowhere. */}
+                  rendering a link to nowhere. Company is always derived via
+                  the deal, so it only ever appears alongside a deal link. */}
               {event.deal_id ? (
-                <Link
-                  to={`/app/deals/${event.deal_id}`}
-                  className="text-accent hover:text-accent-hover"
-                >
-                  {event.deal_name}
-                </Link>
+                <>
+                  <Link
+                    to={`/app/deals/${event.deal_id}`}
+                    className="text-accent hover:text-accent-hover"
+                  >
+                    {event.deal_name}
+                  </Link>
+                  {event.company_id ? (
+                    <>
+                      {" · "}
+                      <Link
+                        to={`/app/companies/${event.company_id}`}
+                        className="text-accent hover:text-accent-hover"
+                      >
+                        {event.company_name}
+                      </Link>
+                    </>
+                  ) : null}
+                </>
               ) : (
                 <span>{t("calendarPage.noDeal")}</span>
               )}
@@ -273,33 +316,32 @@ export function CalendarPage() {
         >
           {day.date.getDate()}
         </span>
-        {events.slice(0, maxChips).map((event) => (
-          <span
-            key={event.id}
-            role="button"
-            tabIndex={0}
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditingEvent(event);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
+        {events.slice(0, maxChips).map((event) => {
+          const tint = chipTint(event);
+          return (
+            <span
+              key={event.id}
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
                 e.stopPropagation();
                 setEditingEvent(event);
-              }
-            }}
-            title={event.deal_name ? `${event.title} — ${event.deal_name}` : event.title}
-            className={cn(
-              "truncate rounded px-1.5 py-0.5 text-xs",
-              event.google_sync_status === "error"
-                ? "bg-warning-subtle text-warning"
-                : "bg-accent-subtle text-accent hover:opacity-80",
-            )}
-          >
-            {event.title}
-          </span>
-        ))}
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEditingEvent(event);
+                }
+              }}
+              title={event.deal_name ? `${event.title} — ${event.deal_name}` : event.title}
+              style={tint.style}
+              className={cn("truncate rounded px-1.5 py-0.5 text-xs", tint.className)}
+            >
+              {event.title}
+            </span>
+          );
+        })}
         {overflow > 0 ? (
           <span className="px-1.5 text-xs text-text-tertiary">
             {t("calendarPage.moreEvents", { count: overflow })}

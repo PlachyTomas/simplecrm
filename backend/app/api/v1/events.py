@@ -15,6 +15,7 @@ the whole org). Editing/deleting is restricted to the owner or an admin.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterable, Sequence
 from typing import Annotated, TypeGuard
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -32,6 +33,7 @@ from app.db.models import (
     ActivityType,
     CalendarEvent,
     Deal,
+    EventLabel,
     GoogleCalendarConnection,
     GoogleSyncStatus,
     User,
@@ -42,6 +44,7 @@ from app.schemas.calendar_event import (
     CalendarEventOut,
     CalendarEventUpdate,
 )
+from app.schemas.event_label import EventLabelBrief
 from app.schemas.pagination import Page, PaginationParams
 from app.services.activity_log import record_activity
 from app.services.google_calendar import (
@@ -55,14 +58,54 @@ from app.services.google_calendar import (
 router = APIRouter(prefix="/events", tags=["events"])
 
 
-def _event_out(event: CalendarEvent, deal_name: str | None) -> CalendarEventOut:
-    """`deal_name` is passed explicitly — accessing `event.deal` after a
-    commit can trigger an async lazy-load, which raises MissingGreenlet."""
+# Everything `_event_out` needs must be loaded up front: an async lazy-load
+# after the commit raises MissingGreenlet.
+_EVENT_LOADS = (
+    selectinload(CalendarEvent.deal).selectinload(Deal.company),
+    selectinload(CalendarEvent.labels),
+)
+
+
+def _label_briefs(labels: Iterable[EventLabel]) -> list[EventLabelBrief]:
+    """Snapshot label rows into plain schema objects, name-ordered.
+
+    Taking a copy is the point: the ORM collection is expired by the commit,
+    and re-reading it would lazy-load. Sorting here (rather than trusting the
+    relationship's `order_by`) also covers a freshly assigned collection.
+    """
+    return [
+        EventLabelBrief(id=label.id, name=label.name, color=label.color)
+        for label in sorted(labels, key=lambda label: label.name)
+    ]
+
+
+def _deal_display(deal: Deal | None) -> tuple[str | None, uuid.UUID | None, str | None]:
+    """`(deal_name, company_id, company_name)` read while the deal — and its
+    eager-loaded company — are still live. Events carry no company FK; the
+    company is always the deal's, so a deal-less event has none."""
+    if deal is None:
+        return None, None, None
+    return deal.name, deal.company_id, deal.company.name if deal.company else None
+
+
+def _event_out(
+    event: CalendarEvent,
+    deal_name: str | None,
+    *,
+    company_id: uuid.UUID | None = None,
+    company_name: str | None = None,
+    labels: Sequence[EventLabelBrief] = (),
+) -> CalendarEventOut:
+    """`deal_name`, the company pair and `labels` are passed explicitly —
+    accessing `event.deal` / `event.labels` after a commit can trigger an
+    async lazy-load, which raises MissingGreenlet."""
     return CalendarEventOut(
         id=event.id,
         organization_id=event.organization_id,
         deal_id=event.deal_id,
         deal_name=deal_name,
+        company_id=company_id,
+        company_name=company_name,
         owner_user_id=event.owner_user_id,
         title=event.title,
         description=event.description,
@@ -71,15 +114,21 @@ def _event_out(event: CalendarEvent, deal_name: str | None) -> CalendarEventOut:
         ends_at=event.ends_at,
         google_event_id=event.google_event_id,
         google_sync_status=event.google_sync_status,
+        labels=list(labels),
         created_at=event.created_at,
         updated_at=event.updated_at,
     )
 
 
 async def _get_visible_deal(session: AsyncSession, user: User, deal_id: uuid.UUID) -> Deal:
-    base = select(Deal).where(
-        Deal.organization_id == user.organization_id,
-        Deal.id == deal_id,
+    base = (
+        select(Deal)
+        .where(
+            Deal.organization_id == user.organization_id,
+            Deal.id == deal_id,
+        )
+        # The company is part of the event payload (`company_id`/`company_name`).
+        .options(selectinload(Deal.company))
     )
     scoped = await scope_by_owner(base, session=session, user=user, owner_col=Deal.owner_user_id)
     deal: Deal | None = (await session.execute(scoped)).scalar_one_or_none()
@@ -100,7 +149,7 @@ async def _get_scoped_event(
             CalendarEvent.organization_id == user.organization_id,
             CalendarEvent.id == event_id,
         )
-        .options(selectinload(CalendarEvent.deal))
+        .options(*_EVENT_LOADS)
     )
     scoped = await scope_by_owner(
         base, session=session, user=user, owner_col=CalendarEvent.owner_user_id
@@ -109,6 +158,37 @@ async def _get_scoped_event(
     if event is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
     return event
+
+
+async def _resolve_labels(
+    session: AsyncSession, user: User, label_ids: Sequence[uuid.UUID]
+) -> list[EventLabel]:
+    """Label rows for `label_ids`, or 400 — same style as the deal_id check.
+
+    Unknown ids and ids belonging to another organization are indistinguishable
+    on purpose: an id outside the tenant must not be confirmed to exist.
+    """
+    if not label_ids:
+        return []
+    wanted = list(dict.fromkeys(label_ids))  # de-dupe, keep the request's order
+    rows = list(
+        (
+            await session.execute(
+                select(EventLabel).where(
+                    EventLabel.organization_id == user.organization_id,
+                    EventLabel.id.in_(wanted),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if len(rows) != len(wanted):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="label_ids contains an id that does not exist in your organization",
+        )
+    return rows
 
 
 def _assert_can_modify(user: User, event: CalendarEvent) -> None:
@@ -224,7 +304,7 @@ async def list_events(
     base = (
         select(CalendarEvent)
         .where(CalendarEvent.organization_id == user.organization_id)
-        .options(selectinload(CalendarEvent.deal))
+        .options(*_EVENT_LOADS)
     )
     if from_ is not None:
         base = base.where(CalendarEvent.ends_at > from_)
@@ -243,8 +323,20 @@ async def list_events(
         .offset(pagination.offset)
     )
     events = (await session.execute(items_stmt)).scalars().all()
+    items = []
+    for event in events:
+        deal_name, company_id, company_name = _deal_display(event.deal)
+        items.append(
+            _event_out(
+                event,
+                deal_name,
+                company_id=company_id,
+                company_name=company_name,
+                labels=_label_briefs(event.labels),
+            )
+        )
     return Page(
-        items=[_event_out(event, event.deal.name if event.deal else None) for event in events],
+        items=items,
         total=total,
         limit=pagination.limit,
         offset=pagination.offset,
@@ -259,6 +351,7 @@ async def create_event(
     client: GoogleCalendarClient = Depends(get_google_calendar_client),
 ) -> CalendarEventOut:
     deal = await _get_visible_deal(session, user, payload.deal_id) if payload.deal_id else None
+    labels = await _resolve_labels(session, user, payload.label_ids)
 
     event = CalendarEvent(
         organization_id=user.organization_id,
@@ -269,9 +362,14 @@ async def create_event(
         location=payload.location,
         starts_at=payload.starts_at,
         ends_at=payload.ends_at,
+        labels=labels,
     )
     session.add(event)
     await session.flush()
+
+    # Snapshot every display value before the commit expires the instances.
+    deal_name, company_id, company_name = _deal_display(deal)
+    label_briefs = _label_briefs(labels)
 
     # Only a deal-linked event has somewhere to be logged: the activity feed
     # is keyed on an entity, and a free-standing event has no company either.
@@ -302,7 +400,13 @@ async def create_event(
 
     await session.commit()
     await session.refresh(event)
-    return _event_out(event, deal.name if deal else None)
+    return _event_out(
+        event,
+        deal_name,
+        company_id=company_id,
+        company_name=company_name,
+        labels=label_briefs,
+    )
 
 
 @router.put("/{event_id}", response_model=CalendarEventOut)
@@ -315,11 +419,23 @@ async def update_event(
 ) -> CalendarEventOut:
     event = await _get_scoped_event(session, user, event_id)
     _assert_can_modify(user, event)
-    deal_name = event.deal.name if event.deal else None  # before commit expires it
+    # Read before the commit expires the loaded instances.
+    deal_name, company_id, company_name = _deal_display(event.deal)
+    label_briefs = _label_briefs(event.labels)
 
-    fields = payload.model_dump(exclude_unset=True, exclude={"add_to_google", "deal_id"})
+    fields = payload.model_dump(
+        exclude_unset=True, exclude={"add_to_google", "deal_id", "label_ids"}
+    )
     for key, value in fields.items():
         setattr(event, key, value)
+
+    # Labels are handled apart from the blind setattr loop for the same
+    # reason deal_id is: the ids need the org check first. Absent = leave the
+    # set alone, `[]` = clear it, a list = replace it with exactly those.
+    if payload.label_ids is not None:
+        labels = await _resolve_labels(session, user, payload.label_ids)
+        event.labels = labels
+        label_briefs = _label_briefs(labels)
 
     # deal_id is handled apart from the blind setattr loop: attaching a deal
     # has to go through the same visibility check as creating against one,
@@ -327,11 +443,11 @@ async def update_event(
     if "deal_id" in payload.model_fields_set:
         if payload.deal_id is None:
             event.deal_id = None
-            deal_name = None
+            deal_name, company_id, company_name = _deal_display(None)
         else:
             deal = await _get_visible_deal(session, user, payload.deal_id)
             event.deal_id = deal.id
-            deal_name = deal.name
+            deal_name, company_id, company_name = _deal_display(deal)
     if event.ends_at <= event.starts_at:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -363,7 +479,13 @@ async def update_event(
 
     await session.commit()
     await session.refresh(event)
-    return _event_out(event, deal_name)
+    return _event_out(
+        event,
+        deal_name,
+        company_id=company_id,
+        company_name=company_name,
+        labels=label_briefs,
+    )
 
 
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)

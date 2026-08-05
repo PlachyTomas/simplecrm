@@ -6,6 +6,7 @@ from datetime import datetime
 from pydantic import AwareDatetime, BaseModel, Field, model_validator
 
 from app.db.models.enums import GoogleSyncStatus
+from app.schemas.event_label import EventLabelBrief
 
 
 class CalendarEventCreate(BaseModel):
@@ -23,6 +24,9 @@ class CalendarEventCreate(BaseModel):
     # connection exists (missing or `sync_broken`), the CRM event is still
     # saved but lands with `google_sync_status=error` — the write never 400s.
     add_to_google: bool = False
+    # Org-shared labels to attach. Ids outside the caller's org (or unknown)
+    # are a 400, same as `deal_id`. CRM-only — never pushed to Google.
+    label_ids: list[uuid.UUID] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _ends_after_starts(self) -> CalendarEventCreate:
@@ -42,6 +46,9 @@ class CalendarEventUpdate(BaseModel):
     ends_at: AwareDatetime | None = None
     # None = keep current sync state; True/False = add/remove the Google copy.
     add_to_google: bool | None = None
+    # Tri-state on `exclude_unset` like `deal_id`: absent = labels unchanged,
+    # `[]` = clear them all, a list = replace the set with exactly those.
+    label_ids: list[uuid.UUID] | None = None
 
 
 class CalendarEventOut(BaseModel):
@@ -51,6 +58,10 @@ class CalendarEventOut(BaseModel):
     # Denormalized so the calendar page can label chips without N+1 fetches.
     # None for an event that isn't attached to a deal.
     deal_name: str | None
+    # The deal's company, derived — events have no company FK of their own,
+    # so both are None whenever `deal_id` is None.
+    company_id: uuid.UUID | None = None
+    company_name: str | None = None
     owner_user_id: uuid.UUID | None
     title: str
     description: str | None
@@ -59,5 +70,7 @@ class CalendarEventOut(BaseModel):
     ends_at: datetime
     google_event_id: str | None
     google_sync_status: GoogleSyncStatus
+    # Name-ordered so the first entry is a stable choice for the chip tint.
+    labels: list[EventLabelBrief] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime

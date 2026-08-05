@@ -30,6 +30,7 @@ from app.db.models.enums import (
     StageType,
     UserRole,
 )
+from app.db.models.event_label import EventLabel, calendar_event_labels
 from app.db.models.google_calendar_connection import GoogleCalendarConnection
 from app.db.models.import_run import ImportRun
 from app.db.models.invitation import Invitation
@@ -71,6 +72,7 @@ __all__ = [
     "EmailDirection",
     "EmailRecipientStatus",
     "EmailTemplate",
+    "EventLabel",
     "GoogleCalendarConnection",
     "GoogleSyncStatus",
     "ImportRun",
@@ -102,4 +104,6 @@ __all__ = [
     "UserRole",
     "UserSmtpSettings",
     "WebhookEvent",
+    # Core association table (no ORM class of its own).
+    "calendar_event_labels",
 ]
