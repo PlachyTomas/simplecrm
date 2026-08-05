@@ -1,6 +1,13 @@
 /**
- * Full-viewport tour overlay — scrim + spotlight ring + tooltip card,
+ * Full-viewport tour overlay — spotlight scrim + ring + tooltip card,
  * driven by the current route's tour (see `tours.ts`).
+ *
+ * The scrim is a transparent "hole" over the anchor whose oversized
+ * box-shadow washes out everything else — the spotlighted element stays
+ * fully legible while the rest of the page recedes. No backdrop blur:
+ * a blur layer can't have a hole cut into it, and blurring the very
+ * element a step points at is what made tours unusable. Steps without
+ * an anchor fall back to a plain full scrim behind the centered card.
  *
  * The scrim never intercepts pointer events: the page stays clickable,
  * which is what makes action-gated steps ("open the ⚡ menu") possible.
@@ -28,6 +35,35 @@ const RING_PADDING = 6;
 
 function anchorSelector(testId: string, prefix: boolean): string {
   return prefix ? `[data-testid^="${testId}"]` : `[data-testid="${testId}"]`;
+}
+
+/**
+ * The wash uses the `bg` token at the same 80% the modal backdrops use,
+ * so the scrim darkens in dark mode and lightens in light mode. Inline
+ * because Tailwind can't parameterize a shadow color from a var here.
+ */
+const SCRIM_SHADOW = "0 0 0 100vmax rgb(var(--color-bg-rgb) / 0.8)";
+
+/** Exported for tests. */
+export function SpotlightScrim({ holeRect }: { holeRect: DOMRect | null }): ReactElement {
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-40">
+      {holeRect ? (
+        <div
+          className="absolute rounded-md transition-all duration-150"
+          style={{
+            top: holeRect.top - RING_PADDING,
+            left: holeRect.left - RING_PADDING,
+            width: holeRect.width + RING_PADDING * 2,
+            height: holeRect.height + RING_PADDING * 2,
+            boxShadow: SCRIM_SHADOW,
+          }}
+        />
+      ) : (
+        <div className="absolute inset-0 bg-bg/80" />
+      )}
+    </div>
+  );
 }
 
 export function TourOverlay(): ReactElement | null {
@@ -125,11 +161,7 @@ export function TourOverlay(): ReactElement | null {
 
   return createPortal(
     <>
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-40">
-        {/* Scrim — dark wash; pointer-events stay off so the page is
-            usable during action steps. */}
-        <div className="absolute inset-0 bg-black/65 backdrop-blur-sm transition-opacity duration-200" />
-      </div>
+      <SpotlightScrim holeRect={anchorRect} />
 
       {/* Ring + card live above app modals (z-50): the ring must be able
           to spotlight elements INSIDE a dialog (deals tour anchors the
