@@ -275,6 +275,22 @@ export const testIds = {
       option: (id: string) => `event-form-deal-picker-option-${id}`,
     },
     reconnectGoogle: "event-form-reconnect-google",
+    timeStart: "event-form-time-start",
+    timeEnd: "event-form-time-end",
+    timeOption: (value: string) => `event-form-time-option-${value}`,
+    labelPicker: {
+      input: "event-form-label-picker-input",
+      option: (id: string) => `event-form-label-option-${id}`,
+      create: "event-form-label-create",
+      remove: (id: string) => `event-form-label-remove-${id}`,
+    },
+  },
+  eventLabels: {
+    row: (id: string) => `event-label-row-${id}`,
+    name: (id: string) => `event-label-name-${id}`,
+    save: (id: string) => `event-label-save-${id}`,
+    delete: (id: string) => `event-label-delete-${id}`,
+    color: (id: string, hex: string) => `event-label-color-${id}-${hex}`,
   },
   calendar: {
     newEvent: "calendar-new-event",
