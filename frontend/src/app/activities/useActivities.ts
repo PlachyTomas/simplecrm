@@ -17,6 +17,12 @@ interface UseActivitiesOptions {
    */
   companyId?: string;
   limit?: number;
+  /**
+   * Restricts the feed to these activity types (repeatable `activity_types`
+   * query param). Omit for everything — the deal timeline and the pipeline
+   * card preview pass `DEAL_TIMELINE_TYPES`, the company tab its own set.
+   */
+  activityTypes?: string[];
   /** Defer the request (lazy consumers such as the card hover preview). */
   enabled?: boolean;
 }
@@ -26,11 +32,12 @@ export function useActivities({
   entityId,
   companyId,
   limit = 50,
+  activityTypes,
   enabled = true,
 }: UseActivitiesOptions = {}) {
   const { accessToken } = useAuth();
   return useQuery<ActivitiesPage>({
-    queryKey: ["activities", { entityType, entityId, companyId, limit }],
+    queryKey: ["activities", { entityType, entityId, companyId, limit, activityTypes }],
     enabled: enabled && !!accessToken,
     queryFn: () => {
       const params = new URLSearchParams();
@@ -38,6 +45,7 @@ export function useActivities({
       if (entityType) params.set("entity_type", entityType);
       if (entityId) params.set("entity_id", entityId);
       if (companyId) params.set("company_id", companyId);
+      for (const type of activityTypes ?? []) params.append("activity_types", type);
       return apiFetch<ActivitiesPage>(`/api/v1/activities?${params}`, {
         token: accessToken,
       });
