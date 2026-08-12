@@ -22,6 +22,7 @@ from app.db.models import (
     Company,
     Contact,
     Deal,
+    EventLabel,
     Organization,
     Pipeline,
     Stage,
@@ -32,6 +33,7 @@ from app.db.models.enums import StageType
 from app.db.search import folded_ilike_contains
 from app.schemas.activity import ActivityOut
 from app.schemas.deal import (
+    DealActionCreate,
     DealCallCreate,
     DealCreate,
     DealDetailOut,
@@ -42,6 +44,7 @@ from app.schemas.deal import (
     DealStageMove,
     DealUpdate,
 )
+from app.schemas.event_label import EventLabelBrief
 from app.schemas.pagination import Page, PaginationParams
 from app.services.activity_log import record_activity, resolve_field_changes
 from app.services.list_export import EXPORT_ROW_CAP, csv_date, csv_response
@@ -904,6 +907,86 @@ async def create_deal_note(
     await session.refresh(activity)
     out = ActivityOut.model_validate(activity)
     out.user_name = user.name
+    return out
+
+
+@router.post(
+    "/{deal_id}/actions",
+    response_model=ActivityOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_deal_action(
+    deal_id: uuid.UUID,
+    payload: DealActionCreate,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ActivityOut:
+    """Log an action the user carried out, at a time they choose.
+
+    The counterpart to the automatic pipeline rows: this is the half of the
+    timeline the user writes. Body text lands under the `note` payload key so
+    the one renderer covers `manual_action`, `note` and `call_logged` alike.
+    """
+    deal = await _get_scoped(session, user, deal_id)
+    if not await can_write_row(session, user, deal.owner_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot log actions on deals outside your visibility scope",
+        )
+
+    label: EventLabel | None = None
+    if payload.label_id is not None:
+        label = (
+            await session.execute(
+                select(EventLabel).where(
+                    EventLabel.id == payload.label_id,
+                    EventLabel.organization_id == user.organization_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if label is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Unknown label",
+            )
+
+    activity = record_activity(
+        session,
+        organization_id=deal.organization_id,
+        entity_type=ActivityEntityType.deal,
+        entity_id=deal.id,
+        company_id=deal.company_id,
+        user_id=user.id,
+        activity_type=ActivityType.manual_action,
+        occurred_at=payload.occurred_at,
+        label_id=payload.label_id,
+        payload={"deal_name": deal.name, **({"note": payload.body} if payload.body else {})},
+    )
+    await session.commit()
+    await session.refresh(activity)
+    # Built with explicit kwargs rather than `ActivityOut.model_validate(activity)`:
+    # when `label` is set, SQLAlchemy's identity map resolves `activity.label` to
+    # a real `EventLabel` ORM instance (no extra query needed — it was just
+    # loaded above). `ActivityOut` declares `from_attributes`, but its nested
+    # `label` field's type, `EventLabelBrief`, does not — so validating the
+    # whole activity in one call raises a `model_type` error on that nested
+    # field (`Input should be a valid dictionary or instance of
+    # EventLabelBrief`). `events.py._label_briefs` sidesteps the same trap by
+    # constructing `EventLabelBrief` from kwargs instead of `model_validate`.
+    out = ActivityOut(
+        id=activity.id,
+        organization_id=activity.organization_id,
+        entity_type=activity.entity_type,
+        entity_id=activity.entity_id,
+        user_id=activity.user_id,
+        user_name=user.name,
+        activity_type=activity.activity_type,
+        payload=activity.payload,
+        created_at=activity.created_at,
+        occurred_at=activity.occurred_at,
+        label=EventLabelBrief(id=label.id, name=label.name, color=label.color) if label else None,
+        can_edit=True,
+    )
     return out
 
 

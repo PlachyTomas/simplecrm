@@ -13,7 +13,17 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.db.models import Company, Contact, Deal, Organization, Stage, Team, User, UserRole
+from app.db.models import (
+    Company,
+    Contact,
+    Deal,
+    EventLabel,
+    Organization,
+    Stage,
+    Team,
+    User,
+    UserRole,
+)
 from app.db.session import AsyncSessionLocal
 from app.services.pipeline import create_default_pipeline
 
@@ -1171,6 +1181,129 @@ async def test_create_deal_note_blocked_for_foreign_deal(
         f"/api/v1/deals/{deal.id}/notes", headers=_auth(sales), json={"body": "Ahoj"}
     )
     assert resp.status_code == 404
+
+
+# actions -------------------------------------------------------------------
+
+
+async def test_create_deal_action_persists_kind_body_and_time(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=admin.id,
+        name="Akce",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    label = EventLabel(organization_id=org.id, name="Hovor", color="#6366F1")
+    db_session.add(label)
+    await db_session.commit()
+    await db_session.refresh(label)
+
+    when = "2026-08-10T09:00:00+00:00"
+    resp = await client.post(
+        f"/api/v1/deals/{deal.id}/actions",
+        headers=_auth(admin),
+        json={"label_id": str(label.id), "body": "Prošli jsme rozpočet", "occurred_at": when},
+    )
+    assert resp.status_code == 201, resp.text
+    data = resp.json()
+    assert data["activity_type"] == "manual_action"
+    assert data["payload"]["note"] == "Prošli jsme rozpočet"
+    assert data["label"]["id"] == str(label.id)
+    assert data["occurred_at"].startswith("2026-08-10T09:00")
+    assert data["can_edit"] is True
+
+
+async def test_create_deal_action_defaults_occurred_at_to_now(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=admin.id,
+        name="Akce",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    resp = await client.post(
+        f"/api/v1/deals/{deal.id}/actions",
+        headers=_auth(admin),
+        json={"body": "Zavolal jsem"},
+    )
+    assert resp.status_code == 201, resp.text
+    occurred = datetime.fromisoformat(resp.json()["occurred_at"])
+    assert abs((occurred - datetime.now(UTC)).total_seconds()) < 30
+
+
+async def test_create_deal_action_rejects_empty_payload(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=admin.id,
+        name="Akce",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    resp = await client.post(
+        f"/api/v1/deals/{deal.id}/actions", headers=_auth(admin), json={"body": "   "}
+    )
+    assert resp.status_code == 422
+
+
+async def test_create_deal_action_rejects_foreign_label(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """A label id from another org must not attach — it would leak its name."""
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=admin.id,
+        name="Akce",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+
+    other_org, _other_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    other_org_label = EventLabel(organization_id=other_org.id, name="Cizí", color="#6366F1")
+    db_session.add(other_org_label)
+    await db_session.commit()
+    await db_session.refresh(other_org_label)
+
+    resp = await client.post(
+        f"/api/v1/deals/{deal.id}/actions",
+        headers=_auth(admin),
+        json={"label_id": str(other_org_label.id), "body": "x"},
+    )
+    assert resp.status_code == 422
 
 
 # list_deals: search / stage_id / owner_user_id / status / sort -----------

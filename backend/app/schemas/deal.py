@@ -5,7 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.db.models.enums import StageType
 
@@ -72,6 +72,36 @@ class DealCallCreate(BaseModel):
     """
 
     body: str | None = Field(default=None, max_length=2000)
+
+
+class DealActionCreate(BaseModel):
+    """An action the user carried out, logged by hand on a deal's timeline.
+
+    The kind is an `event_labels` row — the same org vocabulary the calendar
+    uses — and `occurred_at` is when it happened, defaulting to now. At least
+    one of kind/body must be present: an untouched draft row must not be able
+    to create an empty entry.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    label_id: uuid.UUID | None = None
+    body: str | None = Field(default=None, max_length=2000)
+    occurred_at: datetime | None = None
+
+    @field_validator("body")
+    @classmethod
+    def _trim_body(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
+
+    @model_validator(mode="after")
+    def _require_content(self) -> DealActionCreate:
+        if self.label_id is None and self.body is None:
+            raise ValueError("an action needs a kind, a description, or both")
+        return self
 
 
 class DealOut(BaseModel):
