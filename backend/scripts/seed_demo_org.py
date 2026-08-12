@@ -389,13 +389,18 @@ async def _create_activity_history(
                         ActivityType.deal_won if d.lost_reason is None else ActivityType.deal_lost
                     ),
                     payload={},
+                    # Both stamps, always: `occurred_at` defaults to now() at
+                    # the DB level, so backdating only `created_at` would date
+                    # every historical close as "today" on the timelines.
                     created_at=d.closed_at,
+                    occurred_at=d.closed_at,
                 )
             )
             continue
         # Open deal: only the non-stale ones get a recent stage_change.
         days_since_update = (now - d.updated_at).days if d.updated_at else 0
         if days_since_update <= 60:
+            moved_at = d.updated_at or now - timedelta(days=rng.randint(1, 14))
             session.add(
                 Activity(
                     organization_id=org_id,
@@ -404,7 +409,8 @@ async def _create_activity_history(
                     user_id=d.owner_user_id,
                     activity_type=ActivityType.stage_change,
                     payload={"to_stage_id": str(d.stage_id)},
-                    created_at=d.updated_at or now - timedelta(days=rng.randint(1, 14)),
+                    created_at=moved_at,
+                    occurred_at=moved_at,
                 )
             )
     await session.flush()
