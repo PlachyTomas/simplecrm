@@ -28,6 +28,7 @@ from app.db.models import (
     UserRole,
 )
 from app.db.session import AsyncSessionLocal
+from app.services.activity_log import record_activity
 from app.services.pipeline import create_default_pipeline
 
 
@@ -385,3 +386,48 @@ async def test_migration_backfills_company_id_for_legacy_activity_rows(
     await db_session.refresh(legacy_company_act)
     assert legacy_deal_act.company_id == company.id
     assert legacy_company_act.company_id == company.id
+
+
+async def test_activity_defaults_occurred_at_to_created_at(owned_cleanup: dict[str, list]) -> None:
+    """A row written without an explicit occurred_at is stamped like created_at."""
+    async with AsyncSessionLocal() as session:
+        org, admin, company, _stage = await _seed(session, owned_cleanup)
+        activity = record_activity(
+            session,
+            organization_id=org.id,
+            entity_type=ActivityEntityType.company,
+            entity_id=company.id,
+            company_id=company.id,
+            user_id=admin.id,
+            activity_type=ActivityType.manual_action,
+            payload={"note": "Volali jsme"},
+        )
+        await session.commit()
+        await session.refresh(activity)
+        assert activity.occurred_at is not None
+        assert abs((activity.occurred_at - activity.created_at).total_seconds()) < 5
+        assert activity.label_id is None
+
+
+async def test_record_activity_accepts_backdated_occurred_at(
+    owned_cleanup: dict[str, list],
+) -> None:
+    """occurred_at is caller-supplied and independent of the write stamp."""
+    backdated = datetime.now(UTC) - timedelta(days=3)
+    async with AsyncSessionLocal() as session:
+        org, admin, company, _stage = await _seed(session, owned_cleanup)
+        activity = record_activity(
+            session,
+            organization_id=org.id,
+            entity_type=ActivityEntityType.company,
+            entity_id=company.id,
+            company_id=company.id,
+            user_id=admin.id,
+            activity_type=ActivityType.manual_action,
+            occurred_at=backdated,
+            payload={"note": "Zpětný zápis"},
+        )
+        await session.commit()
+        await session.refresh(activity)
+        assert abs((activity.occurred_at - backdated).total_seconds()) < 1
+        assert activity.created_at > activity.occurred_at

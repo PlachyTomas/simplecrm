@@ -84,6 +84,11 @@ class ActivityType(StrEnum):
     # Distinct from `stage_change` because a lost deal in an open-type stage
     # reopens without moving anywhere.
     deal_reopened = "deal_reopened"
+    # User-authored timeline entry: "what I did", with a caller-set
+    # `occurred_at` and a kind drawn from the shared calendar-label
+    # vocabulary. `note` and `call_logged` are its predecessors and stay
+    # valid — all three are editable (services/activity_log.MANUAL_ACTIVITY_TYPES).
+    manual_action = "manual_action"
 
 
 class EmailRecipientStatus(StrEnum):

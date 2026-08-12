@@ -26,6 +26,14 @@ from app.db.models import (
     User,
 )
 
+# The activity types a user authored by hand, and therefore the only ones
+# `PATCH`/`DELETE /activities/{id}` will touch. `note` and `call_logged`
+# predate `manual_action` but are just as user-authored, so historical rows
+# become editable too — no data migration needed.
+MANUAL_ACTIVITY_TYPES: frozenset[ActivityType] = frozenset(
+    {ActivityType.manual_action, ActivityType.note, ActivityType.call_logged}
+)
+
 
 def record_activity(
     session: AsyncSession,
@@ -37,12 +45,21 @@ def record_activity(
     company_id: uuid.UUID | None = None,
     user_id: uuid.UUID | None = None,
     payload: dict[str, Any] | None = None,
+    occurred_at: datetime | None = None,
+    label_id: uuid.UUID | None = None,
 ) -> Activity:
     """Stage an :class:`Activity` row on ``session`` (does NOT commit).
 
     ``company_id`` is the parent company so the company timeline can surface a
     deal's / event's / email's activity alongside the company's own — pass it
     for every non-org-level event.
+
+    ``occurred_at`` is when the thing happened, as opposed to ``created_at``
+    (the immutable write stamp). Leave it ``None`` — as every automatic
+    write-site does — and the column's ``now()`` server default makes the two
+    equal; hand-logged entries pass a user-chosen time, possibly backdated.
+    ``label_id`` is the entry's kind, from the org-shared ``event_labels``
+    vocabulary, and is ``None`` for everything the system logs itself.
     """
     activity = Activity(
         organization_id=organization_id,
@@ -52,7 +69,12 @@ def record_activity(
         user_id=user_id,
         activity_type=activity_type,
         payload=payload or {},
+        label_id=label_id,
     )
+    # Only set it when given: assigning None would override the server default
+    # with an explicit NULL and violate the NOT NULL constraint.
+    if occurred_at is not None:
+        activity.occurred_at = occurred_at
     session.add(activity)
     return activity
 

@@ -13,6 +13,7 @@ from app.db.base import Base
 from app.db.models.enums import ActivityEntityType, ActivityType
 
 if TYPE_CHECKING:
+    from app.db.models.event_label import EventLabel
     from app.db.models.organization import Organization
     from app.db.models.user import User
 
@@ -32,6 +33,7 @@ class Activity(Base):
         Index("ix_activities_organization_id", "organization_id"),
         Index("ix_activities_user_id", "user_id"),
         Index("ix_activities_company_id", "company_id"),
+        Index("ix_activities_entity_occurred", "entity_type", "entity_id", "occurred_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -68,9 +70,27 @@ class Activity(Base):
     )
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
+    # When the thing happened, as opposed to when the row was written.
+    # User-settable for manual entries; equal to `created_at` for everything
+    # the system logs. Timelines order by this so a backdated entry lands in
+    # the right place. Keeps a server default — see migration a4b5c6d7e8f9.
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # The action's kind, drawn from the org-shared calendar-label vocabulary
+    # so "Hovor" means the same thing on a timeline and in the calendar.
+    # NULL for every automatic row and for unlabelled manual ones; a deleted
+    # label leaves the entry intact (SET NULL).
+    label_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("event_labels.id", ondelete="SET NULL"),
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
     organization: Mapped[Organization] = relationship()
     user: Mapped[User | None] = relationship()
+    label: Mapped[EventLabel | None] = relationship()

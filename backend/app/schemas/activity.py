@@ -7,6 +7,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from app.db.models.enums import ActivityEntityType, ActivityType
+from app.schemas.event_label import EventLabelBrief
 
 
 class ActivityOut(BaseModel):
@@ -24,3 +25,11 @@ class ActivityOut(BaseModel):
     activity_type: ActivityType
     payload: dict[str, Any]
     created_at: datetime
+    # When it happened (user-settable on manual entries). `created_at` stays
+    # the write stamp; timelines sort on this one.
+    occurred_at: datetime
+    # The kind chip, from the org's shared calendar-label vocabulary.
+    label: EventLabelBrief | None = None
+    # Computed per request: this row is a manual entry AND the caller either
+    # wrote it or is an admin. Keeps the role rule out of the frontend.
+    can_edit: bool = False

@@ -30,7 +30,7 @@ Spec: `docs/superpowers/specs/2026-08-12-manual-deal-timeline-design.md` (commit
 | File | Responsibility |
 |---|---|
 | `backend/alembic/versions/20260812_1200_activity_type_manual_action_e1f2a3b4c5d6.py` | `ALTER TYPE activity_type ADD VALUE 'manual_action'`, alone in its own migration. |
-| `backend/alembic/versions/20260812_1205_activity_occurred_at_label_a1b2c3d4e5f6.py` | `occurred_at` + `label_id` columns, backfill, index. |
+| `backend/alembic/versions/20260812_1205_activity_occurred_at_label_a4b5c6d7e8f9.py` | `occurred_at` + `label_id` columns, backfill, index. |
 
 **Backend — modify**
 
@@ -77,7 +77,7 @@ Spec: `docs/superpowers/specs/2026-08-12-manual-deal-timeline-design.md` (commit
 
 **Files:**
 - Create: `backend/alembic/versions/20260812_1200_activity_type_manual_action_e1f2a3b4c5d6.py`
-- Create: `backend/alembic/versions/20260812_1205_activity_occurred_at_label_a1b2c3d4e5f6.py`
+- Create: `backend/alembic/versions/20260812_1205_activity_occurred_at_label_a4b5c6d7e8f9.py`
 - Modify: `backend/app/db/models/enums.py`, `backend/app/db/models/activity.py`, `backend/app/services/activity_log.py`, `backend/app/schemas/activity.py`
 - Test: `backend/tests/api/v1/test_activity_feed.py`
 
@@ -194,12 +194,12 @@ def downgrade() -> None:
 
 - [ ] **Step 5: Write the column migration**
 
-`backend/alembic/versions/20260812_1205_activity_occurred_at_label_a1b2c3d4e5f6.py`:
+`backend/alembic/versions/20260812_1205_activity_occurred_at_label_a4b5c6d7e8f9.py`:
 
 ```python
 """activities: user-settable occurred_at + shared event label
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: a4b5c6d7e8f9
 Revises: e1f2a3b4c5d6
 Create Date: 2026-08-12 12:05:00.000000+00:00
 
@@ -226,7 +226,7 @@ from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
-revision: str = "a1b2c3d4e5f6"
+revision: str = "a4b5c6d7e8f9"
 down_revision: str | None = "e1f2a3b4c5d6"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
@@ -282,7 +282,7 @@ In `backend/app/db/models/activity.py`: add `EventLabel` to the `TYPE_CHECKING` 
     # When the thing happened, as opposed to when the row was written.
     # User-settable for manual entries; equal to `created_at` for everything
     # the system logs. Timelines order by this so a backdated entry lands in
-    # the right place. Keeps a server default — see migration a1b2c3d4e5f6.
+    # the right place. Keeps a server default — see migration a4b5c6d7e8f9.
     occurred_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -381,7 +381,7 @@ Expected: `alembic upgrade head` reports both revisions applied; every test in t
 - [ ] **Step 10: Commit**
 
 ```bash
-git add backend/app/db/models/enums.py backend/app/db/models/activity.py backend/app/services/activity_log.py backend/app/schemas/activity.py backend/alembic/versions/20260812_1200_activity_type_manual_action_e1f2a3b4c5d6.py backend/alembic/versions/20260812_1205_activity_occurred_at_label_a1b2c3d4e5f6.py backend/tests/api/v1/test_activity_feed.py
+git add backend/app/db/models/enums.py backend/app/db/models/activity.py backend/app/services/activity_log.py backend/app/schemas/activity.py backend/alembic/versions/20260812_1200_activity_type_manual_action_e1f2a3b4c5d6.py backend/alembic/versions/20260812_1205_activity_occurred_at_label_a4b5c6d7e8f9.py backend/tests/api/v1/test_activity_feed.py
 git commit -m "feat(activities): user-settable occurred_at + shared event label"
 ```
 
