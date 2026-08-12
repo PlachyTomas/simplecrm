@@ -1085,6 +1085,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/deals/{deal_id}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Deal Action
+         * @description Log an action the user carried out, at a time they choose.
+         *
+         *     The counterpart to the automatic pipeline rows: this is the half of the
+         *     timeline the user writes. Body text lands under the `note` payload key so
+         *     the one renderer covers `manual_action`, `note` and `call_logged` alike.
+         */
+        post: operations["create_deal_action_api_v1_deals__deal_id__actions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/deals/{deal_id}/calls": {
         parameters: {
             query?: never;
@@ -2218,6 +2242,31 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/activities/{activity_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Activity
+         * @description Remove a hand-logged entry. Automatic rows are never deletable.
+         */
+        delete: operations["delete_activity_api_v1_activities__activity_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Activity
+         * @description Edit a hand-logged entry after the fact — the timeline is a record the
+         *     user maintains, not an append-only log.
+         */
+        patch: operations["update_activity_api_v1_activities__activity_id__patch"];
         trace?: never;
     };
     "/api/v1/admin/blocked-companies": {
@@ -3564,12 +3613,41 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            label?: components["schemas"]["EventLabelBrief"] | null;
+            /**
+             * Can Edit
+             * @default false
+             */
+            can_edit: boolean;
         };
         /**
          * ActivityType
          * @enum {string}
          */
-        ActivityType: "note" | "stage_change" | "owner_change" | "deal_won" | "deal_lost" | "company_freed" | "ownership_reassigned" | "subscription_change" | "email_sent" | "email_received" | "deal_created" | "deal_updated" | "company_updated" | "event_created" | "call_logged" | "deal_reopened";
+        ActivityType: "note" | "stage_change" | "owner_change" | "deal_won" | "deal_lost" | "company_freed" | "ownership_reassigned" | "subscription_change" | "email_sent" | "email_received" | "deal_created" | "deal_updated" | "company_updated" | "event_created" | "call_logged" | "deal_reopened" | "manual_action";
+        /**
+         * ActivityUpdate
+         * @description Partial edit of a hand-logged activity.
+         *
+         *     Omitting a field leaves it alone; sending an explicit `null` clears it.
+         *     The two are told apart by `model_fields_set`, which is why every field
+         *     defaults to `None` rather than to a sentinel. `occurred_at` is the one
+         *     exception — the column is NOT NULL, so an explicit `null` there is a 422
+         *     raised by the endpoint rather than a silent no-op.
+         */
+        ActivityUpdate: {
+            /** Label Id */
+            label_id?: string | null;
+            /** Body */
+            body?: string | null;
+            /** Occurred At */
+            occurred_at?: string | null;
+        };
         /** AdminAccessLogList */
         AdminAccessLogList: {
             /** Items */
@@ -5160,6 +5238,23 @@ export interface components {
             from?: string | null;
             /** To */
             to?: string | null;
+        };
+        /**
+         * DealActionCreate
+         * @description An action the user carried out, logged by hand on a deal's timeline.
+         *
+         *     The kind is an `event_labels` row — the same org vocabulary the calendar
+         *     uses — and `occurred_at` is when it happened, defaulting to now. At least
+         *     one of kind/body must be present: an untouched draft row must not be able
+         *     to create an empty entry.
+         */
+        DealActionCreate: {
+            /** Label Id */
+            label_id?: string | null;
+            /** Body */
+            body?: string | null;
+            /** Occurred At */
+            occurred_at?: string | null;
         };
         /**
          * DealCallCreate
@@ -10337,6 +10432,41 @@ export interface operations {
             };
         };
     };
+    create_deal_action_api_v1_deals__deal_id__actions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealActionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_deal_call_api_v1_deals__deal_id__calls_post: {
         parameters: {
             query?: never;
@@ -12748,6 +12878,8 @@ export interface operations {
                 entity_id?: string | null;
                 /** @description Fan-up filter: returns everything logged against this company AND its deals/events/emails. Powers the company detail's Aktivita timeline. */
                 company_id?: string | null;
+                /** @description Repeatable. Restricts the feed to these activity types — the deal timeline asks for manual entries plus pipeline movements, the company tab for deal created/won/lost. Omit for everything. */
+                activity_types?: components["schemas"]["ActivityType"][] | null;
                 limit?: number;
                 offset?: number;
             };
@@ -12764,6 +12896,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Page_ActivityOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_activity_api_v1_activities__activity_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                activity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_activity_api_v1_activities__activity_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                activity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivityUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityOut"];
                 };
             };
             /** @description Validation Error */
