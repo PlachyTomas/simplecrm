@@ -60,7 +60,7 @@ One Alembic migration, three changes to `activities`:
 
 | Change | Definition | Notes |
 |---|---|---|
-| `occurred_at` | `TIMESTAMP WITH TIME ZONE NOT NULL` | When the action *happened*. Backfill `occurred_at = created_at` for every existing row, then set `NOT NULL`. `created_at` remains the immutable write stamp. |
+| `occurred_at` | `TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()` | When the action *happened*. Backfill `occurred_at = created_at` for every existing row, then set `NOT NULL`. `created_at` remains the immutable write stamp. The server default is load-bearing, not decoration: main-branch code and any parallel branch insert activities against the same dev database without naming the column, and a bare `NOT NULL` would break them. |
 | `label_id` | `UUID NULL REFERENCES event_labels(id) ON DELETE SET NULL` | The action kind, from the shared calendar-label vocabulary. One label per entry. Deleting a label leaves entries intact but unlabelled. |
 | `ActivityType.manual_action` | new native-enum value | `ALTER TYPE activity_type ADD VALUE 'manual_action'`. The value is **not used** elsewhere in the same migration, so it is transaction-safe (same precedent as `deal_reopened`, migration `f7a8b9c0d1e2`). |
 
