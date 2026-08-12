@@ -35,7 +35,8 @@
     "action_new_contact": "Nový kontakt",
     "action_new_activity": "Nová událost",
     "invite_teammates": "Pozvěte svůj tým",
-    "velocity": "Průměrné trvání obchodu"
+    "velocity": "Průměrné trvání obchodu",
+    "todo_list": "Úkoly"
   },
   "widgetDescriptions": {
     "kpi_open_deals": "Počet obchodů v probíhající pipeline.",
@@ -47,7 +48,8 @@
     "action_new_contact": "Rychle přidáte novou kontaktní osobu.",
     "action_new_activity": "Rychle naplánujete schůzku či událost.",
     "invite_teammates": "Pozvánky pro kolegy, dokud máte volná místa.",
-    "velocity": "Průměrný počet dní obchodu v jednotlivých fázích."
+    "velocity": "Průměrný počet dní obchodu v jednotlivých fázích.",
+    "todo_list": "Osobní seznam úkolů. Vidíte jen své a úkol můžete propojit s obchodem."
   },
   "widgetConfig": {
     "title": "Nastavení widgetu",

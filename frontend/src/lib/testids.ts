@@ -269,6 +269,39 @@ export const testIds = {
       preset: (preset: string) => `dashboard-widget-config-preset-${preset}`,
     },
   },
+  todos: {
+    // The dashboard widget. Ids carry the widget id because several todo
+    // widgets can sit on one dashboard, each on its own list.
+    widget: (widgetId: string) => `todo-widget-${widgetId}`,
+    // Deliberately NOT prefixed `todo-widget-`: a `^=` selector for the
+    // widget root would otherwise also match every switcher button.
+    switcherOpen: (widgetId: string) => `todo-list-switcher-open-${widgetId}`,
+    switcher: {
+      popover: "todo-list-switcher",
+      option: (listId: string) => `todo-list-switcher-option-${listId}`,
+      create: "todo-list-switcher-create",
+      createInput: "todo-list-switcher-create-input",
+      rename: "todo-list-rename",
+      linkDeal: "todo-list-link-deal",
+      unlinkDeal: "todo-list-unlink-deal",
+      delete: "todo-list-delete",
+    },
+    addInput: "todo-add-input",
+    row: (todoId: string) => `todo-row-${todoId}`,
+    checkbox: (todoId: string) => `todo-checkbox-${todoId}`,
+    text: (todoId: string) => `todo-text-${todoId}`,
+    dealChip: (todoId: string) => `todo-deal-chip-${todoId}`,
+    dealLink: (todoId: string) => `todo-deal-link-${todoId}`,
+    remove: (todoId: string) => `todo-remove-${todoId}`,
+    dealPicker: {
+      input: "todo-deal-picker-input",
+      option: (dealId: string) => `todo-deal-picker-option-${dealId}`,
+      clear: "todo-deal-picker-clear",
+    },
+    // The deal detail section.
+    dealSection: "deal-todos-section",
+    dealSectionAdd: "deal-todos-add-input",
+  },
   events: {
     dealPicker: {
       input: "event-form-deal-picker-input",

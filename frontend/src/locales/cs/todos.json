@@ -1,0 +1,60 @@
+{
+  "widget": {
+    "title": "Úkoly",
+    "switchList": "Přepnout seznam",
+    "addPlaceholder": "Přidat úkol…",
+    "loadError": "Úkoly se nepodařilo načíst.",
+    "saveError": "Úkol se nepodařilo uložit.",
+    "emptyTodos": "Zatím tu nic není. Přidejte první úkol.",
+    "noLists": "Zatím nemáte žádný seznam úkolů.",
+    "createFirstList": "Vytvořit seznam"
+  },
+  "todo": {
+    "toggle": "Označit jako hotové",
+    "toggleDone": "Označit jako nehotové",
+    "edit": "Upravit úkol",
+    "remove": "Smazat úkol",
+    "linkDeal": "Propojit s obchodem",
+    "linkDealLocked": "Celý seznam je propojený s obchodem {{deal}}. Úkol propojení dědí.",
+    "openDeal": "Otevřít obchod {{deal}}"
+  },
+  "switcher": {
+    "title": "Seznamy úkolů",
+    "openCount_one": "{{count}} úkol",
+    "openCount_few": "{{count}} úkoly",
+    "openCount_other": "{{count}} úkolů",
+    "newList": "Nový seznam…",
+    "newListPlaceholder": "Název seznamu",
+    "create": "Vytvořit",
+    "cancel": "Zrušit",
+    "manageTitle": "Aktuální seznam",
+    "rename": "Přejmenovat",
+    "renamePlaceholder": "Nový název",
+    "save": "Uložit",
+    "linkDeal": "Propojit s obchodem",
+    "unlinkDeal": "Zrušit propojení s obchodem",
+    "delete": "Smazat seznam",
+    "deleteConfirm": "Smazat seznam „{{name}}“ i se všemi jeho úkoly?",
+    "createError": "Seznam se nepodařilo vytvořit.",
+    "saveError": "Seznam se nepodařilo uložit.",
+    "deleteError": "Seznam se nepodařilo smazat."
+  },
+  "dealPicker": {
+    "title": "Vyberte obchod",
+    "placeholder": "Hledat obchod…",
+    "hint": "Začněte psát název obchodu nebo firmy.",
+    "loading": "Načítání obchodů…",
+    "loadError": "Obchody se nepodařilo načíst.",
+    "noMatch": "Žádný obchod neodpovídá.",
+    "clear": "Zrušit propojení",
+    "close": "Zavřít"
+  },
+  "dealSection": {
+    "title": "Moje úkoly",
+    "privacyHint": "Vidíte jen své vlastní úkoly.",
+    "addPlaceholder": "Přidat úkol k tomuto obchodu…",
+    "empty": "K tomuto obchodu zatím nemáte žádný úkol.",
+    "loadError": "Úkoly se nepodařilo načíst.",
+    "listSuffix": "v seznamu {{list}}"
+  }
+}

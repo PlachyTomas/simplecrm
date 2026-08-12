@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { useCompany } from "@/app/companies/useCompany";
 import { useContact, useContacts } from "@/app/contacts/useContacts";
 import { DealTimelineSection } from "@/app/deals/DealTimelineSection";
+import { DealTodosSection } from "@/app/deals/DealTodosSection";
 import { MarkLostDialog } from "@/app/deals/MarkLostDialog";
 import { useMarkDealLost, useMarkDealWon, useReopenDeal } from "@/app/deals/useDealActions";
 import { type DealOut, useDeal, useDeleteDeal, useUpdateDeal } from "@/app/deals/useDeals";
@@ -522,6 +523,8 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
         ) : null}
 
         <DealEventsSection dealId={deal.id} dealName={deal.name} locale={locale} />
+
+        <DealTodosSection dealId={deal.id} />
 
         <EmailHistorySection
           dealId={deal.id}

@@ -21,6 +21,7 @@ import { HomeEditChrome } from "@/app/dashboard/widgets/HomeEditChrome";
 import { HomeInviteWidget } from "@/app/dashboard/widgets/HomeInviteWidget";
 import { HomeKpiWidget, type HomeKpiType } from "@/app/dashboard/widgets/HomeKpiWidget";
 import { HomeReportWidget } from "@/app/dashboard/widgets/HomeReportWidget";
+import { HomeTodoWidget } from "@/app/dashboard/widgets/HomeTodoWidget";
 import { HomeVelocityWidget } from "@/app/dashboard/widgets/HomeVelocityWidget";
 import { QuickActionTile } from "@/app/dashboard/widgets/QuickActionTile";
 
@@ -46,9 +47,18 @@ interface Props {
   onConfigOpen: (id: string) => void;
   /** Fire a quick action (open its create modal). */
   onAction: (type: HomeWidgetType) => void;
+  /** Persist which todo list a todo widget shows. */
+  onSelectList: (widgetId: string, listId: string) => void;
 }
 
-export function HomeWidgetByType({ entry, isEditMode, onRemove, onConfigOpen, onAction }: Props) {
+export function HomeWidgetByType({
+  entry,
+  isEditMode,
+  onRemove,
+  onConfigOpen,
+  onAction,
+  onSelectList,
+}: Props) {
   const { t } = useTranslation("dashboard");
   const { t: tReports } = useTranslation("reports");
   const type = entry.config.type as HomeWidgetType;
@@ -74,6 +84,17 @@ export function HomeWidgetByType({ entry, isEditMode, onRemove, onConfigOpen, on
 
   if (type === "invite_teammates") {
     return <HomeInviteWidget isEditMode={isEditMode} onRemove={onRemove} />;
+  }
+
+  if (type === "todo_list") {
+    return (
+      <HomeTodoWidget
+        entry={entry}
+        isEditMode={isEditMode}
+        onRemove={onRemove}
+        onSelectList={onSelectList}
+      />
+    );
   }
 
   if (type === "velocity") {

@@ -1,11 +1,12 @@
 /**
  * Static metadata + gating for the home dashboard "add widget" picker.
  *
- * The home catalog is a superset of the Reports catalog: it adds ten
- * home-native widget types (4 KPI tiles, 4 quick actions, the invite card
- * and the pipeline-velocity list) and re-exposes the 12 Reports analytics
- * widgets (duplicable, labelled from the `reports` namespace). Role gating
- * hides ineligible widgets from the picker entirely.
+ * The home catalog is a superset of the Reports catalog: it adds eleven
+ * home-native widget types (4 KPI tiles, 4 quick actions, the invite card,
+ * the pipeline-velocity list and the todo list) and re-exposes the 12
+ * Reports analytics widgets (duplicable, labelled from the `reports`
+ * namespace). Role gating hides ineligible widgets from the picker
+ * entirely.
  */
 
 import type { ParseKeys, TFunction } from "i18next";
@@ -15,6 +16,7 @@ import {
   Gauge,
   HandCoins,
   Handshake,
+  ListChecks,
   Target,
   Trophy,
   UserPlus,
@@ -61,6 +63,7 @@ export const HOME_NATIVE_TYPES = [
   ...HOME_ACTION_TYPES,
   "invite_teammates",
   "velocity",
+  "todo_list",
 ] as const satisfies readonly HomeWidgetType[];
 
 export type HomeNativeType = (typeof HOME_NATIVE_TYPES)[number];
@@ -83,6 +86,7 @@ const HOME_ICONS: Record<HomeNativeType, LucideIcon> = {
   action_new_activity: CalendarPlus,
   invite_teammates: Users,
   velocity: Gauge,
+  todo_list: ListChecks,
 };
 
 export function homeWidgetIcon(type: HomeWidgetType): LucideIcon {
@@ -101,6 +105,7 @@ const HOME_LABEL_KEY: Record<HomeNativeType, ParseKeys<"dashboard">> = {
   action_new_activity: "widgetLabels.action_new_activity",
   invite_teammates: "widgetLabels.invite_teammates",
   velocity: "widgetLabels.velocity",
+  todo_list: "widgetLabels.todo_list",
 };
 
 const HOME_DESCRIPTION_KEY: Record<HomeNativeType, ParseKeys<"dashboard">> = {
@@ -114,6 +119,7 @@ const HOME_DESCRIPTION_KEY: Record<HomeNativeType, ParseKeys<"dashboard">> = {
   action_new_activity: "widgetDescriptions.action_new_activity",
   invite_teammates: "widgetDescriptions.invite_teammates",
   velocity: "widgetDescriptions.velocity",
+  todo_list: "widgetDescriptions.todo_list",
 };
 
 /** Resolved display label for any home widget type. */
@@ -141,6 +147,9 @@ export function defaultHomeWidgetSize(type: HomeWidgetType): { w: number; h: num
   if ((HOME_ACTION_TYPES as readonly string[]).includes(type)) return { w: 3, h: 1 };
   if (type === "invite_teammates") return { w: 12, h: 3 };
   if (type === "velocity") return { w: 6, h: 4 };
+  // Narrower than the velocity list, tall enough for the add line plus
+  // roughly six todos.
+  if (type === "todo_list") return { w: 4, h: 4 };
   return defaultWidgetSize(type as WidgetType);
 }
 
@@ -165,7 +174,9 @@ export function isHomeWidgetEligible(type: HomeWidgetType, user: CurrentUser): b
 
 /** Types that may appear at most once on the dashboard (locked in the picker). */
 function isUnique(type: HomeWidgetType): boolean {
-  return isHomeNativeType(type);
+  // Todo widgets are the one duplicable home-native type: each instance
+  // pins its own list, so several of them is the point, not a mistake.
+  return isHomeNativeType(type) && type !== "todo_list";
 }
 
 interface BuildGroupsArgs {
@@ -201,7 +212,7 @@ export function buildHomePickerGroups({
     { title: t("widgetGroups.quickActions"), items: eligible(HOME_ACTION_TYPES) },
     {
       title: t("widgetGroups.overview"),
-      items: eligible([...HOME_KPI_TYPES, "invite_teammates", "velocity"]),
+      items: eligible([...HOME_KPI_TYPES, "todo_list", "invite_teammates", "velocity"]),
     },
     {
       title: tReports("widgetPicker.groupKpi"),

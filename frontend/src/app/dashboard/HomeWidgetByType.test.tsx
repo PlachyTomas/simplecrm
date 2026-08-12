@@ -78,6 +78,7 @@ describe("HomeWidgetByType", () => {
               onRemove={vi.fn()}
               onConfigOpen={vi.fn()}
               onAction={vi.fn()}
+              onSelectList={vi.fn()}
               {...overrides}
             />
           </MemoryRouter>

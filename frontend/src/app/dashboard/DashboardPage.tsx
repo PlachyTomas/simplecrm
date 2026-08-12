@@ -19,7 +19,12 @@ import { useMediaQuery } from "@/lib/useMediaQuery";
 import { usePageTitle } from "@/lib/usePageTitle";
 
 import { HomeWidgetByType } from "@/app/dashboard/HomeWidgetByType";
-import { addWidget, removeWidget, setWidgetDatePreset } from "@/app/dashboard/homeLayout";
+import {
+  addWidget,
+  removeWidget,
+  setWidgetDatePreset,
+  setWidgetListId,
+} from "@/app/dashboard/homeLayout";
 import { buildHomePickerGroups } from "@/app/dashboard/homeWidgetCatalog";
 import {
   useHomeDashboardConfig,
@@ -134,6 +139,19 @@ export function DashboardPage() {
     setDraft(setWidgetDatePreset(working, configWidgetId, preset));
   }
 
+  /**
+   * Switching a todo widget's list is a normal-mode action, not a layout
+   * edit, so it can't route through the draft the way the date preset
+   * does — outside edit mode it saves straight away.
+   */
+  function handleSelectList(widgetId: string, listId: string) {
+    if (isEditMode) {
+      if (working) setDraft(setWidgetListId(working, widgetId, listId));
+      return;
+    }
+    if (config.data) void save.mutateAsync(setWidgetListId(config.data, widgetId, listId));
+  }
+
   function handleAction(type: HomeWidgetType) {
     const action = ACTION_BY_TYPE[type];
     if (action) setOpenAction(action);
@@ -156,6 +174,7 @@ export function DashboardPage() {
       onRemove={() => handleRemoveWidget(entry.id)}
       onConfigOpen={setConfigWidgetId}
       onAction={handleAction}
+      onSelectList={handleSelectList}
     />
   );
 
