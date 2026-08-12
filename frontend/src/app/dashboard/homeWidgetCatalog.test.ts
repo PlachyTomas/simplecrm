@@ -80,8 +80,8 @@ describe("buildHomePickerGroups", () => {
     expect(types).not.toContain("velocity");
     expect(types).not.toContain("sales_leaderboard");
     expect(types).not.toContain("rep_activity");
-    // 8 home types + 16 reports − 2 gated reports types.
-    expect(types).toHaveLength(23);
+    // 9 home types + 16 reports − 2 gated reports types.
+    expect(types).toHaveLength(24);
   });
 
   it("shows the full catalog to admins", () => {
@@ -89,7 +89,7 @@ describe("buildHomePickerGroups", () => {
     expect(types).toContain("invite_teammates");
     expect(types).toContain("velocity");
     expect(types).toContain("sales_leaderboard");
-    expect(types).toHaveLength(27);
+    expect(types).toHaveLength(28);
   });
 
   it("marks home-native widgets unique and present types as added", () => {
@@ -109,6 +109,20 @@ describe("buildHomePickerGroups", () => {
     const velocity = items.find((i) => i.type === "velocity")!;
     expect(velocity.unique).toBe(true);
     expect(velocity.added).toBe(false);
+  });
+
+  it("keeps the todo widget addable after one is already on the dashboard", () => {
+    // The one duplicable home-native type: each instance pins its own
+    // list, so the picker must never lock it.
+    const groups = buildHomePickerGroups({
+      user: user({ role: "admin" }),
+      presentTypes: new Set<HomeWidgetType>(["todo_list"]),
+      t,
+      tReports,
+    });
+    const todo = groups.flatMap((g) => g.items).find((i) => i.type === "todo_list")!;
+    expect(todo.unique).toBe(false);
+    expect(todo.added).toBe(true);
   });
 
   it("groups: quick actions, overview, then the two reports groups", () => {

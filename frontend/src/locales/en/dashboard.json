@@ -35,7 +35,8 @@
     "action_new_contact": "New contact",
     "action_new_activity": "New event",
     "invite_teammates": "Invite your team",
-    "velocity": "Average deal duration"
+    "velocity": "Average deal duration",
+    "todo_list": "To-do"
   },
   "widgetDescriptions": {
     "kpi_open_deals": "Number of deals in the active pipeline.",
@@ -47,7 +48,8 @@
     "action_new_contact": "Quickly add a new contact person.",
     "action_new_activity": "Quickly schedule a meeting or event.",
     "invite_teammates": "Invitations for colleagues while you have free seats.",
-    "velocity": "Average days a deal spends in each stage."
+    "velocity": "Average days a deal spends in each stage.",
+    "todo_list": "A personal todo list. Private to you, and each todo can point at a deal."
   },
   "widgetConfig": {
     "title": "Widget settings",

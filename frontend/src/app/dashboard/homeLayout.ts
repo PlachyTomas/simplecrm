@@ -81,6 +81,33 @@ export function removeWidget(config: HomeDashboardConfig, id: string): HomeDashb
   };
 }
 
+/**
+ * Point one todo widget at a list. Only the target entry changes, so the
+ * other todo widgets on the dashboard keep their own lists — that pairing
+ * is what makes several of them useful.
+ */
+export function setWidgetListId(
+  config: HomeDashboardConfig,
+  id: string,
+  listId: string | null,
+): HomeDashboardConfig {
+  return {
+    ...config,
+    widgets: (config.widgets ?? []).map((w) =>
+      // `list_id` belongs to the todo config alone — the type guard keeps a
+      // stray id off any other widget, which the server would 422 on.
+      w.id === id && w.config.type === "todo_list"
+        ? { ...w, config: { ...w.config, list_id: listId } }
+        : w,
+    ),
+  };
+}
+
+/** The list a todo widget shows; null for a fresh one or any other type. */
+export function widgetListId(config: HomeWidgetEntry["config"]): string | null {
+  return config.type === "todo_list" ? (config.list_id ?? null) : null;
+}
+
 /** Write a per-widget date preset into the entry's config. */
 export function setWidgetDatePreset(
   config: HomeDashboardConfig,

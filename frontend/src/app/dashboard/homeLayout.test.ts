@@ -6,6 +6,8 @@ import {
   effectiveMobileOrder,
   removeWidget,
   setWidgetDatePreset,
+  setWidgetListId,
+  widgetListId,
 } from "@/app/dashboard/homeLayout";
 import type { HomeDashboardConfig, HomeWidgetEntry } from "@/app/dashboard/useHomeDashboard";
 
@@ -96,5 +98,31 @@ describe("setWidgetDatePreset", () => {
     const next = setWidgetDatePreset(c, "a", "this_quarter");
     expect(next.widgets![0]!.config.date_preset).toBe("this_quarter");
     expect(next.widgets![1]!.config.date_preset).toBeUndefined();
+  });
+});
+
+describe("setWidgetListId", () => {
+  it("leaves a sibling todo widget on its own list", () => {
+    // Two todo widgets is the supported case, so switching one must not
+    // drag the other along.
+    const c = config([entry("a", 0, 0, "todo_list"), entry("b", 4, 0, "todo_list")]);
+    const withB = setWidgetListId(c, "b", "list-2");
+    const next = setWidgetListId(withB, "a", "list-1");
+    expect(widgetListId(next.widgets![0]!.config)).toBe("list-1");
+    expect(widgetListId(next.widgets![1]!.config)).toBe("list-2");
+  });
+
+  it("clears the stored list with null", () => {
+    const c = config([entry("a", 0, 0, "todo_list")]);
+    const next = setWidgetListId(setWidgetListId(c, "a", "list-1"), "a", null);
+    expect(widgetListId(next.widgets![0]!.config)).toBeNull();
+  });
+
+  it("refuses to write a list id onto a non-todo widget", () => {
+    // The home config union forbids `list_id` anywhere else, so a stray
+    // write here would come back as a 422 on the next save.
+    const c = config([entry("a", 0, 0, "velocity")]);
+    const next = setWidgetListId(c, "a", "list-1");
+    expect(next.widgets![0]!.config).toEqual({ type: "velocity" });
   });
 });

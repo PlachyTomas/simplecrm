@@ -30,6 +30,8 @@ from app.db.models import (
     SalesGoalMetric,
     SentEmail,
     SentEmailStatus,
+    Todo,
+    TodoList,
     User,
     UserRole,
     UserSmtpSettings,
@@ -404,6 +406,13 @@ async def test_erasure_leaves_no_org_scoped_rows_anywhere(
         )
         # Org vocabulary the users typed themselves — must not survive either.
         s.add(EventLabel(organization_id=org.id, name="Schůzka", color="#6366F1"))
+        # Personal todos: free text a user typed, routinely naming people
+        # ("zavolat Janovi o smlouvě"). The list is org-scoped so the walk
+        # below sees it; the todos hang off it and must go with it.
+        todo_list = TodoList(organization_id=org.id, user_id=admin.id, name="Dnes")
+        s.add(todo_list)
+        await s.flush()
+        s.add(Todo(list_id=todo_list.id, text="Zavolat Janovi o smlouvě", position=0))
         s.add(
             SalesGoal(
                 organization_id=org.id,

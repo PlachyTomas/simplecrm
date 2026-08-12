@@ -453,6 +453,7 @@
     "notesTitle": "Poznámky",
     "more_one": "…a další {{count}}",
     "more_few": "…a další {{count}}",
-    "more_other": "…a dalších {{count}}"
+    "more_other": "…a dalších {{count}}",
+    "dealNoteTitle": "Popis obchodu"
   }
 }

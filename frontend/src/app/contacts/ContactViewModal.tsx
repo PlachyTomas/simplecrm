@@ -3,6 +3,7 @@ import { type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { type ContactOut } from "@/app/contacts/useContacts";
+import { CopyButton } from "@/components/ui/CopyButton";
 import { testIds } from "@/lib/testids";
 import { useModalDialog } from "@/lib/useModalDialog";
 
@@ -99,13 +100,23 @@ export function ContactViewModal({
               column, a normal address broke mid-word. */}
           <Field label={t("viewContactModal.email")}>
             {contact.email ? (
-              <a
-                href={`mailto:${contact.email}`}
-                className="inline-flex items-center gap-2 break-words text-accent hover:text-accent-hover"
-              >
-                <Mail size={14} strokeWidth={1.75} aria-hidden className="shrink-0" />
-                {contact.email}
-              </a>
+              // Copy sits beside the mailto link, not inside it — see
+              // ContactDetailPanel for the same pairing.
+              <span className="flex items-center gap-1">
+                <a
+                  href={`mailto:${contact.email}`}
+                  className="inline-flex min-w-0 items-center gap-2 break-words text-accent hover:text-accent-hover"
+                >
+                  <Mail size={14} strokeWidth={1.75} aria-hidden className="shrink-0" />
+                  {contact.email}
+                </a>
+                <CopyButton
+                  value={contact.email}
+                  label={t("viewContactModal.copyEmail")}
+                  copiedLabel={t("viewContactModal.emailCopied")}
+                  promptLabel={t("viewContactModal.copyEmailPrompt")}
+                />
+              </span>
             ) : (
               <Empty />
             )}

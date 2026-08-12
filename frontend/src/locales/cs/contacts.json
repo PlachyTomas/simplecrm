@@ -77,7 +77,10 @@
     "saving": "Ukládám…",
     "cancel": "Zrušit",
     "noContactInfo": "Ke kontaktu zatím nejsou vyplněny e-mail ani telefon.",
-    "noteTitle": "Poznámka"
+    "noteTitle": "Poznámka",
+    "copyEmail": "Kopírovat e-mail",
+    "emailCopied": "Zkopírováno",
+    "copyEmailPrompt": "Zkopírujte e-mail:"
   },
   "viewContactModal": {
     "close": "Zavřít",
@@ -85,6 +88,9 @@
     "noPosition": "Bez uvedené pozice",
     "email": "E-mail",
     "phone": "Telefon",
-    "note": "Poznámka"
+    "note": "Poznámka",
+    "copyEmail": "Kopírovat e-mail",
+    "emailCopied": "Zkopírováno",
+    "copyEmailPrompt": "Zkopírujte e-mail:"
   }
 }

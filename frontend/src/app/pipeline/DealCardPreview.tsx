@@ -1,4 +1,4 @@
-import { CalendarDays, History, StickyNote } from "lucide-react";
+import { CalendarDays, FileText, History, StickyNote } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { ACTIVITY_LABEL_KEY } from "@/app/activities/activityLabels";
 import { useActivities } from "@/app/activities/useActivities";
 import { DEAL_TIMELINE_TYPES } from "@/app/deals/DealTimelineSection";
+import { useDeal } from "@/app/deals/useDeals";
 import { useEvents } from "@/app/events/useEvents";
 import { formatDate } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
@@ -183,6 +184,10 @@ export function DealCardPreview({
   const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
   const { data: eventsPage, isPending: eventsPending } = useEvents({ dealId, limit: 50 });
+  // The board's list item carries no `note` (it lives on the detail schema),
+  // so the panel reads the deal itself. Same react-query key as the detail
+  // dialog, so opening the deal afterwards is served from cache.
+  const { data: deal } = useDeal(dealId);
   const { data: activitiesPage, isPending: notesPending } = useActivities({
     entityType: "deal",
     entityId: dealId,
@@ -190,20 +195,22 @@ export function DealCardPreview({
     activityTypes: PREVIEW_ACTIVITY_TYPES,
   });
 
+  // Exactly one event: the next one coming up. "What already happened" is what
+  // "Poslední akce" answers, so past events would only crowd the panel.
   const events = useMemo<PreviewRow[]>(() => {
-    const items = eventsPage?.items ?? [];
     const now = Date.now();
-    const upcoming = items
+    const next = (eventsPage?.items ?? [])
       .filter((e) => new Date(e.ends_at).getTime() >= now)
-      .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
-    const past = items
-      .filter((e) => new Date(e.ends_at).getTime() < now)
-      .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime());
-    return [...upcoming, ...past].map((e) => ({
-      key: e.id,
-      title: e.title,
-      meta: formatDate(e.starts_at, locale, { dateStyle: "medium", timeStyle: "short" }),
-    }));
+      .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())[0];
+    return next
+      ? [
+          {
+            key: next.id,
+            title: next.title,
+            meta: formatDate(next.starts_at, locale, { dateStyle: "medium", timeStyle: "short" }),
+          },
+        ]
+      : [];
   }, [eventsPage, locale]);
 
   const notes = useMemo<PreviewRow[]>(() => {
@@ -237,8 +244,12 @@ export function DealCardPreview({
     };
   }, [activitiesPage, locale, tCommon]);
 
+  // The deal's permanent note ("Popis obchodu"), not the note activities
+  // below it. Whitespace-only is no note at all.
+  const dealNote = deal?.note?.trim() ?? "";
+
   const pending = eventsPending || notesPending;
-  const isEmpty = !pending && !lastAction && events.length === 0 && notes.length === 0;
+  const isEmpty = !pending && !lastAction && !dealNote && events.length === 0 && notes.length === 0;
 
   return createPortal(
     <div
@@ -255,8 +266,9 @@ export function DealCardPreview({
       }}
       // The panel floats over deal cards that share its surface color (light
       // theme: both are white), so it needs more edge than a default popover:
-      // strong border + a second hairline ring outside it + the top shadow step.
-      className="pointer-events-none rounded-md border border-border-strong bg-surface-elevated p-3 text-xs shadow-lg ring-1 ring-border"
+      // the indigo accent border, a second accent hairline outside it, and the
+      // shadow step.
+      className="pointer-events-none rounded-md border border-accent bg-surface-elevated p-3 text-xs shadow-lg ring-1 ring-accent-border"
     >
       {pending ? (
         <p className="text-text-tertiary">{t("cardPreview.loading")}</p>
@@ -264,6 +276,17 @@ export function DealCardPreview({
         <p className="text-text-tertiary">{t("cardPreview.empty")}</p>
       ) : (
         <div className="space-y-3">
+          {dealNote ? (
+            <section>
+              <p className="flex items-center gap-1.5 font-medium uppercase tracking-wider text-text-tertiary">
+                <FileText size={12} strokeWidth={1.75} aria-hidden />
+                {t("cardPreview.dealNoteTitle")}
+              </p>
+              {/* Free text, so it wraps and clamps rather than truncating to
+                  one line the way the row sections do. */}
+              <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-text-primary">{dealNote}</p>
+            </section>
+          ) : null}
           {lastAction ? (
             <PreviewSection
               icon={<History size={12} strokeWidth={1.75} aria-hidden />}

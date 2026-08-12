@@ -1,0 +1,59 @@
+{
+  "widget": {
+    "title": "To-do",
+    "switchList": "Switch list",
+    "addPlaceholder": "Add a todo…",
+    "loadError": "Couldn't load the todos.",
+    "saveError": "Couldn't save the todo.",
+    "emptyTodos": "Nothing here yet. Add your first todo.",
+    "noLists": "You don't have any todo list yet.",
+    "createFirstList": "Create a list"
+  },
+  "todo": {
+    "toggle": "Mark as done",
+    "toggleDone": "Mark as not done",
+    "edit": "Edit todo",
+    "remove": "Delete todo",
+    "linkDeal": "Link to a deal",
+    "linkDealLocked": "The whole list is linked to {{deal}}. This todo inherits that link.",
+    "openDeal": "Open deal {{deal}}"
+  },
+  "switcher": {
+    "title": "Todo lists",
+    "openCount_one": "{{count}} todo",
+    "openCount_other": "{{count}} todos",
+    "newList": "New list…",
+    "newListPlaceholder": "List name",
+    "create": "Create",
+    "cancel": "Cancel",
+    "manageTitle": "Current list",
+    "rename": "Rename",
+    "renamePlaceholder": "New name",
+    "save": "Save",
+    "linkDeal": "Link to a deal",
+    "unlinkDeal": "Remove the deal link",
+    "delete": "Delete list",
+    "deleteConfirm": "Delete the list “{{name}}” and all its todos?",
+    "createError": "Couldn't create the list.",
+    "saveError": "Couldn't save the list.",
+    "deleteError": "Couldn't delete the list."
+  },
+  "dealPicker": {
+    "title": "Pick a deal",
+    "placeholder": "Search deals…",
+    "hint": "Start typing a deal or company name.",
+    "loading": "Loading deals…",
+    "loadError": "Couldn't load the deals.",
+    "noMatch": "No deal matches.",
+    "clear": "Remove the link",
+    "close": "Close"
+  },
+  "dealSection": {
+    "title": "My todos",
+    "privacyHint": "Only your own todos are shown.",
+    "addPlaceholder": "Add a todo for this deal…",
+    "empty": "You have no todos for this deal yet.",
+    "loadError": "Couldn't load the todos.",
+    "listSuffix": "in {{list}}"
+  }
+}

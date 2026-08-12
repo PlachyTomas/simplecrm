@@ -1133,6 +1133,111 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/todo-lists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Todo Lists
+         * @description My lists, oldest first — the order they appear in the switcher.
+         *     Not paginated: this is a picker, not a data set.
+         */
+        get: operations["list_todo_lists_api_v1_todo_lists_get"];
+        put?: never;
+        /** Create Todo List */
+        post: operations["create_todo_list_api_v1_todo_lists_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/todo-lists/{list_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Todo List */
+        delete: operations["delete_todo_list_api_v1_todo_lists__list_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Todo List */
+        patch: operations["update_todo_list_api_v1_todo_lists__list_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/todo-lists/{list_id}/todos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Todos */
+        get: operations["list_todos_api_v1_todo_lists__list_id__todos_get"];
+        put?: never;
+        /** Create Todo */
+        post: operations["create_todo_api_v1_todo_lists__list_id__todos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/todos/{todo_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Todo */
+        delete: operations["delete_todo_api_v1_todos__todo_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Todo */
+        patch: operations["update_todo_api_v1_todos__todo_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/deals/{deal_id}/todos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Deal Todos
+         * @description My todos reaching this deal, by either link path.
+         *
+         *     Scoped to the caller's own lists: deal detail is a shared page, but
+         *     personal todos stay personal.
+         */
+        get: operations["list_deal_todos_api_v1_deals__deal_id__todos_get"];
+        put?: never;
+        /**
+         * Create Deal Todo
+         * @description Add a todo from the deal page: resolve my default list (the oldest,
+         *     creating one if I have none) and stamp the deal link. One round trip,
+         *     so the client never orchestrates create-list-then-create-todo.
+         */
+        post: operations["create_deal_todo_api_v1_deals__deal_id__todos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/emails": {
         parameters: {
             query?: never;
@@ -5480,6 +5585,14 @@ export interface components {
              */
             stage_id: string;
         };
+        /**
+         * DealTodoCreate
+         * @description Body of `POST /deals/{id}/todos` — the list is resolved server-side.
+         */
+        DealTodoCreate: {
+            /** Text */
+            text: string;
+        };
         /** DealUpdate */
         DealUpdate: {
             /** Name */
@@ -5879,7 +5992,7 @@ export interface components {
             id: string;
             position: components["schemas"]["WidgetPosition"];
             /** Config */
-            config: components["schemas"]["PipelineValueConfig"] | components["schemas"]["WeightedPipelineConfig"] | components["schemas"]["NewCompaniesConfig"] | components["schemas"]["DealsWonConfig"] | components["schemas"]["WonVsPaidConfig"] | components["schemas"]["SalesForecastConfig"] | components["schemas"]["WinRateConfig"] | components["schemas"]["AvgDealSizeConfig"] | components["schemas"]["SalesCycleLengthConfig"] | components["schemas"]["LeadToDealConversionConfig"] | components["schemas"]["LostReasonsBreakdownConfig"] | components["schemas"]["SalesLeaderboardConfig"] | components["schemas"]["RepActivityConfig"] | components["schemas"]["DealsWithoutNextStepConfig"] | components["schemas"]["StaleDealsConfig"] | components["schemas"]["CompaniesAtRiskConfig"] | components["schemas"]["SalesGoalConfig"] | components["schemas"]["KpiOpenDealsConfig"] | components["schemas"]["KpiPipelineValueConfig"] | components["schemas"]["KpiWonMonthConfig"] | components["schemas"]["KpiRevenueMonthConfig"] | components["schemas"]["ActionNewDealConfig"] | components["schemas"]["ActionNewCompanyConfig"] | components["schemas"]["ActionNewContactConfig"] | components["schemas"]["ActionNewActivityConfig"] | components["schemas"]["InviteTeammatesConfig"] | components["schemas"]["VelocityConfig"];
+            config: components["schemas"]["PipelineValueConfig"] | components["schemas"]["WeightedPipelineConfig"] | components["schemas"]["NewCompaniesConfig"] | components["schemas"]["DealsWonConfig"] | components["schemas"]["WonVsPaidConfig"] | components["schemas"]["SalesForecastConfig"] | components["schemas"]["WinRateConfig"] | components["schemas"]["AvgDealSizeConfig"] | components["schemas"]["SalesCycleLengthConfig"] | components["schemas"]["LeadToDealConversionConfig"] | components["schemas"]["LostReasonsBreakdownConfig"] | components["schemas"]["SalesLeaderboardConfig"] | components["schemas"]["RepActivityConfig"] | components["schemas"]["DealsWithoutNextStepConfig"] | components["schemas"]["StaleDealsConfig"] | components["schemas"]["CompaniesAtRiskConfig"] | components["schemas"]["SalesGoalConfig"] | components["schemas"]["KpiOpenDealsConfig"] | components["schemas"]["KpiPipelineValueConfig"] | components["schemas"]["KpiWonMonthConfig"] | components["schemas"]["KpiRevenueMonthConfig"] | components["schemas"]["ActionNewDealConfig"] | components["schemas"]["ActionNewCompanyConfig"] | components["schemas"]["ActionNewContactConfig"] | components["schemas"]["ActionNewActivityConfig"] | components["schemas"]["InviteTeammatesConfig"] | components["schemas"]["VelocityConfig"] | components["schemas"]["TodoListConfig"];
         };
         /**
          * ImpersonateOut
@@ -8157,6 +8270,127 @@ export interface components {
             name?: string | null;
             /** Manager User Id */
             manager_user_id?: string | null;
+        };
+        /** TodoCreate */
+        TodoCreate: {
+            /** Text */
+            text: string;
+            /** Deal Id */
+            deal_id?: string | null;
+        };
+        /**
+         * TodoListConfig
+         * @description A personal todo list. The only home config with a field of its own:
+         *     which list this instance shows. Duplicable — several todo widgets on
+         *     one dashboard each keep their own `list_id`, which is why the id lives
+         *     in config rather than in a single per-user preference.
+         *
+         *     Not validated against `todo_lists` here: the client is the sole
+         *     writer, and a list deleted after the layout was saved falls back to
+         *     the first one client-side rather than 422-ing the whole dashboard.
+         */
+        TodoListConfig: {
+            /** Date Preset */
+            date_preset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "todo_list";
+            /** List Id */
+            list_id?: string | null;
+        };
+        /** TodoListCreate */
+        TodoListCreate: {
+            /** Name */
+            name: string;
+            /** Deal Id */
+            deal_id?: string | null;
+        };
+        /** TodoListOut */
+        TodoListOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Deal Id */
+            deal_id?: string | null;
+            /** Deal Name */
+            deal_name?: string | null;
+            /**
+             * Open Count
+             * @default 0
+             */
+            open_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * TodoListUpdate
+         * @description Partial update. Tri-state on `exclude_unset`: an absent `deal_id`
+         *     leaves the link alone, an explicit null clears it.
+         */
+        TodoListUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Deal Id */
+            deal_id?: string | null;
+        };
+        /** TodoOut */
+        TodoOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * List Id
+             * Format: uuid
+             */
+            list_id: string;
+            /** List Name */
+            list_name: string;
+            /** Text */
+            text: string;
+            /** Is Done */
+            is_done: boolean;
+            /** Position */
+            position: number;
+            /** Deal Id */
+            deal_id?: string | null;
+            /** Deal Name */
+            deal_name?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * TodoUpdate
+         * @description Partial update; `deal_id` is tri-state on `exclude_unset` like
+         *     `TodoListUpdate.deal_id`. Sending it at all while the parent list is
+         *     deal-linked is a 422 — the list link wins, so it would be dead
+         *     config.
+         */
+        TodoUpdate: {
+            /** Text */
+            text?: string | null;
+            /** Is Done */
+            is_done?: boolean | null;
+            /** Deal Id */
+            deal_id?: string | null;
         };
         /** TokenCheckRequest */
         TokenCheckRequest: {
@@ -10489,6 +10723,319 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ActivityOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_todo_lists_api_v1_todo_lists_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodoListOut"][];
+                };
+            };
+        };
+    };
+    create_todo_list_api_v1_todo_lists_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TodoListCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodoListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_todo_list_api_v1_todo_lists__list_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                list_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_todo_list_api_v1_todo_lists__list_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                list_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TodoListUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodoListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_todos_api_v1_todo_lists__list_id__todos_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                list_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodoOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_todo_api_v1_todo_lists__list_id__todos_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                list_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TodoCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_todo_api_v1_todos__todo_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                todo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_todo_api_v1_todos__todo_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                todo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TodoUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_deal_todos_api_v1_deals__deal_id__todos_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodoOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_deal_todo_api_v1_deals__deal_id__todos_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealTodoCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodoOut"];
                 };
             };
             /** @description Validation Error */
