@@ -106,7 +106,8 @@
       "company_updated": "Company updated",
       "event_created": "Event added",
       "call_logged": "Logged call",
-      "deal_reopened": "Deal reopened"
+      "deal_reopened": "Deal reopened",
+      "manual_action": "Action"
     },
     "fields": {
       "name": "name",

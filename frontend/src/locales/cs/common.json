@@ -108,7 +108,8 @@
       "company_updated": "Firma upravena",
       "event_created": "Událost přidána",
       "call_logged": "Zaznamenaný hovor",
-      "deal_reopened": "Obchod znovu otevřen"
+      "deal_reopened": "Obchod znovu otevřen",
+      "manual_action": "Akce"
     },
     "fields": {
       "name": "název",

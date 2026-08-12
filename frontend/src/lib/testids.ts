@@ -51,6 +51,7 @@ export const testIds = {
     contactRowView: (id: string) => `company-contact-view-${id}`,
     contactRowEdit: (id: string) => `company-contact-edit-${id}`,
     contactRowDelete: (id: string) => `company-contact-delete-${id}`,
+    activityRow: (id: string) => `company-activity-row-${id}`,
     addModal: {
       icoInput: "companies-add-modal-ico",
       nameInput: "companies-add-modal-name",
@@ -123,6 +124,15 @@ export const testIds = {
       noteCancel: "deals-detail-note-cancel",
       deleteButton: "deals-detail-delete-button",
       timelineLoadMore: "deals-detail-timeline-load-more",
+      timelineDraft: "deals-detail-timeline-draft",
+      timelineDraftKind: "deals-detail-timeline-draft-kind",
+      timelineDraftBody: "deals-detail-timeline-draft-body",
+      timelineDraftTime: "deals-detail-timeline-draft-time",
+      timelineEntry: (id: string) => `deals-detail-timeline-entry-${id}`,
+      timelineEntryBody: (id: string) => `deals-detail-timeline-entry-body-${id}`,
+      timelineEntryKind: (id: string) => `deals-detail-timeline-entry-kind-${id}`,
+      timelineEntryTime: (id: string) => `deals-detail-timeline-entry-time-${id}`,
+      timelineEntryDelete: (id: string) => `deals-detail-timeline-entry-delete-${id}`,
     },
     addModal: {
       nameInput: "deals-add-modal-name",

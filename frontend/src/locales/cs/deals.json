@@ -255,8 +255,44 @@
       "title": "Průběh",
       "loading": "Načítání…",
       "loadError": "Průběh se nepodařilo načíst.",
-      "empty": "Zatím se nic nestalo. Jakmile obchod posunete, pošlete e-mail nebo zapíšete hovor, objeví se to tady.",
-      "loadMore": "Načíst další"
+      "empty": "Zatím nic. Zapište první akci výše.",
+      "loadMore": "Načíst další",
+      "draft": {
+        "legend": "Přidat akci",
+        "kindLabel": "Druh",
+        "kindPlaceholder": "Vyberte druh…",
+        "bodyLabel": "Popis",
+        "bodyPlaceholder": "Co jste udělali?",
+        "timeLabel": "Kdy",
+        "hint": "Uloží se samo, jakmile kliknete jinam.",
+        "saveError": "Akci se nepodařilo uložit. Zkuste to prosím znovu."
+      },
+      "entry": {
+        "editBody": "Upravit popis akce",
+        "editKind": "Změnit druh akce",
+        "editTime": "Změnit datum a čas",
+        "delete": "Smazat akci",
+        "saving": "Ukládám…",
+        "saved": "Uloženo",
+        "saveError": "Změnu se nepodařilo uložit.",
+        "deleteConfirmTitle": "Smazat akci?",
+        "deleteConfirmBody": "Záznam se z časové osy nenávratně odstraní.",
+        "deleteConfirm": "Smazat",
+        "deleteCancel": "Zrušit",
+        "deleteError": "Akci se nepodařilo smazat.",
+        "noKind": "Bez druhu"
+      },
+      "kindPicker": {
+        "placeholder": "Hledat nebo vytvořit…",
+        "create": "Vytvořit „{{name}}“",
+        "creating": "Vytvářím…",
+        "createError": "Druh se nepodařilo vytvořit.",
+        "loading": "Načítám…",
+        "loadError": "Druhy se nepodařilo načíst.",
+        "noMatch": "Nic neodpovídá.",
+        "clear": "Bez druhu",
+        "sharedHint": "Druhy sdílíte se štítky v kalendáři."
+      }
     },
     "reopenDialog": {
       "title": "Znovu otevřít obchod?",

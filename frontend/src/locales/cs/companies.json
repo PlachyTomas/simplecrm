@@ -221,7 +221,10 @@
       "title": "Aktivita",
       "loading": "Načítání aktivit…",
       "loadError": "Aktivity se nepodařilo načíst.",
-      "empty": "K této firmě zatím není zaznamenaná žádná aktivita."
+      "empty": "Zatím žádné obchody. Až nějaký založíte nebo uzavřete, uvidíte to tady.",
+      "dealCreated": "Nový obchod",
+      "dealWon": "Vyhráno",
+      "dealLost": "Prohráno"
     },
     "notesTab": {
       "title": "Poznámky",

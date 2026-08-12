@@ -218,7 +218,10 @@
       "title": "Activity",
       "loading": "Loading activity…",
       "loadError": "Failed to load activity.",
-      "empty": "No activity has been recorded for this company yet."
+      "empty": "No deals yet. When you create or close one, it shows up here.",
+      "dealCreated": "New deal",
+      "dealWon": "Won",
+      "dealLost": "Lost"
     },
     "notesTab": {
       "title": "Notes",

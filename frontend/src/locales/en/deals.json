@@ -248,8 +248,44 @@
       "title": "Timeline",
       "loading": "Loading…",
       "loadError": "Failed to load the timeline.",
-      "empty": "Nothing has happened yet. Move the deal, send an email or log a call and it will show up here.",
-      "loadMore": "Load more"
+      "empty": "Nothing yet. Log your first action above.",
+      "loadMore": "Load more",
+      "draft": {
+        "legend": "Add action",
+        "kindLabel": "Kind",
+        "kindPlaceholder": "Pick a kind…",
+        "bodyLabel": "Description",
+        "bodyPlaceholder": "What did you do?",
+        "timeLabel": "When",
+        "hint": "Saves itself when you click away.",
+        "saveError": "Could not save the action. Please try again."
+      },
+      "entry": {
+        "editBody": "Edit description",
+        "editKind": "Change kind",
+        "editTime": "Change date and time",
+        "delete": "Delete action",
+        "saving": "Saving…",
+        "saved": "Saved",
+        "saveError": "Could not save the change.",
+        "deleteConfirmTitle": "Delete action?",
+        "deleteConfirmBody": "The entry will be permanently removed from the timeline.",
+        "deleteConfirm": "Delete",
+        "deleteCancel": "Cancel",
+        "deleteError": "Could not delete the action.",
+        "noKind": "No kind"
+      },
+      "kindPicker": {
+        "placeholder": "Search or create…",
+        "create": "Create “{{name}}”",
+        "creating": "Creating…",
+        "createError": "Could not create the kind.",
+        "loading": "Loading…",
+        "loadError": "Could not load kinds.",
+        "noMatch": "Nothing matches.",
+        "clear": "No kind",
+        "sharedHint": "Kinds are shared with your calendar labels."
+      }
     },
     "reopenDialog": {
       "title": "Reopen this deal?",
