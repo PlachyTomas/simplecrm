@@ -97,6 +97,21 @@ class VelocityConfig(WidgetConfigBase):
     type: Literal["velocity"] = "velocity"
 
 
+class TodoListConfig(WidgetConfigBase):
+    """A personal todo list. The only home config with a field of its own:
+    which list this instance shows. Duplicable — several todo widgets on
+    one dashboard each keep their own `list_id`, which is why the id lives
+    in config rather than in a single per-user preference.
+
+    Not validated against `todo_lists` here: the client is the sole
+    writer, and a list deleted after the layout was saved falls back to
+    the first one client-side rather than 422-ing the whole dashboard.
+    """
+
+    type: Literal["todo_list"] = "todo_list"
+    list_id: str | None = Field(default=None, max_length=64)
+
+
 # Discriminated union: the 16 report configs + the 10 home-only configs.
 # Pydantic picks the right subclass off `type`; unknown types fail
 # validation instead of silently coercing.
@@ -127,7 +142,8 @@ HomeWidgetConfig = Annotated[
     | ActionNewContactConfig
     | ActionNewActivityConfig
     | InviteTeammatesConfig
-    | VelocityConfig,
+    | VelocityConfig
+    | TodoListConfig,
     Field(discriminator="type"),
 ]
 
@@ -204,6 +220,7 @@ __all__ = [
     "KpiPipelineValueConfig",
     "KpiRevenueMonthConfig",
     "KpiWonMonthConfig",
+    "TodoListConfig",
     "VelocityConfig",
     "WidgetPosition",
 ]

@@ -50,6 +50,7 @@ from app.db.models.stage import Stage
 from app.db.models.subscription import Subscription
 from app.db.models.super_admin_audit import SuperAdminAction, SuperAdminAuditLog
 from app.db.models.team import Team
+from app.db.models.todo import Todo, TodoList
 from app.db.models.user import User
 from app.db.models.user_smtp_settings import UserSmtpSettings
 from app.db.models.webhook_event import WebhookEvent
@@ -100,6 +101,8 @@ __all__ = [
     "SuperAdminAction",
     "SuperAdminAuditLog",
     "Team",
+    "Todo",
+    "TodoList",
     "User",
     "UserRole",
     "UserSmtpSettings",

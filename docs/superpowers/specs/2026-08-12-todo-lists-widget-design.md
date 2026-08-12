@@ -137,8 +137,12 @@ caller's org answers 404.
 ```python
 class TodoListConfig(WidgetConfigBase):
     type: Literal["todo_list"] = "todo_list"
-    list_id: str | None = Field(default=None, alias="listId")
+    list_id: str | None = None
 ```
+
+Snake_case on the wire, like its sibling `date_preset` (and unlike
+`mobileOrder`, the one aliased field on the config blob) — the frontend
+reads `config.list_id`.
 
 Added to the **home union only** (`schemas/home_dashboard.py`). It is
 home-native, so the Reports union stays untouched — the widget never

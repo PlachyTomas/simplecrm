@@ -339,6 +339,64 @@ async def test_home_dashboard_rejects_bad_date_preset(
     assert resp.status_code == 422
 
 
+async def test_home_dashboard_accepts_two_todo_widgets_with_their_own_lists(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """The todo widget is duplicable and each instance remembers its own
+    list — that pairing is the whole point of `list_id` living in config."""
+    org = await _make_org(db_session, owned_cleanup)
+    user = await _make_user(db_session, owned_cleanup, org, role=UserRole.admin)
+    payload = {
+        "version": 1,
+        "widgets": [
+            {
+                "id": "w1",
+                "position": {"x": 0, "y": 0, "w": 4, "h": 4},
+                "config": {"type": "todo_list", "list_id": "0198f0c2-list-one"},
+            },
+            {
+                "id": "w2",
+                "position": {"x": 4, "y": 0, "w": 4, "h": 4},
+                "config": {"type": "todo_list", "list_id": "0198f0c2-list-two"},
+            },
+        ],
+        "mobileOrder": ["w1", "w2"],
+    }
+    put_resp = await client.put(_URL, headers=_auth(user), json=payload)
+    assert put_resp.status_code == 200, put_resp.text
+
+    get_resp = await client.get(_URL, headers=_auth(user))
+    assert get_resp.status_code == 200
+    configs = [w["config"] for w in get_resp.json()["widgets"]]
+    assert [c["type"] for c in configs] == ["todo_list", "todo_list"]
+    assert [c["list_id"] for c in configs] == ["0198f0c2-list-one", "0198f0c2-list-two"]
+
+
+async def test_home_dashboard_accepts_todo_widget_without_a_list(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """A freshly added widget has picked no list yet."""
+    org = await _make_org(db_session, owned_cleanup)
+    user = await _make_user(db_session, owned_cleanup, org, role=UserRole.admin)
+    resp = await client.put(
+        _URL,
+        headers=_auth(user),
+        json={
+            "version": 1,
+            "widgets": [
+                {
+                    "id": "w1",
+                    "position": {"x": 0, "y": 0, "w": 4, "h": 4},
+                    "config": {"type": "todo_list"},
+                }
+            ],
+            "mobileOrder": ["w1"],
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["widgets"][0]["config"]["list_id"] is None
+
+
 # ---------------------------------------------------------------------------
 # Role-aware defaults
 # ---------------------------------------------------------------------------

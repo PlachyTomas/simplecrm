@@ -34,6 +34,7 @@ from app.api.v1 import (
     search,
     subscription,
     teams,
+    todos,
     tracking,
     user_smtp,
     users,
@@ -78,6 +79,10 @@ api_router.include_router(bulk_email.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(companies.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(contacts.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(deals.router, dependencies=PROTECTED_DEPS)
+# Personal todo lists. Carries `/todo-lists`, `/todos` and the deal-scoped
+# `/deals/{deal_id}/todos` — no prefix of its own, and no collision with
+# the deals router above (its `/{deal_id}` routes are all shorter).
+api_router.include_router(todos.router, dependencies=PROTECTED_DEPS)
 api_router.include_router(emails.router, dependencies=PROTECTED_DEPS)
 # Org-shared email templates. Everyone reads; admins/managers write (gated
 # per-route inside the router).
