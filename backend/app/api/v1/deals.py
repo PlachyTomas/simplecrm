@@ -29,6 +29,7 @@ from app.db.models import (
     UserRole,
 )
 from app.db.models.enums import StageType
+from app.db.search import folded_ilike_contains
 from app.schemas.activity import ActivityOut
 from app.schemas.deal import (
     DealCallCreate,
@@ -158,8 +159,12 @@ async def _scoped_deals_query(
     if company_id is not None:
         base = base.where(Deal.company_id == company_id)
     if search:
-        pattern = f"%{search.strip()}%"
-        base = base.where(or_(Deal.name.ilike(pattern), Company.name.ilike(pattern)))
+        base = base.where(
+            or_(
+                folded_ilike_contains(Deal.name, search),
+                folded_ilike_contains(Company.name, search),
+            )
+        )
     if stage_id is not None:
         base = base.where(Deal.stage_id == stage_id)
     if owner_user_id is not None:
@@ -212,7 +217,9 @@ _STATUS_DESCRIPTION = (
     "Lifecycle filter. 'open' = open-type stage and not closed, 'won' = won-type "
     "stage, 'lost' = lost-type stage or an open-type stage already closed."
 )
-_SEARCH_DESCRIPTION = "Case-insensitive partial match on the deal name or its company's name."
+_SEARCH_DESCRIPTION = (
+    "Case- and diacritic-insensitive partial match on the deal name or its company's name."
+)
 
 
 @router.get("", response_model=Page[DealListItemOut])

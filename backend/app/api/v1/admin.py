@@ -37,6 +37,7 @@ from app.db.models import (
     SuperAdminAction,
     User,
 )
+from app.db.search import folded_ilike_contains
 from app.schemas.billing import (
     ActivateSubscriptionIn,
     AdminActivityActor,
@@ -79,7 +80,7 @@ async def list_organizations(
 ) -> AdminOrgList:
     base = select(Organization)
     if q:
-        base = base.where(Organization.name.ilike(f"%{q}%"))
+        base = base.where(folded_ilike_contains(Organization.name, q))
 
     total = (await session.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
 

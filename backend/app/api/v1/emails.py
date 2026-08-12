@@ -22,6 +22,7 @@ from app.core.scoping import scope_by_owner
 from app.db import get_db
 from app.db.models import Company, Deal, SentEmail, User, UserRole
 from app.db.models.enums import ActivityEntityType, ActivityType, EmailDirection
+from app.db.search import folded_ilike_contains, ilike_contains
 from app.schemas.pagination import Page, PaginationParams
 from app.schemas.sent_email import (
     SentEmailCreate,
@@ -178,7 +179,10 @@ async def list_emails(
     search: str | None = Query(
         default=None,
         max_length=120,
-        description="Case-insensitive substring over subject, body and addresses.",
+        description=(
+            "Case-insensitive substring over subject, body and addresses. "
+            "Subject and body also ignore diacritics."
+        ),
     ),
     direction: EmailDirection | None = Query(default=None),
     unmatched: bool = Query(
@@ -200,16 +204,16 @@ async def list_emails(
     if company_id is not None:
         base = base.where(SentEmail.company_id == company_id)
     if search is not None and search.strip():
-        term = f"%{search.strip()}%"
-        # Recipient arrays are JSONB; matching their text rendering is crude
-        # but fine for a substring search over e-mail addresses.
+        # Subject and body carry prose, so they fold diacritics. Addresses
+        # cannot hold any, and the recipient arrays are JSONB — matching their
+        # text rendering is crude but fine for a substring search.
         base = base.where(
             or_(
-                SentEmail.subject.ilike(term),
-                SentEmail.body.ilike(term),
-                SentEmail.from_email.ilike(term),
-                cast(SentEmail.to_emails, Text).ilike(term),
-                cast(SentEmail.cc_emails, Text).ilike(term),
+                folded_ilike_contains(SentEmail.subject, search),
+                folded_ilike_contains(SentEmail.body, search),
+                ilike_contains(SentEmail.from_email, search),
+                ilike_contains(cast(SentEmail.to_emails, Text), search),
+                ilike_contains(cast(SentEmail.cc_emails, Text), search),
             )
         )
     if direction is not None:

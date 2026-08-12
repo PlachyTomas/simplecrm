@@ -9435,7 +9435,7 @@ export interface operations {
     list_companies_api_v1_companies_get: {
         parameters: {
             query?: {
-                /** @description Case-insensitive partial match on name or IČO. */
+                /** @description Case- and diacritic-insensitive partial match on name, or partial IČO. */
                 search?: string | null;
                 /** @description Sort key. One of: name, industry, ownership_expires_at, last_order_at, last_activity_at, created_at. */
                 sort?: string;
@@ -9927,7 +9927,7 @@ export interface operations {
         parameters: {
             query?: {
                 company_id?: string | null;
-                /** @description Case-insensitive partial match on the deal name or its company's name. */
+                /** @description Case- and diacritic-insensitive partial match on the deal name or its company's name. */
                 search?: string | null;
                 /** @description Filter to a single stage. */
                 stage_id?: string | null;
@@ -10004,7 +10004,7 @@ export interface operations {
         parameters: {
             query?: {
                 company_id?: string | null;
-                /** @description Case-insensitive partial match on the deal name or its company's name. */
+                /** @description Case- and diacritic-insensitive partial match on the deal name or its company's name. */
                 search?: string | null;
                 stage_id?: string | null;
                 owner_user_id?: string | null;
@@ -10377,7 +10377,7 @@ export interface operations {
             query?: {
                 deal_id?: string | null;
                 company_id?: string | null;
-                /** @description Case-insensitive substring over subject, body and addresses. */
+                /** @description Case-insensitive substring over subject, body and addresses. Subject and body also ignore diacritics. */
                 search?: string | null;
                 direction?: components["schemas"]["EmailDirection"] | null;
                 /** @description Only mail linked to no company AND no deal. */

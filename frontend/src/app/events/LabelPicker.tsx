@@ -11,6 +11,7 @@ import {
 } from "@/app/events/useEventLabels";
 import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
+import { matches as matchesFolded } from "@/lib/fold";
 
 interface LabelPickerProps {
   selected: EventLabelBrief[];
@@ -41,13 +42,15 @@ export function LabelPicker({ selected, onChange, inputCls }: LabelPickerProps) 
 
   const all = labels.data ?? [];
   const trimmed = query.trim();
-  const q = trimmed.toLowerCase();
   const selectedIds = new Set(selected.map((label) => label.id));
   const matches = all
     .filter((label) => !selectedIds.has(label.id))
-    .filter((label) => !q || label.name.toLowerCase().includes(q))
+    .filter((label) => matchesFolded(label.name, trimmed))
     .slice(0, 25);
-  const exists = all.some((label) => label.name.trim().toLowerCase() === q);
+  // Duplicate detection, not search — so it stays diacritic-*sensitive*. "Brána"
+  // and "Brana" are two distinct labels; folding here would refuse to create the
+  // second one.
+  const exists = all.some((label) => label.name.trim().toLowerCase() === trimmed.toLowerCase());
   // Never offer "create" over a half-loaded vocabulary — the duplicate would
   // just come back as a 409.
   const canCreate = trimmed.length > 0 && !exists && !labels.isPending && !labels.isError;
@@ -72,7 +75,7 @@ export function LabelPicker({ selected, onChange, inputCls }: LabelPickerProps) 
     );
   }
 
-  const showList = open && (matches.length > 0 || canCreate || (!!q && !labels.isError));
+  const showList = open && (matches.length > 0 || canCreate || (!!trimmed && !labels.isError));
 
   return (
     <div className="text-sm">
@@ -125,7 +128,7 @@ export function LabelPicker({ selected, onChange, inputCls }: LabelPickerProps) 
             if (e.key === "Enter") {
               // The picker's Enter belongs to the picker, not the form.
               e.preventDefault();
-              const first = q ? matches[0] : undefined;
+              const first = trimmed ? matches[0] : undefined;
               if (first) pick(first);
               else create();
             } else if (e.key === "Escape" && open) {

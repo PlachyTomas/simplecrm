@@ -30,6 +30,7 @@ from app.db.models import (
     Organization,
     User,
 )
+from app.db.search import folded_ilike_contains, ilike_contains
 from app.schemas.admin_invoicing import (
     AdminCreditNoteIn,
     AdminIntegrityFailure,
@@ -105,8 +106,12 @@ async def list_invoices(
     if date_to is not None:
         base = base.where(Invoice.issued_at <= datetime.combine(date_to, datetime.max.time()))
     if q:
-        like = f"%{q}%"
-        base = base.where(or_(Invoice.number.ilike(like), Invoice.customer_name.ilike(like)))
+        base = base.where(
+            or_(
+                ilike_contains(Invoice.number, q),
+                folded_ilike_contains(Invoice.customer_name, q),
+            )
+        )
 
     total = (await session.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
     rows = (

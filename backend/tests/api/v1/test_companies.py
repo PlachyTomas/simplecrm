@@ -190,6 +190,49 @@ async def test_list_companies_search_filters_by_name_and_ico(
     assert empty.json()["total"] == 0
 
 
+async def test_list_companies_search_ignores_diacritics_both_ways(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    db_session.add_all(
+        [
+            Company(organization_id=org.id, name="Brána s.r.o.", ico="27082440"),
+            Company(organization_id=org.id, name="Ceska posta", ico="24253820"),
+        ]
+    )
+    await db_session.commit()
+
+    # Typed without diacritics, stored with them.
+    plain = await client.get("/api/v1/companies?search=brana", headers=_auth(admin))
+    assert plain.status_code == 200
+    assert {it["name"] for it in plain.json()["items"]} == {"Brána s.r.o."}
+
+    # Typed with diacritics, stored without.
+    accented = await client.get("/api/v1/companies?search=Česká", headers=_auth(admin))
+    assert {it["name"] for it in accented.json()["items"]} == {"Ceska posta"}
+
+
+async def test_list_companies_search_treats_wildcards_literally(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    db_session.add_all(
+        [
+            Company(organization_id=org.id, name="Sleva 20% s.r.o.", ico="11111111"),
+            Company(organization_id=org.id, name="Sleva 20 a.s.", ico="22222222"),
+        ]
+    )
+    await db_session.commit()
+
+    # A typed "%" is a literal percent sign, not "match anything" — so the
+    # second company (no % in its name) must not come back.
+    r = await client.get("/api/v1/companies?search=20%25", headers=_auth(admin))
+    assert r.status_code == 200
+    assert {it["name"] for it in r.json()["items"]} == {"Sleva 20% s.r.o."}
+
+
 async def test_list_companies_filters_by_owner_industry_city(
     client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
 ) -> None:

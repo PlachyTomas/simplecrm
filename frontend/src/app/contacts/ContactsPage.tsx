@@ -11,6 +11,7 @@ import { testIds } from "@/lib/testids";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
+import { matchesAny, matchesPhone } from "@/lib/fold";
 
 function ContactRow({
   contact,
@@ -104,17 +105,16 @@ export function ContactsPage() {
   // stable across re-renders that don't change the list contents.
   const allItems = useMemo(() => contacts?.items ?? [], [contacts]);
   const items = useMemo(() => {
-    const q = debouncedSearch.trim().toLowerCase();
+    const q = debouncedSearch.trim();
     if (!q) return allItems;
-    return allItems.filter((c) => {
-      const name = `${c.first_name} ${c.last_name}`.toLowerCase();
-      return (
-        name.includes(q) ||
-        (c.email?.toLowerCase().includes(q) ?? false) ||
-        (c.phone?.toLowerCase().includes(q) ?? false) ||
-        (c.company_name?.toLowerCase().includes(q) ?? false)
-      );
-    });
+    // `phone` sits in both checks on purpose: the text path keeps any
+    // non-numeric part of the field searchable, while the phone path ignores
+    // how the number is spaced ("602000000" finds "+420 602 000 000").
+    return allItems.filter(
+      (c) =>
+        matchesAny([`${c.first_name} ${c.last_name}`, c.email, c.phone, c.company_name], q) ||
+        matchesPhone(c.phone, q),
+    );
   }, [allItems, debouncedSearch]);
   // A filter is active when the open-deals toggle is on or the user is
   // searching. When active but zero rows match, the "filtered empty" state

@@ -180,6 +180,65 @@ async def test_global_search_finds_deal_by_name_and_subtitle_is_company_name(
     assert body["deals"][0]["subtitle"] == "Acme s.r.o."
 
 
+async def test_global_search_ignores_diacritics_across_all_three_entities(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    open_stage, _won_stage = await _seed_stages(db_session, org)
+    company = Company(organization_id=org.id, name="Brána Plzeň s.r.o.")
+    db_session.add(company)
+    await db_session.commit()
+    db_session.add_all(
+        [
+            Contact(
+                organization_id=org.id,
+                company_id=company.id,
+                first_name="Jiří",
+                last_name="Růžička",
+                email=f"jiri-{uuid.uuid4().hex[:6]}@ex.cz",
+            ),
+            Deal(
+                organization_id=org.id,
+                company_id=company.id,
+                stage_id=open_stage.id,
+                name="Údržba systému",
+                value=Decimal("1"),
+                currency="CZK",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    company_hit = await client.get("/api/v1/search?q=brana", headers=_auth(admin))
+    assert company_hit.status_code == 200
+    assert [c["name"] for c in company_hit.json()["companies"]] == ["Brána Plzeň s.r.o."]
+
+    contact_hit = await client.get("/api/v1/search?q=ruzicka", headers=_auth(admin))
+    assert [c["name"] for c in contact_hit.json()["contacts"]] == ["Jiří Růžička"]
+
+    deal_hit = await client.get("/api/v1/search?q=udrzba", headers=_auth(admin))
+    assert [d["name"] for d in deal_hit.json()["deals"]] == ["Údržba systému"]
+
+    # The concatenated-full-name branch folds too: "jiri ruz" spans both columns.
+    full_name = await client.get("/api/v1/search?q=jiri%20ruz", headers=_auth(admin))
+    assert [c["name"] for c in full_name.json()["contacts"]] == ["Jiří Růžička"]
+
+
+async def test_global_search_finds_accented_row_from_accented_query(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """The reverse direction: diacritics typed, none stored."""
+    org = await _seed_org(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    db_session.add(Company(organization_id=org.id, name="Ceska Brana"))
+    await db_session.commit()
+
+    r = await client.get("/api/v1/search?q=Brána", headers=_auth(admin))
+    assert r.status_code == 200
+    assert [c["name"] for c in r.json()["companies"]] == ["Ceska Brana"]
+
+
 # ---------------------------------------------------------------------------
 # per-entity cap + min query length
 # ---------------------------------------------------------------------------

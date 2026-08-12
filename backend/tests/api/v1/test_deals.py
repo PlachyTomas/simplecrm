@@ -1217,6 +1217,51 @@ async def test_list_deals_search_matches_deal_name_or_company_name(
     assert {it["name"] for it in by_company_name.json()["items"]} == {"Servisní smlouva"}
 
 
+async def test_list_deals_search_ignores_diacritics_both_ways(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    rohlik = Company(organization_id=org.id, name="Rohlík.cz")
+    db_session.add(rohlik)
+    await db_session.commit()
+    db_session.add(
+        Deal(
+            organization_id=org.id,
+            company_id=rohlik.id,
+            stage_id=stage.id,
+            name="Servisní smlouva",
+            value=Decimal("1"),
+            currency="CZK",
+        )
+    )
+    await db_session.commit()
+
+    # Typed without diacritics, stored with them — on the deal name...
+    plain_deal = await client.get("/api/v1/deals?search=servisni", headers=_auth(admin))
+    assert plain_deal.status_code == 200
+    assert {it["name"] for it in plain_deal.json()["items"]} == {"Servisní smlouva"}
+
+    # ...and on the joined company name.
+    plain_company = await client.get("/api/v1/deals?search=rohlik", headers=_auth(admin))
+    assert {it["name"] for it in plain_company.json()["items"]} == {"Servisní smlouva"}
+
+    # And the reverse: typed with diacritics, stored without.
+    db_session.add(
+        Deal(
+            organization_id=org.id,
+            company_id=rohlik.id,
+            stage_id=stage.id,
+            name="Dodavka zbozi",
+            value=Decimal("1"),
+            currency="CZK",
+        )
+    )
+    await db_session.commit()
+    accented = await client.get("/api/v1/deals?search=dodávka", headers=_auth(admin))
+    assert {it["name"] for it in accented.json()["items"]} == {"Dodavka zbozi"}
+
+
 async def test_list_deals_filter_by_stage_id(
     client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
 ) -> None:

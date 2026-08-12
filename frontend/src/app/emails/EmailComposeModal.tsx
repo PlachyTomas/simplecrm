@@ -14,6 +14,7 @@ import { useDismissGuard } from "@/lib/useDismissGuard";
 import { useModalDialog } from "@/lib/useModalDialog";
 import { useToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { fold } from "@/lib/fold";
 
 interface EmailComposeModalProps {
   open: boolean;
@@ -58,14 +59,6 @@ function attachmentError(file: File, t: TFunction<"emails">): string | null {
     return t("compose.attachmentUnsupportedType", { filename: file.name });
   }
   return null;
-}
-
-/** Strip diacritics + lowercase so "novak" matches "Novák". */
-function fold(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
 }
 
 function ChipsInput({

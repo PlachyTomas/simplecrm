@@ -25,6 +25,7 @@ from app.db.models import (
     User,
     UserRole,
 )
+from app.db.search import folded_ilike_contains, ilike_contains
 from app.schemas.company import (
     CompanyCreate,
     CompanyFilterOptions,
@@ -236,7 +237,7 @@ async def list_companies(
     search: str | None = Query(
         default=None,
         max_length=120,
-        description="Case-insensitive partial match on name or IČO.",
+        description="Case- and diacritic-insensitive partial match on name, or partial IČO.",
     ),
     sort: str = Query(
         default="name",
@@ -279,8 +280,11 @@ async def list_companies(
 
     base = select(Company).where(Company.organization_id == user.organization_id)
     if search:
-        pattern = f"%{search.strip()}%"
-        base = base.where(Company.name.ilike(pattern) | Company.ico.ilike(pattern))
+        # Name folds diacritics ("brana" finds "Brána"); IČO is digits, so it
+        # only needs the case/wildcard handling.
+        base = base.where(
+            folded_ilike_contains(Company.name, search) | ilike_contains(Company.ico, search)
+        )
 
     if ownership == "mine":
         base = base.where(Company.owner_user_id == user.id)

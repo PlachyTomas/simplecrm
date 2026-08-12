@@ -21,6 +21,7 @@ import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useDismissGuard } from "@/lib/useDismissGuard";
 import { useModalDialog } from "@/lib/useModalDialog";
 import { useToast } from "@/lib/toast";
+import { matchesAny } from "@/lib/fold";
 
 /** Local-naive `YYYY-MM-DD` for `<input type="date">`. */
 function toLocalDate(iso: string): string {
@@ -531,10 +532,9 @@ function DealPickerField({
   const debounced = useDebouncedValue(search.trim(), 250);
   const deals = useDeals({ limit: 100 });
 
-  const q = debounced.toLowerCase();
-  const matches = q
+  const matches = debounced
     ? (deals.data?.items ?? [])
-        .filter((d) => d.name.toLowerCase().includes(q) || d.company_name.toLowerCase().includes(q))
+        .filter((d) => matchesAny([d.name, d.company_name], debounced))
         .slice(0, 25)
     : [];
 
@@ -555,23 +555,23 @@ function DealPickerField({
         placeholder={t("eventFormModal.dealPicker.placeholder")}
         className={inputCls}
       />
-      {!q && !value ? (
+      {!debounced && !value ? (
         <p className="mt-1 text-xs text-text-tertiary">{t("eventFormModal.dealPicker.hint")}</p>
       ) : null}
-      {q && deals.isPending ? (
+      {debounced && deals.isPending ? (
         <p className="mt-2 text-xs text-text-tertiary" role="status">
           {t("eventFormModal.dealPicker.loading")}
         </p>
       ) : null}
-      {q && deals.isError ? (
+      {debounced && deals.isError ? (
         <p className="mt-2 text-xs text-danger" role="alert">
           {t("eventFormModal.dealPicker.loadError")}
         </p>
       ) : null}
-      {q && !deals.isPending && !deals.isError && matches.length === 0 && !value ? (
+      {debounced && !deals.isPending && !deals.isError && matches.length === 0 && !value ? (
         <p className="mt-2 text-xs text-text-tertiary">{t("eventFormModal.dealPicker.noMatch")}</p>
       ) : null}
-      {q && matches.length > 0 && !value ? (
+      {debounced && matches.length > 0 && !value ? (
         <ul className="mt-2 max-h-40 overflow-y-auto rounded-md border border-border bg-surface">
           {matches.map((deal) => (
             <li key={deal.id}>

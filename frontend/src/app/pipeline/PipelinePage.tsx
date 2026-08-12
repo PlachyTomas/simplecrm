@@ -46,6 +46,7 @@ import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
+import { matches as matchesFolded } from "@/lib/fold";
 
 const WON_WINDOW_STORAGE_KEY = "pipeline-won-window-days";
 const WON_WINDOW_VALUES: WonWindow[] = [7, 30, 90, "all"];
@@ -942,14 +943,14 @@ export function PipelinePage() {
 
   const filteredStages = useMemo<BoardStage[]>(() => {
     if (!board) return [];
-    const normalized = searchTerm.trim().toLowerCase();
+    const normalized = searchTerm.trim();
     return board.stages.map((stage) => {
       const deals = stage.deals.filter((deal) => {
         if (ownerFilter === "mine" && deal.owner_user_id !== user?.id) return false;
         if (ownerFilter !== "all" && ownerFilter !== "mine" && deal.owner_user_id !== ownerFilter) {
           return false;
         }
-        if (normalized && !deal.name.toLowerCase().includes(normalized)) return false;
+        if (normalized && !matchesFolded(deal.name, normalized)) return false;
         if (
           noNextStepOnly &&
           stage.stage_type === "open" &&

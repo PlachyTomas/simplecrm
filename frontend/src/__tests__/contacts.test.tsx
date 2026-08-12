@@ -299,4 +299,73 @@ describe("Contacts split-view", () => {
     );
     confirmSpy.mockRestore();
   });
+  it("filters the list diacritic-insensitively in both directions", async () => {
+    fetchMock.mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
+      if (url.includes("/api/v1/contacts?")) {
+        return jsonResponse({ items: CONTACTS, total: CONTACTS.length, limit: 50, offset: 0 });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    renderAt("/app/contacts");
+    const user = userEvent.setup();
+    const box = await screen.findByPlaceholderText(/jméno, e-mail, telefon/i);
+
+    // Typed without diacritics, stored with them.
+    await user.type(box, "svobodova");
+    await waitFor(() => expect(screen.queryByText(/Jan Novák/)).toBeNull());
+    expect(screen.getByText(/Jana Svobodová/)).toBeInTheDocument();
+
+    // Typed with diacritics, matching a plain ASCII field (the e-mail) — the
+    // fold has to run over the data as well as the query.
+    await user.clear(box);
+    await user.type(box, "Nověk");
+    await waitFor(() => expect(screen.queryByText(/Jana Svobodová/)).toBeNull());
+    expect(screen.queryByText(/Jan Novák/)).toBeNull();
+
+    // And the accented query against the accented row it really belongs to.
+    await user.clear(box);
+    await user.type(box, "Novák");
+    await waitFor(() => expect(screen.getByText(/Jan Novák/)).toBeInTheDocument());
+    expect(screen.queryByText(/Jana Svobodová/)).toBeNull();
+  });
+  it("finds a contact by phone number regardless of spacing", async () => {
+    fetchMock.mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
+      if (url.includes("/api/v1/contacts?")) {
+        return jsonResponse({ items: CONTACTS, total: CONTACTS.length, limit: 50, offset: 0 });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    renderAt("/app/contacts");
+    const user = userEvent.setup();
+    const box = await screen.findByPlaceholderText(/jméno, e-mail, telefon/i);
+
+    // Jan Novák's number is stored as "+420 602 000 000"; typing it unspaced
+    // has to find him anyway.
+    await user.type(box, "602000000");
+    await waitFor(() => expect(screen.queryByText(/Jana Svobodová/)).toBeNull());
+    expect(screen.getByText(/Jan Novák/)).toBeInTheDocument();
+
+    // The spacing the user actually sees on screen works too.
+    await user.clear(box);
+    await user.type(box, "602 000 000");
+    await waitFor(() => expect(screen.getByText(/Jan Novák/)).toBeInTheDocument());
+    expect(screen.queryByText(/Jana Svobodová/)).toBeNull();
+
+    // ...as does the number with its country prefix.
+    await user.clear(box);
+    await user.type(box, "+420602000000");
+    await waitFor(() => expect(screen.getByText(/Jan Novák/)).toBeInTheDocument());
+
+    // A different number matches nobody.
+    await user.clear(box);
+    await user.type(box, "603111111");
+    await waitFor(() => expect(screen.queryByText(/Jan Novák/)).toBeNull());
+    expect(screen.queryByText(/Jana Svobodová/)).toBeNull();
+  });
 });

@@ -1,10 +1,9 @@
 """Global search — the app-wide top-bar lookup.
 
-One endpoint, three independent ILIKE queries, up to five hits each. No
-ranking, no full-text index, no `unaccent`/`pg_trgm` extension: the point is a
-fast "jump to the thing I'm thinking of" affordance over a few thousand rows,
-and Postgres' plain ILIKE serves that from the existing btree/seq scans without
-adding a migration or an extension to the deployment story.
+One endpoint, three independent ILIKE queries, up to five hits each. No ranking
+and no full-text index: the point is a fast "jump to the thing I'm thinking of"
+affordance over a few thousand rows, which a sequential scan serves fine.
+Matching is case- and diacritic-insensitive via `app.db.search`.
 
 Visibility is per-entity and matches whatever each resource's own list endpoint
 does, so search can never become a side channel around row-level scoping:
@@ -25,6 +24,7 @@ from app.core.deps import get_current_user
 from app.core.scoping import scope_by_owner
 from app.db import get_db
 from app.db.models import Company, Contact, Deal, User
+from app.db.search import folded_ilike_contains, ilike_contains
 from app.schemas.search import GlobalSearchResults, SearchHit
 
 router = APIRouter(prefix="/search", tags=["search"])
@@ -49,11 +49,13 @@ async def global_search(
     # 1-char search. Empty results beat a full-table scan.
     if len(term) < _MIN_QUERY_LENGTH:
         return GlobalSearchResults()
-    pattern = f"%{term}%"
 
     company_stmt = select(Company).where(
         Company.organization_id == user.organization_id,
-        or_(Company.name.ilike(pattern), Company.ico.ilike(pattern)),
+        or_(
+            folded_ilike_contains(Company.name, term),
+            ilike_contains(Company.ico, term),
+        ),
     )
     company_stmt = await scope_by_owner(
         company_stmt, session=session, user=user, owner_col=Company.owner_user_id
@@ -72,11 +74,11 @@ async def global_search(
         .where(
             Contact.organization_id == user.organization_id,
             or_(
-                Contact.first_name.ilike(pattern),
-                Contact.last_name.ilike(pattern),
-                Contact.email.ilike(pattern),
+                folded_ilike_contains(Contact.first_name, term),
+                folded_ilike_contains(Contact.last_name, term),
+                ilike_contains(Contact.email, term),
                 # Lets "jan nov" match "Jan Novák" — people type full names.
-                (Contact.first_name + " " + Contact.last_name).ilike(pattern),
+                folded_ilike_contains(Contact.first_name + " " + Contact.last_name, term),
             ),
         )
         .order_by(Contact.last_name, Contact.first_name)
@@ -89,7 +91,7 @@ async def global_search(
         .join(Company, Company.id == Deal.company_id)
         .where(
             Deal.organization_id == user.organization_id,
-            Deal.name.ilike(pattern),
+            folded_ilike_contains(Deal.name, term),
         )
     )
     deal_stmt = await scope_by_owner(
