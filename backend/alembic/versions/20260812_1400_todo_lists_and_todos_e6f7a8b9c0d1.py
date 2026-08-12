@@ -1,7 +1,7 @@
 """personal todo lists + todos
 
 Revision ID: e6f7a8b9c0d1
-Revises: c4d5e6f7a8b9
+Revises: d5e6f7a8b9c0
 Create Date: 2026-08-12 14:00:00.000000+00:00
 
 Two plain tables — no native enums, so nothing here needs to run outside a
@@ -21,7 +21,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision: str = "e6f7a8b9c0d1"
-down_revision: str | None = "c4d5e6f7a8b9"
+down_revision: str | None = "d5e6f7a8b9c0"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
