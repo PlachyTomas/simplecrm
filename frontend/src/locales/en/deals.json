@@ -409,6 +409,7 @@
     "eventsTitle": "Events",
     "notesTitle": "Notes",
     "more_one": "…and {{count}} more",
-    "more_other": "…and {{count}} more"
+    "more_other": "…and {{count}} more",
+    "dealNoteTitle": "Deal description"
   }
 }

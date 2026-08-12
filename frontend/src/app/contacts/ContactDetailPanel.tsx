@@ -8,6 +8,7 @@ import { EditContactModal } from "@/app/contacts/EditContactModal";
 import { useContact, useDeleteContact, useUpdateContact } from "@/app/contacts/useContacts";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { CompanyCombobox } from "@/components/ui/CompanyCombobox";
+import { CopyButton } from "@/components/ui/CopyButton";
 import { ApiError } from "@/lib/api";
 import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
@@ -180,13 +181,25 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
 
       <section className="space-y-3">
         {contact.email ? (
-          <a
-            href={`mailto:${contact.email}`}
-            className="flex items-center gap-3 rounded-md border border-border bg-surface px-4 py-3 text-sm text-text-primary transition-colors duration-fast hover:border-accent-border hover:text-accent"
-          >
-            <Mail size={16} strokeWidth={1.75} className="text-text-tertiary" />
-            {contact.email}
-          </a>
+          // The copy button is a sibling of the mailto link, never inside it:
+          // a button nested in an anchor is invalid, and copying must not
+          // open the mail client.
+          <div className="flex items-center gap-1 rounded-md border border-border bg-surface pr-2 transition-colors duration-fast focus-within:border-accent-border hover:border-accent-border">
+            <a
+              href={`mailto:${contact.email}`}
+              className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-sm text-text-primary transition-colors duration-fast hover:text-accent"
+            >
+              <Mail size={16} strokeWidth={1.75} className="shrink-0 text-text-tertiary" />
+              <span className="truncate">{contact.email}</span>
+            </a>
+            <CopyButton
+              value={contact.email}
+              label={t("contactDetail.copyEmail")}
+              copiedLabel={t("contactDetail.emailCopied")}
+              promptLabel={t("contactDetail.copyEmailPrompt")}
+              testId={testIds.contacts.copyEmail}
+            />
+          </div>
         ) : null}
         {contact.phone ? (
           <a

@@ -82,6 +82,7 @@ export const testIds = {
       cancel: "contacts-add-modal-cancel",
     },
     editButton: "contacts-edit-button",
+    copyEmail: "contacts-copy-email",
     editModal: {
       firstNameInput: "contacts-edit-modal-first-name",
       lastNameInput: "contacts-edit-modal-last-name",

@@ -77,7 +77,10 @@
     "saving": "Saving…",
     "cancel": "Cancel",
     "noContactInfo": "No email or phone number has been added for this contact yet.",
-    "noteTitle": "Note"
+    "noteTitle": "Note",
+    "copyEmail": "Copy the email address",
+    "emailCopied": "Copied",
+    "copyEmailPrompt": "Copy the email address:"
   },
   "viewContactModal": {
     "close": "Close",
@@ -85,6 +88,9 @@
     "noPosition": "No position given",
     "email": "Email",
     "phone": "Phone",
-    "note": "Note"
+    "note": "Note",
+    "copyEmail": "Copy the email address",
+    "emailCopied": "Copied",
+    "copyEmailPrompt": "Copy the email address:"
   }
 }
