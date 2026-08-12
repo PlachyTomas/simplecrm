@@ -76,9 +76,7 @@ export function ActivityKindPicker({ value, onChange, testId }: ActivityKindPick
         onClick={() => setOpen(true)}
         data-testid={testId}
         className="inline-flex h-6 items-center gap-1.5 rounded-full px-2 text-xs font-medium transition-opacity duration-fast hover:opacity-80"
-        style={
-          value ? { backgroundColor: labelTint(value.color), color: value.color } : undefined
-        }
+        style={value ? { backgroundColor: labelTint(value.color), color: value.color } : undefined}
       >
         {value ? (
           <>
@@ -132,7 +130,7 @@ export function ActivityKindPicker({ value, onChange, testId }: ActivityKindPick
         id={listId}
         role="listbox"
         aria-label={t("dealDetail.timeline.kindPicker.placeholder")}
-        className="absolute left-0 right-0 z-10 mt-1 min-w-48 max-h-48 overflow-y-auto rounded-md border border-border bg-surface-elevated py-1 shadow-md"
+        className="absolute left-0 right-0 z-10 mt-1 max-h-48 min-w-48 overflow-y-auto rounded-md border border-border bg-surface-elevated py-1 shadow-md"
       >
         <button
           type="button"

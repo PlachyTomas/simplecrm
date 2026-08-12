@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { ACTIVITY_LABEL_KEY } from "@/app/activities/activityLabels";
 import { useActivities } from "@/app/activities/useActivities";
+import { DEAL_TIMELINE_TYPES } from "@/app/deals/DealTimelineSection";
 import { useEvents } from "@/app/events/useEvents";
 import { formatDate } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
@@ -21,6 +22,9 @@ const PANEL_WIDTH = 264;
 /** Rough panel height used only to decide whether to flip above the card.
  *  Bumped with the "Poslední akce" section. */
 const PANEL_HEIGHT_ESTIMATE = 260;
+/** Same set the deal timeline shows, so "Poslední akce" cannot surface a
+ *  field edit the timeline itself no longer lists. */
+const PREVIEW_ACTIVITY_TYPES: string[] = [...DEAL_TIMELINE_TYPES];
 
 interface Anchor {
   /** Panel left edge, already clamped into the viewport. */
@@ -183,6 +187,7 @@ export function DealCardPreview({
     entityType: "deal",
     entityId: dealId,
     limit: 50,
+    activityTypes: PREVIEW_ACTIVITY_TYPES,
   });
 
   const events = useMemo<PreviewRow[]>(() => {

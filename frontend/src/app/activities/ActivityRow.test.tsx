@@ -13,6 +13,10 @@ function makeActivity(overrides: Partial<ActivityItem> = {}): ActivityItem {
     activity_type: "stage_change",
     payload: {},
     created_at: "2026-07-08T12:00:00Z",
+    // Automatic rows are stamped the moment they are written, so the two
+    // match; only hand-logged entries can pull `occurred_at` backwards.
+    occurred_at: "2026-07-08T12:00:00Z",
+    can_edit: false,
     ...overrides,
   };
 }

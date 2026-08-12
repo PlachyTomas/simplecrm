@@ -3,9 +3,7 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
-import { ActivityRow } from "@/app/activities/ActivityRow";
-import { useActivities } from "@/app/activities/useActivities";
-import { EmailDetailModal } from "@/app/emails/EmailDetailModal";
+import { CompanyActivityTab } from "@/app/companies/CompanyActivityTab";
 import { EditCompanyModal } from "@/app/companies/EditCompanyModal";
 import { OwnershipBadge } from "@/app/companies/OwnershipBadge";
 import { useCompany } from "@/app/companies/useCompany";
@@ -611,44 +609,6 @@ function EmailsTab({ company, locale }: { company: CompanyOut; locale: string })
   );
 }
 
-function ActivityTab({ companyId }: { companyId: string }) {
-  const { t } = useTranslation("companies");
-  const [openEmailId, setOpenEmailId] = useState<string | null>(null);
-  const { data, isPending, isError } = useActivities({
-    companyId,
-    limit: 50,
-  });
-  if (isPending) {
-    return <p className="text-sm text-text-tertiary">{t("companyDetail.activityTab.loading")}</p>;
-  }
-  if (isError || !data) {
-    return <p className="text-sm text-danger">{t("companyDetail.activityTab.loadError")}</p>;
-  }
-  if (data.items.length === 0) {
-    return (
-      <section className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="text-lg font-semibold">{t("companyDetail.activityTab.title")}</h2>
-        <p className="mt-4 text-sm text-text-secondary">{t("companyDetail.activityTab.empty")}</p>
-      </section>
-    );
-  }
-  return (
-    <section className="rounded-lg border border-border bg-surface p-6">
-      <h2 className="text-lg font-semibold">{t("companyDetail.activityTab.title")}</h2>
-      <ol className="mt-4 space-y-3 border-l border-border-subtle pl-5">
-        {data.items.map((a) => (
-          <ActivityRow key={a.id} activity={a} onOpenEmail={setOpenEmailId} />
-        ))}
-      </ol>
-      <EmailDetailModal
-        emailId={openEmailId}
-        onClose={() => setOpenEmailId(null)}
-        onSwitch={setOpenEmailId}
-      />
-    </section>
-  );
-}
-
 function NotesTab({ companyId, initialNote }: { companyId: string; initialNote: string | null }) {
   const { t } = useTranslation("companies");
   const update = useUpdateCompany(companyId);
@@ -886,7 +846,7 @@ export function CompanyDetailPage() {
         ) : activeTab === "emails" ? (
           <EmailsTab company={company} locale={locale} />
         ) : activeTab === "activity" ? (
-          <ActivityTab companyId={company.id} />
+          <CompanyActivityTab companyId={company.id} />
         ) : (
           <NotesTab companyId={company.id} initialNote={company.note ?? null} />
         )}

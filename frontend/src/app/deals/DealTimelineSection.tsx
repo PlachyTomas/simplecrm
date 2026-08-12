@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 
 import { ActivityRow } from "@/app/activities/ActivityRow";
 import { type ActivitiesPage, useActivities } from "@/app/activities/useActivities";
+import { TimelineDraftRow } from "@/app/deals/TimelineDraftRow";
+import { TimelineEntryRow } from "@/app/deals/TimelineEntryRow";
 import { EmailDetailModal } from "@/app/emails/EmailDetailModal";
 import { testIds } from "@/lib/testids";
 
@@ -12,10 +14,34 @@ const INITIAL_PAGE = 4;
 const PAGE_STEP = 15;
 
 /**
- * The deal's narrative — every activity logged against it, newest first, in the
- * same `ActivityRow` the company Aktivita tab uses so a deal reads identically
- * in both places. The Události and E-maily sections below stay: those are
- * editable detail, this is the story of what happened.
+ * What belongs on a deal's own timeline: the actions the user logged by hand
+ * plus the pipeline movements the system adds by itself. Everything else —
+ * field edits, owner changes, e-mails, calendar entries — is audit data or
+ * lives in its own section below, and would drown the narrative here.
+ *
+ * `deal_created` is deliberately absent: on the deal's own page it says
+ * nothing the header does not. The pipeline card preview imports this set so
+ * "Poslední akce" can never disagree with the timeline.
+ */
+export const DEAL_TIMELINE_TYPES = [
+  "manual_action",
+  "note",
+  "call_logged",
+  "stage_change",
+  "deal_won",
+  "deal_lost",
+  "deal_reopened",
+] as const;
+
+// Module-level copy so the query key holds the same array every render.
+const TIMELINE_TYPES: string[] = [...DEAL_TIMELINE_TYPES];
+
+/**
+ * The deal's narrative — a log the user writes, newest first, with the
+ * pipeline's own movements folded in. Entries the caller may edit render as
+ * inline-editable rows (no Save button anywhere); everything else keeps the
+ * shared read-only `ActivityRow`. The Události and E-maily sections below
+ * stay: those are editable detail, this is the story of what happened.
  */
 export function DealTimelineSection({ dealId }: { dealId: string }) {
   const { t } = useTranslation("deals");
@@ -25,6 +51,7 @@ export function DealTimelineSection({ dealId }: { dealId: string }) {
     entityType: "deal",
     entityId: dealId,
     limit,
+    activityTypes: TIMELINE_TYPES,
   });
 
   // The activities query keys on `limit` and carries no placeholder data, so
@@ -40,6 +67,11 @@ export function DealTimelineSection({ dealId }: { dealId: string }) {
       className="rounded-lg border border-border bg-surface p-4"
     >
       <h2 className="text-base font-semibold">{t("dealDetail.timeline.title")}</h2>
+      {/* Always present, including while the feed loads or fails — an empty
+          timeline is the one that most needs to be writable. */}
+      <div className="mt-3">
+        <TimelineDraftRow dealId={dealId} />
+      </div>
       {!page ? (
         isError ? (
           <p className="mt-3 text-sm text-danger" role="alert">
@@ -55,14 +87,22 @@ export function DealTimelineSection({ dealId }: { dealId: string }) {
       ) : (
         <>
           <ol className="mt-3 space-y-2 border-l border-border-subtle pl-5">
-            {page.items.map((activity) => (
-              <ActivityRow
-                key={activity.id}
-                activity={activity}
-                hideDealName
-                onOpenEmail={setOpenEmailId}
-              />
-            ))}
+            {page.items.map((activity) =>
+              activity.can_edit ? (
+                <TimelineEntryRow
+                  key={activity.id}
+                  activity={activity}
+                  onOpenEmail={setOpenEmailId}
+                />
+              ) : (
+                <ActivityRow
+                  key={activity.id}
+                  activity={activity}
+                  hideDealName
+                  onOpenEmail={setOpenEmailId}
+                />
+              ),
+            )}
           </ol>
           {page.items.length < page.total ? (
             <button
