@@ -13,7 +13,7 @@ Kept (with FKs that survive via SET NULL on user/org pointers):
 Hard-deleted (PII-heavy, no accounting need):
 - contacts, companies, deals, activities, blocked_companies, invitations,
   pipelines (stages cascade), teams, payment_methods, refresh_tokens,
-  auth_action_tokens, import_runs
+  auth_action_tokens, import_runs, todo_lists (todos cascade)
 """
 
 from __future__ import annotations
@@ -47,6 +47,7 @@ from app.db.models import (
     SalesGoal,
     SentEmail,
     Team,
+    TodoList,
     User,
     UserSmtpSettings,
 )
@@ -131,6 +132,11 @@ async def erase_organization(
     # they leave with the events they tagged. The join rows cascade from both
     # sides; only these parent rows need an explicit delete.
     await session.execute(delete(EventLabel).where(EventLabel.organization_id == org_id))
+    # Personal todo lists. Neither cascade fires here — the organizations row
+    # is anonymized rather than deleted and users are only deactivated — so
+    # the free text ("zavolat Janovi o smlouvě") would outlive Art. 17
+    # erasure. Deleting the lists takes their todos via the FK cascade.
+    await session.execute(delete(TodoList).where(TodoList.organization_id == org_id))
     await session.execute(delete(EmailTemplate).where(EmailTemplate.organization_id == org_id))
     await session.execute(delete(SalesGoal).where(SalesGoal.organization_id == org_id))
     await session.execute(delete(Activity).where(Activity.organization_id == org_id))
