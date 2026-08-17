@@ -94,12 +94,13 @@ class CalendarEventOut(BaseModel):
     location: str | None
     starts_at: datetime
     ends_at: datetime
-    # Defaulted: the events router doesn't populate this yet (Task 4).
-    all_day: bool = False
+    all_day: bool
     reminders: list[EventReminder] = Field(default_factory=list)
     google_event_id: str | None
     google_sync_status: GoogleSyncStatus
-    meet_url: str | None = None
+    # Google's `hangoutLink`, captured on a successful insert — None until
+    # (and unless) the event was pushed with `meet_requested`.
+    meet_url: str | None
     # Name-ordered so the first entry is a stable choice for the chip tint.
     labels: list[EventLabelBrief] = Field(default_factory=list)
     attendees: list[AttendeeBrief] = Field(default_factory=list)
