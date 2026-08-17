@@ -126,6 +126,11 @@ interface EventFormModalProps {
    */
   dealId?: string;
   dealName?: string;
+  /**
+   * The deal's company, when the caller already knows it — its contacts are
+   * offered first in the attendee picker.
+   */
+  companyId?: string | null;
   /** Edit mode: the event being edited (wins over dealId/dealName). */
   event?: CalendarEventOut | null;
   /**
@@ -147,6 +152,7 @@ export function EventFormModal({
   onClose,
   dealId,
   dealName,
+  companyId,
   event,
   initialDate,
 }: EventFormModalProps) {
@@ -429,6 +435,11 @@ export function EventFormModal({
     }
   }
 
+  // An existing conference can't be revoked from here — Google keeps it on
+  // update — so the checkbox stays checked and inert rather than lying.
+  const meetLinkExists = event?.meet_url != null;
+  const meetLocked = !addToGoogle || meetLinkExists;
+
   const inputCls =
     "block h-9 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none";
 
@@ -568,7 +579,7 @@ export function EventFormModal({
             selected={attendees}
             onChange={setAttendees}
             inputCls={inputCls}
-            companyId={event?.company_id ?? selectedDeal?.companyId ?? null}
+            companyId={event?.company_id ?? selectedDeal?.companyId ?? companyId ?? null}
           />
 
           <ReminderRows value={reminders} onChange={setReminders} inputCls={inputCls} />
@@ -577,7 +588,11 @@ export function EventFormModal({
             <input
               type="checkbox"
               checked={addToGoogle}
-              onChange={(e) => setAddToGoogle(e.target.checked)}
+              onChange={(e) => {
+                setAddToGoogle(e.target.checked);
+                // No Google copy, no conference to hang a Meet link on.
+                if (!e.target.checked) setMeetRequested(false);
+              }}
               disabled={!googleAvailable}
               className="mt-0.5"
             />
@@ -610,14 +625,29 @@ export function EventFormModal({
           </label>
 
           {googleAvailable ? (
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-start gap-2 text-sm">
               <input
                 type="checkbox"
                 checked={meetRequested}
                 onChange={(e) => setMeetRequested(e.target.checked)}
+                disabled={meetLocked}
                 data-testid={testIds.events.meetToggle}
+                className="mt-0.5"
               />
-              <span className="text-text-secondary">{t("eventFormModal.meet.label")}</span>
+              <span className={meetLocked ? "text-text-tertiary" : "text-text-secondary"}>
+                {t("eventFormModal.meet.label")}
+                {!addToGoogle ? (
+                  <>
+                    {" — "}
+                    {t("eventFormModal.meet.needsGoogle")}
+                  </>
+                ) : meetLinkExists ? (
+                  <>
+                    {" — "}
+                    {t("eventFormModal.meet.existing")}
+                  </>
+                ) : null}
+              </span>
             </label>
           ) : null}
         </div>

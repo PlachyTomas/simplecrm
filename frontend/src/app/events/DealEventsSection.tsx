@@ -10,6 +10,8 @@ import { useToast } from "@/lib/toast";
 interface DealEventsSectionProps {
   dealId: string;
   dealName: string;
+  /** The deal's company — its contacts lead the event form's attendee picker. */
+  companyId?: string | null;
   locale: string;
 }
 
@@ -82,7 +84,7 @@ function EventRow({
   );
 }
 
-export function DealEventsSection({ dealId, dealName, locale }: DealEventsSectionProps) {
+export function DealEventsSection({ dealId, dealName, companyId, locale }: DealEventsSectionProps) {
   const { t } = useTranslation("deals");
   const toast = useToast();
   const { data, isPending } = useEvents({ dealId });
@@ -192,6 +194,7 @@ export function DealEventsSection({ dealId, dealName, locale }: DealEventsSectio
         onClose={() => setModalOpen(false)}
         dealId={dealId}
         dealName={dealName}
+        companyId={companyId}
         event={editingEvent}
       />
     </section>

@@ -99,6 +99,26 @@ const CONTACTS_PAGE = {
   offset: 0,
 };
 
+/** Only reachable through the company-scoped query — never on the general page. */
+const COMPANY_CONTACTS = {
+  items: [
+    {
+      id: "k9",
+      organization_id: "o1",
+      company_id: "c1",
+      company_name: "Acme s.r.o.",
+      first_name: "Karel",
+      last_name: "Zeman",
+      email: "karel@acme.cz",
+      created_at: "2026-01-01T10:00:00Z",
+      updated_at: "2026-01-01T10:00:00Z",
+    },
+  ],
+  total: 1,
+  limit: 100,
+  offset: 0,
+};
+
 const ALL_DAY_EVENT: CalendarEventOut = {
   id: "e1",
   organization_id: "o1",
@@ -172,7 +192,7 @@ function installFetchMock() {
       return jsonResponse(ORG_USERS);
     }
     if (url.includes("/api/v1/contacts")) {
-      return jsonResponse(CONTACTS_PAGE);
+      return jsonResponse(url.includes("company_id=") ? COMPANY_CONTACTS : CONTACTS_PAGE);
     }
     if (url.includes("/api/v1/events/") && init?.method === "PUT") {
       return jsonResponse(ALL_DAY_EVENT);
@@ -515,6 +535,53 @@ describe("EventFormModal reminders", () => {
     ]);
   });
 
+  it("authors a custom lead time and clamps it to Google's four-week bound", async () => {
+    const { onClose } = openFixedSlotForm();
+
+    await userEvent.click(screen.getByTestId(testIds.events.reminders.add));
+    await userEvent.selectOptions(
+      screen.getByTestId(testIds.events.reminders.minutes(0)),
+      "custom",
+    );
+    const custom = screen.getByTestId(testIds.events.reminders.customMinutes(0));
+
+    await userEvent.clear(custom);
+    await userEvent.type(custom, "50000");
+    expect(custom).toHaveValue(40320);
+
+    await userEvent.clear(custom);
+    await userEvent.type(custom, "90");
+    await submit();
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(lastPostBody("/api/v1/events")).toMatchObject({
+      reminders: [{ method: "popup", minutes: 90 }],
+    });
+  });
+
+  it("keeps the custom flag on its own row when an earlier row is removed", async () => {
+    const { onClose } = openFixedSlotForm();
+
+    const add = screen.getByTestId(testIds.events.reminders.add);
+    await userEvent.click(add);
+    await userEvent.click(add);
+    await userEvent.selectOptions(
+      screen.getByTestId(testIds.events.reminders.minutes(0)),
+      "custom",
+    );
+    expect(screen.getByTestId(testIds.events.reminders.customMinutes(0))).toBeInTheDocument();
+
+    // Index-keyed rows would hand the custom flag down to the survivor.
+    await userEvent.click(screen.getByTestId(testIds.events.reminders.remove(0)));
+    expect(screen.queryByTestId(testIds.events.reminders.customMinutes(0))).not.toBeInTheDocument();
+    expect(screen.getByTestId(testIds.events.reminders.minutes(0))).toHaveValue("30");
+
+    await submit();
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(lastPostBody("/api/v1/events")).toMatchObject({
+      reminders: [{ method: "popup", minutes: 30 }],
+    });
+  });
+
   it("removes a row and sends the shortened list", async () => {
     const { onClose } = openFixedSlotForm();
 
@@ -561,6 +628,28 @@ describe("EventFormModal attendees", () => {
     });
   });
 
+  it("offers the deal company's contacts first, including ones off the general page", async () => {
+    wrap(
+      <EventFormModal
+        open
+        onClose={vi.fn()}
+        dealId="d9"
+        dealName="Velká zakázka"
+        companyId="c1"
+        initialDate={FIXED_DAY}
+      />,
+    );
+
+    await userEvent.click(screen.getByTestId(testIds.events.attendeePicker.input));
+    // Beyond 100 contacts the general page needn't contain them at all.
+    const scoped = await screen.findByTestId(testIds.events.attendeePicker.option("k9"));
+    expect(scoped).toHaveTextContent("Karel Zeman");
+    expect(screen.getAllByRole("option")[0]).toBe(scoped);
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes("company_id=c1"))).toBe(
+      true,
+    );
+  });
+
   it("filters by name and drops a removed chip from the payload", async () => {
     const { onClose } = openFixedSlotForm();
 
@@ -600,6 +689,35 @@ describe("EventFormModal Meet", () => {
     await submit();
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(lastPostBody("/api/v1/events")).toMatchObject({ meet_requested: true });
+  });
+
+  it("locks the toggle off when the Google copy is switched off", async () => {
+    setGoogleStatus({ connected: true, sync_broken: false });
+    const { onClose } = openFixedSlotForm();
+
+    await userEvent.click(await screen.findByTestId(testIds.events.meetToggle));
+    await userEvent.click(screen.getByRole("checkbox", { name: /Přidat do Google kalendáře/ }));
+
+    const meet = screen.getByTestId(testIds.events.meetToggle);
+    expect(meet).toBeDisabled();
+    expect(meet).not.toBeChecked();
+
+    await submit();
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(lastPostBody("/api/v1/events")).toMatchObject({
+      add_to_google: false,
+      meet_requested: false,
+    });
+  });
+
+  it("locks the toggle on when the event already has a Meet link", async () => {
+    setGoogleStatus({ connected: true, sync_broken: false });
+    wrap(<EventFormModal open onClose={vi.fn()} event={ALL_DAY_EVENT} />);
+
+    const meet = await screen.findByTestId(testIds.events.meetToggle);
+    expect(meet).toBeChecked();
+    // Google keeps the conference on update — the control must not pretend otherwise.
+    expect(meet).toBeDisabled();
   });
 
   it("hides the toggle while Google is disconnected or the sync is broken", async () => {

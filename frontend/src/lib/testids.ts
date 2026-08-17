@@ -333,6 +333,7 @@ export const testIds = {
       add: "event-form-reminder-add",
       row: (index: number) => `event-form-reminder-row-${index}`,
       minutes: (index: number) => `event-form-reminder-minutes-${index}`,
+      customMinutes: (index: number) => `event-form-reminder-custom-minutes-${index}`,
       method: (index: number) => `event-form-reminder-method-${index}`,
       remove: (index: number) => `event-form-reminder-remove-${index}`,
     },

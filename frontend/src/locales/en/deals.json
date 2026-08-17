@@ -387,7 +387,7 @@
     "attendees": {
       "label": "Attendees (optional)",
       "placeholder": "Search contacts or teammates…",
-      "hint": "Google Calendar invites attendees who have an email address.",
+      "hint": "Google Calendar sends the invites — only to attendees with an email address, and only when you add the event to your connected Google Calendar.",
       "loading": "Loading attendees…",
       "noMatch": "Nobody matches your search.",
       "loadError": "Failed to load attendees.",
@@ -410,14 +410,17 @@
         "m60": "1 hour before",
         "d1": "1 day before"
       },
-      "customMinutes": "{{minutes}} min before",
+      "custom": "Custom…",
+      "customLabel": "Custom minutes before",
       "method": {
         "popup": "Notification",
         "email": "Email"
       }
     },
     "meet": {
-      "label": "Create a Google Meet link"
+      "label": "Create a Google Meet link",
+      "needsGoogle": "tick “Add to Google Calendar” first",
+      "existing": "the link already exists and can't be revoked from the CRM"
     },
     "cancel": "Cancel",
     "saving": "Saving…",

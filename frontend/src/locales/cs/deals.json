@@ -394,7 +394,7 @@
     "attendees": {
       "label": "Účastníci (volitelné)",
       "placeholder": "Hledejte kontakt nebo kolegu…",
-      "hint": "Účastníkům s e-mailem pošle pozvánku Google kalendář.",
+      "hint": "Pozvánku pošle Google kalendář — jen účastníkům s e-mailem a jen když událost přidáte do propojeného Google kalendáře.",
       "loading": "Načítání účastníků…",
       "noMatch": "Nikdo neodpovídá hledání.",
       "loadError": "Účastníky se nepodařilo načíst.",
@@ -417,14 +417,17 @@
         "m60": "1 hodinu předem",
         "d1": "1 den předem"
       },
-      "customMinutes": "{{minutes}} min předem",
+      "custom": "Vlastní…",
+      "customLabel": "Vlastní počet minut předem",
       "method": {
         "popup": "Oznámení",
         "email": "E-mail"
       }
     },
     "meet": {
-      "label": "Vytvořit odkaz na Google Meet"
+      "label": "Vytvořit odkaz na Google Meet",
+      "needsGoogle": "nejprve zaškrtněte přidání do Google kalendáře",
+      "existing": "odkaz už je vytvořený a z CRM ho nezrušíte"
     },
     "cancel": "Zrušit",
     "saving": "Ukládám…",

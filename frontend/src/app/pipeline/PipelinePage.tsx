@@ -1320,6 +1320,7 @@ export function PipelinePage() {
           onClose={() => setSchedulingDeal(null)}
           dealId={schedulingDeal.id}
           dealName={schedulingDeal.name}
+          companyId={schedulingDeal.company_id}
         />
       ) : null}
 

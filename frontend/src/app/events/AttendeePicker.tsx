@@ -33,6 +33,10 @@ interface AttendeePickerProps {
  * `LabelPicker`. Both kinds are fetched as a page and filtered in the browser
  * (neither endpoint searches server-side), and the picked set is split back
  * into `attendee_user_ids` / `attendee_contact_ids` by the form.
+ *
+ * The event's own company gets a second, scoped contacts query: past ~100
+ * contacts the general page alone may not contain the people this meeting is
+ * actually with, so ranking within it would come up empty-handed.
  */
 export function AttendeePicker({ selected, onChange, inputCls, companyId }: AttendeePickerProps) {
   const { t } = useTranslation("deals");
@@ -43,12 +47,28 @@ export function AttendeePicker({ selected, onChange, inputCls, companyId }: Atte
 
   const users = useOrgUsers();
   const contacts = useContacts({ limit: 100 });
+  const companyContacts = useContacts({
+    companyId: companyId ?? undefined,
+    limit: 100,
+    enabled: !!companyId,
+  });
 
   const trimmed = query.trim();
   const selectedIds = new Set(selected.map((attendee) => attendee.id));
   const loading = users.isPending || contacts.isPending;
   const failed = users.isError || contacts.isError;
 
+  const contactOptions = new Map<string, AttendeeOption>();
+  for (const contact of [...(companyContacts.data?.items ?? []), ...(contacts.data?.items ?? [])]) {
+    if (contactOptions.has(contact.id)) continue;
+    contactOptions.set(contact.id, {
+      kind: "contact",
+      id: contact.id,
+      name: `${contact.first_name} ${contact.last_name}`.trim(),
+      detail: contact.company_name ?? contact.email ?? null,
+      companyId: contact.company_id ?? null,
+    });
+  }
   const options: AttendeeOption[] = [
     ...(users.data?.items ?? [])
       .filter((user) => user.is_active)
@@ -59,13 +79,7 @@ export function AttendeePicker({ selected, onChange, inputCls, companyId }: Atte
         detail: user.email,
         companyId: null,
       })),
-    ...(contacts.data?.items ?? []).map((contact) => ({
-      kind: "contact" as const,
-      id: contact.id,
-      name: `${contact.first_name} ${contact.last_name}`.trim(),
-      detail: contact.company_name ?? contact.email ?? null,
-      companyId: contact.company_id ?? null,
-    })),
+    ...contactOptions.values(),
   ];
   const matches = options
     .filter((option) => !selectedIds.has(option.id))
