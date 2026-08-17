@@ -94,7 +94,7 @@ class GoogleCalendarClient(Protocol):
         payload: dict[str, Any],
         *,
         params: dict[str, str] | None = None,
-    ) -> None: ...
+    ) -> dict[str, Any]: ...
 
     async def delete_event(self, access_token: str, event_id: str) -> None: ...
 
@@ -327,7 +327,7 @@ class HttpGoogleCalendarClient:
         payload: dict[str, Any],
         *,
         params: dict[str, str] | None = None,
-    ) -> None:
+    ) -> dict[str, Any]:
         response = await self._request(
             "PATCH",
             f"{GCAL_EVENTS_URL}/{event_id}",
@@ -340,6 +340,8 @@ class HttpGoogleCalendarClient:
             # Treat as missing so the caller can decide to re-insert.
             raise GoogleCalendarError("Google event no longer exists", http_status=404)
         self._check_event_response(response)
+        body: dict[str, Any] = response.json()
+        return body
 
     async def delete_event(self, access_token: str, event_id: str) -> None:
         response = await self._request(

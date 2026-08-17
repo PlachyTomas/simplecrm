@@ -249,6 +249,25 @@ async def test_insert_event_passes_query_params() -> None:
     assert captured[0].url.params["conferenceDataVersion"] == "1"
 
 
+async def test_patch_event_returns_response_body() -> None:
+    """Google answers a PATCH with the updated event resource — that's where
+    a Meet link created by the patch itself shows up."""
+    captured: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(
+            200, json={"id": "gev-9", "hangoutLink": "https://meet.google.com/patched"}
+        )
+
+    client = _client_with_handler(handler)
+    body = await client.patch_event(
+        "at-1", "gev-9", {"summary": "Demo"}, params={"sendUpdates": "all"}
+    )
+    assert body["hangoutLink"] == "https://meet.google.com/patched"
+    assert captured[0].url.params["sendUpdates"] == "all"
+
+
 async def test_delete_event_tolerates_missing_google_copy() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(404, json={"error": {"code": 404}})

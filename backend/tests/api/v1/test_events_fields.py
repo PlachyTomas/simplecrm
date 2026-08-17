@@ -14,11 +14,13 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
+from fastapi import HTTPException
 from httpx import AsyncClient
 from pydantic import ValidationError
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.events import _resolve_attendees
 from app.core.security import create_access_token
 from app.core.token_crypto import encrypt_token
 from app.db.models import (
@@ -141,6 +143,9 @@ class FakeGoogleCalendarClient:
         self.patched: list[tuple[str, dict[str, Any]]] = []
         self.patch_params: list[dict[str, str] | None] = []
         self.deleted: list[str] = []
+        # Google ids whose event carries a conference — like the real API, the
+        # link comes back on every later read of that event, insert or patch.
+        self.conferenced: set[str] = set()
 
     def build_authorize_url(self, state: str) -> str:
         return f"https://example.test/auth?state={state}"
@@ -160,7 +165,7 @@ class FakeGoogleCalendarClient:
         self.insert_params.append(params)
         if self.insert_returns_no_id:
             return {"htmlLink": "https://calendar.google.test/x"}
-        return {"id": "gev-1", "hangoutLink": MEET_URL}
+        return self._event_resource("gev-1", payload)
 
     async def patch_event(
         self,
@@ -169,9 +174,18 @@ class FakeGoogleCalendarClient:
         payload: dict[str, Any],
         *,
         params: dict[str, str] | None = None,
-    ) -> None:
+    ) -> dict[str, Any]:
         self.patched.append((event_id, payload))
         self.patch_params.append(params)
+        return self._event_resource(event_id, payload)
+
+    def _event_resource(self, event_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        if payload.get("conferenceData"):
+            self.conferenced.add(event_id)
+        body: dict[str, Any] = {"id": event_id}
+        if event_id in self.conferenced:
+            body["hangoutLink"] = MEET_URL
+        return body
 
     async def delete_event(self, access_token: str, event_id: str) -> None:
         self.deleted.append(event_id)
@@ -534,6 +548,101 @@ async def test_create_event_google_push_carries_params_meet_and_attendees(
     assert fake_gcal.patch_params == [SYNC_PARAMS]
     assert "conferenceData" not in fake_gcal.patched[0][1]
     assert edited.json()["meet_url"] == MEET_URL
+
+
+async def test_update_event_meet_requested_later_captures_the_patch_link(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    """A Meet asked for on an already-synced event is created by the PATCH,
+    so its `hangoutLink` has to be read off the patch response — otherwise
+    `create_meet` stays true and every later edit re-requests a conference."""
+    org, stage = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org)
+    await _seed_connection(db_session, user)
+    deal = await _seed_deal(db_session, org, stage)
+
+    created = await client.post(EVENTS, json=_body(deal, add_to_google=True), headers=_auth(user))
+    assert created.status_code == 201, created.text
+    assert created.json()["meet_url"] is None
+    event_id = created.json()["id"]
+
+    upgraded = await client.put(
+        f"{EVENTS}/{event_id}", json={"meet_requested": True}, headers=_auth(user)
+    )
+    assert upgraded.status_code == 200, upgraded.text
+    assert upgraded.json()["meet_url"] == MEET_URL
+    assert fake_gcal.patched[0][1]["conferenceData"]["createRequest"]["requestId"] == event_id
+
+    persisted = (
+        await db_session.execute(
+            select(CalendarEvent).where(CalendarEvent.id == uuid.UUID(event_id))
+        )
+    ).scalar_one()
+    assert persisted.meet_url == MEET_URL
+
+    edited = await client.put(
+        f"{EVENTS}/{event_id}", json={"title": "Nový název"}, headers=_auth(user)
+    )
+    assert edited.status_code == 200, edited.text
+    assert "conferenceData" not in fake_gcal.patched[1][1]
+    assert edited.json()["meet_url"] == MEET_URL
+
+
+async def test_google_payload_skips_an_attendee_without_email(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    """Google can't invite a contact with no address — the CRM still shows
+    them on the event, the pushed payload just leaves them out."""
+    org, stage = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org, name="Zdeněk")
+    await _seed_connection(db_session, user)
+    deal = await _seed_deal(db_session, org, stage)
+    silent = Contact(organization_id=org.id, first_name="Bez", last_name="Mailu")
+    db_session.add(silent)
+    await db_session.commit()
+    await db_session.refresh(silent)
+
+    response = await client.post(
+        EVENTS,
+        json=_body(
+            deal,
+            add_to_google=True,
+            attendee_contact_ids=[str(silent.id)],
+            attendee_user_ids=[str(user.id)],
+        ),
+        headers=_auth(user),
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["attendees"] == [
+        {"id": str(silent.id), "kind": "contact", "name": "Bez Mailu", "email": None},
+        {"id": str(user.id), "kind": "user", "name": "Zdeněk", "email": user.email},
+    ]
+    assert fake_gcal.inserted[0]["attendees"] == [{"email": user.email, "displayName": "Zdeněk"}]
+
+
+async def test_resolve_attendees_rejects_a_null_org_caller() -> None:
+    """`organization_id == None` compiles to `IS NULL`, which would match
+    every other org-less user in the database — a cross-tenant leak."""
+    async with AsyncSessionLocal() as session:
+        ghost = User(email=f"g-{uuid.uuid4().hex[:8]}@ex.cz", name="Ghost", organization_id=None)
+        stranger = User(
+            email=f"s-{uuid.uuid4().hex[:8]}@ex.cz", name="Stranger", organization_id=None
+        )
+        session.add_all([ghost, stranger])
+        await session.commit()
+        try:
+            with pytest.raises(HTTPException) as raised:
+                await _resolve_attendees(session, ghost, [], [stranger.id])
+            assert raised.value.status_code == 400
+        finally:
+            await session.execute(delete(User).where(User.id.in_([ghost.id, stranger.id])))
+            await session.commit()
 
 
 async def test_create_event_google_insert_without_id_degrades(

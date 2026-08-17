@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Iterable, Sequence
-from typing import Annotated, TypeGuard
+from typing import Annotated, Any, TypeGuard
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import AwareDatetime
@@ -232,8 +232,10 @@ async def _org_subjects[Subject: (Contact, User)](
     ids: Sequence[uuid.UUID],
 ) -> list[Subject]:
     """Rows of `model` inside the org — the shared half of the attendee
-    lookup, since a contact and a teammate are scoped identically."""
-    if not ids:
+    lookup, since a contact and a teammate are scoped identically. A caller
+    without an organization matches nothing: `== None` renders as `IS NULL`,
+    which would hand them every other org-less user."""
+    if not ids or organization_id is None:
         return []
     return list(
         (
@@ -262,7 +264,7 @@ async def _resolve_attendees(
     `_attendee_briefs` and the Google payload can read the subject before
     the commit expires everything.
     """
-    wanted_contacts = list(dict.fromkeys(contact_ids))  # de-dupe, keep the request's order
+    wanted_contacts = list(dict.fromkeys(contact_ids))
     wanted_users = list(dict.fromkeys(user_ids))
     contacts = await _org_subjects(session, Contact, user.organization_id, wanted_contacts)
     teammates = await _org_subjects(session, User, user.organization_id, wanted_users)
@@ -325,6 +327,14 @@ def _google_body(event: CalendarEvent) -> dict[str, object]:
     )
 
 
+def _capture_meet_link(event: CalendarEvent, body: dict[str, Any]) -> None:
+    """Both an insert and a patch can be the call that creates the conference,
+    and both answer with the event resource — so both are read for the link.
+    Storing it is also what stops `_google_body` re-requesting a Meet."""
+    if body.get("hangoutLink"):
+        event.meet_url = body["hangoutLink"]
+
+
 async def _sync_insert(
     session: AsyncSession,
     event: CalendarEvent,
@@ -344,8 +354,7 @@ async def _sync_insert(
         event.google_sync_status = GoogleSyncStatus.error
         return
     event.google_event_id = google_event_id
-    if body.get("hangoutLink"):
-        event.meet_url = body["hangoutLink"]
+    _capture_meet_link(event, body)
     event.google_sync_status = GoogleSyncStatus.synced
 
 
@@ -362,9 +371,10 @@ async def _sync_patch(
         return
     try:
         token = await get_valid_access_token(session, connection, client)
-        await client.patch_event(
+        body = await client.patch_event(
             token, event.google_event_id, _google_body(event), params=_SYNC_PARAMS
         )
+        _capture_meet_link(event, body)
         event.google_sync_status = GoogleSyncStatus.synced
     except (GoogleCalendarError, TokenDecryptError) as exc:
         if isinstance(exc, GoogleCalendarError) and exc.http_status == 404:

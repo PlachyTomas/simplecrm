@@ -97,11 +97,12 @@ class FakeGoogleCalendarClient:
         payload: dict[str, Any],
         *,
         params: dict[str, str] | None = None,
-    ) -> None:
+    ) -> dict[str, Any]:
         if self.patch_returns_404:
             raise GoogleCalendarError("gone", http_status=404)
         self.patched.append((event_id, payload))
         self.patch_params.append(params)
+        return {"id": event_id}
 
     async def delete_event(self, access_token: str, event_id: str) -> None:
         self.deleted.append(event_id)
