@@ -33,7 +33,7 @@ dependencies = [
     # verified against the stored bytes, so upgrading the renderer never
     # invalidates archived invoices — it only changes bytes of future
     # renders. Bump the major deliberately (security fixes), never blindly.
-    "weasyprint>=68,<69",
+    "weasyprint>=69,<70",
     # SPAYD QR-code (CZ "QR Platba") generator. Pure-Python, MIT.
     "qrplatba>=1.0",
     # Czech locale-aware number/date formatting in the PDF template.
