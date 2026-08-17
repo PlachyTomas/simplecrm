@@ -9,6 +9,7 @@ import { ToastProvider } from "@/lib/toast";
 import { testIds } from "@/lib/testids";
 
 import { EventFormModal } from "@/app/events/EventFormModal";
+import type { CalendarEventOut } from "@/app/events/useEvents";
 
 const DEALS_PAGE = {
   items: [
@@ -62,6 +63,66 @@ const LABELS = [
   { id: "l2", organization_id: "o1", name: "Schůzka", color: "#6366F1", usage_count: 1 },
 ];
 
+const ORG_USERS = {
+  items: [
+    {
+      id: "u1",
+      email: "petr@firma.cz",
+      name: "Petr Novák",
+      role: "salesperson",
+      can_invite: false,
+      is_active: true,
+      created_at: "2026-01-01T10:00:00Z",
+    },
+  ],
+  total: 1,
+  limit: 100,
+  offset: 0,
+};
+
+const CONTACTS_PAGE = {
+  items: [
+    {
+      id: "k1",
+      organization_id: "o1",
+      company_id: "c1",
+      company_name: "Acme s.r.o.",
+      first_name: "Jana",
+      last_name: "Malá",
+      email: "jana@acme.cz",
+      created_at: "2026-01-01T10:00:00Z",
+      updated_at: "2026-01-01T10:00:00Z",
+    },
+  ],
+  total: 1,
+  limit: 100,
+  offset: 0,
+};
+
+const ALL_DAY_EVENT: CalendarEventOut = {
+  id: "e1",
+  organization_id: "o1",
+  deal_id: "d1",
+  deal_name: "Web pro Acme",
+  company_id: "c1",
+  company_name: "Acme s.r.o.",
+  owner_user_id: "u1",
+  title: "Workshop",
+  description: null,
+  location: null,
+  starts_at: "2030-03-04T00:00:00.000Z",
+  ends_at: "2030-03-05T00:00:00.000Z",
+  all_day: true,
+  reminders: [{ method: "popup", minutes: 60 }],
+  google_event_id: "g1",
+  google_sync_status: "synced",
+  meet_url: "https://meet.google.com/abc-defg-hij",
+  labels: [],
+  attendees: [{ id: "k1", kind: "contact", name: "Jana Malá", email: "jana@acme.cz" }],
+  created_at: "2026-01-01T10:00:00Z",
+  updated_at: "2026-01-01T10:00:00Z",
+};
+
 /** A day that is never "today", so the slot defaults to a fixed 09:00–10:00. */
 const FIXED_DAY = "2030-01-15";
 
@@ -88,16 +149,33 @@ function wrap(ui: React.ReactNode) {
 const fetchMock = vi.fn<typeof fetch>();
 const originalFetch = globalThis.fetch;
 
+let googleStatus = { connected: false, sync_broken: false };
+
+/** Call before rendering — the modal reads the status once the modal opens. */
+function setGoogleStatus(status: { connected: boolean; sync_broken: boolean }) {
+  googleStatus = status;
+}
+
 function installFetchMock() {
   fetchMock.mockReset();
+  googleStatus = { connected: false, sync_broken: false };
   globalThis.fetch = fetchMock as unknown as typeof fetch;
   fetchMock.mockImplementation(async (input, init) => {
     const url = typeof input === "string" ? input : (input as Request).url;
     if (url.includes("/api/v1/integrations/google-calendar")) {
-      return jsonResponse({ connected: false, sync_broken: false });
+      return jsonResponse(googleStatus);
     }
     if (url.includes("/api/v1/deals?") || url.endsWith("/api/v1/deals")) {
       return jsonResponse(DEALS_PAGE);
+    }
+    if (url.includes("/api/v1/users")) {
+      return jsonResponse(ORG_USERS);
+    }
+    if (url.includes("/api/v1/contacts")) {
+      return jsonResponse(CONTACTS_PAGE);
+    }
+    if (url.includes("/api/v1/events/") && init?.method === "PUT") {
+      return jsonResponse(ALL_DAY_EVENT);
     }
     if (url.endsWith("/api/v1/event-labels") && init?.method === "POST") {
       const body = JSON.parse(String(init.body)) as { name: string; color: string };
@@ -113,12 +191,16 @@ function installFetchMock() {
   });
 }
 
-function lastPostBody(path: string) {
-  const posts = fetchMock.mock.calls.filter(
-    ([input, init]) => init?.method === "POST" && String(input).endsWith(path),
+function lastBody(method: string, path: string) {
+  const calls = fetchMock.mock.calls.filter(
+    ([input, init]) => init?.method === method && String(input).endsWith(path),
   );
-  const post = posts[posts.length - 1];
-  return post ? (JSON.parse(String(post[1]!.body)) as Record<string, unknown>) : undefined;
+  const call = calls[calls.length - 1];
+  return call ? (JSON.parse(String(call[1]!.body)) as Record<string, unknown>) : undefined;
+}
+
+function lastPostBody(path: string) {
+  return lastBody("POST", path);
 }
 
 describe("EventFormModal deal picker", () => {
@@ -203,7 +285,7 @@ describe("EventFormModal deal picker", () => {
  * wall clock or the runner's timezone.
  */
 function openFixedSlotForm(onClose = vi.fn()) {
-  wrap(
+  const { unmount } = wrap(
     <EventFormModal
       open
       onClose={onClose}
@@ -214,10 +296,15 @@ function openFixedSlotForm(onClose = vi.fn()) {
   );
   return {
     onClose,
+    unmount,
     start: screen.getByTestId(testIds.events.timeStart),
     end: screen.getByTestId(testIds.events.timeEnd),
     title: screen.getByRole("textbox", { name: "Název" }),
   };
+}
+
+function submit() {
+  return userEvent.click(screen.getByRole("button", { name: "Vytvořit událost" }));
 }
 
 describe("EventFormModal time comboboxes", () => {
@@ -355,5 +442,214 @@ describe("EventFormModal labels", () => {
     await userEvent.click(screen.getByRole("button", { name: "Vytvořit událost" }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(lastPostBody("/api/v1/events")).toMatchObject({ label_ids: [] });
+  });
+});
+
+describe("EventFormModal all-day", () => {
+  beforeEach(installFetchMock);
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("hides both time selects and submits a UTC-midnight day pair", async () => {
+    const { onClose } = openFixedSlotForm();
+
+    await userEvent.click(screen.getByTestId(testIds.events.allDayToggle));
+    expect(screen.queryByTestId(testIds.events.timeStart)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(testIds.events.timeEnd)).not.toBeInTheDocument();
+
+    await submit();
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(lastPostBody("/api/v1/events")).toMatchObject({
+      all_day: true,
+      starts_at: "2030-01-15T00:00:00.000Z",
+      ends_at: "2030-01-16T00:00:00.000Z",
+    });
+  });
+
+  it("keeps the timed slot when the toggle is off", async () => {
+    const { onClose } = openFixedSlotForm();
+    await submit();
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(lastPostBody("/api/v1/events")).toMatchObject({ all_day: false });
+  });
+});
+
+describe("EventFormModal reminders", () => {
+  beforeEach(installFetchMock);
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("adds rows with the popup/30 preset, caps them at five, and submits the picks", async () => {
+    const { onClose } = openFixedSlotForm();
+
+    const add = screen.getByTestId(testIds.events.reminders.add);
+    await userEvent.click(add);
+    expect(screen.getByTestId(testIds.events.reminders.minutes(0))).toHaveValue("30");
+    expect(screen.getByTestId(testIds.events.reminders.method(0))).toHaveValue("popup");
+
+    await userEvent.click(add);
+    await userEvent.selectOptions(screen.getByTestId(testIds.events.reminders.minutes(1)), "1440");
+    await userEvent.selectOptions(screen.getByTestId(testIds.events.reminders.method(1)), "email");
+
+    await userEvent.click(add);
+    await userEvent.click(add);
+    await userEvent.click(add);
+    expect(screen.getByTestId(testIds.events.reminders.row(4))).toBeInTheDocument();
+    // Six would exceed the backend's max_length=5.
+    expect(add).toBeDisabled();
+
+    await submit();
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    const reminders = lastPostBody("/api/v1/events")?.reminders;
+    expect(reminders).toHaveLength(5);
+    expect(reminders).toMatchObject([
+      { method: "popup", minutes: 30 },
+      { method: "email", minutes: 1440 },
+      { method: "popup", minutes: 30 },
+      { method: "popup", minutes: 30 },
+      { method: "popup", minutes: 30 },
+    ]);
+  });
+
+  it("removes a row and sends the shortened list", async () => {
+    const { onClose } = openFixedSlotForm();
+
+    const add = screen.getByTestId(testIds.events.reminders.add);
+    await userEvent.click(add);
+    await userEvent.click(add);
+    await userEvent.selectOptions(screen.getByTestId(testIds.events.reminders.minutes(0)), "0");
+    await userEvent.click(screen.getByTestId(testIds.events.reminders.remove(0)));
+    expect(screen.queryByTestId(testIds.events.reminders.row(1))).not.toBeInTheDocument();
+
+    await submit();
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(lastPostBody("/api/v1/events")).toMatchObject({
+      reminders: [{ method: "popup", minutes: 30 }],
+    });
+  });
+});
+
+describe("EventFormModal attendees", () => {
+  beforeEach(installFetchMock);
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("splits picked teammates and contacts into their own id lists", async () => {
+    const { onClose } = openFixedSlotForm();
+
+    await userEvent.click(screen.getByTestId(testIds.events.attendeePicker.input));
+    await userEvent.click(await screen.findByTestId(testIds.events.attendeePicker.option("u1")));
+    await userEvent.click(await screen.findByTestId(testIds.events.attendeePicker.option("k1")));
+    expect(screen.getByTestId(testIds.events.attendeePicker.chip("u1"))).toHaveTextContent(
+      "Petr Novák",
+    );
+    expect(screen.getByTestId(testIds.events.attendeePicker.chip("k1"))).toHaveTextContent(
+      "Jana Malá",
+    );
+
+    await submit();
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(lastPostBody("/api/v1/events")).toMatchObject({
+      attendee_user_ids: ["u1"],
+      attendee_contact_ids: ["k1"],
+    });
+  });
+
+  it("filters by name and drops a removed chip from the payload", async () => {
+    const { onClose } = openFixedSlotForm();
+
+    await userEvent.type(screen.getByTestId(testIds.events.attendeePicker.input), "mala");
+    expect(
+      await screen.findByTestId(testIds.events.attendeePicker.option("k1")),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId(testIds.events.attendeePicker.option("u1")),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId(testIds.events.attendeePicker.option("k1")));
+    await userEvent.click(screen.getByTestId(testIds.events.attendeePicker.remove("k1")));
+    expect(screen.queryByTestId(testIds.events.attendeePicker.chip("k1"))).not.toBeInTheDocument();
+
+    await submit();
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(lastPostBody("/api/v1/events")).toMatchObject({
+      attendee_user_ids: [],
+      attendee_contact_ids: [],
+    });
+  });
+});
+
+describe("EventFormModal Meet", () => {
+  beforeEach(installFetchMock);
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("offers the toggle on a healthy connection and requests a Meet link", async () => {
+    setGoogleStatus({ connected: true, sync_broken: false });
+    const { onClose } = openFixedSlotForm();
+
+    await userEvent.click(await screen.findByTestId(testIds.events.meetToggle));
+    await submit();
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(lastPostBody("/api/v1/events")).toMatchObject({ meet_requested: true });
+  });
+
+  it("hides the toggle while Google is disconnected or the sync is broken", async () => {
+    const { onClose, unmount } = openFixedSlotForm();
+
+    await submit();
+    // The round-trip settles the status query that gates the toggle.
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(screen.queryByTestId(testIds.events.meetToggle)).not.toBeInTheDocument();
+    expect(lastPostBody("/api/v1/events")).toMatchObject({ meet_requested: false });
+    unmount();
+
+    setGoogleStatus({ connected: true, sync_broken: true });
+    openFixedSlotForm();
+    expect(await screen.findByTestId(testIds.events.reconnectGoogle)).toBeInTheDocument();
+    expect(screen.queryByTestId(testIds.events.meetToggle)).not.toBeInTheDocument();
+  });
+});
+
+describe("EventFormModal edit prefill", () => {
+  beforeEach(installFetchMock);
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("prefills all-day, reminders, attendees and Meet, then replaces them on save", async () => {
+    setGoogleStatus({ connected: true, sync_broken: false });
+    const onClose = vi.fn();
+    wrap(<EventFormModal open onClose={onClose} event={ALL_DAY_EVENT} />);
+
+    expect(screen.getByTestId(testIds.events.allDayToggle)).toBeChecked();
+    expect(screen.queryByTestId(testIds.events.timeStart)).not.toBeInTheDocument();
+    expect(screen.getByTestId(testIds.events.reminders.minutes(0))).toHaveValue("60");
+    expect(screen.getByTestId(testIds.events.attendeePicker.chip("k1"))).toHaveTextContent(
+      "Jana Malá",
+    );
+    // `meet_requested` never comes back on the event — an existing link is the tell.
+    expect(await screen.findByTestId(testIds.events.meetToggle)).toBeChecked();
+
+    await userEvent.click(screen.getByRole("button", { name: "Uložit změny" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(lastBody("PUT", "/api/v1/events/e1")).toMatchObject({
+      all_day: true,
+      starts_at: "2030-03-04T00:00:00.000Z",
+      ends_at: "2030-03-05T00:00:00.000Z",
+      reminders: [{ method: "popup", minutes: 60 }],
+      meet_requested: true,
+      attendee_contact_ids: ["k1"],
+      attendee_user_ids: [],
+    });
   });
 });

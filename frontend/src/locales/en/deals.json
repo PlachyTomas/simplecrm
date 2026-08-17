@@ -351,6 +351,7 @@
     "dateLabel": "Date",
     "fromLabel": "From",
     "toLabel": "To",
+    "allDay": "All day",
     "locationLabel": "Location (optional)",
     "descriptionLabel": "Description (optional)",
     "labelsLabel": "Labels (optional)",
@@ -382,6 +383,41 @@
       "creating": "Creating…",
       "createError": "Failed to create the label.",
       "remove": "Remove label {{name}}"
+    },
+    "attendees": {
+      "label": "Attendees (optional)",
+      "placeholder": "Search contacts or teammates…",
+      "hint": "Google Calendar invites attendees who have an email address.",
+      "loading": "Loading attendees…",
+      "noMatch": "Nobody matches your search.",
+      "loadError": "Failed to load attendees.",
+      "remove": "Remove attendee {{name}}",
+      "kindUser": "Teammate",
+      "kindContact": "Contact"
+    },
+    "reminders": {
+      "title": "Reminders (optional)",
+      "add": "Add reminder",
+      "remove": "Remove reminder",
+      "hint": "Reminders are delivered by Google Calendar — they apply to events you add to it.",
+      "minutesLabel": "When to remind",
+      "methodLabel": "How to remind",
+      "minutes": {
+        "atStart": "At start time",
+        "m5": "5 minutes before",
+        "m10": "10 minutes before",
+        "m30": "30 minutes before",
+        "m60": "1 hour before",
+        "d1": "1 day before"
+      },
+      "customMinutes": "{{minutes}} min before",
+      "method": {
+        "popup": "Notification",
+        "email": "Email"
+      }
+    },
+    "meet": {
+      "label": "Create a Google Meet link"
     },
     "cancel": "Cancel",
     "saving": "Saving…",

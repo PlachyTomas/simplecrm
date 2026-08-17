@@ -1,0 +1,108 @@
+import { useTranslation } from "react-i18next";
+import { Plus, X } from "lucide-react";
+
+import type { EventReminder } from "@/app/events/useEvents";
+import { testIds } from "@/lib/testids";
+
+/** The backend caps the list at five (`max_length=5`). */
+const MAX_REMINDERS = 5;
+
+const MINUTE_PRESETS = [
+  { minutes: 0, labelKey: "eventFormModal.reminders.minutes.atStart" },
+  { minutes: 5, labelKey: "eventFormModal.reminders.minutes.m5" },
+  { minutes: 10, labelKey: "eventFormModal.reminders.minutes.m10" },
+  { minutes: 30, labelKey: "eventFormModal.reminders.minutes.m30" },
+  { minutes: 60, labelKey: "eventFormModal.reminders.minutes.m60" },
+  { minutes: 1440, labelKey: "eventFormModal.reminders.minutes.d1" },
+] as const;
+
+const DEFAULT_REMINDER: EventReminder = { method: "popup", minutes: 30 };
+
+interface ReminderRowsProps {
+  value: EventReminder[];
+  onChange: (reminders: EventReminder[]) => void;
+  /** The modal's shared input classes. */
+  inputCls: string;
+}
+
+/**
+ * Up to five "remind me" rows — a lead time and a delivery method each,
+ * mirroring what Google Calendar accepts as reminder overrides.
+ */
+export function ReminderRows({ value, onChange, inputCls }: ReminderRowsProps) {
+  const { t } = useTranslation("deals");
+
+  function update(index: number, patch: Partial<EventReminder>) {
+    onChange(value.map((reminder, i) => (i === index ? { ...reminder, ...patch } : reminder)));
+  }
+
+  return (
+    <div className="text-sm">
+      <span className="mb-1 block text-text-secondary">{t("eventFormModal.reminders.title")}</span>
+      {value.length > 0 ? (
+        <ul className="mb-2 space-y-2">
+          {value.map((reminder, index) => (
+            <li
+              key={index}
+              data-testid={testIds.events.reminders.row(index)}
+              className="flex items-center gap-2"
+            >
+              <select
+                value={String(reminder.minutes)}
+                onChange={(e) => update(index, { minutes: Number(e.target.value) })}
+                data-testid={testIds.events.reminders.minutes(index)}
+                aria-label={t("eventFormModal.reminders.minutesLabel")}
+                className={`${inputCls} text-text-primary`}
+              >
+                {MINUTE_PRESETS.map((preset) => (
+                  <option key={preset.minutes} value={String(preset.minutes)}>
+                    {t(preset.labelKey)}
+                  </option>
+                ))}
+                {MINUTE_PRESETS.every((preset) => preset.minutes !== reminder.minutes) ? (
+                  // A lead time set outside this form (or by a later preset list)
+                  // must stay selectable, or saving would silently rewrite it.
+                  <option value={String(reminder.minutes)}>
+                    {t("eventFormModal.reminders.customMinutes", { minutes: reminder.minutes })}
+                  </option>
+                ) : null}
+              </select>
+              <select
+                value={reminder.method}
+                onChange={(e) =>
+                  update(index, { method: e.target.value as EventReminder["method"] })
+                }
+                data-testid={testIds.events.reminders.method(index)}
+                aria-label={t("eventFormModal.reminders.methodLabel")}
+                className={`${inputCls} text-text-primary`}
+              >
+                <option value="popup">{t("eventFormModal.reminders.method.popup")}</option>
+                <option value="email">{t("eventFormModal.reminders.method.email")}</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => onChange(value.filter((_, i) => i !== index))}
+                data-testid={testIds.events.reminders.remove(index)}
+                aria-label={t("eventFormModal.reminders.remove")}
+                className="shrink-0 rounded-md p-1.5 text-text-tertiary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary"
+              >
+                <X size={14} strokeWidth={1.75} aria-hidden="true" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <button
+        type="button"
+        onClick={() => onChange([...value, DEFAULT_REMINDER])}
+        disabled={value.length >= MAX_REMINDERS}
+        data-testid={testIds.events.reminders.add}
+        className="inline-flex items-center gap-1.5 text-sm text-accent transition-colors duration-fast hover:text-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <Plus size={14} strokeWidth={1.75} aria-hidden="true" />
+        {t("eventFormModal.reminders.add")}
+      </button>
+      <p className="mt-1 text-xs text-text-tertiary">{t("eventFormModal.reminders.hint")}</p>
+    </div>
+  );
+}

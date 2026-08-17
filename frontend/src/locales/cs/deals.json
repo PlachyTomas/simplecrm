@@ -358,6 +358,7 @@
     "dateLabel": "Datum",
     "fromLabel": "Od",
     "toLabel": "Do",
+    "allDay": "Celý den",
     "locationLabel": "Místo (volitelné)",
     "descriptionLabel": "Popis (volitelné)",
     "labelsLabel": "Štítky (volitelné)",
@@ -389,6 +390,41 @@
       "creating": "Vytvářím…",
       "createError": "Štítek se nepodařilo vytvořit.",
       "remove": "Odebrat štítek {{name}}"
+    },
+    "attendees": {
+      "label": "Účastníci (volitelné)",
+      "placeholder": "Hledejte kontakt nebo kolegu…",
+      "hint": "Účastníkům s e-mailem pošle pozvánku Google kalendář.",
+      "loading": "Načítání účastníků…",
+      "noMatch": "Nikdo neodpovídá hledání.",
+      "loadError": "Účastníky se nepodařilo načíst.",
+      "remove": "Odebrat účastníka {{name}}",
+      "kindUser": "Kolega",
+      "kindContact": "Kontakt"
+    },
+    "reminders": {
+      "title": "Připomenutí (volitelné)",
+      "add": "Přidat připomenutí",
+      "remove": "Odebrat připomenutí",
+      "hint": "Připomenutí doručuje Google kalendář — projeví se u událostí, které do něj přidáte.",
+      "minutesLabel": "Kdy připomenout",
+      "methodLabel": "Jak připomenout",
+      "minutes": {
+        "atStart": "Při začátku",
+        "m5": "5 minut předem",
+        "m10": "10 minut předem",
+        "m30": "30 minut předem",
+        "m60": "1 hodinu předem",
+        "d1": "1 den předem"
+      },
+      "customMinutes": "{{minutes}} min předem",
+      "method": {
+        "popup": "Oznámení",
+        "email": "E-mail"
+      }
+    },
+    "meet": {
+      "label": "Vytvořit odkaz na Google Meet"
     },
     "cancel": "Zrušit",
     "saving": "Ukládám…",
