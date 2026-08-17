@@ -4,12 +4,15 @@ import uuid
 from datetime import UTC, datetime
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import select
 
 from app.db.models import CalendarEvent, CalendarEventAttendee, Contact, Organization, User
 from app.db.session import AsyncSessionLocal
+from app.schemas.calendar_event import CalendarEventCreate
 
-pytestmark = pytest.mark.asyncio
+# No module-level `pytestmark = pytest.mark.asyncio`: asyncio_mode="auto" already
+# covers the async test, and the mark would error on the sync ones below.
 
 
 async def test_event_carries_new_columns_and_attendees() -> None:
@@ -72,3 +75,22 @@ async def test_event_carries_new_columns_and_attendees() -> None:
         org = await s.get(Organization, org_id)
         await s.delete(org)
         await s.commit()
+
+
+def _base(**over: object) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "title": "T",
+        "starts_at": "2026-09-01T10:00:00+00:00",
+        "ends_at": "2026-09-01T11:00:00+00:00",
+    }
+    payload.update(over)
+    return payload
+
+
+def test_reminders_validated() -> None:
+    ok = CalendarEventCreate(**_base(reminders=[{"minutes": 30}]))
+    assert ok.reminders[0].method == "popup"
+    with pytest.raises(ValidationError):
+        CalendarEventCreate(**_base(reminders=[{"minutes": 99999}]))
+    with pytest.raises(ValidationError):
+        CalendarEventCreate(**_base(reminders=[{"minutes": 5}] * 6))

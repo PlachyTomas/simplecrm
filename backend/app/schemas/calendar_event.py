@@ -2,11 +2,25 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, Field, model_validator
 
 from app.db.models.enums import GoogleSyncStatus
 from app.schemas.event_label import EventLabelBrief
+
+
+class EventReminder(BaseModel):
+    method: Literal["popup", "email"] = "popup"
+    # Google Calendar's own bound: up to 4 weeks before the event.
+    minutes: int = Field(ge=0, le=40320)
+
+
+class AttendeeBrief(BaseModel):
+    id: uuid.UUID  # the contact/user id, not the join-row id
+    kind: Literal["contact", "user"]
+    name: str
+    email: str | None
 
 
 class CalendarEventCreate(BaseModel):
@@ -27,6 +41,11 @@ class CalendarEventCreate(BaseModel):
     # Org-shared labels to attach. Ids outside the caller's org (or unknown)
     # are a 400, same as `deal_id`. CRM-only — never pushed to Google.
     label_ids: list[uuid.UUID] = Field(default_factory=list)
+    all_day: bool = False
+    reminders: list[EventReminder] = Field(default_factory=list, max_length=5)
+    meet_requested: bool = False
+    attendee_contact_ids: list[uuid.UUID] = Field(default_factory=list)
+    attendee_user_ids: list[uuid.UUID] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _ends_after_starts(self) -> CalendarEventCreate:
@@ -49,6 +68,13 @@ class CalendarEventUpdate(BaseModel):
     # Tri-state on `exclude_unset` like `deal_id`: absent = labels unchanged,
     # `[]` = clear them all, a list = replace the set with exactly those.
     label_ids: list[uuid.UUID] | None = None
+    all_day: bool | None = None
+    reminders: list[EventReminder] | None = Field(default=None, max_length=5)
+    meet_requested: bool | None = None
+    # Tri-state on `exclude_unset` like `label_ids`: absent = attendees
+    # unchanged, `[]` = clear them all, a list = replace with exactly those.
+    attendee_contact_ids: list[uuid.UUID] | None = None
+    attendee_user_ids: list[uuid.UUID] | None = None
 
 
 class CalendarEventOut(BaseModel):
@@ -68,9 +94,14 @@ class CalendarEventOut(BaseModel):
     location: str | None
     starts_at: datetime
     ends_at: datetime
+    # Defaulted: the events router doesn't populate this yet (Task 4).
+    all_day: bool = False
+    reminders: list[EventReminder] = Field(default_factory=list)
     google_event_id: str | None
     google_sync_status: GoogleSyncStatus
+    meet_url: str | None = None
     # Name-ordered so the first entry is a stable choice for the chip tint.
     labels: list[EventLabelBrief] = Field(default_factory=list)
+    attendees: list[AttendeeBrief] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
