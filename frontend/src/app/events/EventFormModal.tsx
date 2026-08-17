@@ -311,6 +311,9 @@ export function EventFormModal({
           ends_at: ends.toISOString(),
           add_to_google: addToGoogle,
           label_ids: labels.map((label) => label.id),
+          // All-day/attendees pickers land in a later task — send the backend's own defaults until then.
+          all_day: false,
+          meet_requested: false,
         },
         {
           onSuccess: (saved) => notifySaved(saved, "created"),
