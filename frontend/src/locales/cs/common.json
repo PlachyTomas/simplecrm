@@ -287,10 +287,6 @@
         }
       },
       "emails": {
-        "bcc": {
-          "title": "Dostaňte sem i poštu z vašeho e-mailu",
-          "body": "Klepněte na ? vedle nadpisu — najdete tam svou osobní BCC adresu. Přidejte ji do skryté kopie zprávy zákazníkovi a e-mail se sám uloží ke správné firmě i obchodu."
-        },
         "filters": {
           "title": "Nic se neztratí",
           "body": "Pošta bez napárované firmy čeká pod filtrem Nepřiřazené. Filtry Firma a Obchod vyberou korespondenci k jednomu případu a hledání prochází i text zprávy a adresy."

@@ -187,8 +187,6 @@ export const testIds = {
       companyFilter: "mail-company-filter",
       dealFilter: "mail-deal-filter",
       mineToggle: "mail-mine-toggle",
-      helpButton: "mail-help-button",
-      helpDialog: "mail-help-dialog",
       row: (id: string) => `mail-row-${id}`,
       detailDialog: "mail-detail-dialog",
       detailReply: "mail-detail-reply",
@@ -232,11 +230,6 @@ export const testIds = {
   },
   settings: {
     smtpSignature: "settings-smtp-signature",
-    inboundAddress: {
-      value: "settings-inbound-address-value",
-      copy: "settings-inbound-address-copy",
-      rotate: "settings-inbound-address-rotate",
-    },
     emailTrackingToggle: "settings-email-tracking-toggle",
     dealRottingDaysInput: "settings-deal-rotting-days",
     salesGoals: {

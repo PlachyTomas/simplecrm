@@ -9,7 +9,6 @@ import { EmailComposeModal } from "@/app/emails/EmailComposeModal";
 import { EmailDetailModal } from "@/app/emails/EmailDetailModal";
 import { LinkEmailDialog } from "@/app/emails/LinkEmailDialog";
 import { EngagementChips, StatusBadge } from "@/app/emails/EmailHistorySection";
-import { SmartBccHelp } from "@/app/emails/SmartBccHelp";
 import {
   type MailListFilters,
   type SentEmailListItem,
@@ -31,8 +30,9 @@ const TH = "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider tex
 const FILTER_SELECT_CLASS =
   "h-9 max-w-[12rem] truncate rounded-md border border-border bg-surface-overlay px-2 text-xs font-medium text-text-secondary focus:border-accent focus:outline-none";
 
-/** One URL param folds direction + unmatched into a single quick filter. */
-const TYPES = ["sent", "received", "unmatched"] as const;
+/** One URL param folds direction + unmatched into a single quick filter.
+ * Inbound capture is parked: no "received" option until it returns. */
+const TYPES = ["sent", "unmatched"] as const;
 type MailType = (typeof TYPES)[number];
 
 function isType(value: string): value is MailType {
@@ -50,10 +50,10 @@ function counterparty(email: SentEmailListItem, t: TFunction<"emails">): string 
 }
 
 /**
- * The unified Mail page (email suite Stage 0): every mail SimpleCRM has
- * captured — sent from the app, tracked, BCC'd or auto-forwarded in — in one
- * searchable, filterable list. Rows open `EmailDetailModal`; the "?" explains
- * how to feed the capture pipeline.
+ * The unified Mail page (email suite Stage 0), currently presented as a
+ * sent-mail overview: inbound capture is parked, so the page lists mail sent
+ * from SimpleCRM plus any historic captured rows. Rows open
+ * `EmailDetailModal`; unmatched rows carry the assign flow.
  */
 export function MailPage() {
   const { t } = useTranslation("emails");
@@ -100,6 +100,14 @@ export function MailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch]);
 
+  // A stale `type` from a bookmark (e.g. the retired "received") is silently
+  // ignored by `isType` — strip it so re-shared URLs don't carry a phantom
+  // filter.
+  useEffect(() => {
+    if (rawType && !isType(rawType)) patchParams({ type: null }, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawType]);
+
   const { data: user } = useCurrentUser();
   // Salespeople only ever see their own history server-side — the toggle
   // would be a no-op checkbox, so it hides.
@@ -107,8 +115,7 @@ export function MailPage() {
 
   const filters: MailListFilters = {
     search: debouncedSearch || undefined,
-    direction:
-      typeFilter === "sent" ? "outbound" : typeFilter === "received" ? "inbound" : undefined,
+    direction: typeFilter === "sent" ? "outbound" : undefined,
     unmatched: typeFilter === "unmatched" || undefined,
     mine: mineOnly || undefined,
     companyId: companyFilter || undefined,
@@ -168,10 +175,7 @@ export function MailPage() {
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="mb-6">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold">{t("mailPage.title")}</h1>
-          <SmartBccHelp />
-        </div>
+        <h1 className="text-2xl font-semibold">{t("mailPage.title")}</h1>
         <p className="mt-1 text-sm text-text-tertiary">{t("mailPage.subtitle")}</p>
       </div>
 
@@ -203,7 +207,6 @@ export function MailPage() {
           >
             <option value="">{t("mailPage.typeAll")}</option>
             <option value="sent">{t("mailPage.typeSent")}</option>
-            <option value="received">{t("mailPage.typeReceived")}</option>
             <option value="unmatched">{t("mailPage.typeUnmatched")}</option>
           </select>
           <select

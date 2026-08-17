@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppRoutes } from "@/App";
@@ -69,6 +69,12 @@ function pageOf(items: unknown[]) {
   return { items, total: items.length, limit: 25, offset: 0 };
 }
 
+/** Exposes the live query string so tests can assert on URL state. */
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location-probe">{location.search}</div>;
+}
+
 function renderAt(path: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -76,6 +82,7 @@ function renderAt(path: string) {
       <AuthProvider initialToken="fake">
         <MemoryRouter initialEntries={[path]}>
           <AppRoutes />
+          <LocationProbe />
         </MemoryRouter>
       </AuthProvider>
     </QueryClientProvider>,
@@ -104,8 +111,6 @@ describe("Mail page", () => {
       if (url.includes("/api/v1/emails?")) return jsonResponse(pageOf(mails));
       if (url.includes("/api/v1/companies")) return jsonResponse(pageOf([]));
       if (url.includes("/api/v1/deals")) return jsonResponse(pageOf([]));
-      if (url.endsWith("/api/v1/me/inbound-address"))
-        return jsonResponse({ address: "bcc+tajny@in.simplecrm.cz" });
       throw new Error(`Unexpected fetch: ${url}`);
     });
   }
@@ -188,13 +193,33 @@ describe("Mail page", () => {
     expect(screen.getByTestId(testIds.emails.mail.linkSubmit)).toBeDisabled();
   });
 
-  it("shows the personal Smart-BCC address behind the ? help", async () => {
+  it("declares itself a sent-mail overview — no received filter, no BCC help", async () => {
     stubApi([makeMail()]);
     renderAt("/app/emails");
     await screen.findByRole("button", { name: "Nabídka služeb" });
 
-    await userEvent.click(screen.getByTestId(testIds.emails.mail.helpButton));
-    expect(await screen.findByTestId(testIds.emails.mail.helpDialog)).toBeInTheDocument();
-    expect(await screen.findByText("bcc+tajny@in.simplecrm.cz")).toBeInTheDocument();
+    expect(
+      screen.getByText("Přehled e-mailů odeslaných ze SimpleCRM. Příjem e-mailů připravujeme."),
+    ).toBeInTheDocument();
+    // Inbound capture is parked: no "?" helper, no Přijaté filter option.
+    expect(screen.queryByTestId("mail-help-button")).not.toBeInTheDocument();
+    const options = within(screen.getByTestId(testIds.emails.mail.typeFilter)).getAllByRole(
+      "option",
+    );
+    expect(options.map((o) => (o as HTMLOptionElement).value)).toEqual(["", "sent", "unmatched"]);
+  });
+
+  it("strips a stale type=received bookmark from the URL instead of carrying it", async () => {
+    stubApi([makeMail()]);
+    renderAt("/app/emails?type=received");
+    await screen.findByRole("button", { name: "Nabídka služeb" });
+
+    const select = screen.getByTestId(testIds.emails.mail.typeFilter) as HTMLSelectElement;
+    expect(select.value).toBe("");
+    // The dead param is dropped from the URL, not silently carried into
+    // every re-shared link.
+    await waitFor(() =>
+      expect(screen.getByTestId("location-probe")).not.toHaveTextContent("type=received"),
+    );
   });
 });

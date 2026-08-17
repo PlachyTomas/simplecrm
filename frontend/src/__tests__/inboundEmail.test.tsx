@@ -1,9 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { EmailHistorySection } from "@/app/emails/EmailHistorySection";
-import { InboundAddressCard } from "@/app/settings/InboundAddressCard";
 import { AuthProvider } from "@/auth/AuthContext";
 import { testIds } from "@/lib/testids";
 import { ToastProvider } from "@/lib/toast";
@@ -120,85 +119,5 @@ describe("EmailHistorySection — inbound rows", () => {
       testIds.emails.history.row("in-1"),
       testIds.emails.history.row("out-1"),
     ]);
-  });
-});
-
-describe("InboundAddressCard", () => {
-  const fetchMock = vi.fn<typeof fetch>();
-  const originalFetch = globalThis.fetch;
-  const writeText = vi.fn(() => Promise.resolve());
-  const originalClipboard = navigator.clipboard;
-
-  beforeEach(() => {
-    fetchMock.mockReset();
-    writeText.mockClear();
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText },
-    });
-  });
-  afterEach(() => {
-    globalThis.fetch = originalFetch;
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: originalClipboard,
-    });
-    vi.restoreAllMocks();
-  });
-
-  function mockAddress(posts: string[]) {
-    fetchMock.mockImplementation(async (input, init) => {
-      const url = typeof input === "string" ? input : (input as Request).url;
-      if (url.endsWith("/api/v1/auth/me")) return jsonResponse({ id: "1", role: "admin" });
-      if (url.includes("/api/v1/me/inbound-address/rotate")) {
-        posts.push(String(init?.method));
-        return jsonResponse({ address: "bcc+novy@in.simplecrm.cz", local_part: "bcc+novy" });
-      }
-      if (url.includes("/api/v1/me/inbound-address"))
-        return jsonResponse({ address: "bcc+puvodni@in.simplecrm.cz", local_part: "bcc+puvodni" });
-      throw new Error(`Unexpected: ${url}`);
-    });
-  }
-
-  it("shows the magic address and copies it to the clipboard", async () => {
-    mockAddress([]);
-    renderWithProviders(
-      <ul>
-        <InboundAddressCard />
-      </ul>,
-    );
-
-    const value = await screen.findByTestId(testIds.settings.inboundAddress.value);
-    await waitFor(() => expect(value).toHaveTextContent("bcc+puvodni@in.simplecrm.cz"));
-    // The "no company page" caveat is stated here rather than in a new inbox screen.
-    expect(screen.getByText(/neobjeví se u žádné firmy/)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByTestId(testIds.settings.inboundAddress.copy));
-    await waitFor(() => expect(writeText).toHaveBeenCalledWith("bcc+puvodni@in.simplecrm.cz"));
-    expect(await screen.findByText("Zkopírováno")).toBeInTheDocument();
-  });
-
-  it("rotates only after the user confirms", async () => {
-    const posts: string[] = [];
-    mockAddress(posts);
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
-    renderWithProviders(
-      <ul>
-        <InboundAddressCard />
-      </ul>,
-    );
-
-    const value = await screen.findByTestId(testIds.settings.inboundAddress.value);
-    await waitFor(() => expect(value).toHaveTextContent("bcc+puvodni@in.simplecrm.cz"));
-
-    fireEvent.click(screen.getByTestId(testIds.settings.inboundAddress.rotate));
-    expect(confirmSpy).toHaveBeenCalled();
-    expect(posts).toHaveLength(0);
-
-    confirmSpy.mockReturnValue(true);
-    fireEvent.click(screen.getByTestId(testIds.settings.inboundAddress.rotate));
-    await waitFor(() => expect(posts).toEqual(["POST"]));
-    await waitFor(() => expect(value).toHaveTextContent("bcc+novy@in.simplecrm.cz"));
   });
 });

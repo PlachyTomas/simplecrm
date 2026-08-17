@@ -156,13 +156,12 @@
   },
   "mailPage": {
     "title": "Emails",
-    "subtitle": "All mail captured in SimpleCRM — sent and received.",
+    "subtitle": "An overview of emails sent from SimpleCRM. Receiving mail is in the works.",
     "searchLabel": "Search emails",
     "searchPlaceholder": "Search subject, text, address…",
     "typeFilterLabel": "Filter by type",
     "typeAll": "All",
     "typeSent": "Sent",
-    "typeReceived": "Received",
     "typeUnmatched": "Unmatched",
     "companyFilterLabel": "Filter by company",
     "companyAll": "Company: all",
@@ -173,7 +172,7 @@
     "loading": "Loading emails…",
     "loadError": "Emails could not be loaded.",
     "emptyTitle": "No emails yet",
-    "emptyBody": "Mail sent from SimpleCRM and messages captured via BCC will show up here.",
+    "emptyBody": "Once you send your first email from SimpleCRM, it will show up here.",
     "emptyFilteredTitle": "Nothing found",
     "emptyFilteredBody": "No email matches the selected filters.",
     "columns": {
@@ -217,20 +216,6 @@
     "threadTitle": "Thread ({{count}})",
     "reply": "Reply",
     "close": "Close"
-  },
-  "bccHelp": {
-    "buttonAria": "How to get mail into SimpleCRM",
-    "title": "How to get mail into SimpleCRM",
-    "intro": "Emails sent straight from SimpleCRM are stored automatically. To capture mail from your regular client, use your personal BCC address:",
-    "addressLabel": "Your BCC address",
-    "loadError": "The address could not be loaded.",
-    "copy": "Copy",
-    "copied": "Copied",
-    "copyPrompt": "Copy the address:",
-    "stepBcc": "Add this address as a BCC on outgoing customer messages — the mail files itself under the right company and deal.",
-    "stepForward": "Forward received messages to it, or set up an auto-forward rule in your email client (Seznam, Outlook and Gmail all support it).",
-    "settingsLink": "Manage the address in Settings → Integrations",
-    "close": "Got it"
   },
   "linkDialog": {
     "title": "Assign email",

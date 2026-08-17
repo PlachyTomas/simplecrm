@@ -285,10 +285,6 @@
         }
       },
       "emails": {
-        "bcc": {
-          "title": "Get your regular mail in here too",
-          "body": "Click the ? next to the page title — it holds your personal BCC address. Add it as a BCC on customer messages and the email files itself under the right company and deal."
-        },
         "filters": {
           "title": "Nothing gets lost",
           "body": "Mail without a matched company waits under the Unmatched filter. The Company and Deal filters pull up one case's correspondence, and search covers message text and addresses too."
