@@ -95,6 +95,62 @@ def test_event_payload_uses_rfc3339_utc_and_clearable_fields() -> None:
     assert payload["location"] is None
 
 
+def test_event_payload_all_day_dates() -> None:
+    body = event_payload(
+        title="T",
+        description=None,
+        location=None,
+        starts_at=datetime(2026, 9, 1, tzinfo=UTC),
+        ends_at=datetime(2026, 9, 2, tzinfo=UTC),
+        all_day=True,
+    )
+    assert body["start"] == {"date": "2026-09-01"}
+    assert body["end"] == {"date": "2026-09-02"}
+
+
+def test_event_payload_reminders_omitted_when_empty() -> None:
+    body = event_payload(
+        title="T",
+        description=None,
+        location=None,
+        starts_at=datetime(2026, 9, 1, 10, tzinfo=UTC),
+        ends_at=datetime(2026, 9, 1, 11, tzinfo=UTC),
+    )
+    assert "reminders" not in body
+    body2 = event_payload(
+        title="T",
+        description=None,
+        location=None,
+        starts_at=datetime(2026, 9, 1, 10, tzinfo=UTC),
+        ends_at=datetime(2026, 9, 1, 11, tzinfo=UTC),
+        reminders=({"method": "email", "minutes": 60},),
+    )
+    assert body2["reminders"] == {
+        "useDefault": False,
+        "overrides": [{"method": "email", "minutes": 60}],
+    }
+
+
+def test_event_payload_attendees_and_meet() -> None:
+    body = event_payload(
+        title="T",
+        description=None,
+        location=None,
+        starts_at=datetime(2026, 9, 1, 10, tzinfo=UTC),
+        ends_at=datetime(2026, 9, 1, 11, tzinfo=UTC),
+        attendees=({"email": "a@ex.cz", "displayName": "A"},),
+        create_meet=True,
+        meet_request_id="req-1",
+    )
+    assert body["attendees"] == [{"email": "a@ex.cz", "displayName": "A"}]
+    assert body["conferenceData"] == {
+        "createRequest": {
+            "requestId": "req-1",
+            "conferenceSolutionKey": {"type": "hangoutsMeet"},
+        }
+    }
+
+
 # ---------------------------------------------------------- authorize url
 
 
@@ -162,7 +218,26 @@ async def test_refresh_access_token_maps_invalid_grant_to_auth_error() -> None:
 # ----------------------------------------------------------- event calls
 
 
-async def test_insert_event_returns_google_event_id() -> None:
+async def test_insert_event_returns_full_response_body() -> None:
+    captured: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(
+            200, json={"id": "gev-123", "hangoutLink": "https://meet.google.com/xyz"}
+        )
+
+    client = _client_with_handler(handler)
+    body = await client.insert_event("at-1", {"summary": "Demo"})
+    assert body["id"] == "gev-123"
+    assert body["hangoutLink"] == "https://meet.google.com/xyz"
+    request = captured[0]
+    assert request.url.path.endswith("/calendars/primary/events")
+    assert request.headers["Authorization"] == "Bearer at-1"
+    assert json.loads(request.content)["summary"] == "Demo"
+
+
+async def test_insert_event_passes_query_params() -> None:
     captured: list[httpx.Request] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -170,12 +245,8 @@ async def test_insert_event_returns_google_event_id() -> None:
         return httpx.Response(200, json={"id": "gev-123"})
 
     client = _client_with_handler(handler)
-    event_id = await client.insert_event("at-1", {"summary": "Demo"})
-    assert event_id == "gev-123"
-    request = captured[0]
-    assert request.url.path.endswith("/calendars/primary/events")
-    assert request.headers["Authorization"] == "Bearer at-1"
-    assert json.loads(request.content)["summary"] == "Demo"
+    await client.insert_event("at-1", {"summary": "Demo"}, params={"conferenceDataVersion": "1"})
+    assert captured[0].url.params["conferenceDataVersion"] == "1"
 
 
 async def test_delete_event_tolerates_missing_google_copy() -> None:

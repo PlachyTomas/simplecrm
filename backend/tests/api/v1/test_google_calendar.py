@@ -74,11 +74,18 @@ class FakeGoogleCalendarClient:
     async def revoke_token(self, token: str) -> None:
         self.revoked.append(token)
 
-    async def insert_event(self, access_token: str, payload: dict[str, Any]) -> str:
-        return "gev-1"
+    async def insert_event(
+        self, access_token: str, payload: dict[str, Any], *, params: dict[str, str] | None = None
+    ) -> dict[str, Any]:
+        return {"id": "gev-1", "hangoutLink": "https://meet.google.com/fake"}
 
     async def patch_event(
-        self, access_token: str, event_id: str, payload: dict[str, Any]
+        self,
+        access_token: str,
+        event_id: str,
+        payload: dict[str, Any],
+        *,
+        params: dict[str, str] | None = None,
     ) -> None: ...
 
     async def delete_event(self, access_token: str, event_id: str) -> None: ...

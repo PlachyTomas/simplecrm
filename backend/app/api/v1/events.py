@@ -235,7 +235,7 @@ async def _sync_insert(
     """Push a fresh Google copy. Failures mark the event `error` — never raise."""
     try:
         token = await get_valid_access_token(session, connection, client)
-        event.google_event_id = await client.insert_event(token, _google_body(event))
+        event.google_event_id = (await client.insert_event(token, _google_body(event)))["id"]
         event.google_sync_status = GoogleSyncStatus.synced
     except (GoogleCalendarError, TokenDecryptError):
         event.google_sync_status = GoogleSyncStatus.error
