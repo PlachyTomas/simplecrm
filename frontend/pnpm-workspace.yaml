@@ -11,9 +11,31 @@ allowBuilds:
 # them. For an urgent security patch younger than the window, temporarily add
 # the package to minimumReleaseAgeExclude.
 minimumReleaseAge: 4320
-minimumReleaseAgeExclude: []
+# 2026-08-17 advisory sweep: the patched releases below are younger than the
+# quarantine window; remove these once the window has passed.
+minimumReleaseAgeExclude:
+  - postcss
+  - nanoid
+  - brace-expansion
+  - js-yaml
 
 # @redocly/openapi-core (openapi-typescript chain, dev-only) holds js-yaml at
-# 4.1.1, which carries two ReDoS advisories fixed in 4.3.0.
+# 4.1.1, which carries two ReDoS advisories fixed in 4.3.0; 4.3.1 adds the
+# !!omap quadratic-CPU fix (2026-08-17 sweep, with the ranged floors below).
+# react-router v6 advisories fixed only in v7.18 (owner call 2026-08-17):
+# SSR constructor injection is N/A (no SSR here) and the open-redirect
+# variants need attacker-controlled nav targets the app never passes.
+# Remove all three when the scheduled v7 migration lands.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-wrjc-x8rr-h8h6
+    - GHSA-jjmj-jmhj-qwj2
+    - GHSA-337j-9hxr-rhxg
+
 overrides:
-  js-yaml: ">=4.3.0"
+  js-yaml: ">=4.3.1"
+  "postcss@<8.5.23": ">=8.5.23 <9"
+  "nanoid@<3.3.18": ">=3.3.18 <4"
+  "brace-expansion@<1.1.18": ">=1.1.18 <2"
+  "brace-expansion@>=2.0.0 <2.1.4": ">=2.1.4 <3"
+  "brace-expansion@>=4.0.0 <5.0.9": ">=5.0.9"
