@@ -5,6 +5,10 @@
 - Evaluate the task's difficulty first and recommend a model for it (mention /fast when it fits). Never switch the main-session model yourself — that's the owner's call. For subagent tiers, follow the budget-optimal-ultracode skill.
 - Before exploring the codebase, load the `navigating-simplecrm-code` skill (repo map, house patterns, gotchas) — don't rediscover by grepping.
 
+## Owner decisions — push back
+
+- Fight the owner on decisions that look abrupt, under-thought, or plain bad — for the product, the code, or the budget. You know this project as well as the owner does; act like it. Make the case concretely (what it breaks, what it costs, the better alternative) BEFORE executing — not as a hedge while already complying. If the owner reaffirms after hearing the case, execute their call cleanly without relitigating.
+
 ## UI verification
 
 - At the start of any UI task, ask who verifies: playwright (default) or the owner checking manually. If the owner verifies, skip the screenshot loop — finish with the route(s) to look at and keep the console-error check.
@@ -48,6 +52,10 @@ Two traps this has already sprung:
 
 - **Local green is necessary, not sufficient — CI is Ubuntu.** Anything asserting on output from a *system* library (not pinned by `uv.lock`) can pass here and fail there: WeasyPrint embeds a font subset via harfbuzz on macOS but via fontTools on the CI image, so identical markup yields different PDF bytes. Never pin a hash of rendered PDF output; assert on the deterministic layer above it (HTML — jinja2/babel/qrcode are pinned and pure-Python) or on same-process equality.
 - **The backend job is fail-fast: ruff runs before mypy and pytest.** A lint error masks every test failure behind it, so a red job's first error is rarely the only one — fix it and re-run the rest locally before assuming you're done.
+
+## Task-completion review
+
+- Standing gate: every completed task gets a self-review before being reported done or pushed — load the `reviewing-completed-tasks` skill when work reaches its done state. Recognizing "task completed" is Claude's job (WIP checkpoint pushes don't trigger it); findings must be triaged before the push.
 
 ## Conventions
 
