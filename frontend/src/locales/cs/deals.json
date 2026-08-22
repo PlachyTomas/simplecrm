@@ -347,7 +347,12 @@
     "deleteAriaLabel": "Smazat událost {{title}}",
     "confirmDelete": "Smazat událost \"{{title}}\"?",
     "toastDeleted": "Událost smazána.",
-    "toastDeleteError": "Událost se nepodařilo smazat."
+    "toastDeleteError": "Událost se nepodařilo smazat.",
+    "allDayLabel": "Celý den",
+    "attendeeCount_one": "{{count}} účastník",
+    "attendeeCount_few": "{{count}} účastníci",
+    "attendeeCount_other": "{{count}} účastníků",
+    "meetLink": "Připojit se přes Google Meet"
   },
   "eventFormModal": {
     "titleCreate": "Naplánovat událost",

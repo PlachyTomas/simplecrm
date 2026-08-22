@@ -5,8 +5,12 @@
     "errorLabel": "Google sync selhal"
   },
   "dayEventsList": {
-    "editAria": "Upravit událost {{title}}",
-    "deleteAria": "Smazat událost {{title}}"
+    "deleteAria": "Smazat událost {{title}}",
+    "allDay": "Celý den",
+    "attendeeCount_one": "{{count}} účastník",
+    "attendeeCount_few": "{{count}} účastníci",
+    "attendeeCount_other": "{{count}} účastníků",
+    "meetLink": "Připojit se přes Google Meet"
   },
   "calendarPage": {
     "title": "Kalendář",

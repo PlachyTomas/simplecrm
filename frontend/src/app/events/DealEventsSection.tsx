@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { EventFormModal } from "@/app/events/EventFormModal";
 import { type CalendarEventOut, useDeleteEvent, useEvents } from "@/app/events/useEvents";
 import { ChevronDown } from "lucide-react";
+import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
 
 interface DealEventsSectionProps {
@@ -33,8 +34,12 @@ function EventRow({
   const { t } = useTranslation("deals");
   const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
   const timeFmt = new Intl.DateTimeFormat(locale, { timeStyle: "short" });
+  // All-day events are stored at UTC midnight — a local-time read would show
+  // the previous day west of Greenwich, so the date-only line reads UTC.
+  const allDayDateFmt = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" });
   const starts = new Date(event.starts_at);
   const ends = new Date(event.ends_at);
+  const attendeeCount = event.attendees?.length ?? 0;
 
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
@@ -57,9 +62,29 @@ function EventRow({
           ) : null}
         </p>
         <p className="mt-0.5 text-sm text-text-tertiary">
-          {dateFmt.format(starts)} – {timeFmt.format(ends)}
+          {event.all_day
+            ? `${allDayDateFmt.format(starts)} · ${t("eventsSection.allDayLabel")}`
+            : `${dateFmt.format(starts)} – ${timeFmt.format(ends)}`}
           {event.location ? ` · ${event.location}` : ""}
         </p>
+        {attendeeCount > 0 || event.meet_url ? (
+          <p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-text-tertiary">
+            {attendeeCount > 0 ? (
+              <span>{t("eventsSection.attendeeCount", { count: attendeeCount })}</span>
+            ) : null}
+            {event.meet_url ? (
+              <a
+                href={event.meet_url}
+                target="_blank"
+                rel="noreferrer"
+                data-testid={testIds.events.dealSectionMeetLink(event.id)}
+                className="text-accent hover:text-accent-hover"
+              >
+                {t("eventsSection.meetLink")}
+              </a>
+            ) : null}
+          </p>
+        ) : null}
       </div>
       <div className="flex items-center gap-1">
         <button

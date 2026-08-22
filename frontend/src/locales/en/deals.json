@@ -340,7 +340,11 @@
     "deleteAriaLabel": "Delete event {{title}}",
     "confirmDelete": "Delete event \"{{title}}\"?",
     "toastDeleted": "Event deleted.",
-    "toastDeleteError": "Failed to delete the event."
+    "toastDeleteError": "Failed to delete the event.",
+    "allDayLabel": "All day",
+    "attendeeCount_one": "{{count}} attendee",
+    "attendeeCount_other": "{{count}} attendees",
+    "meetLink": "Join Google Meet"
   },
   "eventFormModal": {
     "titleCreate": "Schedule event",

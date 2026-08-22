@@ -1,4 +1,4 @@
-import { AlertTriangle, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -109,74 +109,111 @@ function DayEventsList({
   const timeFmt = new Intl.DateTimeFormat(locale, { timeStyle: "short" });
   return (
     <ul className="divide-y divide-border-subtle">
-      {events.map((event) => (
-        <li key={event.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
-          <div>
-            <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-text-primary">
-              {timeFmt.format(new Date(event.starts_at))}–{timeFmt.format(new Date(event.ends_at))}
-              <span>{event.title}</span>
-              {(event.labels ?? []).map((label) => (
-                <span
-                  key={label.id}
-                  className="rounded-full px-2 py-0.5 text-xs font-medium"
-                  style={{ backgroundColor: labelTint(label.color), color: label.color }}
-                >
-                  {label.name}
+      {events.map((event) => {
+        const attendeeCount = event.attendees?.length ?? 0;
+        return (
+          <li
+            key={event.id}
+            data-testid={testIds.calendar.dayEventRow(event.id)}
+            onClick={() => onEdit(event)}
+            className="-mx-2 flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-md px-2 py-3 transition-colors duration-fast hover:bg-surface-overlay"
+          >
+            <div className="min-w-0">
+              {/* The row itself opens the event; a real button underneath
+                  keeps that reachable by keyboard, not just by mouse. */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(event);
+                }}
+                className="flex flex-wrap items-center gap-2 text-left text-sm font-medium text-text-primary hover:text-accent"
+              >
+                <span>
+                  {event.all_day
+                    ? t("dayEventsList.allDay")
+                    : `${timeFmt.format(new Date(event.starts_at))}–${timeFmt.format(new Date(event.ends_at))}`}
                 </span>
-              ))}
-              <SyncBadge status={event.google_sync_status} />
-            </p>
-            <p className="mt-0.5 text-sm text-text-tertiary">
-              {/* Deal-less events are legitimate now — say so rather than
-                  rendering a link to nowhere. Company is always derived via
-                  the deal, so it only ever appears alongside a deal link. */}
-              {event.deal_id ? (
-                <>
-                  <Link
-                    to={`/app/deals/${event.deal_id}`}
-                    className="text-accent hover:text-accent-hover"
+                <span>{event.title}</span>
+                {(event.labels ?? []).map((label) => (
+                  <span
+                    key={label.id}
+                    className="rounded-full px-2 py-0.5 text-xs font-medium"
+                    style={{ backgroundColor: labelTint(label.color), color: label.color }}
                   >
-                    {event.deal_name}
-                  </Link>
-                  {event.company_id ? (
-                    <>
-                      {" · "}
-                      <Link
-                        to={`/app/companies/${event.company_id}`}
-                        className="text-accent hover:text-accent-hover"
-                      >
-                        {event.company_name}
-                      </Link>
-                    </>
+                    {label.name}
+                  </span>
+                ))}
+                <SyncBadge status={event.google_sync_status} />
+              </button>
+              <p className="mt-0.5 text-sm text-text-tertiary">
+                {/* Deal-less events are legitimate now — say so rather than
+                    rendering a link to nowhere. Company is always derived via
+                    the deal, so it only ever appears alongside a deal link. */}
+                {event.deal_id ? (
+                  <>
+                    <Link
+                      to={`/app/deals/${event.deal_id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-accent hover:text-accent-hover"
+                    >
+                      {event.deal_name}
+                    </Link>
+                    {event.company_id ? (
+                      <>
+                        {" · "}
+                        <Link
+                          to={`/app/companies/${event.company_id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-accent hover:text-accent-hover"
+                        >
+                          {event.company_name}
+                        </Link>
+                      </>
+                    ) : null}
+                  </>
+                ) : (
+                  <span>{t("calendarPage.noDeal")}</span>
+                )}
+                {event.location ? ` · ${event.location}` : ""}
+              </p>
+              {attendeeCount > 0 || event.meet_url ? (
+                <p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-text-tertiary">
+                  {attendeeCount > 0 ? (
+                    <span>{t("dayEventsList.attendeeCount", { count: attendeeCount })}</span>
                   ) : null}
-                </>
-              ) : (
-                <span>{t("calendarPage.noDeal")}</span>
-              )}
-              {event.location ? ` · ${event.location}` : ""}
-            </p>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => onEdit(event)}
-              aria-label={t("dayEventsList.editAria", { title: event.title })}
-              className="rounded p-1.5 text-text-secondary hover:bg-surface-elevated hover:text-text-primary"
-            >
-              <Pencil size={15} strokeWidth={1.75} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onDelete(event)}
-              disabled={deleting}
-              aria-label={t("dayEventsList.deleteAria", { title: event.title })}
-              className="rounded p-1.5 text-text-secondary hover:bg-danger-subtle hover:text-danger disabled:opacity-60"
-            >
-              <Trash2 size={15} strokeWidth={1.75} />
-            </button>
-          </div>
-        </li>
-      ))}
+                  {event.meet_url ? (
+                    <a
+                      href={event.meet_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      data-testid={testIds.calendar.dayEventMeetLink(event.id)}
+                      className="text-accent hover:text-accent-hover"
+                    >
+                      {t("dayEventsList.meetLink")}
+                    </a>
+                  ) : null}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(event);
+                }}
+                disabled={deleting}
+                aria-label={t("dayEventsList.deleteAria", { title: event.title })}
+                className="rounded p-1.5 text-text-secondary hover:bg-danger-subtle hover:text-danger disabled:opacity-60"
+              >
+                <Trash2 size={15} strokeWidth={1.75} />
+              </button>
+            </div>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -223,6 +260,10 @@ export function CalendarPage() {
       if (bucket) bucket.push(event);
       else map.set(key, [event]);
     }
+    // All-day events surface first within their day — there's no hourly
+    // timeline to lay them into, so this is the whole story for "before
+    // timed events". Array#sort is stable, so timed events keep their order.
+    for (const bucket of map.values()) bucket.sort((a, b) => Number(b.all_day) - Number(a.all_day));
     return map;
   }, [data]);
 

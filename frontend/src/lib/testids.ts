@@ -337,6 +337,8 @@ export const testIds = {
       method: (index: number) => `event-form-reminder-method-${index}`,
       remove: (index: number) => `event-form-reminder-remove-${index}`,
     },
+    // The deal detail section's event rows.
+    dealSectionMeetLink: (id: string) => `event-deal-section-meet-link-${id}`,
   },
   eventLabels: {
     row: (id: string) => `event-label-row-${id}`,
@@ -355,6 +357,8 @@ export const testIds = {
     zoomWeek: "calendar-zoom-week",
     zoomMonth: "calendar-zoom-month",
     reconnect: "calendar-reconnect",
+    dayEventRow: (id: string) => `calendar-day-event-row-${id}`,
+    dayEventMeetLink: (id: string) => `calendar-day-event-meet-link-${id}`,
   },
   widgets: {
     picker: {
