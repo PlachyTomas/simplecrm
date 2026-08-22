@@ -37,8 +37,12 @@ from app.db.models import (
 )
 from app.db.session import AsyncSessionLocal
 from app.main import app
-from app.schemas.calendar_event import CalendarEventCreate
-from app.services.google_calendar import GoogleTokenBundle, get_google_calendar_client
+from app.schemas.calendar_event import CalendarEventCreate, CalendarEventUpdate
+from app.services.google_calendar import (
+    GoogleCalendarError,
+    GoogleTokenBundle,
+    get_google_calendar_client,
+)
 from app.services.pipeline import create_default_pipeline
 
 # No module-level `pytestmark = pytest.mark.asyncio`: asyncio_mode="auto" already
@@ -138,11 +142,14 @@ class FakeGoogleCalendarClient:
 
     def __init__(self) -> None:
         self.insert_returns_no_id = False
+        self.patch_raises_404 = False
+        self.next_event_id = "gev-1"
         self.inserted: list[dict[str, Any]] = []
         self.insert_params: list[dict[str, str] | None] = []
         self.patched: list[tuple[str, dict[str, Any]]] = []
         self.patch_params: list[dict[str, str] | None] = []
         self.deleted: list[str] = []
+        self.delete_params: list[dict[str, str] | None] = []
         # Google ids whose event carries a conference — like the real API, the
         # link comes back on every later read of that event, insert or patch.
         self.conferenced: set[str] = set()
@@ -165,7 +172,7 @@ class FakeGoogleCalendarClient:
         self.insert_params.append(params)
         if self.insert_returns_no_id:
             return {"htmlLink": "https://calendar.google.test/x"}
-        return self._event_resource("gev-1", payload)
+        return self._event_resource(self.next_event_id, payload)
 
     async def patch_event(
         self,
@@ -175,6 +182,8 @@ class FakeGoogleCalendarClient:
         *,
         params: dict[str, str] | None = None,
     ) -> dict[str, Any]:
+        if self.patch_raises_404:
+            raise GoogleCalendarError("gone", http_status=404)
         self.patched.append((event_id, payload))
         self.patch_params.append(params)
         return self._event_resource(event_id, payload)
@@ -187,8 +196,11 @@ class FakeGoogleCalendarClient:
             body["hangoutLink"] = MEET_URL
         return body
 
-    async def delete_event(self, access_token: str, event_id: str) -> None:
+    async def delete_event(
+        self, access_token: str, event_id: str, *, params: dict[str, str] | None = None
+    ) -> None:
         self.deleted.append(event_id)
+        self.delete_params.append(params)
 
 
 @pytest.fixture
@@ -523,7 +535,10 @@ async def test_create_event_google_push_carries_params_meet_and_attendees(
     assert fake_gcal.insert_params == [SYNC_PARAMS]
 
     sent = fake_gcal.inserted[0]
-    assert sent["conferenceData"]["createRequest"]["requestId"] == body["id"]
+    # Google dedupes a repeated createRequest id, so it must be fresh per push.
+    request_id = sent["conferenceData"]["createRequest"]["requestId"]
+    uuid.UUID(request_id)
+    assert request_id != body["id"]
     assert sent["reminders"] == {
         "useDefault": False,
         "overrides": [{"method": "popup", "minutes": 10}],
@@ -574,7 +589,7 @@ async def test_update_event_meet_requested_later_captures_the_patch_link(
     )
     assert upgraded.status_code == 200, upgraded.text
     assert upgraded.json()["meet_url"] == MEET_URL
-    assert fake_gcal.patched[0][1]["conferenceData"]["createRequest"]["requestId"] == event_id
+    uuid.UUID(fake_gcal.patched[0][1]["conferenceData"]["createRequest"]["requestId"])
 
     persisted = (
         await db_session.execute(
@@ -699,3 +714,206 @@ async def test_deleting_contact_cascades_its_attendee_rows(
         await db_session.execute(select(CalendarEvent).where(CalendarEvent.id == event_id))
     ).scalar_one_or_none()
     assert survivor is not None
+
+
+# meet lifecycle ---------------------------------------------------------------
+
+
+async def test_meet_requested_survives_a_failed_push(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    """`meet_url` only exists after Google answered — the intent has to come
+    back on its own so a retry after a failed push still asks for a Meet."""
+    fake_gcal.insert_returns_no_id = True
+    org, stage = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org)
+    await _seed_connection(db_session, user)
+    deal = await _seed_deal(db_session, org, stage)
+
+    created = await client.post(
+        EVENTS, json=_body(deal, add_to_google=True, meet_requested=True), headers=_auth(user)
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["google_sync_status"] == "error"
+    assert created.json()["meet_requested"] is True
+    assert created.json()["meet_url"] is None
+
+    listed = await client.get(EVENTS, headers=_auth(user))
+    item = next(item for item in listed.json()["items"] if item["id"] == created.json()["id"])
+    assert item["meet_requested"] is True
+
+    dropped = await client.put(
+        f"{EVENTS}/{created.json()['id']}", json={"meet_requested": False}, headers=_auth(user)
+    )
+    assert dropped.status_code == 200, dropped.text
+    assert dropped.json()["meet_requested"] is False
+
+
+async def test_patch_404_reinsert_rerequests_the_meet_conference(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    """The user deleted the Google copy: the re-insert has to forget the dead
+    `meet_url` too, or the fresh event lands without a conference while the
+    CRM still advertises the old link."""
+    org, stage = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org)
+    await _seed_connection(db_session, user)
+    deal = await _seed_deal(db_session, org, stage)
+
+    created = await client.post(
+        EVENTS, json=_body(deal, add_to_google=True, meet_requested=True), headers=_auth(user)
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["meet_url"] == MEET_URL
+    event_id = created.json()["id"]
+
+    fake_gcal.patch_raises_404 = True
+    fake_gcal.next_event_id = "gev-2"
+    reinserted = await client.put(
+        f"{EVENTS}/{event_id}", json={"title": "Nový název"}, headers=_auth(user)
+    )
+    assert reinserted.status_code == 200, reinserted.text
+    assert reinserted.json()["google_event_id"] == "gev-2"
+    assert reinserted.json()["meet_url"] == MEET_URL
+
+    first, second = fake_gcal.inserted[0], fake_gcal.inserted[1]
+    assert "conferenceData" in second
+    assert (
+        second["conferenceData"]["createRequest"]["requestId"]
+        != first["conferenceData"]["createRequest"]["requestId"]
+    )
+
+
+async def test_untick_google_clears_the_meet_link_and_notifies_attendees(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    org, stage = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org)
+    await _seed_connection(db_session, user)
+    deal = await _seed_deal(db_session, org, stage)
+
+    created = await client.post(
+        EVENTS, json=_body(deal, add_to_google=True, meet_requested=True), headers=_auth(user)
+    )
+    assert created.status_code == 201, created.text
+    event_id = created.json()["id"]
+
+    unticked = await client.put(
+        f"{EVENTS}/{event_id}", json={"add_to_google": False}, headers=_auth(user)
+    )
+    assert unticked.status_code == 200, unticked.text
+    assert unticked.json()["google_event_id"] is None
+    assert unticked.json()["meet_url"] is None
+    assert fake_gcal.delete_params == [{"sendUpdates": "all"}]
+
+    fake_gcal.next_event_id = "gev-2"
+    reticked = await client.put(
+        f"{EVENTS}/{event_id}", json={"add_to_google": True}, headers=_auth(user)
+    )
+    assert reticked.status_code == 200, reticked.text
+    assert reticked.json()["meet_url"] == MEET_URL
+    assert "conferenceData" in fake_gcal.inserted[1]
+
+
+async def test_delete_event_asks_google_to_notify_attendees(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    org, stage = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org)
+    await _seed_connection(db_session, user)
+    deal = await _seed_deal(db_session, org, stage)
+
+    created = await client.post(EVENTS, json=_body(deal, add_to_google=True), headers=_auth(user))
+    assert created.status_code == 201, created.text
+
+    removed = await client.delete(f"{EVENTS}/{created.json()['id']}", headers=_auth(user))
+    assert removed.status_code == 204
+    assert fake_gcal.deleted == ["gev-1"]
+    assert fake_gcal.delete_params == [{"sendUpdates": "all"}]
+
+
+# input caps + null tolerance --------------------------------------------------
+
+
+def test_attendee_lists_are_capped() -> None:
+    ids = [str(uuid.uuid4()) for _ in range(101)]
+    with pytest.raises(ValidationError):
+        CalendarEventCreate(**_base(attendee_contact_ids=ids))
+    with pytest.raises(ValidationError):
+        CalendarEventCreate(**_base(attendee_user_ids=ids))
+    with pytest.raises(ValidationError):
+        CalendarEventUpdate(attendee_contact_ids=ids)
+    with pytest.raises(ValidationError):
+        CalendarEventUpdate(attendee_user_ids=ids)
+
+
+async def test_update_event_tolerates_explicit_null_flags(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    """`all_day`/`meet_requested` back NOT NULL columns — an explicit JSON
+    null must leave them alone, not blow up with an IntegrityError."""
+    org, stage = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org)
+    deal = await _seed_deal(db_session, org, stage)
+
+    day = datetime(2026, 9, 1, tzinfo=UTC)
+    created = await client.post(
+        EVENTS,
+        json=_body(
+            deal,
+            starts_at=day.isoformat(),
+            ends_at=(day + timedelta(days=1)).isoformat(),
+            all_day=True,
+            meet_requested=True,
+        ),
+        headers=_auth(user),
+    )
+    assert created.status_code == 201, created.text
+
+    kept = await client.put(
+        f"{EVENTS}/{created.json()['id']}",
+        json={"all_day": None, "meet_requested": None},
+        headers=_auth(user),
+    )
+    assert kept.status_code == 200, kept.text
+    assert kept.json()["all_day"] is True
+    assert kept.json()["meet_requested"] is True
+
+
+async def test_attendee_resolution_rejects_a_deactivated_teammate(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    fake_gcal: FakeGoogleCalendarClient,
+) -> None:
+    org, stage = await _seed_org(db_session, owned_cleanup)
+    user = await _seed_user(db_session, owned_cleanup, org)
+    gone = await _seed_user(
+        db_session, owned_cleanup, org, role=UserRole.salesperson, name="Bývalý"
+    )
+    gone.is_active = False
+    await db_session.commit()
+    deal = await _seed_deal(db_session, org, stage)
+
+    response = await client.post(
+        EVENTS, json=_body(deal, attendee_user_ids=[str(gone.id)]), headers=_auth(user)
+    )
+    assert response.status_code == 400, response.text
+    assert response.json()["detail"] == (
+        "attendee ids contain an id that does not exist in your organization"
+    )

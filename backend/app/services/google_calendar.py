@@ -96,7 +96,13 @@ class GoogleCalendarClient(Protocol):
         params: dict[str, str] | None = None,
     ) -> dict[str, Any]: ...
 
-    async def delete_event(self, access_token: str, event_id: str) -> None: ...
+    async def delete_event(
+        self,
+        access_token: str,
+        event_id: str,
+        *,
+        params: dict[str, str] | None = None,
+    ) -> None: ...
 
 
 def event_payload(
@@ -343,11 +349,18 @@ class HttpGoogleCalendarClient:
         body: dict[str, Any] = response.json()
         return body
 
-    async def delete_event(self, access_token: str, event_id: str) -> None:
+    async def delete_event(
+        self,
+        access_token: str,
+        event_id: str,
+        *,
+        params: dict[str, str] | None = None,
+    ) -> None:
         response = await self._request(
             "DELETE",
             f"{GCAL_EVENTS_URL}/{event_id}",
             headers={"Authorization": f"Bearer {access_token}"},
+            params=params or {},
         )
         if response.status_code in (404, 410):
             return  # already gone — that's the outcome we wanted

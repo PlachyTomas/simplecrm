@@ -28,6 +28,7 @@ const TIMED_EVENT: CalendarEventOut = {
   google_event_id: null,
   google_sync_status: "not_synced",
   meet_url: "https://meet.google.com/abc-defg-hij",
+  meet_requested: true,
   labels: [],
   attendees: [
     { id: "k1", kind: "contact", name: "Jana Malá", email: "jana@acme.cz" },
@@ -55,6 +56,7 @@ const ALL_DAY_EVENT: CalendarEventOut = {
   google_event_id: null,
   google_sync_status: "not_synced",
   meet_url: null,
+  meet_requested: false,
   labels: [],
   attendees: [],
   created_at: "2026-01-01T10:00:00Z",

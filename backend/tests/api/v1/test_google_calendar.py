@@ -89,7 +89,9 @@ class FakeGoogleCalendarClient:
     ) -> dict[str, Any]:
         return {"id": event_id}
 
-    async def delete_event(self, access_token: str, event_id: str) -> None: ...
+    async def delete_event(
+        self, access_token: str, event_id: str, *, params: dict[str, str] | None = None
+    ) -> None: ...
 
 
 @pytest.fixture

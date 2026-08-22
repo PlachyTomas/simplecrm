@@ -75,6 +75,9 @@ _EVENT_LOADS = (
 # `conferenceDataVersion` keeps (or creates) the Meet conference.
 _SYNC_PARAMS = {"sendUpdates": "all", "conferenceDataVersion": "1"}
 
+# A cancellation reaches the attendees only when Google is told to mail it.
+_DELETE_PARAMS = {"sendUpdates": "all"}
+
 
 def _label_briefs(labels: Iterable[EventLabel]) -> list[EventLabelBrief]:
     """Snapshot label rows into plain schema objects, name-ordered.
@@ -146,6 +149,7 @@ def _event_out(
         reminders=[EventReminder.model_validate(item) for item in event.reminders],
         google_event_id=event.google_event_id,
         google_sync_status=event.google_sync_status,
+        meet_requested=event.meet_requested,
         meet_url=event.meet_url,
         labels=list(labels),
         attendees=list(attendees),
@@ -234,21 +238,17 @@ async def _org_subjects[Subject: (Contact, User)](
     """Rows of `model` inside the org — the shared half of the attendee
     lookup, since a contact and a teammate are scoped identically. A caller
     without an organization matches nothing: `== None` renders as `IS NULL`,
-    which would hand them every other org-less user."""
+    which would hand them every other org-less user. Deactivated teammates
+    are invisible here too — they've left, inviting them is a mistake."""
     if not ids or organization_id is None:
         return []
-    return list(
-        (
-            await session.execute(
-                select(model).where(
-                    model.organization_id == organization_id,
-                    model.id.in_(ids),
-                )
-            )
-        )
-        .scalars()
-        .all()
+    stmt = select(model).where(
+        model.organization_id == organization_id,
+        model.id.in_(ids),
     )
+    if model is User:
+        stmt = stmt.where(User.is_active.is_(True))
+    return list((await session.execute(stmt)).scalars().all())
 
 
 async def _resolve_attendees(
@@ -323,7 +323,9 @@ def _google_body(event: CalendarEvent) -> dict[str, object]:
         reminders=tuple(event.reminders),
         attendees=tuple(attendees),
         create_meet=event.meet_requested and event.meet_url is None,
-        meet_request_id=str(event.id),
+        # Fresh per call: Google dedupes a repeated createRequest id, so a
+        # retried push against a stable id would come back without a Meet.
+        meet_request_id=str(uuid.uuid4()),
     )
 
 
@@ -333,6 +335,14 @@ def _capture_meet_link(event: CalendarEvent, body: dict[str, Any]) -> None:
     Storing it is also what stops `_google_body` re-requesting a Meet."""
     if body.get("hangoutLink"):
         event.meet_url = body["hangoutLink"]
+
+
+def _forget_google_copy(event: CalendarEvent) -> None:
+    """Both halves of the Google link die together: `meet_url` is what gates
+    the conference request, so a leftover link would have the next insert
+    re-create the event without a Meet while the CRM shows the dead one."""
+    event.google_event_id = None
+    event.meet_url = None
 
 
 async def _sync_insert(
@@ -378,7 +388,7 @@ async def _sync_patch(
         event.google_sync_status = GoogleSyncStatus.synced
     except (GoogleCalendarError, TokenDecryptError) as exc:
         if isinstance(exc, GoogleCalendarError) and exc.http_status == 404:
-            event.google_event_id = None
+            _forget_google_copy(event)
             await _sync_insert(session, event, connection, client)
             return
         event.google_sync_status = GoogleSyncStatus.error
@@ -395,7 +405,7 @@ async def _sync_delete(
         return
     try:
         token = await get_valid_access_token(session, connection, client)
-        await client.delete_event(token, event.google_event_id)
+        await client.delete_event(token, event.google_event_id, params=_DELETE_PARAMS)
     except (GoogleCalendarError, TokenDecryptError):
         pass
 
@@ -563,10 +573,19 @@ async def update_event(
             "reminders",
             "attendee_contact_ids",
             "attendee_user_ids",
+            "all_day",
+            "meet_requested",
         },
     )
     for key, value in fields.items():
         setattr(event, key, value)
+
+    # Both back NOT NULL columns, so they leave the blind setattr loop: an
+    # explicit JSON null means "leave it alone", not an IntegrityError.
+    if payload.all_day is not None:
+        event.all_day = payload.all_day
+    if payload.meet_requested is not None:
+        event.meet_requested = payload.meet_requested
 
     if payload.reminders is not None:
         event.reminders = [reminder.model_dump() for reminder in payload.reminders]
@@ -637,7 +656,7 @@ async def update_event(
             await _sync_patch(session, event, connection, client)
     elif not desired_synced and currently_synced:
         await _sync_delete(session, event, connection, client)
-        event.google_event_id = None
+        _forget_google_copy(event)
         event.google_sync_status = GoogleSyncStatus.not_synced
 
     await session.commit()

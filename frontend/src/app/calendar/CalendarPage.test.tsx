@@ -27,6 +27,9 @@ function todayAt(hour: number): string {
 }
 
 const TODAY = localToday();
+/** The exclusive next UTC midnight — the DB CHECK forbids ends_at == starts_at. */
+const TOMORROW_UTC = new Date(`${TODAY}T00:00:00.000Z`);
+TOMORROW_UTC.setUTCDate(TOMORROW_UTC.getUTCDate() + 1);
 
 const TIMED_EVENT: CalendarEventOut = {
   id: "e1",
@@ -46,6 +49,7 @@ const TIMED_EVENT: CalendarEventOut = {
   google_event_id: null,
   google_sync_status: "not_synced",
   meet_url: "https://meet.google.com/abc-defg-hij",
+  meet_requested: true,
   labels: [],
   attendees: [
     { id: "k1", kind: "contact", name: "Jana Malá", email: "jana@acme.cz" },
@@ -67,12 +71,13 @@ const ALL_DAY_EVENT: CalendarEventOut = {
   description: null,
   location: null,
   starts_at: `${TODAY}T00:00:00.000Z`,
-  ends_at: `${TODAY}T00:00:00.000Z`,
+  ends_at: TOMORROW_UTC.toISOString(),
   all_day: true,
   reminders: [],
   google_event_id: null,
   google_sync_status: "not_synced",
   meet_url: null,
+  meet_requested: false,
   labels: [],
   attendees: [],
   created_at: "2026-01-01T10:00:00Z",
@@ -142,8 +147,13 @@ function wrap(ui: React.ReactNode) {
 const fetchMock = vi.fn<typeof fetch>();
 const originalFetch = globalThis.fetch;
 
+// Timed event listed first — the row order assertions only pass if the
+// component itself sorts all-day events to the top.
+let events: CalendarEventOut[] = [];
+
 function installFetchMock() {
   fetchMock.mockReset();
+  events = [TIMED_EVENT, ALL_DAY_EVENT];
   globalThis.fetch = fetchMock as unknown as typeof fetch;
   fetchMock.mockImplementation(async (input) => {
     const url = typeof input === "string" ? input : (input as Request).url;
@@ -151,11 +161,9 @@ function installFetchMock() {
       return jsonResponse({ connected: false, sync_broken: false });
     }
     if (url.includes("/api/v1/events")) {
-      // Timed event listed first — the row order assertions only pass if
-      // the component itself sorts all-day events to the top.
       return jsonResponse({
-        items: [TIMED_EVENT, ALL_DAY_EVENT],
-        total: 2,
+        items: events,
+        total: events.length,
         limit: 200,
         offset: 0,
       });
@@ -217,5 +225,39 @@ describe("CalendarPage day panel", () => {
     await userEvent.click(row);
     expect(await screen.findByRole("heading", { name: "Upravit událost" })).toBeInTheDocument();
     expect(screen.getByDisplayValue("Schůzka")).toBeInTheDocument();
+  });
+});
+
+describe("CalendarPage all-day bucketing", () => {
+  const originalTz = process.env.TZ;
+
+  beforeEach(installFetchMock);
+
+  afterEach(() => {
+    process.env.TZ = originalTz;
+    globalThis.fetch = originalFetch;
+  });
+
+  it("shows an all-day event on its UTC date west of Greenwich", async () => {
+    process.env.TZ = "America/New_York";
+    const today = localToday();
+    const tomorrow = new Date(`${today}T00:00:00.000Z`);
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    // Its UTC midnight falls on the previous local day here — a local-day
+    // bucket would file it under yesterday and the panel would look empty.
+    events = [
+      {
+        ...ALL_DAY_EVENT,
+        starts_at: `${today}T00:00:00.000Z`,
+        ends_at: tomorrow.toISOString(),
+      },
+    ];
+
+    wrap(<CalendarPage />);
+    const dayPanel = await screen.findByLabelText("Detail vybraného dne");
+
+    expect(
+      await within(dayPanel).findByTestId(testIds.calendar.dayEventRow("e2")),
+    ).toBeInTheDocument();
   });
 });

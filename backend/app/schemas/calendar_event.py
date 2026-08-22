@@ -44,8 +44,8 @@ class CalendarEventCreate(BaseModel):
     all_day: bool = False
     reminders: list[EventReminder] = Field(default_factory=list, max_length=5)
     meet_requested: bool = False
-    attendee_contact_ids: list[uuid.UUID] = Field(default_factory=list)
-    attendee_user_ids: list[uuid.UUID] = Field(default_factory=list)
+    attendee_contact_ids: list[uuid.UUID] = Field(default_factory=list, max_length=100)
+    attendee_user_ids: list[uuid.UUID] = Field(default_factory=list, max_length=100)
 
     @model_validator(mode="after")
     def _ends_after_starts(self) -> CalendarEventCreate:
@@ -73,8 +73,8 @@ class CalendarEventUpdate(BaseModel):
     meet_requested: bool | None = None
     # Tri-state on `exclude_unset` like `label_ids`: absent = attendees
     # unchanged, `[]` = clear them all, a list = replace with exactly those.
-    attendee_contact_ids: list[uuid.UUID] | None = None
-    attendee_user_ids: list[uuid.UUID] | None = None
+    attendee_contact_ids: list[uuid.UUID] | None = Field(default=None, max_length=100)
+    attendee_user_ids: list[uuid.UUID] | None = Field(default=None, max_length=100)
 
 
 class CalendarEventOut(BaseModel):
@@ -98,6 +98,9 @@ class CalendarEventOut(BaseModel):
     reminders: list[EventReminder] = Field(default_factory=list)
     google_event_id: str | None
     google_sync_status: GoogleSyncStatus
+    # The user's intent, which outlives a failed push — `meet_url` alone would
+    # lose it whenever Google never answered with a link.
+    meet_requested: bool
     # Google's `hangoutLink`, captured on a successful insert — None until
     # (and unless) the event was pushed with `meet_requested`.
     meet_url: str | None

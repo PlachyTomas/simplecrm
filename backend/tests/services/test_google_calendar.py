@@ -276,6 +276,18 @@ async def test_delete_event_tolerates_missing_google_copy() -> None:
     await client.delete_event("at-1", "gev-already-gone")  # must not raise
 
 
+async def test_delete_event_forwards_query_params() -> None:
+    captured: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(204)
+
+    client = _client_with_handler(handler)
+    await client.delete_event("at-1", "gev-9", params={"sendUpdates": "all"})
+    assert captured[0].url.params["sendUpdates"] == "all"
+
+
 async def test_insert_event_expired_token_raises_auth_error() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(401, json={"error": {"code": 401}})

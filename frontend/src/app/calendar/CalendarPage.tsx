@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 
 import {
   dayKey,
+  eventDayKey,
   gridRange,
   monthGrid,
   shiftMonth,
@@ -255,7 +256,7 @@ export function CalendarPage() {
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarEventOut[]>();
     for (const event of data?.items ?? []) {
-      const key = dayKey(event.starts_at);
+      const key = eventDayKey(event);
       const bucket = map.get(key);
       if (bucket) bucket.push(event);
       else map.set(key, [event]);

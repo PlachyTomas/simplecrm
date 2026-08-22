@@ -104,7 +104,9 @@ class FakeGoogleCalendarClient:
         self.patch_params.append(params)
         return {"id": event_id}
 
-    async def delete_event(self, access_token: str, event_id: str) -> None:
+    async def delete_event(
+        self, access_token: str, event_id: str, *, params: dict[str, str] | None = None
+    ) -> None:
         self.deleted.append(event_id)
 
 

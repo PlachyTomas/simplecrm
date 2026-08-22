@@ -137,6 +137,7 @@ const ALL_DAY_EVENT: CalendarEventOut = {
   google_event_id: "g1",
   google_sync_status: "synced",
   meet_url: "https://meet.google.com/abc-defg-hij",
+  meet_requested: true,
   labels: [],
   attendees: [{ id: "k1", kind: "contact", name: "Jana Malá", email: "jana@acme.cz" }],
   created_at: "2026-01-01T10:00:00Z",
@@ -755,7 +756,6 @@ describe("EventFormModal edit prefill", () => {
     expect(screen.getByTestId(testIds.events.attendeePicker.chip("k1"))).toHaveTextContent(
       "Jana Malá",
     );
-    // `meet_requested` never comes back on the event — an existing link is the tell.
     expect(await screen.findByTestId(testIds.events.meetToggle)).toBeChecked();
 
     await userEvent.click(screen.getByRole("button", { name: "Uložit změny" }));
@@ -769,5 +769,26 @@ describe("EventFormModal edit prefill", () => {
       attendee_contact_ids: ["k1"],
       attendee_user_ids: [],
     });
+  });
+
+  it("keeps the Meet intent after a push that never produced a link", async () => {
+    setGoogleStatus({ connected: true, sync_broken: false });
+    const onClose = vi.fn();
+    const failed: CalendarEventOut = {
+      ...ALL_DAY_EVENT,
+      google_event_id: null,
+      google_sync_status: "error",
+      meet_url: null,
+    };
+    wrap(<EventFormModal open onClose={onClose} event={failed} />);
+
+    const meet = await screen.findByTestId(testIds.events.meetToggle);
+    expect(meet).toBeChecked();
+    // No conference exists yet, so the retry is still the user's to cancel.
+    expect(meet).toBeEnabled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Uložit změny" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(lastBody("PUT", "/api/v1/events/e1")).toMatchObject({ meet_requested: true });
   });
 });

@@ -244,10 +244,9 @@ export function EventFormModal({
           id: attendee.id,
           name: attendee.name,
         })),
-        // `meet_requested` doesn't come back on the event — an existing link
-        // is the tell. A requested-but-not-yet-created Meet resolves on the
-        // next save, which is what the backend does with the flag anyway.
-        meetRequested: event.meet_url != null,
+        // The link alone would lose the intent whenever the push failed
+        // before Google ever answered with one.
+        meetRequested: event.meet_requested || event.meet_url != null,
       };
       setTitle(prefill.title);
       setDate(prefill.date);

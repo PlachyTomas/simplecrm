@@ -4754,6 +4754,8 @@ export interface components {
             /** Google Event Id */
             google_event_id: string | null;
             google_sync_status: components["schemas"]["GoogleSyncStatus"];
+            /** Meet Requested */
+            meet_requested: boolean;
             /** Meet Url */
             meet_url: string | null;
             /** Labels */
