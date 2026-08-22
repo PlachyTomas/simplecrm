@@ -28,7 +28,7 @@ Two setups — detect with `command -v docker`:
 
 Gotchas that WILL bite otherwise:
 
-- macOS only: `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib` is required for ANY process importing the backend (uvicorn, pytest, alembic, scripts) — WeasyPrint needs Homebrew glib; without it: `OSError: cannot load library 'libgobject-2.0-0'`. Not needed on Linux.
+- macOS only: `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib` is required for ANY process importing the backend (uvicorn, pytest, alembic, scripts) — WeasyPrint needs Homebrew glib; without it: `OSError: cannot load library 'libgobject-2.0-0'`. Not needed on Linux. SIP strips `DYLD_*` through protected binaries — launching uvicorn via `nohup` loses the var and crashes on the WeasyPrint import; background with plain `&` instead.
 - Backend tests in host mode need the same `DATABASE_URL`/`POSTGRES_HOST` env as uvicorn. A plain `uv run pytest` fails ~485 tests with DB-connection noise that looks like real failures — it isn't.
 - Regenerate API types via the running server: `BACKEND_OPENAPI_URL=http://localhost:8000/api/v1/openapi.json pnpm types:generate` (default mode imports the backend in-process → same macOS glib crash).
 - App login + seeded demo data for UI verification: see `.claude/skills/running-simplecrm/SKILL.md`.
