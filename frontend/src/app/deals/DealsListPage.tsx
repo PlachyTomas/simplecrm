@@ -247,7 +247,11 @@ export function DealsListPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkLoseOpen, setBulkLoseOpen] = useState(false);
   // Warning cell in the "Další krok" column doubles as the fix — click → event form.
-  const [schedulingDeal, setSchedulingDeal] = useState<{ id: string; name: string } | null>(null);
+  const [schedulingDeal, setSchedulingDeal] = useState<{
+    id: string;
+    name: string;
+    companyId: string;
+  } | null>(null);
   const [bulkPending, setBulkPending] = useState(false);
   const bulkLose = useMarkAnyDealLost();
   const toast = useToast();
@@ -596,7 +600,11 @@ export function DealsListPage() {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSchedulingDeal({ id: deal.id, name: deal.name });
+                                setSchedulingDeal({
+                                  id: deal.id,
+                                  name: deal.name,
+                                  companyId: deal.company_id,
+                                });
                               }}
                               className="font-medium text-warning underline-offset-2 hover:underline"
                             >
@@ -666,6 +674,7 @@ export function DealsListPage() {
           onClose={() => setSchedulingDeal(null)}
           dealId={schedulingDeal.id}
           dealName={schedulingDeal.name}
+          companyId={schedulingDeal.companyId}
         />
       ) : null}
       <MarkLostDialog

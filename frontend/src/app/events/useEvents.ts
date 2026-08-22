@@ -13,6 +13,8 @@ export type CalendarEventOut = components["schemas"]["CalendarEventOut"];
 export type CalendarEventCreate = components["schemas"]["CalendarEventCreate"];
 export type CalendarEventUpdate = components["schemas"]["CalendarEventUpdate"];
 export type EventsPage = components["schemas"]["Page_CalendarEventOut_"];
+export type AttendeeBrief = components["schemas"]["AttendeeBrief"];
+export type EventReminder = components["schemas"]["EventReminder"];
 
 export interface UseEventsOptions {
   /** ISO datetime — events overlapping [from, to) */

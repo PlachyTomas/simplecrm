@@ -126,7 +126,15 @@ export function DealQuickActionsModal({ deal, open, onClose }: DealQuickActionsM
   }
 
   if (view === "event") {
-    return <EventFormModal open onClose={onClose} dealId={deal.id} dealName={deal.name} />;
+    return (
+      <EventFormModal
+        open
+        onClose={onClose}
+        dealId={deal.id}
+        dealName={deal.name}
+        companyId={deal.company_id}
+      />
+    );
   }
 
   // Activity-based selling: completing an activity is the moment to plan

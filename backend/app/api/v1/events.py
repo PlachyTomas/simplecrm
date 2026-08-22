@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Iterable, Sequence
-from typing import Annotated, TypeGuard
+from typing import Annotated, Any, TypeGuard
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import AwareDatetime
@@ -32,6 +32,8 @@ from app.db.models import (
     ActivityEntityType,
     ActivityType,
     CalendarEvent,
+    CalendarEventAttendee,
+    Contact,
     Deal,
     EventLabel,
     GoogleCalendarConnection,
@@ -40,9 +42,11 @@ from app.db.models import (
     UserRole,
 )
 from app.schemas.calendar_event import (
+    AttendeeBrief,
     CalendarEventCreate,
     CalendarEventOut,
     CalendarEventUpdate,
+    EventReminder,
 )
 from app.schemas.event_label import EventLabelBrief
 from app.schemas.pagination import Page, PaginationParams
@@ -63,7 +67,16 @@ router = APIRouter(prefix="/events", tags=["events"])
 _EVENT_LOADS = (
     selectinload(CalendarEvent.deal).selectinload(Deal.company),
     selectinload(CalendarEvent.labels),
+    selectinload(CalendarEvent.attendees).selectinload(CalendarEventAttendee.contact),
+    selectinload(CalendarEvent.attendees).selectinload(CalendarEventAttendee.user),
 )
+
+# Google needs both on every insert/patch: `sendUpdates` mails the invites,
+# `conferenceDataVersion` keeps (or creates) the Meet conference.
+_SYNC_PARAMS = {"sendUpdates": "all", "conferenceDataVersion": "1"}
+
+# A cancellation reaches the attendees only when Google is told to mail it.
+_DELETE_PARAMS = {"sendUpdates": "all"}
 
 
 def _label_briefs(labels: Iterable[EventLabel]) -> list[EventLabelBrief]:
@@ -77,6 +90,24 @@ def _label_briefs(labels: Iterable[EventLabel]) -> list[EventLabelBrief]:
         EventLabelBrief(id=label.id, name=label.name, color=label.color)
         for label in sorted(labels, key=lambda label: label.name)
     ]
+
+
+def _attendee_briefs(attendees: Iterable[CalendarEventAttendee]) -> list[AttendeeBrief]:
+    """Snapshot attendee rows into plain schema objects, name-ordered — same
+    pre-commit copy as `_label_briefs`. The brief carries the *subject's* id
+    (contact/user), never the join row's: the UI selects subjects."""
+    briefs: list[AttendeeBrief] = []
+    for row in attendees:
+        if row.contact is not None:
+            name = f"{row.contact.first_name} {row.contact.last_name}".strip()
+            briefs.append(
+                AttendeeBrief(id=row.contact.id, kind="contact", name=name, email=row.contact.email)
+            )
+        elif row.user is not None:
+            briefs.append(
+                AttendeeBrief(id=row.user.id, kind="user", name=row.user.name, email=row.user.email)
+            )
+    return sorted(briefs, key=lambda brief: brief.name)
 
 
 def _deal_display(deal: Deal | None) -> tuple[str | None, uuid.UUID | None, str | None]:
@@ -95,10 +126,12 @@ def _event_out(
     company_id: uuid.UUID | None = None,
     company_name: str | None = None,
     labels: Sequence[EventLabelBrief] = (),
+    attendees: Sequence[AttendeeBrief] = (),
 ) -> CalendarEventOut:
-    """`deal_name`, the company pair and `labels` are passed explicitly —
-    accessing `event.deal` / `event.labels` after a commit can trigger an
-    async lazy-load, which raises MissingGreenlet."""
+    """`deal_name`, the company pair, `labels` and `attendees` are passed
+    explicitly — accessing `event.deal` / `event.labels` / `event.attendees`
+    after a commit can trigger an async lazy-load, which raises
+    MissingGreenlet."""
     return CalendarEventOut(
         id=event.id,
         organization_id=event.organization_id,
@@ -112,9 +145,14 @@ def _event_out(
         location=event.location,
         starts_at=event.starts_at,
         ends_at=event.ends_at,
+        all_day=event.all_day,
+        reminders=[EventReminder.model_validate(item) for item in event.reminders],
         google_event_id=event.google_event_id,
         google_sync_status=event.google_sync_status,
+        meet_requested=event.meet_requested,
+        meet_url=event.meet_url,
         labels=list(labels),
+        attendees=list(attendees),
         created_at=event.created_at,
         updated_at=event.updated_at,
     )
@@ -191,6 +229,55 @@ async def _resolve_labels(
     return rows
 
 
+async def _org_subjects[Subject: (Contact, User)](
+    session: AsyncSession,
+    model: type[Subject],
+    organization_id: uuid.UUID | None,
+    ids: Sequence[uuid.UUID],
+) -> list[Subject]:
+    """Rows of `model` inside the org — the shared half of the attendee
+    lookup, since a contact and a teammate are scoped identically. A caller
+    without an organization matches nothing: `== None` renders as `IS NULL`,
+    which would hand them every other org-less user. Deactivated teammates
+    are invisible here too — they've left, inviting them is a mistake."""
+    if not ids or organization_id is None:
+        return []
+    stmt = select(model).where(
+        model.organization_id == organization_id,
+        model.id.in_(ids),
+    )
+    if model is User:
+        stmt = stmt.where(User.is_active.is_(True))
+    return list((await session.execute(stmt)).scalars().all())
+
+
+async def _resolve_attendees(
+    session: AsyncSession,
+    user: User,
+    contact_ids: Sequence[uuid.UUID],
+    user_ids: Sequence[uuid.UUID],
+) -> list[CalendarEventAttendee]:
+    """Unsaved attendee rows for the given subjects, or 400 — same
+    org-scoping and same deliberate ambiguity as `_resolve_labels`.
+
+    The `contact` / `user` relationship is assigned alongside the row so
+    `_attendee_briefs` and the Google payload can read the subject before
+    the commit expires everything.
+    """
+    wanted_contacts = list(dict.fromkeys(contact_ids))
+    wanted_users = list(dict.fromkeys(user_ids))
+    contacts = await _org_subjects(session, Contact, user.organization_id, wanted_contacts)
+    teammates = await _org_subjects(session, User, user.organization_id, wanted_users)
+    if len(contacts) != len(wanted_contacts) or len(teammates) != len(wanted_users):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="attendee ids contain an id that does not exist in your organization",
+        )
+    return [CalendarEventAttendee(contact=contact) for contact in contacts] + [
+        CalendarEventAttendee(user=teammate) for teammate in teammates
+    ]
+
+
 def _assert_can_modify(user: User, event: CalendarEvent) -> None:
     """Owner or admin. Visibility (manager/teammate) grants read, not write —
     the Google copy lives in the owner's calendar, so edits are theirs."""
@@ -217,13 +304,45 @@ async def _owner_connection(
 
 
 def _google_body(event: CalendarEvent) -> dict[str, object]:
+    """Google copy of the event. Attendees join live off the loaded rows —
+    an attendee Google can't reach (no email) is left out rather than sent
+    as an anonymous entry. A Meet link is requested once: a re-run over an
+    event that already has one would replace the existing conference."""
+    attendees = [
+        {"email": brief.email, "displayName": brief.name}
+        for brief in _attendee_briefs(event.attendees)
+        if brief.email
+    ]
     return event_payload(
         title=event.title,
         description=event.description,
         location=event.location,
         starts_at=event.starts_at,
         ends_at=event.ends_at,
+        all_day=event.all_day,
+        reminders=tuple(event.reminders),
+        attendees=tuple(attendees),
+        create_meet=event.meet_requested and event.meet_url is None,
+        # Fresh per call: Google dedupes a repeated createRequest id, so a
+        # retried push against a stable id would come back without a Meet.
+        meet_request_id=str(uuid.uuid4()),
     )
+
+
+def _capture_meet_link(event: CalendarEvent, body: dict[str, Any]) -> None:
+    """Both an insert and a patch can be the call that creates the conference,
+    and both answer with the event resource — so both are read for the link.
+    Storing it is also what stops `_google_body` re-requesting a Meet."""
+    if body.get("hangoutLink"):
+        event.meet_url = body["hangoutLink"]
+
+
+def _forget_google_copy(event: CalendarEvent) -> None:
+    """Both halves of the Google link die together: `meet_url` is what gates
+    the conference request, so a leftover link would have the next insert
+    re-create the event without a Meet while the CRM shows the dead one."""
+    event.google_event_id = None
+    event.meet_url = None
 
 
 async def _sync_insert(
@@ -235,10 +354,18 @@ async def _sync_insert(
     """Push a fresh Google copy. Failures mark the event `error` — never raise."""
     try:
         token = await get_valid_access_token(session, connection, client)
-        event.google_event_id = await client.insert_event(token, _google_body(event))
-        event.google_sync_status = GoogleSyncStatus.synced
+        body = await client.insert_event(token, _google_body(event), params=_SYNC_PARAMS)
     except (GoogleCalendarError, TokenDecryptError):
         event.google_sync_status = GoogleSyncStatus.error
+        return
+    google_event_id = body.get("id")
+    if not google_event_id:
+        # An insert we can't link back to is a failed push, not a synced event.
+        event.google_sync_status = GoogleSyncStatus.error
+        return
+    event.google_event_id = google_event_id
+    _capture_meet_link(event, body)
+    event.google_sync_status = GoogleSyncStatus.synced
 
 
 async def _sync_patch(
@@ -254,11 +381,14 @@ async def _sync_patch(
         return
     try:
         token = await get_valid_access_token(session, connection, client)
-        await client.patch_event(token, event.google_event_id, _google_body(event))
+        body = await client.patch_event(
+            token, event.google_event_id, _google_body(event), params=_SYNC_PARAMS
+        )
+        _capture_meet_link(event, body)
         event.google_sync_status = GoogleSyncStatus.synced
     except (GoogleCalendarError, TokenDecryptError) as exc:
         if isinstance(exc, GoogleCalendarError) and exc.http_status == 404:
-            event.google_event_id = None
+            _forget_google_copy(event)
             await _sync_insert(session, event, connection, client)
             return
         event.google_sync_status = GoogleSyncStatus.error
@@ -275,7 +405,7 @@ async def _sync_delete(
         return
     try:
         token = await get_valid_access_token(session, connection, client)
-        await client.delete_event(token, event.google_event_id)
+        await client.delete_event(token, event.google_event_id, params=_DELETE_PARAMS)
     except (GoogleCalendarError, TokenDecryptError):
         pass
 
@@ -333,6 +463,7 @@ async def list_events(
                 company_id=company_id,
                 company_name=company_name,
                 labels=_label_briefs(event.labels),
+                attendees=_attendee_briefs(event.attendees),
             )
         )
     return Page(
@@ -352,6 +483,9 @@ async def create_event(
 ) -> CalendarEventOut:
     deal = await _get_visible_deal(session, user, payload.deal_id) if payload.deal_id else None
     labels = await _resolve_labels(session, user, payload.label_ids)
+    attendees = await _resolve_attendees(
+        session, user, payload.attendee_contact_ids, payload.attendee_user_ids
+    )
 
     event = CalendarEvent(
         organization_id=user.organization_id,
@@ -362,7 +496,11 @@ async def create_event(
         location=payload.location,
         starts_at=payload.starts_at,
         ends_at=payload.ends_at,
+        all_day=payload.all_day,
+        reminders=[reminder.model_dump() for reminder in payload.reminders],
+        meet_requested=payload.meet_requested,
         labels=labels,
+        attendees=attendees,
     )
     session.add(event)
     await session.flush()
@@ -370,6 +508,7 @@ async def create_event(
     # Snapshot every display value before the commit expires the instances.
     deal_name, company_id, company_name = _deal_display(deal)
     label_briefs = _label_briefs(labels)
+    attendee_briefs = _attendee_briefs(attendees)
 
     # Only a deal-linked event has somewhere to be logged: the activity feed
     # is keyed on an entity, and a free-standing event has no company either.
@@ -406,6 +545,7 @@ async def create_event(
         company_id=company_id,
         company_name=company_name,
         labels=label_briefs,
+        attendees=attendee_briefs,
     )
 
 
@@ -422,12 +562,33 @@ async def update_event(
     # Read before the commit expires the loaded instances.
     deal_name, company_id, company_name = _deal_display(event.deal)
     label_briefs = _label_briefs(event.labels)
+    attendee_briefs = _attendee_briefs(event.attendees)
 
     fields = payload.model_dump(
-        exclude_unset=True, exclude={"add_to_google", "deal_id", "label_ids"}
+        exclude_unset=True,
+        exclude={
+            "add_to_google",
+            "deal_id",
+            "label_ids",
+            "reminders",
+            "attendee_contact_ids",
+            "attendee_user_ids",
+            "all_day",
+            "meet_requested",
+        },
     )
     for key, value in fields.items():
         setattr(event, key, value)
+
+    # Both back NOT NULL columns, so they leave the blind setattr loop: an
+    # explicit JSON null means "leave it alone", not an IntegrityError.
+    if payload.all_day is not None:
+        event.all_day = payload.all_day
+    if payload.meet_requested is not None:
+        event.meet_requested = payload.meet_requested
+
+    if payload.reminders is not None:
+        event.reminders = [reminder.model_dump() for reminder in payload.reminders]
 
     # Labels are handled apart from the blind setattr loop for the same
     # reason deal_id is: the ids need the org check first. Absent = leave the
@@ -436,6 +597,27 @@ async def update_event(
         labels = await _resolve_labels(session, user, payload.label_ids)
         event.labels = labels
         label_briefs = _label_briefs(labels)
+
+    # Attendees are tri-state per list: an omitted list leaves that kind
+    # untouched, so contacts and teammates can be edited independently.
+    if payload.attendee_contact_ids is not None or payload.attendee_user_ids is not None:
+        kept = [
+            row
+            for row in event.attendees
+            if (payload.attendee_contact_ids is None or row.contact_id is None)
+            and (payload.attendee_user_ids is None or row.user_id is None)
+        ]
+        event.attendees = kept
+        # The orphan deletes must reach the DB before the replacements, or a
+        # re-added attendee trips the unique (event_id, subject) index.
+        await session.flush()
+        event.attendees = kept + await _resolve_attendees(
+            session,
+            user,
+            payload.attendee_contact_ids or [],
+            payload.attendee_user_ids or [],
+        )
+        attendee_briefs = _attendee_briefs(event.attendees)
 
     # deal_id is handled apart from the blind setattr loop: attaching a deal
     # has to go through the same visibility check as creating against one,
@@ -474,7 +656,7 @@ async def update_event(
             await _sync_patch(session, event, connection, client)
     elif not desired_synced and currently_synced:
         await _sync_delete(session, event, connection, client)
-        event.google_event_id = None
+        _forget_google_copy(event)
         event.google_sync_status = GoogleSyncStatus.not_synced
 
     await session.commit()
@@ -485,6 +667,7 @@ async def update_event(
         company_id=company_id,
         company_name=company_name,
         labels=label_briefs,
+        attendees=attendee_briefs,
     )
 
 

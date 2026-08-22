@@ -522,7 +522,12 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
           </>
         ) : null}
 
-        <DealEventsSection dealId={deal.id} dealName={deal.name} locale={locale} />
+        <DealEventsSection
+          dealId={deal.id}
+          dealName={deal.name}
+          companyId={deal.company_id}
+          locale={locale}
+        />
 
         <DealTodosSection dealId={deal.id} />
 

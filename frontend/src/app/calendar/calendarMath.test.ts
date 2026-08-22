@@ -1,6 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { dayKey, gridRange, monthGrid, shiftMonth, shiftWeek, weekGrid } from "./calendarMath";
+import {
+  dayKey,
+  eventDayKey,
+  gridRange,
+  monthGrid,
+  shiftMonth,
+  shiftWeek,
+  weekGrid,
+} from "./calendarMath";
 
 describe("monthGrid", () => {
   it("trims to exactly 4 weeks when a 28-day month starts on Monday", () => {
@@ -137,5 +145,27 @@ describe("dayKey", () => {
     const d = new Date(2026, 5, 12, 23, 30);
     expect(dayKey(d)).toBe("2026-06-12");
     expect(dayKey(d.toISOString())).toBe("2026-06-12");
+  });
+});
+
+describe("eventDayKey", () => {
+  const originalTz = process.env.TZ;
+
+  afterEach(() => {
+    process.env.TZ = originalTz;
+  });
+
+  it("buckets an all-day event by its UTC date, west of Greenwich too", () => {
+    process.env.TZ = "America/New_York";
+    const startsAt = "2026-03-01T00:00:00.000Z";
+    expect(dayKey(startsAt)).toBe("2026-02-28"); // what a local-day bucket would give
+    expect(eventDayKey({ starts_at: startsAt, all_day: true })).toBe("2026-03-01");
+  });
+
+  it("keeps a timed event on its local day", () => {
+    process.env.TZ = "America/New_York";
+    expect(eventDayKey({ starts_at: "2026-03-01T02:30:00.000Z", all_day: false })).toBe(
+      "2026-02-28",
+    );
   });
 });

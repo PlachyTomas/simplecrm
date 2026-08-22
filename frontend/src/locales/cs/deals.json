@@ -347,7 +347,12 @@
     "deleteAriaLabel": "Smazat událost {{title}}",
     "confirmDelete": "Smazat událost \"{{title}}\"?",
     "toastDeleted": "Událost smazána.",
-    "toastDeleteError": "Událost se nepodařilo smazat."
+    "toastDeleteError": "Událost se nepodařilo smazat.",
+    "allDayLabel": "Celý den",
+    "attendeeCount_one": "{{count}} účastník",
+    "attendeeCount_few": "{{count}} účastníci",
+    "attendeeCount_other": "{{count}} účastníků",
+    "meetLink": "Připojit se přes Google Meet"
   },
   "eventFormModal": {
     "titleCreate": "Naplánovat událost",
@@ -358,6 +363,7 @@
     "dateLabel": "Datum",
     "fromLabel": "Od",
     "toLabel": "Do",
+    "allDay": "Celý den",
     "locationLabel": "Místo (volitelné)",
     "descriptionLabel": "Popis (volitelné)",
     "labelsLabel": "Štítky (volitelné)",
@@ -389,6 +395,44 @@
       "creating": "Vytvářím…",
       "createError": "Štítek se nepodařilo vytvořit.",
       "remove": "Odebrat štítek {{name}}"
+    },
+    "attendees": {
+      "label": "Účastníci (volitelné)",
+      "placeholder": "Hledejte kontakt nebo kolegu…",
+      "hint": "Pozvánku pošle Google kalendář — jen účastníkům s e-mailem a jen když událost přidáte do propojeného Google kalendáře.",
+      "loading": "Načítání účastníků…",
+      "noMatch": "Nikdo neodpovídá hledání.",
+      "loadError": "Účastníky se nepodařilo načíst.",
+      "remove": "Odebrat účastníka {{name}}",
+      "kindUser": "Kolega",
+      "kindContact": "Kontakt"
+    },
+    "reminders": {
+      "title": "Připomenutí (volitelné)",
+      "add": "Přidat připomenutí",
+      "remove": "Odebrat připomenutí",
+      "hint": "Připomenutí doručuje Google kalendář — projeví se u událostí, které do něj přidáte.",
+      "minutesLabel": "Kdy připomenout",
+      "methodLabel": "Jak připomenout",
+      "minutes": {
+        "atStart": "Při začátku",
+        "m5": "5 minut předem",
+        "m10": "10 minut předem",
+        "m30": "30 minut předem",
+        "m60": "1 hodinu předem",
+        "d1": "1 den předem"
+      },
+      "custom": "Vlastní…",
+      "customLabel": "Vlastní počet minut předem",
+      "method": {
+        "popup": "Oznámení",
+        "email": "E-mail"
+      }
+    },
+    "meet": {
+      "label": "Vytvořit odkaz na Google Meet",
+      "needsGoogle": "nejprve zaškrtněte přidání do Google kalendáře",
+      "existing": "odkaz už je vytvořený a z CRM ho nezrušíte"
     },
     "cancel": "Zrušit",
     "saving": "Ukládám…",

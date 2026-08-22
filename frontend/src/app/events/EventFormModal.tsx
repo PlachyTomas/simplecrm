@@ -3,8 +3,15 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { useDeals } from "@/app/deals/useDeals";
-import { type CalendarEventOut, useCreateEvent, useUpdateEvent } from "@/app/events/useEvents";
+import {
+  type CalendarEventOut,
+  type EventReminder,
+  useCreateEvent,
+  useUpdateEvent,
+} from "@/app/events/useEvents";
+import { AttendeePicker, type PickedAttendee } from "@/app/events/AttendeePicker";
 import { LabelPicker } from "@/app/events/LabelPicker";
+import { ReminderRows } from "@/app/events/ReminderRows";
 import { TimeSelect } from "@/app/events/TimeSelect";
 import type { EventLabelBrief } from "@/app/events/useEventLabels";
 import {
@@ -61,6 +68,54 @@ function todayLocalDate(): string {
   return toLocalDate(new Date().toISOString());
 }
 
+/**
+ * `YYYY-MM-DD` read in UTC — the day an all-day event is stored under. Those
+ * are saved as UTC midnight and Google reads the calendar date off the same
+ * clock, so a local-time read would show the previous day west of Greenwich.
+ */
+function toUtcDate(iso: string): string {
+  return new Date(iso).toISOString().slice(0, 10);
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+interface FormValues {
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  description: string;
+  dealId: string;
+  labelIds: string[];
+  allDay: boolean;
+  reminders: EventReminder[];
+  attendees: PickedAttendee[];
+  meetRequested: boolean;
+}
+
+/**
+ * The comparable form state, as one string. Every field lives here so a new
+ * one can't quietly drop out of the unsaved-changes guard — the array order,
+ * not the object's, is what the comparison sees.
+ */
+function formSnapshot(values: FormValues): string {
+  return JSON.stringify([
+    values.title,
+    values.date,
+    values.startTime,
+    values.endTime,
+    values.location,
+    values.description,
+    values.dealId,
+    values.labelIds,
+    values.allDay,
+    values.reminders,
+    values.attendees.map((attendee) => `${attendee.kind}:${attendee.id}`),
+    values.meetRequested,
+  ]);
+}
+
 interface EventFormModalProps {
   open: boolean;
   onClose: () => void;
@@ -71,6 +126,11 @@ interface EventFormModalProps {
    */
   dealId?: string;
   dealName?: string;
+  /**
+   * The deal's company, when the caller already knows it — its contacts are
+   * offered first in the attendee picker.
+   */
+  companyId?: string | null;
   /** Edit mode: the event being edited (wins over dealId/dealName). */
   event?: CalendarEventOut | null;
   /**
@@ -84,6 +144,7 @@ interface EventFormModalProps {
 interface PickedDeal {
   id: string;
   name: string;
+  companyId: string | null;
 }
 
 export function EventFormModal({
@@ -91,6 +152,7 @@ export function EventFormModal({
   onClose,
   dealId,
   dealName,
+  companyId,
   event,
   initialDate,
 }: EventFormModalProps) {
@@ -130,6 +192,10 @@ export function EventFormModal({
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [labels, setLabels] = useState<EventLabelBrief[]>([]);
+  const [allDay, setAllDay] = useState(false);
+  const [reminders, setReminders] = useState<EventReminder[]>([]);
+  const [attendees, setAttendees] = useState<PickedAttendee[]>([]);
+  const [meetRequested, setMeetRequested] = useState(false);
   const [addToGoogle, setAddToGoogle] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -140,42 +206,63 @@ export function EventFormModal({
   const initialFormRef = useRef<string>("");
   const dirty =
     initialFormRef.current !== "" &&
-    JSON.stringify([
+    formSnapshot({
       title,
       date,
       startTime,
       endTime,
       location,
       description,
-      selectedDeal?.id ?? "",
-      labels.map((label) => label.id),
-    ]) !== initialFormRef.current;
+      dealId: selectedDeal?.id ?? "",
+      labelIds: labels.map((label) => label.id),
+      allDay,
+      reminders,
+      attendees,
+      meetRequested,
+    }) !== initialFormRef.current;
   const { onBackdropClick, nudgeClass } = useDismissGuard(onClose, dirty);
 
   useEffect(() => {
     if (!open) return;
     setError(null);
     if (event) {
-      setTitle(event.title);
-      setDate(toLocalDate(event.starts_at));
-      setStartTime(toLocalTime(event.starts_at));
-      setEndTime(toLocalTime(event.ends_at));
-      setLocation(event.location ?? "");
-      setDescription(event.description ?? "");
+      // An all-day event has no times to show; unchecking the toggle should
+      // still land on a usable slot, so the hidden selects hold the default.
+      const prefill: FormValues = {
+        title: event.title,
+        date: event.all_day ? toUtcDate(event.starts_at) : toLocalDate(event.starts_at),
+        startTime: event.all_day ? "09:00" : toLocalTime(event.starts_at),
+        endTime: event.all_day ? "10:00" : toLocalTime(event.ends_at),
+        location: event.location ?? "",
+        description: event.description ?? "",
+        dealId: "",
+        labelIds: (event.labels ?? []).map((label) => label.id),
+        allDay: event.all_day,
+        reminders: event.reminders ?? [],
+        attendees: (event.attendees ?? []).map((attendee) => ({
+          kind: attendee.kind,
+          id: attendee.id,
+          name: attendee.name,
+        })),
+        // The link alone would lose the intent whenever the push failed
+        // before Google ever answered with one.
+        meetRequested: event.meet_requested || event.meet_url != null,
+      };
+      setTitle(prefill.title);
+      setDate(prefill.date);
+      setStartTime(prefill.startTime);
+      setEndTime(prefill.endTime);
+      setLocation(prefill.location);
+      setDescription(prefill.description);
       setLabels(event.labels ?? []);
+      setAllDay(prefill.allDay);
+      setReminders(prefill.reminders);
+      setAttendees(prefill.attendees);
+      setMeetRequested(prefill.meetRequested);
       // `error` means the user wanted the Google copy but the push failed —
       // keep the intent checked so saving retries it.
       setAddToGoogle(event.google_sync_status !== "not_synced" && googleAvailable);
-      initialFormRef.current = JSON.stringify([
-        event.title,
-        toLocalDate(event.starts_at),
-        toLocalTime(event.starts_at),
-        toLocalTime(event.ends_at),
-        event.location ?? "",
-        event.description ?? "",
-        "",
-        (event.labels ?? []).map((label) => label.id),
-      ]);
+      initialFormRef.current = formSnapshot(prefill);
     } else {
       // A calendar-driven create pre-selects its day; a non-today day gets a
       // plain 09:00–10:00 slot, while today (or no pre-selection) keeps the
@@ -192,19 +279,27 @@ export function EventFormModal({
       setLocation("");
       setDescription("");
       setLabels([]);
+      setAllDay(false);
+      setReminders([]);
+      setAttendees([]);
+      setMeetRequested(false);
       setAddToGoogle(googleAvailable);
       setSelectedDeal(null);
       lastDefaultTitleRef.current = null;
-      initialFormRef.current = JSON.stringify([
-        defaultTitle,
-        slot.date,
-        slot.start,
-        slot.end,
-        "",
-        "",
-        "",
-        [],
-      ]);
+      initialFormRef.current = formSnapshot({
+        title: defaultTitle,
+        date: slot.date,
+        startTime: slot.start,
+        endTime: slot.end,
+        location: "",
+        description: "",
+        dealId: "",
+        labelIds: [],
+        allDay: false,
+        reminders: [],
+        attendees: [],
+        meetRequested: false,
+      });
     }
     // googleAvailable intentionally re-applies when the status loads while
     // the modal is open (first paint may race the status query). `t` stays
@@ -263,8 +358,10 @@ export function EventFormModal({
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    const starts = new Date(`${date}T${startTime}`);
-    const ends = new Date(`${date}T${endTime}`);
+    // An all-day event spans one UTC day — the form has a single date field,
+    // and Google reads the calendar date off UTC (end date exclusive).
+    const starts = allDay ? new Date(`${date}T00:00:00.000Z`) : new Date(`${date}T${startTime}`);
+    const ends = allDay ? new Date(starts.getTime() + DAY_MS) : new Date(`${date}T${endTime}`);
     if (!title.trim() || Number.isNaN(starts.getTime()) || Number.isNaN(ends.getTime())) {
       setError(t("eventFormModal.errorRequired"));
       return;
@@ -273,6 +370,12 @@ export function EventFormModal({
       setError(t("eventFormModal.errorEndBeforeStart"));
       return;
     }
+    const attendeeContactIds = attendees
+      .filter((attendee) => attendee.kind === "contact")
+      .map((attendee) => attendee.id);
+    const attendeeUserIds = attendees
+      .filter((attendee) => attendee.kind === "user")
+      .map((attendee) => attendee.id);
 
     if (editing && event) {
       updateEvent.mutate(
@@ -286,8 +389,14 @@ export function EventFormModal({
             ends_at: ends.toISOString(),
             add_to_google: addToGoogle,
             // The picker always shows the full set, so sending it is a
-            // replace — `[]` deliberately clears every label.
+            // replace — `[]` deliberately clears every label. Attendees and
+            // reminders travel the same way.
             label_ids: labels.map((label) => label.id),
+            all_day: allDay,
+            reminders,
+            meet_requested: meetRequested,
+            attendee_contact_ids: attendeeContactIds,
+            attendee_user_ids: attendeeUserIds,
             // Only sent when the user actually picked one — omitting the key
             // leaves the existing link alone (the PUT is exclude_unset).
             ...(selectedDeal ? { deal_id: selectedDeal.id } : {}),
@@ -311,6 +420,11 @@ export function EventFormModal({
           ends_at: ends.toISOString(),
           add_to_google: addToGoogle,
           label_ids: labels.map((label) => label.id),
+          all_day: allDay,
+          reminders,
+          meet_requested: meetRequested,
+          attendee_contact_ids: attendeeContactIds,
+          attendee_user_ids: attendeeUserIds,
         },
         {
           onSuccess: (saved) => notifySaved(saved, "created"),
@@ -319,6 +433,11 @@ export function EventFormModal({
       );
     }
   }
+
+  // An existing conference can't be revoked from here — Google keeps it on
+  // update — so the checkbox stays checked and inert rather than lying.
+  const meetLinkExists = event?.meet_url != null;
+  const meetLocked = !addToGoogle || meetLinkExists;
 
   const inputCls =
     "block h-9 w-full rounded-md border border-border bg-surface-overlay px-3 text-sm focus:border-accent focus:outline-none";
@@ -335,7 +454,7 @@ export function EventFormModal({
     >
       <form
         onSubmit={handleSubmit}
-        className={`w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg ${nudgeClass}`}
+        className={`max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-border bg-surface p-6 shadow-lg ${nudgeClass}`}
       >
         <h2 id="event-form-title" className="text-xl font-semibold">
           {editing ? t("eventFormModal.titleEdit") : t("eventFormModal.titleCreate")}
@@ -383,7 +502,17 @@ export function EventFormModal({
             />
           </label>
 
-          <div className="grid grid-cols-3 gap-2">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={allDay}
+              onChange={(e) => setAllDay(e.target.checked)}
+              data-testid={testIds.events.allDayToggle}
+            />
+            <span className="text-text-secondary">{t("eventFormModal.allDay")}</span>
+          </label>
+
+          <div className={allDay ? undefined : "grid grid-cols-3 gap-2"}>
             <label className="block text-sm">
               <span className="mb-1 block text-text-secondary">
                 {t("eventFormModal.dateLabel")}
@@ -396,22 +525,26 @@ export function EventFormModal({
                 className={inputCls}
               />
             </label>
-            <TimeSelect
-              label={t("eventFormModal.fromLabel")}
-              value={startTime}
-              onChange={handleStartChange}
-              options={buildStartOptions(startTime)}
-              testId={testIds.events.timeStart}
-              inputCls={inputCls}
-            />
-            <TimeSelect
-              label={t("eventFormModal.toLabel")}
-              value={endTime}
-              onChange={setEndTime}
-              options={buildEndOptions(startTime, endTime)}
-              testId={testIds.events.timeEnd}
-              inputCls={inputCls}
-            />
+            {allDay ? null : (
+              <>
+                <TimeSelect
+                  label={t("eventFormModal.fromLabel")}
+                  value={startTime}
+                  onChange={handleStartChange}
+                  options={buildStartOptions(startTime)}
+                  testId={testIds.events.timeStart}
+                  inputCls={inputCls}
+                />
+                <TimeSelect
+                  label={t("eventFormModal.toLabel")}
+                  value={endTime}
+                  onChange={setEndTime}
+                  options={buildEndOptions(startTime, endTime)}
+                  testId={testIds.events.timeEnd}
+                  inputCls={inputCls}
+                />
+              </>
+            )}
           </div>
 
           <label className="block text-sm">
@@ -441,11 +574,24 @@ export function EventFormModal({
 
           <LabelPicker selected={labels} onChange={setLabels} inputCls={inputCls} />
 
+          <AttendeePicker
+            selected={attendees}
+            onChange={setAttendees}
+            inputCls={inputCls}
+            companyId={event?.company_id ?? selectedDeal?.companyId ?? companyId ?? null}
+          />
+
+          <ReminderRows value={reminders} onChange={setReminders} inputCls={inputCls} />
+
           <label className="flex items-start gap-2 text-sm">
             <input
               type="checkbox"
               checked={addToGoogle}
-              onChange={(e) => setAddToGoogle(e.target.checked)}
+              onChange={(e) => {
+                setAddToGoogle(e.target.checked);
+                // No Google copy, no conference to hang a Meet link on.
+                if (!e.target.checked) setMeetRequested(false);
+              }}
               disabled={!googleAvailable}
               className="mt-0.5"
             />
@@ -476,6 +622,33 @@ export function EventFormModal({
               ) : null}
             </span>
           </label>
+
+          {googleAvailable ? (
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={meetRequested}
+                onChange={(e) => setMeetRequested(e.target.checked)}
+                disabled={meetLocked}
+                data-testid={testIds.events.meetToggle}
+                className="mt-0.5"
+              />
+              <span className={meetLocked ? "text-text-tertiary" : "text-text-secondary"}>
+                {t("eventFormModal.meet.label")}
+                {!addToGoogle ? (
+                  <>
+                    {" — "}
+                    {t("eventFormModal.meet.needsGoogle")}
+                  </>
+                ) : meetLinkExists ? (
+                  <>
+                    {" — "}
+                    {t("eventFormModal.meet.existing")}
+                  </>
+                ) : null}
+              </span>
+            </label>
+          ) : null}
         </div>
 
         {error ? (
@@ -579,7 +752,7 @@ function DealPickerField({
                 type="button"
                 data-testid={testIds.events.dealPicker.option(deal.id)}
                 onClick={() => {
-                  onPick({ id: deal.id, name: deal.name });
+                  onPick({ id: deal.id, name: deal.name, companyId: deal.company_id ?? null });
                   setSearch(deal.name);
                 }}
                 className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-text-primary transition-colors duration-fast hover:bg-surface-overlay"

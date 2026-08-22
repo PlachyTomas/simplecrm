@@ -312,6 +312,8 @@ export const testIds = {
       option: (id: string) => `event-form-deal-picker-option-${id}`,
     },
     reconnectGoogle: "event-form-reconnect-google",
+    allDayToggle: "event-form-all-day",
+    meetToggle: "event-form-meet",
     timeStart: "event-form-time-start",
     timeEnd: "event-form-time-end",
     timeOption: (value: string) => `event-form-time-option-${value}`,
@@ -321,6 +323,22 @@ export const testIds = {
       create: "event-form-label-create",
       remove: (id: string) => `event-form-label-remove-${id}`,
     },
+    attendeePicker: {
+      input: "event-form-attendee-input",
+      option: (id: string) => `event-form-attendee-option-${id}`,
+      chip: (id: string) => `event-form-attendee-chip-${id}`,
+      remove: (id: string) => `event-form-attendee-remove-${id}`,
+    },
+    reminders: {
+      add: "event-form-reminder-add",
+      row: (index: number) => `event-form-reminder-row-${index}`,
+      minutes: (index: number) => `event-form-reminder-minutes-${index}`,
+      customMinutes: (index: number) => `event-form-reminder-custom-minutes-${index}`,
+      method: (index: number) => `event-form-reminder-method-${index}`,
+      remove: (index: number) => `event-form-reminder-remove-${index}`,
+    },
+    // The deal detail section's event rows.
+    dealSectionMeetLink: (id: string) => `event-deal-section-meet-link-${id}`,
   },
   eventLabels: {
     row: (id: string) => `event-label-row-${id}`,
@@ -339,6 +357,8 @@ export const testIds = {
     zoomWeek: "calendar-zoom-week",
     zoomMonth: "calendar-zoom-month",
     reconnect: "calendar-reconnect",
+    dayEventRow: (id: string) => `calendar-day-event-row-${id}`,
+    dayEventMeetLink: (id: string) => `calendar-day-event-meet-link-${id}`,
   },
   widgets: {
     picker: {

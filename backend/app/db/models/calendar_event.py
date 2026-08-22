@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     Enum,
@@ -14,10 +15,12 @@ from sqlalchemy import (
     Text,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.db.models.calendar_event_attendee import CalendarEventAttendee
 from app.db.models.enums import GoogleSyncStatus
 from app.db.models.event_label import EventLabel, calendar_event_labels
 
@@ -70,6 +73,19 @@ class CalendarEvent(Base):
     description: Mapped[str | None] = mapped_column(Text)
     location: Mapped[str | None] = mapped_column(String(200))
 
+    all_day: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    # [{"method": "popup"|"email", "minutes": int}] — max 5, enforced in the
+    # schema layer; Google fires these, the CRM has no notifier of its own.
+    reminders: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default="[]"
+    )
+    meet_requested: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    meet_url: Mapped[str | None] = mapped_column(String(1024))
+
     # Stored UTC; the frontend renders in the browser's zone and Google
     # renders in the viewer's calendar zone.
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -103,4 +119,7 @@ class CalendarEvent(Base):
     labels: Mapped[list[EventLabel]] = relationship(
         secondary=calendar_event_labels,
         order_by=EventLabel.name,
+    )
+    attendees: Mapped[list[CalendarEventAttendee]] = relationship(
+        cascade="all, delete-orphan", passive_deletes=True
     )

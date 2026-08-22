@@ -5,8 +5,11 @@
     "errorLabel": "Google sync failed"
   },
   "dayEventsList": {
-    "editAria": "Edit event {{title}}",
-    "deleteAria": "Delete event {{title}}"
+    "deleteAria": "Delete event {{title}}",
+    "allDay": "All day",
+    "attendeeCount_one": "{{count}} attendee",
+    "attendeeCount_other": "{{count}} attendees",
+    "meetLink": "Join Google Meet"
   },
   "calendarPage": {
     "title": "Calendar",

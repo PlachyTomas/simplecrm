@@ -9,6 +9,7 @@ from app.db.models.auth_action_token import AuthActionToken
 from app.db.models.billing_settings import BillingSettings
 from app.db.models.blocked_company import BlockedCompany
 from app.db.models.calendar_event import CalendarEvent
+from app.db.models.calendar_event_attendee import CalendarEventAttendee
 from app.db.models.charge import Charge
 from app.db.models.company import Company
 from app.db.models.contact import Contact
@@ -64,6 +65,7 @@ __all__ = [
     "BlockedCompany",
     "BlockedCompanyReason",
     "CalendarEvent",
+    "CalendarEventAttendee",
     "Charge",
     "Company",
     "Contact",

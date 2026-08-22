@@ -1,7 +1,8 @@
 /**
- * Date math for the calendar grids. Pure functions over local dates —
- * the backend stores UTC, the grid works in the browser's timezone, so all
- * bucketing here goes through local `dayKey`s.
+ * Date math for the calendar grids. Pure functions over local dates — the
+ * backend stores UTC, the grid works in the browser's timezone, so timed
+ * events bucket through local `dayKey`s and all-day ones through their UTC
+ * day (see `eventDayKey`).
  */
 
 export interface CalendarDay {
@@ -18,6 +19,17 @@ const pad = (n: number) => String(n).padStart(2, "0");
 export function dayKey(value: Date | string): string {
   const d = typeof value === "string" ? new Date(value) : value;
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * Bucket key for an event. All-day events are stored at UTC midnight and read
+ * off that clock everywhere else (the form, Google's calendar date), so they
+ * bucket by their UTC day; timed events belong to the local day they start.
+ */
+export function eventDayKey(event: { starts_at: string; all_day: boolean }): string {
+  return event.all_day
+    ? new Date(event.starts_at).toISOString().slice(0, 10)
+    : dayKey(event.starts_at);
 }
 
 /** Monday-first weekday index (Mon=0 … Sun=6). */

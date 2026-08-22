@@ -4259,6 +4259,23 @@ export interface components {
             /** Stage Values */
             stage_values?: string[];
         };
+        /** AttendeeBrief */
+        AttendeeBrief: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "contact" | "user";
+            /** Name */
+            name: string;
+            /** Email */
+            email: string | null;
+        };
         /**
          * AuthSuccessResponse
          * @description Returned by signup-verify, login, password-reset-confirm — the same
@@ -4675,6 +4692,22 @@ export interface components {
             add_to_google: boolean;
             /** Label Ids */
             label_ids?: string[];
+            /**
+             * All Day
+             * @default false
+             */
+            all_day: boolean;
+            /** Reminders */
+            reminders?: components["schemas"]["EventReminder"][];
+            /**
+             * Meet Requested
+             * @default false
+             */
+            meet_requested: boolean;
+            /** Attendee Contact Ids */
+            attendee_contact_ids?: string[];
+            /** Attendee User Ids */
+            attendee_user_ids?: string[];
         };
         /** CalendarEventOut */
         CalendarEventOut: {
@@ -4714,11 +4747,21 @@ export interface components {
              * Format: date-time
              */
             ends_at: string;
+            /** All Day */
+            all_day: boolean;
+            /** Reminders */
+            reminders?: components["schemas"]["EventReminder"][];
             /** Google Event Id */
             google_event_id: string | null;
             google_sync_status: components["schemas"]["GoogleSyncStatus"];
+            /** Meet Requested */
+            meet_requested: boolean;
+            /** Meet Url */
+            meet_url: string | null;
             /** Labels */
             labels?: components["schemas"]["EventLabelBrief"][];
+            /** Attendees */
+            attendees?: components["schemas"]["AttendeeBrief"][];
             /**
              * Created At
              * Format: date-time
@@ -4748,6 +4791,16 @@ export interface components {
             add_to_google?: boolean | null;
             /** Label Ids */
             label_ids?: string[] | null;
+            /** All Day */
+            all_day?: boolean | null;
+            /** Reminders */
+            reminders?: components["schemas"]["EventReminder"][] | null;
+            /** Meet Requested */
+            meet_requested?: boolean | null;
+            /** Attendee Contact Ids */
+            attendee_contact_ids?: string[] | null;
+            /** Attendee User Ids */
+            attendee_user_ids?: string[] | null;
         };
         /** CampaignDetailOut */
         CampaignDetailOut: {
@@ -5827,6 +5880,17 @@ export interface components {
             name?: string | null;
             /** Color */
             color?: string | null;
+        };
+        /** EventReminder */
+        EventReminder: {
+            /**
+             * Method
+             * @default popup
+             * @enum {string}
+             */
+            method: "popup" | "email";
+            /** Minutes */
+            minutes: number;
         };
         /** ExtendTrialIn */
         ExtendTrialIn: {

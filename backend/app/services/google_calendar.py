@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
@@ -78,13 +79,30 @@ class GoogleCalendarClient(Protocol):
 
     async def revoke_token(self, token: str) -> None: ...
 
-    async def insert_event(self, access_token: str, payload: dict[str, Any]) -> str: ...
+    async def insert_event(
+        self,
+        access_token: str,
+        payload: dict[str, Any],
+        *,
+        params: dict[str, str] | None = None,
+    ) -> dict[str, Any]: ...
 
     async def patch_event(
-        self, access_token: str, event_id: str, payload: dict[str, Any]
-    ) -> None: ...
+        self,
+        access_token: str,
+        event_id: str,
+        payload: dict[str, Any],
+        *,
+        params: dict[str, str] | None = None,
+    ) -> dict[str, Any]: ...
 
-    async def delete_event(self, access_token: str, event_id: str) -> None: ...
+    async def delete_event(
+        self,
+        access_token: str,
+        event_id: str,
+        *,
+        params: dict[str, str] | None = None,
+    ) -> None: ...
 
 
 def event_payload(
@@ -94,17 +112,42 @@ def event_payload(
     location: str | None,
     starts_at: datetime,
     ends_at: datetime,
+    all_day: bool = False,
+    reminders: Sequence[dict[str, Any]] = (),
+    attendees: Sequence[dict[str, str]] = (),
+    create_meet: bool = False,
+    meet_request_id: str | None = None,
 ) -> dict[str, Any]:
     """Google Calendar event body. `description`/`location` are always
-    present (null clears them on PATCH); datetimes go out as RFC3339 UTC
-    so Google renders them in each viewer's calendar timezone."""
-    return {
+    present (null clears them on PATCH); timed events go out as RFC3339 UTC,
+    all-day ones as calendar dates (end date exclusive — the stored exclusive
+    midnight already is that boundary). `reminders` is omitted when empty so
+    the owner's calendar defaults keep applying."""
+    if all_day:
+        start: dict[str, Any] = {"date": starts_at.astimezone(UTC).date().isoformat()}
+        end: dict[str, Any] = {"date": ends_at.astimezone(UTC).date().isoformat()}
+    else:
+        start = {"dateTime": starts_at.astimezone(UTC).isoformat()}
+        end = {"dateTime": ends_at.astimezone(UTC).isoformat()}
+    body: dict[str, Any] = {
         "summary": title,
         "description": description,
         "location": location,
-        "start": {"dateTime": starts_at.astimezone(UTC).isoformat()},
-        "end": {"dateTime": ends_at.astimezone(UTC).isoformat()},
+        "start": start,
+        "end": end,
     }
+    if reminders:
+        body["reminders"] = {"useDefault": False, "overrides": list(reminders)}
+    if attendees:
+        body["attendees"] = list(attendees)
+    if create_meet and meet_request_id:
+        body["conferenceData"] = {
+            "createRequest": {
+                "requestId": meet_request_id,
+                "conferenceSolutionKey": {"type": "hangoutsMeet"},
+            }
+        }
+    return body
 
 
 def _require_credentials(settings: Settings) -> None:
@@ -154,12 +197,15 @@ class HttpGoogleCalendarClient:
         url: str,
         *,
         headers: dict[str, str] | None = None,
+        params: dict[str, str] | None = None,
         data: dict[str, str] | None = None,
         json_body: dict[str, Any] | None = None,
     ) -> httpx.Response:
         client = self._http or httpx.AsyncClient(timeout=15.0)
         try:
-            return await client.request(method, url, headers=headers, data=data, json=json_body)
+            return await client.request(
+                method, url, headers=headers, params=params, data=data, json=json_body
+            )
         except httpx.HTTPError as exc:
             raise GoogleCalendarError(f"Google transport error: {exc}") from exc
         finally:
@@ -262,24 +308,37 @@ class HttpGoogleCalendarClient:
                 http_status=response.status_code,
             )
 
-    async def insert_event(self, access_token: str, payload: dict[str, Any]) -> str:
+    async def insert_event(
+        self,
+        access_token: str,
+        payload: dict[str, Any],
+        *,
+        params: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
         response = await self._request(
             "POST",
             GCAL_EVENTS_URL,
             headers={"Authorization": f"Bearer {access_token}"},
+            params=params or {},
             json_body=payload,
         )
         self._check_event_response(response)
-        event_id = str(response.json().get("id", ""))
-        if not event_id:
-            raise GoogleCalendarError("Google Calendar insert returned no event id")
-        return event_id
+        body: dict[str, Any] = response.json()
+        return body
 
-    async def patch_event(self, access_token: str, event_id: str, payload: dict[str, Any]) -> None:
+    async def patch_event(
+        self,
+        access_token: str,
+        event_id: str,
+        payload: dict[str, Any],
+        *,
+        params: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
         response = await self._request(
             "PATCH",
             f"{GCAL_EVENTS_URL}/{event_id}",
             headers={"Authorization": f"Bearer {access_token}"},
+            params=params or {},
             json_body=payload,
         )
         if response.status_code in (404, 410):
@@ -287,12 +346,21 @@ class HttpGoogleCalendarClient:
             # Treat as missing so the caller can decide to re-insert.
             raise GoogleCalendarError("Google event no longer exists", http_status=404)
         self._check_event_response(response)
+        body: dict[str, Any] = response.json()
+        return body
 
-    async def delete_event(self, access_token: str, event_id: str) -> None:
+    async def delete_event(
+        self,
+        access_token: str,
+        event_id: str,
+        *,
+        params: dict[str, str] | None = None,
+    ) -> None:
         response = await self._request(
             "DELETE",
             f"{GCAL_EVENTS_URL}/{event_id}",
             headers={"Authorization": f"Bearer {access_token}"},
+            params=params or {},
         )
         if response.status_code in (404, 410):
             return  # already gone — that's the outcome we wanted

@@ -64,7 +64,9 @@ class FakeGoogleCalendarClient:
         self.fail_insert = False
         self.patch_returns_404 = False
         self.inserted: list[dict[str, Any]] = []
+        self.insert_params: list[dict[str, str] | None] = []
         self.patched: list[tuple[str, dict[str, Any]]] = []
+        self.patch_params: list[dict[str, str] | None] = []
         self.deleted: list[str] = []
         self.next_event_id = "gev-1"
 
@@ -79,18 +81,32 @@ class FakeGoogleCalendarClient:
 
     async def revoke_token(self, token: str) -> None: ...
 
-    async def insert_event(self, access_token: str, payload: dict[str, Any]) -> str:
+    async def insert_event(
+        self, access_token: str, payload: dict[str, Any], *, params: dict[str, str] | None = None
+    ) -> dict[str, Any]:
         if self.fail_insert:
             raise GoogleCalendarError("boom", http_status=500)
         self.inserted.append(payload)
-        return self.next_event_id
+        self.insert_params.append(params)
+        return {"id": self.next_event_id, "hangoutLink": "https://meet.google.com/fake"}
 
-    async def patch_event(self, access_token: str, event_id: str, payload: dict[str, Any]) -> None:
+    async def patch_event(
+        self,
+        access_token: str,
+        event_id: str,
+        payload: dict[str, Any],
+        *,
+        params: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
         if self.patch_returns_404:
             raise GoogleCalendarError("gone", http_status=404)
         self.patched.append((event_id, payload))
+        self.patch_params.append(params)
+        return {"id": event_id}
 
-    async def delete_event(self, access_token: str, event_id: str) -> None:
+    async def delete_event(
+        self, access_token: str, event_id: str, *, params: dict[str, str] | None = None
+    ) -> None:
         self.deleted.append(event_id)
 
 
