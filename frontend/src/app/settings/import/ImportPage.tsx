@@ -10,10 +10,10 @@
  */
 
 import type { ParseKeys } from "i18next";
-import { ArrowLeft, FileText, Loader2, ShieldAlert, UserCheck, X } from "lucide-react";
+import { FileText, Loader2, ShieldAlert, UserCheck, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, Navigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 
 import { CsvSniffError, sniffCsvHeaders } from "@/app/settings/import/csvSniff";
 import {
@@ -38,7 +38,6 @@ import {
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { useToast } from "@/lib/toast";
-import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 
 type Step = 1 | 2 | 3;
@@ -73,8 +72,6 @@ function makeId(): string {
 }
 
 export function ImportPage() {
-  const { t } = useTranslation("settings");
-  usePageTitle(t("import.page.pageTitle"));
   const me = useCurrentUser();
   if (me.isPending) {
     return (
@@ -253,21 +250,9 @@ function ImportPageInner() {
   }, [buildPayload, commit, skipUnmatched, toast, resetWizard, t]);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 md:px-8">
-      <div className="mb-6 flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">{t("import.page.title")}</h1>
-          <p className="mt-0.5 text-sm text-text-tertiary">{t("import.page.subtitle")}</p>
-        </div>
-        <Link
-          to="/app/settings"
-          className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary"
-        >
-          <ArrowLeft size={16} strokeWidth={1.75} />
-          {t("import.page.backLink")}
-        </Link>
-      </div>
-
+    // Rendered as a settings section — SettingsSectionPage owns the page
+    // title, description and back affordance.
+    <div>
       <Stepper step={step} />
 
       {step === 1 && (
@@ -335,7 +320,7 @@ function Stepper({ step }: { step: Step }) {
               aria-current={isActive ? "step" : undefined}
               className={cn(
                 "inline-flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-semibold",
-                isActive && "border-accent bg-accent text-white",
+                isActive && "border-accent bg-accent text-text-on-accent",
                 isDone && "border-accent bg-accent-subtle text-accent",
                 !isActive && !isDone && "border-border text-text-tertiary",
               )}
@@ -411,7 +396,7 @@ function StepUpload(props: {
           type="button"
           onClick={props.onContinue}
           disabled={!props.canContinue}
-          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-text-on-accent disabled:cursor-not-allowed disabled:opacity-50"
           data-testid="import-continue-to-mapping"
         >
           {t("import.upload.continueButton")}
@@ -542,7 +527,7 @@ function StepMapping(props: {
           type="button"
           onClick={props.onPreview}
           disabled={!props.canPreview || props.isPreviewing}
-          className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-text-on-accent disabled:cursor-not-allowed disabled:opacity-50"
           data-testid="import-run-preview"
         >
           {props.isPreviewing && <Loader2 className="animate-spin" size={14} />}

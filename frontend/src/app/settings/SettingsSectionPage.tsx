@@ -5,6 +5,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 
 import { BlockedCompaniesSection } from "@/app/settings/BlockedCompaniesSection";
 import { EmailTemplatesSection } from "@/app/settings/EmailTemplatesSection";
+import { ImportPage } from "@/app/settings/import/ImportPage";
 import { InvitationsSection } from "@/app/settings/InvitationsSection";
 import { PrivacySection } from "@/app/settings/PrivacySection";
 import { AppearanceSection } from "@/app/settings/sections/AppearanceSection";
@@ -44,6 +45,7 @@ const SECTION_COMPONENTS: Record<SettingsSectionKey, ComponentType> = {
   integrations: IntegrationsSection,
   shortcuts: ShortcutsSection,
   privacy: PrivacySection,
+  import: ImportPage,
 };
 
 export function SettingsSectionPage() {

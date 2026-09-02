@@ -18,7 +18,6 @@ import { MailPage } from "@/app/emails/MailPage";
 import { FeedbackPage } from "@/app/feedback/FeedbackPage";
 import { PipelinePage } from "@/app/pipeline/PipelinePage";
 import { ReportsPage } from "@/app/reports/ReportsPage";
-import { ImportPage } from "@/app/settings/import/ImportPage";
 import { SettingsHome } from "@/app/settings/SettingsHome";
 import { SettingsLayout } from "@/app/settings/SettingsLayout";
 import { SettingsSectionPage } from "@/app/settings/SettingsSectionPage";
@@ -143,7 +142,6 @@ export function AppRoutes() {
           <Route index element={<SettingsHome />} />
           <Route path=":section" element={<SettingsSectionPage />} />
         </Route>
-        <Route path="settings/import" element={<ImportPage />} />
         <Route
           path="nastaveni/predplatne"
           element={<Navigate to="/app/settings/billing" replace />}

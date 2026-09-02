@@ -5,7 +5,6 @@ import { Navigate, NavLink, Outlet, useSearchParams } from "react-router-dom";
 import {
   GROUP_LABELS,
   GROUP_ORDER,
-  IMPORT_NAV_ITEM,
   isSettingsSectionKey,
   SETTINGS_SECTIONS,
   visibleSectionKeys,
@@ -68,7 +67,6 @@ export function SettingsLayout() {
   }
 
   const visibleKeys = visibleSectionKeys(user.role, user.can_invite);
-  const isAdmin = user.role === "admin";
 
   return (
     <div className="flex">
@@ -83,8 +81,7 @@ export function SettingsLayout() {
               const items = SETTINGS_SECTIONS.filter(
                 (s) => s.group === group && visibleKeys.includes(s.key),
               );
-              const withImport = group === "sales" && isAdmin;
-              if (items.length === 0 && !withImport) return null;
+              if (items.length === 0) return null;
               return (
                 <div key={group}>
                   <p className="px-3 text-xs font-medium uppercase tracking-wider text-text-tertiary">
@@ -104,19 +101,6 @@ export function SettingsLayout() {
                         </NavLink>
                       </li>
                     ))}
-                    {withImport ? (
-                      <li>
-                        <NavLink
-                          to={IMPORT_NAV_ITEM.to}
-                          className={({ isActive }) =>
-                            cn(navItemBase, isActive ? navItemActive : navItemIdle)
-                          }
-                        >
-                          <IMPORT_NAV_ITEM.icon size={16} strokeWidth={1.75} aria-hidden />
-                          {t(IMPORT_NAV_ITEM.labelKey)}
-                        </NavLink>
-                      </li>
-                    ) : null}
                   </ul>
                 </div>
               );

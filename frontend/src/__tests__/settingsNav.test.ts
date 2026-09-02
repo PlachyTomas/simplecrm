@@ -8,8 +8,15 @@ import {
 } from "@/app/settings/settingsNav";
 
 describe("settingsNav", () => {
-  it("admins see all 15 sections", () => {
-    expect(visibleSectionKeys("admin", false)).toHaveLength(15);
+  it("admins see all 16 sections", () => {
+    expect(visibleSectionKeys("admin", false)).toHaveLength(16);
+  });
+
+  it("CSV import is a real section, admin-only", () => {
+    expect(isSettingsSectionKey("import")).toBe(true);
+    expect(visibleSectionKeys("admin", false)).toContain("import");
+    expect(visibleSectionKeys("manager", true)).not.toContain("import");
+    expect(visibleSectionKeys("salesperson", true)).not.toContain("import");
   });
 
   it("salespeople see personal sections plus the read-for-all ones", () => {

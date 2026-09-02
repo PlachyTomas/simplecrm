@@ -34,7 +34,8 @@ export type SettingsSectionKey =
   | "billing"
   | "integrations"
   | "shortcuts"
-  | "privacy";
+  | "privacy"
+  | "import";
 
 export type SettingsGroup = "personal" | "organization" | "sales" | "billing";
 
@@ -172,6 +173,13 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
     icon: Lock,
   },
   {
+    key: "import",
+    labelKey: "nav.importItem.label",
+    descriptionKey: "nav.importItem.description",
+    group: "sales",
+    icon: Upload,
+  },
+  {
     key: "billing",
     labelKey: "nav.sections.billing.label",
     descriptionKey: "nav.sections.billing.description",
@@ -179,14 +187,6 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
     icon: CreditCard,
   },
 ];
-
-export const IMPORT_NAV_ITEM = {
-  labelKey: "nav.importItem.label" as ParseKeys<"settings">,
-  descriptionKey: "nav.importItem.description" as ParseKeys<"settings">,
-  icon: Upload,
-  to: "/app/settings/import",
-  group: "sales" as SettingsGroup,
-};
 
 export function isSettingsSectionKey(
   value: string | null | undefined,

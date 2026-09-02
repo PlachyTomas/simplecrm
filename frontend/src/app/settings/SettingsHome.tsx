@@ -6,7 +6,6 @@ import {
   defaultSectionKey,
   GROUP_LABELS,
   GROUP_ORDER,
-  IMPORT_NAV_ITEM,
   SETTINGS_SECTIONS,
   visibleSectionKeys,
 } from "@/app/settings/settingsNav";
@@ -73,7 +72,6 @@ export function SettingsHome() {
   }
 
   const visibleKeys = visibleSectionKeys(user.role, user.can_invite);
-  const isAdmin = user.role === "admin";
 
   return (
     <div>
@@ -83,8 +81,7 @@ export function SettingsHome() {
           const items = SETTINGS_SECTIONS.filter(
             (s) => s.group === group && visibleKeys.includes(s.key),
           );
-          const withImport = group === "sales" && isAdmin;
-          if (items.length === 0 && !withImport) return null;
+          if (items.length === 0) return null;
           return (
             <section key={group}>
               <h2 className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
@@ -100,14 +97,6 @@ export function SettingsHome() {
                     description={t(s.descriptionKey)}
                   />
                 ))}
-                {withImport ? (
-                  <HomeRow
-                    to={IMPORT_NAV_ITEM.to}
-                    icon={IMPORT_NAV_ITEM.icon}
-                    label={t(IMPORT_NAV_ITEM.labelKey)}
-                    description={t(IMPORT_NAV_ITEM.descriptionKey)}
-                  />
-                ) : null}
               </ul>
             </section>
           );
