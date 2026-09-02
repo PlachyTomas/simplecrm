@@ -25,7 +25,8 @@
  * built from the matching `-rgb` triple. They're meant to be applied as-is
  * (`bg-accent-subtle`) and do not accept further `/<alpha>` chaining.
  *
- * The brand accent `--color-brand-accent` is canonical magenta `#EC4899` —
+ * The brand accent `--color-brand-accent` is magenta — `#EC4899` in dark,
+ * `#DB2777` in light (white text on fills; never hardcode either) —
  * "Označit jako vyhráno", logo, leaderboard #1 only. Lime is retired per
  * SIMPLECRM_DESIGN_BRIEF.md; the `--color-highlight` token alias remains and
  * now points at the magenta brand-accent so that any leftover `bg-highlight`
@@ -207,8 +208,9 @@
      value. 3.3:1 keeps it perceivable but clearly empty. */
   --color-text-placeholder-rgb: 134 134 147;
   --color-text-on-accent-rgb: 255 255 255;
-  /* Solid magenta fills always carry near-black text — never white. */
-  --color-text-on-brand-accent-rgb: 10 10 11;
+  /* Light mode matches the colored-button convention (white text) — the
+     fill below is darkened to pink-600 so white clears AA 4.5:1. */
+  --color-text-on-brand-accent-rgb: 255 255 255;
   --color-text-primary: rgb(var(--color-text-primary-rgb));
   --color-text-secondary: rgb(var(--color-text-secondary-rgb));
   --color-text-tertiary: rgb(var(--color-text-tertiary-rgb));
@@ -226,18 +228,19 @@
   --color-accent-subtle: rgb(var(--color-accent-rgb) / 0.1);
   --color-accent-border: rgb(var(--color-accent-rgb) / 0.3);
 
-  /* Brand accent — magenta. Same hex in both themes; the brief notes the
-     surrounding contrast changes the perceived loudness. Use sparingly in
-     light mode (≤1 instance per screen). */
-  --color-brand-accent-rgb: 236 72 153;
-  --color-brand-accent-hover-rgb: 244 114 182;
+  /* Brand accent — magenta, darkened one step (pink-600) in light mode so
+     white text passes AA on solid fills; hover darkens further (pink-700)
+     so the label never dips below AA. Use sparingly in light mode (≤1
+     instance per screen). */
+  --color-brand-accent-rgb: 219 39 119;
+  --color-brand-accent-hover-rgb: 190 24 93;
   --color-brand-accent: rgb(var(--color-brand-accent-rgb));
   --color-brand-accent-hover: rgb(var(--color-brand-accent-hover-rgb));
   /* Radix pink-50 — solid for light mode (intentionally not translucent). */
   --color-brand-accent-subtle: rgb(251 234 240);
   --color-brand-accent-border: rgb(var(--color-brand-accent-rgb) / 0.32);
 
-  --color-win-rgb: 236 72 153;
+  --color-win-rgb: 219 39 119;
   --color-win: rgb(var(--color-win-rgb));
   --color-win-subtle: rgb(251 234 240);
 

@@ -209,7 +209,7 @@ export function InvoiceDetailDrawer({ invoiceId, onSelectInvoice }: InvoiceDetai
               type="button"
               onClick={handleConfirmDraft}
               disabled={confirmDraft.isPending}
-              className="rounded-md border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-text-on-accent hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {t("invoiceDetail.actions.confirmDraft")}
             </button>

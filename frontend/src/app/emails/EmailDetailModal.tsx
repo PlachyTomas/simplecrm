@@ -176,7 +176,7 @@ export function EmailDetailModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex h-9 items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-white transition-colors duration-fast hover:bg-accent-hover"
+                className="inline-flex h-9 items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
               >
                 {t("detail.close")}
               </button>

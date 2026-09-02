@@ -127,7 +127,7 @@ export function InvoicesList({ selectedInvoiceId, onSelect }: InvoicesListProps)
           <button
             type="button"
             onClick={() => setManualOpen(true)}
-            className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+            className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-text-on-accent hover:opacity-90"
           >
             {t("invoicesList.issueManually")}
           </button>

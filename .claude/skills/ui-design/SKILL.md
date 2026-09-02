@@ -126,7 +126,7 @@ The `-rgb` triple is what `tailwind.config.ts` feeds into `rgb(var(--color-x-rgb
   --color-text-tertiary-rgb: 90 90 101;     /* AA-bumped from #8a8a95 */
   --color-text-placeholder-rgb: 134 134 147; /* input placeholders — 3:1, not 4.5:1 */
   --color-text-on-accent-rgb: 255 255 255;  /* white text on the darkened indigo */
-  --color-text-on-brand-accent-rgb: 10 10 11; /* near-black on magenta — never white */
+  --color-text-on-brand-accent-rgb: 255 255 255; /* white, like every light-mode colored button (owner call 2026-09-02); fill darkened below for AA */
 
   /* Accent — Radix iris-9 #5B5BD6, slightly darkened for AA on warm-white. */
   --color-accent-rgb: 91 91 214;            /* #5B5BD6 */
@@ -135,14 +135,16 @@ The `-rgb` triple is what `tailwind.config.ts` feeds into `rgb(var(--color-x-rgb
   --color-accent-subtle: rgb(var(--color-accent-rgb) / 0.1);
   --color-accent-border: rgb(var(--color-accent-rgb) / 0.3);
 
-  /* Brand accent — magenta #EC4899, same hex both themes. Use sparingly in
-     light mode (≤1 instance per screen). */
-  --color-brand-accent-rgb: 236 72 153;
-  --color-brand-accent-hover-rgb: 244 114 182;
+  /* Brand accent — magenta, darkened to pink-600 in light mode so WHITE
+     text passes AA 4.5:1 on solid fills; hover darkens further (pink-700)
+     so the label never dips below AA. Use sparingly in light mode (≤1
+     instance per screen). */
+  --color-brand-accent-rgb: 219 39 119;     /* #DB2777 */
+  --color-brand-accent-hover-rgb: 190 24 93; /* pink-700 — hover darkens, keeps AA */
   --color-brand-accent-subtle: rgb(251 234 240);  /* Radix pink-50, solid (intentionally opaque) */
   --color-brand-accent-border: rgb(var(--color-brand-accent-rgb) / 0.32);
 
-  --color-win-rgb: 236 72 153;
+  --color-win-rgb: 219 39 119;
   --color-win-subtle: rgb(251 234 240);
 
   --color-highlight-rgb: var(--color-brand-accent-rgb);
@@ -295,7 +297,7 @@ The brand has two accents with distinct jobs. **Mixing them up is the single fas
 Use confidently — indigo is the workhorse, not special.
 
 ### 4.2 Magenta (`--color-brand-accent`, `bg-brand-accent` / `text-brand-accent`; `bg-win`; legacy `bg-highlight`) — WIN + BRAND MOMENT
-`#EC4899` in both themes. Solid magenta fills always carry near-black text (`text-text-on-brand-accent`), never white. Used **sparingly** for accomplishment, brand identity, and rare high-priority highlights. **It should feel like a hit of dopamine when it appears.**
+`#EC4899` in dark, `#DB2777` (pink-600) in light. Solid magenta fills always use `text-text-on-brand-accent`, which follows the colored-button convention per theme: near-black in dark (like every dark-mode colored button), white in light — the light fill is darkened precisely so white clears AA (owner call 2026-09-02; never hardcode either color). Used **sparingly** for accomplishment, brand identity, and rare high-priority highlights. **It should feel like a hit of dopamine when it appears.**
 
 Appropriate (all live in the code today):
 - The logo mark — a Sparkles glyph in a `bg-highlight` box (`frontend/src/components/Logo.tsx`; favicon mirrors it)

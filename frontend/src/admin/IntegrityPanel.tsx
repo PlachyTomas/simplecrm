@@ -76,7 +76,7 @@ export function IntegrityPanel() {
           type="button"
           onClick={() => runCheck.mutate()}
           disabled={runCheck.isPending}
-          className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+          className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-text-on-accent hover:opacity-90 disabled:opacity-50"
         >
           {runCheck.isPending ? t("integrityPanel.running") : t("integrityPanel.runButton")}
         </button>

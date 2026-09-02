@@ -301,7 +301,7 @@ export function MailPage() {
                   type="button"
                   data-testid={testIds.emails.mail.bulkAssign}
                   onClick={() => setLinkTarget(unmatchedOnPage.filter((e) => selected.has(e.id)))}
-                  className="inline-flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-white transition-colors duration-fast hover:bg-accent-hover"
+                  className="inline-flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
                 >
                   {t("mailPage.bulk.assign", { count: selected.size })}
                 </button>

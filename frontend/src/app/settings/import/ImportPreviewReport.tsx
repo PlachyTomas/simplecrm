@@ -109,7 +109,7 @@ export function ImportPreviewReport(props: {
           type="button"
           onClick={props.onCommit}
           disabled={blocked || props.isCommitting}
-          className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-text-on-accent disabled:cursor-not-allowed disabled:opacity-50"
           data-testid="import-confirm-commit"
         >
           {props.isCommitting && <Loader2 className="animate-spin" size={14} />}

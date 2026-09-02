@@ -22,8 +22,21 @@ export function celebrateWin(anchor?: HTMLElement | null): void {
     scalar: 0.9,
     origin,
     disableForReducedMotion: true,
-    colors: ["#EC4899", "#F472B6", "#5B5BD6", "#A1A1AA"],
+    colors: [
+      tokenHex("--color-win-rgb", "#EC4899"),
+      tokenHex("--color-brand-accent-hover-rgb", "#F472B6"),
+      tokenHex("--color-accent-rgb", "#5B5BD6"),
+      "#A1A1AA",
+    ],
   });
+}
+
+/** Resolve a `--color-*-rgb` triple to hex (canvas-confetti wants hex). */
+function tokenHex(name: string, fallback: string): string {
+  const triple = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const parts = triple.split(/\s+/).map(Number);
+  if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return fallback;
+  return `#${parts.map((n) => n.toString(16).padStart(2, "0")).join("")}`;
 }
 
 function anchorOrigin(anchor: HTMLElement | null | undefined): { x: number; y: number } {

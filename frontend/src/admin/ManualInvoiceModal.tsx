@@ -303,7 +303,7 @@ export function ManualInvoiceModal({ onClose, onIssued }: ManualInvoiceModalProp
             type="button"
             onClick={handleSubmit}
             disabled={issue.isPending}
-            className="rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+            className="rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-text-on-accent hover:opacity-90 disabled:opacity-50"
           >
             {issue.isPending ? t("manualInvoiceModal.submitting") : t("manualInvoiceModal.submit")}
           </button>
