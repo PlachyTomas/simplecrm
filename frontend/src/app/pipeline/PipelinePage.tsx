@@ -733,7 +733,9 @@ function StageColumn({
         "group/column relative flex flex-col rounded-lg border border-border bg-surface transition-colors duration-fast",
         "before:pointer-events-none before:absolute before:inset-y-0 before:left-0 before:z-10 before:w-[3px] before:rounded-l-lg before:bg-[var(--stage-seam)]",
         "max-md:w-full max-md:shrink-0",
-        "md:min-w-0 md:flex-1",
+        // min-w keeps columns readable (§6.3 kanban ~300px); flex-1 still
+        // stretches a few columns to fill the row on wide screens.
+        "md:min-w-[280px] md:flex-1",
         isOver && "ring-2 ring-accent",
       )}
     >
@@ -1218,7 +1220,10 @@ export function PipelinePage() {
                 // select-none: touch drags (dnd-kit long-press) must never
                 // start a text selection on card/column text.
                 "hidden flex-1 select-none gap-3 px-4 pb-6 md:flex md:px-8",
-                "md:min-h-0 md:overflow-hidden",
+                // Columns have a usable minimum width, so a many-stage board
+                // scrolls horizontally instead of crushing every column;
+                // dnd-kit's default autoScroll drags across the overflow.
+                "md:min-h-0 md:overflow-x-auto md:overflow-y-hidden",
               )}
             >
               {filteredStages.map((stage) => (
