@@ -188,7 +188,10 @@ export function ActivityRow({
   return (
     <li className="relative">
       {marker === "line" ? (
-        <span aria-hidden className="absolute -left-5 top-2.5 inline-block h-px w-3 bg-border-strong" />
+        <span
+          aria-hidden
+          className="absolute -left-5 top-2.5 inline-block h-px w-3 bg-border-strong"
+        />
       ) : (
         /* Kind-labeled rows keep their label's color even read-only; anything
            else (audit rows) is neutral so no system dot collides with a

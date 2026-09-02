@@ -71,15 +71,22 @@ function EditableEntry({ activity }: { activity: ActivityItem }) {
   const savedBody = useRef(serverBody.trim());
   const debounce = useRef<number | undefined>(undefined);
   const savedNotice = useRef<number | undefined>(undefined);
+  // Typing awaiting its debounce. An activities refetch (any deal write
+  // invalidates the cache) can re-slice the page and unmount this row before
+  // the debounce fires; the cleanup below flushes instead of discarding.
+  const pendingEdit = useRef<string | null>(null);
 
-  // Both timers outlive a fast unmount (row deleted, page swapped) and would
-  // set state on a gone component.
+  const flushEdit = update.mutate;
   useEffect(
     () => () => {
       window.clearTimeout(debounce.current);
       window.clearTimeout(savedNotice.current);
+      const orphan = pendingEdit.current;
+      if (orphan !== null && orphan.trim() !== savedBody.current) {
+        flushEdit({ id: activity.id, patch: { body: orphan.trim() || null } });
+      }
     },
-    [],
+    [activity.id, flushEdit],
   );
 
   // The textarea is one line until the text needs more; grow it to content
@@ -92,9 +99,10 @@ function EditableEntry({ activity }: { activity: ActivityItem }) {
   }, [text]);
 
   /**
-   * Write `next` into every cached activities page, run the PATCH, and put
-   * the snapshot back if it fails. `revert` undoes the local field state the
-   * cache doesn't own.
+   * Write `next` into every cached activities page, run the PATCH, and on
+   * failure restore just this row from the snapshot — never the whole page,
+   * which may have legitimately refetched (and gained rows) in the meantime.
+   * `revert` undoes the local field state the cache doesn't own.
    */
   async function applyPatch(
     patch: UpdateActivityPatch,
@@ -117,7 +125,16 @@ function EditableEntry({ activity }: { activity: ActivityItem }) {
       savedNotice.current = window.setTimeout(() => setStatus("idle"), SAVED_NOTICE_MS);
     } catch {
       for (const [key, page] of snapshots) {
-        if (page) qc.setQueryData(key, page);
+        const previous = page?.items.find((item) => item.id === activity.id);
+        if (!previous) continue;
+        qc.setQueryData<ActivitiesPage>(key, (current) =>
+          current
+            ? {
+                ...current,
+                items: current.items.map((item) => (item.id === activity.id ? previous : item)),
+              }
+            : current,
+        );
       }
       revert();
       setStatus("idle");
@@ -126,6 +143,7 @@ function EditableEntry({ activity }: { activity: ActivityItem }) {
   }
 
   function saveBody(value: string) {
+    pendingEdit.current = null;
     const trimmed = value.trim();
     if (trimmed === savedBody.current) return;
     const previous = savedBody.current;
@@ -199,6 +217,7 @@ function EditableEntry({ activity }: { activity: ActivityItem }) {
             onChange={(e) => {
               const value = e.target.value;
               setText(value);
+              pendingEdit.current = value;
               window.clearTimeout(debounce.current);
               debounce.current = window.setTimeout(() => saveBody(value), TYPING_DEBOUNCE_MS);
             }}

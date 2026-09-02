@@ -468,6 +468,278 @@ async def test_create_deal_accepts_the_static_note(
     assert response.json()["note"] == "Region: Morava"
 
 
+async def test_update_deal_stage_change_logs_stage_change_activity(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Changing the stage through the edit-form PUT must produce the same
+    `stage_change` row as a kanban drag — the deal timeline filters to a
+    narrative type set that excludes `deal_updated`, so a stage move logged
+    only as a field edit silently never appears there."""
+    from sqlalchemy import select as sql_select
+
+    from app.db.models import Pipeline
+
+    org, first_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+
+    stages_stmt = sql_select(Stage).join(Pipeline).where(Pipeline.organization_id == org.id)
+    stages = (await db_session.execute(stages_stmt)).scalars().all()
+    second_stage = next(s for s in stages if s.position == 1)
+
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=first_stage.id,
+        owner_user_id=admin.id,
+        name="Formulářový posun",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    response = await client.put(
+        f"/api/v1/deals/{deal.id}",
+        headers=_auth(admin),
+        json={"stage_id": str(second_stage.id)},
+    )
+    assert response.status_code == 200
+    assert response.json()["stage_id"] == str(second_stage.id)
+
+    acts = await client.get(
+        f"/api/v1/activities?entity_type=deal&entity_id={deal.id}", headers=_auth(admin)
+    )
+    items = acts.json()["items"]
+    stage_changes = [a for a in items if a["activity_type"] == "stage_change"]
+    assert len(stage_changes) == 1
+    assert stage_changes[0]["payload"]["from_stage_name"] == first_stage.name
+    assert stage_changes[0]["payload"]["to_stage_name"] == second_stage.name
+    # A pure stage move is NOT a field edit — no deal_updated row on top.
+    assert [a for a in items if a["activity_type"] == "deal_updated"] == []
+
+
+async def test_update_deal_stage_plus_fields_logs_both_rows(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Stage + other fields in one PUT: the stage move becomes a
+    `stage_change` row and the remaining edits a `deal_updated` row whose
+    changes map no longer mentions the stage."""
+    from sqlalchemy import select as sql_select
+
+    from app.db.models import Pipeline
+
+    org, first_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+
+    stages_stmt = sql_select(Stage).join(Pipeline).where(Pipeline.organization_id == org.id)
+    stages = (await db_session.execute(stages_stmt)).scalars().all()
+    second_stage = next(s for s in stages if s.position == 1)
+
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=first_stage.id,
+        owner_user_id=admin.id,
+        name="Kombinovaná editace",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    response = await client.put(
+        f"/api/v1/deals/{deal.id}",
+        headers=_auth(admin),
+        json={"stage_id": str(second_stage.id), "name": "Po editaci"},
+    )
+    assert response.status_code == 200
+
+    acts = await client.get(
+        f"/api/v1/activities?entity_type=deal&entity_id={deal.id}", headers=_auth(admin)
+    )
+    items = acts.json()["items"]
+    assert len([a for a in items if a["activity_type"] == "stage_change"]) == 1
+    updated = [a for a in items if a["activity_type"] == "deal_updated"]
+    assert len(updated) == 1
+    assert "name" in updated[0]["payload"]["changes"]
+    assert "stage_id" not in updated[0]["payload"]["changes"]
+    assert "stage_id" not in updated[0]["payload"]["changed"]
+
+
+async def test_update_deal_stage_into_won_sets_closed_at(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """PUT with a won stage_id must carry full move-stage semantics
+    (closed_at + company ownership refresh), and PUT back to an open stage
+    must reopen — otherwise the edit form quietly de-syncs won bookkeeping."""
+    from sqlalchemy import select as sql_select
+
+    from app.db.models import Pipeline
+    from app.db.models.enums import StageType
+
+    org, first_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+
+    stages_stmt = sql_select(Stage).join(Pipeline).where(Pipeline.organization_id == org.id)
+    stages = (await db_session.execute(stages_stmt)).scalars().all()
+    won_stage = next(s for s in stages if s.stage_type == StageType.won)
+
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=first_stage.id,
+        owner_user_id=admin.id,
+        name="Výhra přes formulář",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    won = await client.put(
+        f"/api/v1/deals/{deal.id}",
+        headers=_auth(admin),
+        json={"stage_id": str(won_stage.id)},
+    )
+    assert won.status_code == 200
+    assert won.json()["closed_at"] is not None
+
+    async with AsyncSessionLocal() as fresh:
+        refreshed_company = await fresh.get(Company, company.id)
+        assert refreshed_company is not None
+        assert refreshed_company.last_order_at is not None
+        assert refreshed_company.ownership_expires_at is not None
+
+    paid = await client.post(
+        f"/api/v1/deals/{deal.id}/payment", headers=_auth(admin), json={"paid": True}
+    )
+    assert paid.status_code == 200
+    assert paid.json()["is_paid"] is True
+
+    reopened = await client.put(
+        f"/api/v1/deals/{deal.id}",
+        headers=_auth(admin),
+        json={"stage_id": str(first_stage.id)},
+    )
+    assert reopened.status_code == 200
+    assert reopened.json()["closed_at"] is None
+    # Leaving the won stage must clear payment state too (mirrors reopen);
+    # otherwise no UI could ever unset it — the payment endpoint 409s
+    # outside won stages.
+    assert reopened.json()["is_paid"] is False
+    assert reopened.json()["paid_at"] is None
+
+
+async def test_update_deal_same_stage_is_a_noop(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """PUT re-submitting the current stage_id writes no activity at all —
+    neither a stage_change nor a deal_updated row."""
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=admin.id,
+        name="Beze změny",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    response = await client.put(
+        f"/api/v1/deals/{deal.id}",
+        headers=_auth(admin),
+        json={"stage_id": str(stage.id)},
+    )
+    assert response.status_code == 200
+
+    acts = await client.get(
+        f"/api/v1/activities?entity_type=deal&entity_id={deal.id}", headers=_auth(admin)
+    )
+    assert [a["activity_type"] for a in acts.json()["items"]] == []
+
+
+async def test_update_deal_rejects_explicit_null_stage_and_company(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Submitted-but-null stage_id/company_id is a 400, not a NOT NULL 500."""
+    org, stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=stage.id,
+        owner_user_id=admin.id,
+        name="Nulový vstup",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    for field in ("stage_id", "company_id"):
+        response = await client.put(
+            f"/api/v1/deals/{deal.id}", headers=_auth(admin), json={field: None}
+        )
+        assert response.status_code == 400, field
+
+
+async def test_update_deal_stage_move_drops_co_submitted_lost_reason(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """A PUT carrying both an open-stage move and lost_reason must not log a
+    lost_reason edit the transition immediately reset — DB and activity log
+    have to agree."""
+    from sqlalchemy import select as sql_select
+
+    from app.db.models import Pipeline
+
+    org, first_stage = await _seed_org_with_pipeline(db_session, owned_cleanup)
+    admin = await _seed_user(db_session, owned_cleanup, org, UserRole.admin)
+    company = await _seed_company(db_session, org)
+
+    stages_stmt = sql_select(Stage).join(Pipeline).where(Pipeline.organization_id == org.id)
+    stages = (await db_session.execute(stages_stmt)).scalars().all()
+    second_stage = next(s for s in stages if s.position == 1)
+
+    deal = Deal(
+        organization_id=org.id,
+        company_id=company.id,
+        stage_id=first_stage.id,
+        owner_user_id=admin.id,
+        name="Sporný důvod",
+        value=Decimal("0"),
+        currency="CZK",
+    )
+    db_session.add(deal)
+    await db_session.commit()
+
+    response = await client.put(
+        f"/api/v1/deals/{deal.id}",
+        headers=_auth(admin),
+        json={"stage_id": str(second_stage.id), "lost_reason": "Cena"},
+    )
+    assert response.status_code == 200
+    assert response.json()["lost_reason"] is None
+
+    acts = await client.get(
+        f"/api/v1/activities?entity_type=deal&entity_id={deal.id}", headers=_auth(admin)
+    )
+    items = acts.json()["items"]
+    assert len([a for a in items if a["activity_type"] == "stage_change"]) == 1
+    assert [a for a in items if a["activity_type"] == "deal_updated"] == []
+
+
 async def test_update_deal_rejects_cross_org_stage(
     client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
 ) -> None:

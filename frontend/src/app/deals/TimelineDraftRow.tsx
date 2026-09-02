@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ActivityKindPicker } from "@/app/activities/ActivityKindPicker";
@@ -26,7 +26,18 @@ export function TimelineDraftRow({ dealId }: { dealId: string }) {
   const [kind, setKind] = useState<EventLabelBrief | null>(null);
   const [body, setBody] = useState("");
   const [when, setWhen] = useState(() => toLocalInputValue(new Date()));
+  // An untouched time field means "now": the commit sends the actual save
+  // moment (seconds included — the minute-rounded input would sort the entry
+  // below anything logged since), and the interval below keeps the displayed
+  // prefill tracking it so the field never shows a time it won't save.
+  const [whenTouched, setWhenTouched] = useState(false);
   const bodyRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (whenTouched) return;
+    const tick = window.setInterval(() => setWhen(toLocalInputValue(new Date())), 30_000);
+    return () => window.clearInterval(tick);
+  }, [whenTouched]);
   // Enter fires the commit; a second Enter before the POST returns would
   // fire another one against state that has not been cleared yet.
   const inFlight = useRef(false);
@@ -37,6 +48,7 @@ export function TimelineDraftRow({ dealId }: { dealId: string }) {
     setKind(null);
     setBody("");
     setWhen(toLocalInputValue(new Date()));
+    setWhenTouched(false);
   }
 
   async function commit() {
@@ -48,9 +60,11 @@ export function TimelineDraftRow({ dealId }: { dealId: string }) {
       await create.mutateAsync({
         label_id: kind?.id ?? null,
         body: trimmed || null,
-        occurred_at: (fromLocalInputValue(when) ?? new Date()).toISOString(),
+        occurred_at: (whenTouched
+          ? (fromLocalInputValue(when) ?? new Date())
+          : new Date()
+        ).toISOString(),
       });
-      // Fresh "now" for the next entry — not the stale value the page loaded with.
       reset();
       // The emptied draft disables the + button; without a new focus target
       // the browser drops focus to <body> and keyboard users start over.
@@ -114,7 +128,10 @@ export function TimelineDraftRow({ dealId }: { dealId: string }) {
           id={timeId}
           type="datetime-local"
           value={when}
-          onChange={(e) => setWhen(e.target.value)}
+          onChange={(e) => {
+            setWhen(e.target.value);
+            setWhenTouched(true);
+          }}
           data-testid={testIds.deals.detail.timelineDraftTime}
           className="h-9 rounded-md border border-border bg-surface px-2 text-sm tabular-nums text-text-primary transition-colors duration-fast focus:border-accent focus:outline-none"
         />

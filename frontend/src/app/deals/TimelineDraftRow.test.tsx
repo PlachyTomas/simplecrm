@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TimelineDraftRow } from "@/app/deals/TimelineDraftRow";
@@ -130,6 +130,48 @@ describe("TimelineDraftRow", () => {
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
     // 9:00 local — whatever offset the runner sits at — never 9:00 UTC.
     expect(posted().occurred_at).toBe(new Date(2026, 7, 10, 9, 0, 0, 0).toISOString());
+  });
+
+  it("commits the real save time when the time field was never touched", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      vi.setSystemTime(new Date(2026, 7, 10, 9, 0, 0, 0));
+      render(<TimelineDraftRow dealId="d1" />);
+      expect(time().value).toBe("2026-08-10T09:00");
+      // The row sits open while other things happen; the prefill goes stale.
+      const saveMoment = new Date(2026, 7, 10, 9, 5, 30, 0);
+      vi.setSystemTime(saveMoment);
+      fireEvent.change(body(), { target: { value: "Hovor po pauze" } });
+      fireEvent.click(submit());
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+      const occurred = new Date(posted().occurred_at as string).getTime();
+      // The actual commit moment — never the minute-rounded 9:00 prefill,
+      // which would sort the entry under anything logged since mount.
+      expect(Math.abs(occurred - saveMoment.getTime())).toBeLessThan(2_000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps the untouched prefill tracking now, and stops once touched", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 7, 10, 9, 0, 0, 0));
+      render(<TimelineDraftRow dealId="d1" />);
+      expect(time().value).toBe("2026-08-10T09:00");
+      act(() => {
+        vi.setSystemTime(new Date(2026, 7, 10, 9, 3, 0, 0));
+        vi.advanceTimersByTime(30_000);
+      });
+      expect(time().value).toBe("2026-08-10T09:03");
+      fireEvent.change(time(), { target: { value: "2026-08-10T08:00" } });
+      act(() => {
+        vi.advanceTimersByTime(60_000);
+      });
+      expect(time().value).toBe("2026-08-10T08:00");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("re-reads 'now' into the time field after a successful save", async () => {

@@ -494,9 +494,19 @@ async def update_deal(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Cannot reassign ownership outside your scope",
             )
-    if "company_id" in updates and updates["company_id"] is not None:
+    if "company_id" in updates:
+        if updates["company_id"] is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="company_id cannot be null",
+            )
         await _assert_company_in_org(session, user, updates["company_id"])
-    if "stage_id" in updates and updates["stage_id"] is not None:
+    if "stage_id" in updates:
+        if updates["stage_id"] is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="stage_id cannot be null",
+            )
         await _assert_stage_in_org(session, user, updates["stage_id"])
     if "primary_contact_id" in updates:
         await _assert_contact_in_org(session, user, updates["primary_contact_id"])
@@ -507,15 +517,36 @@ async def update_deal(
     changed = [field for field, value in updates.items() if getattr(deal, field) != value]
     raw_changes = {field: (getattr(deal, field), updates[field]) for field in changed}
 
+    # A stage move is pipeline narrative, not a field edit: route it through
+    # the shared transition (closed_at sync + a `stage_change` row the deal
+    # timeline actually shows) instead of the plain setattr + deal_updated.
+    dest_stage: Stage | None = None
+    if "stage_id" in changed:
+        del updates["stage_id"]
+        changed.remove("stage_id")
+        del raw_changes["stage_id"]
+        dest_stage = await session.get(Stage, payload.stage_id)
+        # _assert_stage_in_org already verified existence + org ownership.
+        assert dest_stage is not None  # noqa: S101 — guaranteed by the assert above
+        if dest_stage.stage_type is not StageType.lost:
+            # The transition resets lost_reason on entering open/won; drop a
+            # co-submitted value so the deal_updated log matches the DB.
+            updates.pop("lost_reason", None)
+            if "lost_reason" in changed:
+                changed.remove("lost_reason")
+                del raw_changes["lost_reason"]
+
     for field, value in updates.items():
         setattr(deal, field, value)
+
+    if dest_stage is not None:
+        await _transition_stage(session, user, deal, dest_stage)
 
     if changed:
         changes = await resolve_field_changes(
             session,
             raw_changes,
             user_fields=frozenset({"owner_user_id"}),
-            stage_fields=frozenset({"stage_id"}),
             contact_fields=frozenset({"primary_contact_id"}),
             company_fields=frozenset({"company_id"}),
         )
@@ -536,54 +567,47 @@ async def update_deal(
     return deal
 
 
-@router.post("/{deal_id}/move-stage", response_model=DealDetailOut)
-async def move_deal_stage(
-    deal_id: uuid.UUID,
-    payload: DealStageMove,
-    user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
-) -> Deal:
-    """Drag-and-drop endpoint for the kanban board.
+async def _transition_stage(
+    session: AsyncSession, user: User, deal: Deal, dest_stage: Stage
+) -> None:
+    """Move the deal into `dest_stage` — the single owner of stage semantics,
+    shared by the kanban drag endpoint and the edit-form PUT.
 
     Syncs `closed_at` and `lost_reason` to the destination stage's type:
-      * Drag into a `won` stage  → set `closed_at = now`, clear lost_reason,
+      * Into a `won` stage  → set `closed_at = now`, clear lost_reason,
         refresh the company's last_order_at + ownership_expires_at (matches
         `mark-won` semantics; otherwise the deal would be invisible from
         the board's won-window filter).
-      * Drag into a `lost` stage → set `closed_at = now` so the deal is
-        marked terminal. `lost_reason` is left as-is — drag has no UI for
+      * Into a `lost` stage → set `closed_at = now` so the deal is marked
+        terminal. `lost_reason` is left as-is — neither entry has a UI for
         capturing it; the founder can edit via the deal detail page.
-      * Drag into an `open` stage → clear `closed_at` and `lost_reason`
-        ("reopen"). Without this, dragging a won deal back to an earlier
+      * Into an `open` stage → clear `closed_at` and `lost_reason`
+        ("reopen"). Without this, moving a won deal back to an earlier
         stage would leave `closed_at` set, and the board's visibility
         filter would hide the row.
+
+    Always logs a `stage_change` activity — the deal timeline shows those,
+    not `deal_updated` rows. Callers have already checked scope, org
+    ownership of the stage, and that the stage actually differs.
     """
     from datetime import UTC, datetime, timedelta
 
-    deal = await _get_scoped(session, user, deal_id)
-    if not await can_write_row(session, user, deal.owner_user_id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot move deals outside your visibility scope",
-        )
-    await _assert_stage_in_org(session, user, payload.stage_id)
-
-    if deal.stage_id == payload.stage_id:
-        return deal  # no-op; UI sometimes sends it on drop
-
     previous_stage = await session.get(Stage, deal.stage_id)
     previous_type = previous_stage.stage_type if previous_stage else StageType.open
-    dest_stage = await session.get(Stage, payload.stage_id)
-    # _assert_stage_in_org already verified existence + org ownership.
-    assert dest_stage is not None  # noqa: S101 — guaranteed by the assert above
 
     previous_stage_id = deal.stage_id
-    deal.stage_id = payload.stage_id
+    deal.stage_id = dest_stage.id
 
     now = datetime.now(tz=UTC)
+    if previous_type is StageType.won and dest_stage.stage_type is not StageType.won:
+        # `is_paid` only carries meaning in a won stage (mirrors reopen_deal);
+        # left set, no UI could ever clear it — the payment endpoint 409s
+        # outside won stages.
+        deal.is_paid = False
+        deal.paid_at = None
     if dest_stage.stage_type is StageType.won:
         # Match mark-won: set closed_at + refresh the owning company so
-        # the auto-free clock resets. Only on transition INTO won; drags
+        # the auto-free clock resets. Only on transition INTO won; moves
         # between won stages (multi-won pipelines) don't double-refresh.
         if previous_type is not StageType.won:
             deal.closed_at = now
@@ -597,7 +621,6 @@ async def move_deal_stage(
         if previous_type is not StageType.lost:
             deal.closed_at = now
     else:  # StageType.open
-        # Reopen: a deal moving back to an open stage stops being terminal.
         deal.closed_at = None
         deal.lost_reason = None
 
@@ -612,11 +635,39 @@ async def move_deal_stage(
         payload={
             "deal_name": deal.name,
             "from_stage_id": str(previous_stage_id),
-            "to_stage_id": str(payload.stage_id),
+            "to_stage_id": str(dest_stage.id),
             "from_stage_name": previous_stage.name if previous_stage else None,
             "to_stage_name": dest_stage.name,
         },
     )
+
+
+@router.post("/{deal_id}/move-stage", response_model=DealDetailOut)
+async def move_deal_stage(
+    deal_id: uuid.UUID,
+    payload: DealStageMove,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Deal:
+    """Drag-and-drop endpoint for the kanban board — see `_transition_stage`
+    for the won/lost/open semantics."""
+
+    deal = await _get_scoped(session, user, deal_id)
+    if not await can_write_row(session, user, deal.owner_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot move deals outside your visibility scope",
+        )
+    await _assert_stage_in_org(session, user, payload.stage_id)
+
+    if deal.stage_id == payload.stage_id:
+        return deal  # no-op; UI sometimes sends it on drop
+
+    dest_stage = await session.get(Stage, payload.stage_id)
+    # _assert_stage_in_org already verified existence + org ownership.
+    assert dest_stage is not None  # noqa: S101 — guaranteed by the assert above
+
+    await _transition_stage(session, user, deal, dest_stage)
     await session.commit()
     await session.refresh(deal)
     return deal

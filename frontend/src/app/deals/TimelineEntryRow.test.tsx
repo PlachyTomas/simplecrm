@@ -7,14 +7,15 @@ import type { ActivityItem } from "@/app/activities/ActivityRow";
 import { TimelineEntryRow } from "@/app/deals/TimelineEntryRow";
 import { testIds } from "@/lib/testids";
 
-const { updateAsync, deleteMutate, toastError } = vi.hoisted(() => ({
+const { updateAsync, updateMutate, deleteMutate, toastError } = vi.hoisted(() => ({
   updateAsync: vi.fn(),
+  updateMutate: vi.fn(),
   deleteMutate: vi.fn(),
   toastError: vi.fn(),
 }));
 
 vi.mock("@/app/activities/useActivityEdit", () => ({
-  useUpdateActivity: () => ({ mutateAsync: updateAsync, isPending: false }),
+  useUpdateActivity: () => ({ mutateAsync: updateAsync, mutate: updateMutate, isPending: false }),
   useDeleteActivity: () => ({ mutate: deleteMutate, isPending: false }),
 }));
 
@@ -81,8 +82,26 @@ describe("TimelineEntryRow", () => {
   beforeEach(() => {
     updateAsync.mockReset();
     updateAsync.mockResolvedValue({ ...MANUAL });
+    updateMutate.mockReset();
     deleteMutate.mockReset();
     toastError.mockReset();
+  });
+
+  it("flushes a pending edit when the row unmounts before the debounce fires", () => {
+    const { unmount } = renderRow();
+    fireEvent.change(bodyField(), { target: { value: "Rozepsáno a pryč" } });
+    unmount();
+    expect(updateMutate).toHaveBeenCalledWith({ id: "a1", patch: { body: "Rozepsáno a pryč" } });
+    expect(updateAsync).not.toHaveBeenCalled();
+  });
+
+  it("does not flush on unmount when nothing is pending", async () => {
+    const { unmount } = renderRow();
+    fireEvent.change(bodyField(), { target: { value: "Uloženo přes blur" } });
+    fireEvent.blur(bodyField());
+    await waitFor(() => expect(updateAsync).toHaveBeenCalledTimes(1));
+    unmount();
+    expect(updateMutate).not.toHaveBeenCalled();
   });
 
   it("PATCHes the body on blur", async () => {
