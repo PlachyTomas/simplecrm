@@ -734,6 +734,13 @@
       "generic": "Štítek se nepodařilo uložit. Zkuste to prosím znovu."
     },
     "deleteConfirmTitle": "Smazat štítek?",
-    "deleteConfirmAction": "Smazat"
+    "deleteConfirmAction": "Smazat",
+    "create": {
+      "nameLabel": "Název nového štítku",
+      "namePlaceholder": "Nový štítek…",
+      "submit": "Přidat štítek",
+      "creating": "Přidávám…",
+      "colorAria": "Barva nového štítku"
+    }
   }
 }

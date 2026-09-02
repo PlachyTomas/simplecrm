@@ -1,18 +1,19 @@
 /**
  * Settings → Štítky událostí. One screen, no wizard: the org's shared event
- * labels with inline rename and an 8-swatch recolor, mirroring
- * SalesGoalsSection's read-for-all / write-for-admin structure.
- *
- * Creation lives in `LabelPicker` (the event form) — this list only manages
- * labels that already exist.
+ * labels with an admin create form (name + swatch), inline rename and an
+ * 8-swatch recolor, mirroring SalesGoalsSection's read-for-all /
+ * write-for-admin structure. Labels can also be created inline from the
+ * event form's `LabelPicker` and the timeline's kind picker.
  */
 
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { LabelColorSwatches } from "@/app/events/LabelColorSwatches";
 import {
-  EVENT_LABEL_PALETTE,
+  nextEventLabelColor,
+  useCreateEventLabel,
   useDeleteEventLabel,
   useEventLabels,
   useUpdateEventLabel,
@@ -22,7 +23,81 @@ import { useCurrentUser } from "@/auth/useCurrentUser";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ApiError } from "@/lib/api";
 import { testIds } from "@/lib/testids";
-import { cn } from "@/lib/utils";
+
+function CreateLabelRow({ existingCount }: { existingCount: number }) {
+  const { t } = useTranslation("settings");
+  const create = useCreateEventLabel();
+  const [name, setName] = useState("");
+  const [color, setColor] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const trimmed = name.trim();
+  const effectiveColor = color ?? nextEventLabelColor(existingCount);
+
+  async function submit() {
+    if (!trimmed || create.isPending) return;
+    setError(null);
+    try {
+      await create.mutateAsync({ name: trimmed, color: effectiveColor });
+      setName("");
+      setColor(null);
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.status === 409
+          ? t("eventLabels.errors.duplicate")
+          : t("eventLabels.errors.generic"),
+      );
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed border-border px-3 py-2.5">
+      <label htmlFor="event-label-create-name" className="sr-only">
+        {t("eventLabels.create.nameLabel")}
+      </label>
+      <input
+        id="event-label-create-name"
+        type="text"
+        value={name}
+        maxLength={50}
+        onChange={(e) => {
+          setName(e.target.value);
+          setError(null);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            void submit();
+          }
+        }}
+        placeholder={t("eventLabels.create.namePlaceholder")}
+        data-testid={testIds.eventLabels.createName}
+        className="w-40 rounded-md border border-border bg-surface px-2 py-1 text-sm text-text-primary focus:border-accent focus:outline-none"
+      />
+      <LabelColorSwatches
+        value={effectiveColor}
+        onChange={setColor}
+        ariaLabel={t("eventLabels.create.colorAria")}
+        swatchLabel={(hex) => t("eventLabels.swatchAriaLabel", { color: hex })}
+        testId={(hex) => testIds.eventLabels.createColor(hex)}
+      />
+      <button
+        type="button"
+        onClick={() => void submit()}
+        disabled={!trimmed || create.isPending}
+        data-testid={testIds.eventLabels.createSubmit}
+        className="ml-auto inline-flex h-8 items-center rounded-md bg-accent px-3 text-xs font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {create.isPending ? t("eventLabels.create.creating") : t("eventLabels.create.submit")}
+      </button>
+      {error ? (
+        <p role="alert" className="w-full text-xs text-danger">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 function LabelRow({ label, canManage }: { label: EventLabelOut; canManage: boolean }) {
   const { t } = useTranslation("settings");
@@ -97,30 +172,14 @@ function LabelRow({ label, canManage }: { label: EventLabelOut; canManage: boole
 
       {canManage ? (
         <>
-          <div
-            className="flex items-center gap-1"
-            role="group"
-            aria-label={t("eventLabels.swatchGroupAriaLabel")}
-          >
-            {EVENT_LABEL_PALETTE.map((hex) => (
-              <button
-                key={hex}
-                type="button"
-                onClick={() => void recolor(hex)}
-                disabled={update.isPending}
-                aria-label={t("eventLabels.swatchAriaLabel", { color: hex })}
-                aria-pressed={hex === label.color}
-                data-testid={testIds.eventLabels.color(label.id, hex)}
-                className={cn(
-                  "h-5 w-5 shrink-0 rounded-full border-2 transition-colors duration-fast disabled:cursor-not-allowed disabled:opacity-50",
-                  hex === label.color
-                    ? "border-text-primary"
-                    : "border-transparent hover:border-border-strong",
-                )}
-                style={{ backgroundColor: hex }}
-              />
-            ))}
-          </div>
+          <LabelColorSwatches
+            value={label.color}
+            onChange={(hex) => void recolor(hex)}
+            ariaLabel={t("eventLabels.swatchGroupAriaLabel")}
+            swatchLabel={(hex) => t("eventLabels.swatchAriaLabel", { color: hex })}
+            testId={(hex) => testIds.eventLabels.color(label.id, hex)}
+            disabled={update.isPending}
+          />
 
           <div className="ml-auto flex shrink-0 items-center gap-1">
             <button
@@ -184,6 +243,12 @@ export function EventLabelsSection() {
           <p className="mt-1 text-xs text-text-tertiary">{t("eventLabels.readOnlyNote")}</p>
         ) : null}
       </div>
+
+      {canManage ? (
+        <div className="mt-4">
+          <CreateLabelRow existingCount={items.length} />
+        </div>
+      ) : null}
 
       <div className="mt-4 space-y-2">
         {list.isPending ? (

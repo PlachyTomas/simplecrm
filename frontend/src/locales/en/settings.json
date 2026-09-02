@@ -727,6 +727,13 @@
       "generic": "Failed to save the label. Please try again."
     },
     "deleteConfirmTitle": "Delete label?",
-    "deleteConfirmAction": "Delete"
+    "deleteConfirmAction": "Delete",
+    "create": {
+      "nameLabel": "New label name",
+      "namePlaceholder": "New label…",
+      "submit": "Add label",
+      "creating": "Adding…",
+      "colorAria": "New label color"
+    }
   }
 }

@@ -268,11 +268,7 @@ export const testIds = {
     addWidget: "dashboard-add-widget",
     quickAction: (type: string) => `dashboard-quick-action-${type}`,
     widgetRemove: (id: string) => `dashboard-widget-remove-${id}`,
-    widgetConfig: {
-      open: (id: string) => `dashboard-widget-config-open-${id}`,
-      popover: "dashboard-widget-config-popover",
-      preset: (preset: string) => `dashboard-widget-config-preset-${preset}`,
-    },
+    globalRange: "dashboard-global-range",
   },
   todos: {
     // The dashboard widget. Ids carry the widget id because several todo
@@ -342,6 +338,9 @@ export const testIds = {
     dealSectionMeetLink: (id: string) => `event-deal-section-meet-link-${id}`,
   },
   eventLabels: {
+    createName: "event-label-create-name-input",
+    createSubmit: "event-label-create-submit",
+    createColor: (hex: string) => `event-label-create-color-${hex}`,
     row: (id: string) => `event-label-row-${id}`,
     name: (id: string) => `event-label-name-${id}`,
     save: (id: string) => `event-label-save-${id}`,

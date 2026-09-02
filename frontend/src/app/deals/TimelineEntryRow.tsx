@@ -18,7 +18,6 @@ import { formatDate } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
-import { cn } from "@/lib/utils";
 
 /** Autosave delay while the user is still typing. */
 const TYPING_DEBOUNCE_MS = 800;
@@ -40,7 +39,7 @@ interface TimelineEntryRowProps {
  */
 export function TimelineEntryRow({ activity, onOpenEmail }: TimelineEntryRowProps) {
   if (!activity.can_edit) {
-    return <ActivityRow activity={activity} hideDealName onOpenEmail={onOpenEmail} />;
+    return <ActivityRow activity={activity} hideDealName marker="line" onOpenEmail={onOpenEmail} />;
   }
   return <EditableEntry activity={activity} />;
 }
@@ -175,20 +174,15 @@ function EditableEntry({ activity }: { activity: ActivityItem }) {
     // *save* it, and the two controls that can be cancelled (the time input
     // and the kind picker) each revert on their own Escape.
     <li className="group relative" data-testid={testIds.deals.detail.timelineEntry(activity.id)}>
-      <span
-        aria-hidden
-        className={cn(
-          "absolute -left-[26px] top-1 inline-block h-2.5 w-2.5 rounded-full",
-          label ? null : "bg-accent",
-        )}
-        // Data-driven label color — the sanctioned inline-style exception.
-        style={label ? { backgroundColor: label.color } : undefined}
-      />
+      {/* Connector from the timeline rail toward the kind chip, centered on
+          the chip's 24px height. */}
+      <span aria-hidden className="absolute -left-5 top-3 inline-block h-px w-3 bg-border-strong" />
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          {/* Out-dent by the controls' own padding so the text edge lines up
-              with the read-only rows' titles (they start at the column edge). */}
-          <div className="-ml-2 inline-block">
+          {/* Out-dent by the chip's own padding so the text edge lines up
+              with the read-only rows' titles — only for the filled chip; the
+              empty state is a visible dashed box that must not overhang. */}
+          <div className={label ? "-ml-2 inline-block" : "inline-block"}>
             <ActivityKindPicker
               value={label}
               onChange={saveKind}

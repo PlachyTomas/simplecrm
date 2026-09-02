@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, X } from "lucide-react";
 
+import { LabelColorSwatches } from "@/app/events/LabelColorSwatches";
 import {
   type EventLabelBrief,
   labelTint,
@@ -36,6 +37,7 @@ export function LabelPicker({ selected, onChange, inputCls }: LabelPickerProps) 
   const listId = useId();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [newColor, setNewColor] = useState<string | null>(null);
 
   const labels = useEventLabels();
   const createLabel = useCreateEventLabel();
@@ -58,18 +60,24 @@ export function LabelPicker({ selected, onChange, inputCls }: LabelPickerProps) 
   function pick(label: EventLabelBrief) {
     onChange([...selected, { id: label.id, name: label.name, color: label.color }]);
     setQuery("");
+    setNewColor(null);
   }
 
   function remove(labelId: string) {
     onChange(selected.filter((label) => label.id !== labelId));
   }
 
+  const createColor = newColor ?? nextEventLabelColor(all.length);
+
   function create() {
     if (!canCreate || createLabel.isPending) return;
     createLabel.mutate(
-      { name: trimmed, color: nextEventLabelColor(all.length) },
+      { name: trimmed, color: createColor },
       {
-        onSuccess: (created) => pick(created),
+        onSuccess: (created) => {
+          pick(created);
+          setNewColor(null);
+        },
         onError: () => toast.error(t("eventFormModal.labelPicker.createError")),
       },
     );
@@ -106,7 +114,15 @@ export function LabelPicker({ selected, onChange, inputCls }: LabelPickerProps) 
         </ul>
       ) : null}
 
-      <div className="relative">
+      <div
+        className="relative"
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+            setOpen(false);
+            setNewColor(null);
+          }
+        }}
+      >
         <input
           id={inputId}
           type="text"
@@ -123,7 +139,6 @@ export function LabelPicker({ selected, onChange, inputCls }: LabelPickerProps) 
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          onBlur={() => setOpen(false)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               // The picker's Enter belongs to the picker, not the form.
@@ -143,6 +158,7 @@ export function LabelPicker({ selected, onChange, inputCls }: LabelPickerProps) 
           <div
             id={listId}
             role="listbox"
+            onMouseDown={(e) => e.preventDefault()}
             aria-label={t("eventFormModal.labelsLabel")}
             className="absolute left-0 right-0 z-10 mt-1 max-h-40 overflow-y-auto rounded-md border border-border bg-surface-elevated py-1 shadow-md"
           >
@@ -166,21 +182,34 @@ export function LabelPicker({ selected, onChange, inputCls }: LabelPickerProps) 
               </button>
             ))}
             {canCreate ? (
-              <button
-                type="button"
-                data-testid={testIds.events.labelPicker.create}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={create}
-                disabled={createLabel.isPending}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-accent transition-colors duration-fast hover:bg-surface-overlay disabled:opacity-60"
-              >
-                <Plus size={14} strokeWidth={1.75} aria-hidden="true" />
-                <span className="truncate">
-                  {createLabel.isPending
-                    ? t("eventFormModal.labelPicker.creating")
-                    : t("eventFormModal.labelPicker.create", { name: trimmed })}
-                </span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  data-testid={testIds.events.labelPicker.create}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={create}
+                  disabled={createLabel.isPending}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-accent transition-colors duration-fast hover:bg-surface-overlay disabled:opacity-60"
+                >
+                  <Plus size={14} strokeWidth={1.75} aria-hidden="true" />
+                  <span className="truncate">
+                    {createLabel.isPending
+                      ? t("eventFormModal.labelPicker.creating")
+                      : t("eventFormModal.labelPicker.create", { name: trimmed })}
+                  </span>
+                </button>
+                <div className="px-3 py-1.5" onMouseDown={(e) => e.preventDefault()}>
+                  <LabelColorSwatches
+                    value={createColor}
+                    onChange={setNewColor}
+                    ariaLabel={t("eventFormModal.labelPicker.colorAria")}
+                    swatchLabel={(hex) =>
+                      t("eventFormModal.labelPicker.swatchAria", { color: hex })
+                    }
+                    size="sm"
+                  />
+                </div>
+              </>
             ) : null}
             {!canCreate && matches.length === 0 ? (
               <p className="px-3 py-1.5 text-xs text-text-tertiary" role="status">

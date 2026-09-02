@@ -284,7 +284,9 @@
         "loadError": "Could not load kinds.",
         "noMatch": "Nothing matches.",
         "clear": "No kind",
-        "sharedHint": "Kinds are shared with your calendar labels."
+        "sharedHint": "Kinds are shared with your calendar labels.",
+        "colorAria": "New kind color",
+        "swatchAria": "Color {{color}}"
       }
     },
     "reopenDialog": {
@@ -352,7 +354,6 @@
     "titleCreate": "Schedule event",
     "titleEdit": "Edit event",
     "dealLabel": "Deal:",
-    "defaultTitle": "Meeting — {{dealName}}",
     "nameLabel": "Name",
     "dateLabel": "Date",
     "fromLabel": "From",
@@ -388,7 +389,9 @@
       "create": "Create label “{{name}}”",
       "creating": "Creating…",
       "createError": "Failed to create the label.",
-      "remove": "Remove label {{name}}"
+      "remove": "Remove label {{name}}",
+      "colorAria": "New label color",
+      "swatchAria": "Color {{color}}"
     },
     "attendees": {
       "label": "Attendees (optional)",

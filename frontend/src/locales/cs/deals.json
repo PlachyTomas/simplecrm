@@ -291,7 +291,9 @@
         "loadError": "Druhy se nepodařilo načíst.",
         "noMatch": "Nic neodpovídá.",
         "clear": "Bez druhu",
-        "sharedHint": "Druhy sdílíte se štítky v kalendáři."
+        "sharedHint": "Druhy sdílíte se štítky v kalendáři.",
+        "colorAria": "Barva nového druhu",
+        "swatchAria": "Barva {{color}}"
       }
     },
     "reopenDialog": {
@@ -360,7 +362,6 @@
     "titleCreate": "Naplánovat událost",
     "titleEdit": "Upravit událost",
     "dealLabel": "Obchod:",
-    "defaultTitle": "Schůzka — {{dealName}}",
     "nameLabel": "Název",
     "dateLabel": "Datum",
     "fromLabel": "Od",
@@ -396,7 +397,9 @@
       "create": "Vytvořit štítek „{{name}}“",
       "creating": "Vytvářím…",
       "createError": "Štítek se nepodařilo vytvořit.",
-      "remove": "Odebrat štítek {{name}}"
+      "remove": "Odebrat štítek {{name}}",
+      "colorAria": "Barva nového štítku",
+      "swatchAria": "Barva {{color}}"
     },
     "attendees": {
       "label": "Účastníci (volitelné)",

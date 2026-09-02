@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 
+import { LabelColorSwatches } from "@/app/events/LabelColorSwatches";
 import {
   type EventLabelBrief,
   labelTint,
@@ -33,6 +34,7 @@ export function ActivityKindPicker({ value, onChange, testId }: ActivityKindPick
   const listId = useId();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [newColor, setNewColor] = useState<string | null>(null);
 
   const labels = useEventLabels();
   const createLabel = useCreateEventLabel();
@@ -48,9 +50,12 @@ export function ActivityKindPicker({ value, onChange, testId }: ActivityKindPick
   // just come back as a 409.
   const canCreate = trimmed.length > 0 && !exists && !labels.isPending && !labels.isError;
 
+  const createColor = newColor ?? nextEventLabelColor(all.length);
+
   function close() {
     setOpen(false);
     setQuery("");
+    setNewColor(null);
   }
 
   function pick(label: EventLabelBrief | null) {
@@ -61,7 +66,7 @@ export function ActivityKindPicker({ value, onChange, testId }: ActivityKindPick
   function create() {
     if (!canCreate || createLabel.isPending) return;
     createLabel.mutate(
-      { name: trimmed, color: nextEventLabelColor(all.length) },
+      { name: trimmed, color: createColor },
       {
         onSuccess: (created) => pick(created),
         onError: () => toast.error(t("dealDetail.timeline.kindPicker.createError")),
@@ -75,7 +80,12 @@ export function ActivityKindPicker({ value, onChange, testId }: ActivityKindPick
         type="button"
         onClick={() => setOpen(true)}
         data-testid={testId}
-        className="inline-flex h-6 items-center gap-1.5 rounded-full px-2 text-xs font-medium transition-opacity duration-fast hover:opacity-80"
+        className={
+          value
+            ? "inline-flex h-6 items-center gap-1.5 rounded-full px-2 text-xs font-medium transition-opacity duration-fast hover:opacity-80"
+            : // The empty chip must read as clickable — dashed outline + plus.
+              "inline-flex h-6 items-center gap-1 rounded-full border border-dashed border-border-strong px-2 text-xs font-medium text-text-secondary transition-colors duration-fast hover:border-accent hover:text-accent"
+        }
         style={value ? { backgroundColor: labelTint(value.color), color: value.color } : undefined}
       >
         {value ? (
@@ -88,14 +98,24 @@ export function ActivityKindPicker({ value, onChange, testId }: ActivityKindPick
             {value.name}
           </>
         ) : (
-          <span className="text-text-tertiary">{t("dealDetail.timeline.kindPicker.clear")}</span>
+          <>
+            <Plus size={12} strokeWidth={1.75} aria-hidden="true" />
+            {t("dealDetail.timeline.kindPicker.clear")}
+          </>
         )}
       </button>
     );
   }
 
   return (
-    <div className="relative inline-block text-sm">
+    // Closing lives on the container so focus may travel to the swatches
+    // (Tab) without the input's blur tearing the dropdown down.
+    <div
+      className="relative inline-block text-sm"
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) close();
+      }}
+    >
       <input
         id={inputId}
         type="text"
@@ -110,7 +130,6 @@ export function ActivityKindPicker({ value, onChange, testId }: ActivityKindPick
         value={query}
         maxLength={50}
         onChange={(e) => setQuery(e.target.value)}
-        onBlur={close}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             // The picker's Enter belongs to the picker, not the surrounding row.
@@ -129,6 +148,7 @@ export function ActivityKindPicker({ value, onChange, testId }: ActivityKindPick
       <div
         id={listId}
         role="listbox"
+        onMouseDown={(e) => e.preventDefault()}
         aria-label={t("dealDetail.timeline.kindPicker.placeholder")}
         className="absolute left-0 right-0 z-10 mt-1 max-h-48 min-w-48 overflow-y-auto rounded-md border border-border bg-surface-elevated py-1 shadow-md"
       >
@@ -161,21 +181,34 @@ export function ActivityKindPicker({ value, onChange, testId }: ActivityKindPick
           </button>
         ))}
         {canCreate ? (
-          <button
-            type="button"
-            data-testid={`${testId}-create`}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={create}
-            disabled={createLabel.isPending}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-accent transition-colors duration-fast hover:bg-surface-overlay disabled:opacity-60"
-          >
-            <Plus size={14} strokeWidth={1.75} aria-hidden="true" />
-            <span className="truncate">
-              {createLabel.isPending
-                ? t("dealDetail.timeline.kindPicker.creating")
-                : t("dealDetail.timeline.kindPicker.create", { name: trimmed })}
-            </span>
-          </button>
+          <>
+            <button
+              type="button"
+              data-testid={`${testId}-create`}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={create}
+              disabled={createLabel.isPending}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-accent transition-colors duration-fast hover:bg-surface-overlay disabled:opacity-60"
+            >
+              <Plus size={14} strokeWidth={1.75} aria-hidden="true" />
+              <span className="truncate">
+                {createLabel.isPending
+                  ? t("dealDetail.timeline.kindPicker.creating")
+                  : t("dealDetail.timeline.kindPicker.create", { name: trimmed })}
+              </span>
+            </button>
+            <div className="px-3 py-1.5" onMouseDown={(e) => e.preventDefault()}>
+              <LabelColorSwatches
+                value={createColor}
+                onChange={setNewColor}
+                ariaLabel={t("dealDetail.timeline.kindPicker.colorAria")}
+                swatchLabel={(hex) =>
+                  t("dealDetail.timeline.kindPicker.swatchAria", { color: hex })
+                }
+                size="sm"
+              />
+            </div>
+          </>
         ) : null}
         {!canCreate && matches.length === 0 ? (
           <p className="px-3 py-1.5 text-xs text-text-tertiary" role="status">
