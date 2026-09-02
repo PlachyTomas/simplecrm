@@ -99,6 +99,7 @@ export function DealTimelineSection({ dealId }: { dealId: string }) {
                   key={activity.id}
                   activity={activity}
                   hideDealName
+                  marker="line"
                   onOpenEmail={setOpenEmailId}
                 />
               ),

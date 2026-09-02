@@ -271,7 +271,7 @@ export function EventFormModal({
         initialDate && initialDate !== todayLocalDate()
           ? { date: initialDate, start: "09:00", end: "10:00" }
           : defaultStart();
-      const defaultTitle = dealName ? t("eventFormModal.defaultTitle", { dealName }) : "";
+      const defaultTitle = dealName ?? "";
       setTitle(defaultTitle);
       setDate(slot.date);
       setStartTime(slot.start);
@@ -302,11 +302,7 @@ export function EventFormModal({
       });
     }
     // googleAvailable intentionally re-applies when the status loads while
-    // the modal is open (first paint may race the status query). `t` stays
-    // OUT of the deps: its identity changes on a language switch (e.g. the
-    // server sync adopting another device's choice mid-edit), and re-running
-    // the reset then would wipe the user's in-progress form.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // the modal is open (first paint may race the status query).
   }, [open, event, dealName, initialDate, googleAvailable]);
 
   if (!open) return null;
@@ -318,7 +314,7 @@ export function EventFormModal({
     if (!deal) return;
     // The picked deal supplies the default title — but only over an empty
     // field or a previous auto-fill, never over the user's own text.
-    const nextDefault = t("eventFormModal.defaultTitle", { dealName: deal.name });
+    const nextDefault = deal.name;
     setTitle((prev) => {
       if (!prev.trim() || prev === lastDefaultTitleRef.current) {
         lastDefaultTitleRef.current = nextDefault;

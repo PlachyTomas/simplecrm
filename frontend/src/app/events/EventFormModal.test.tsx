@@ -246,8 +246,9 @@ describe("EventFormModal deal picker", () => {
     expect(screen.queryByTestId(testIds.events.dealPicker.option("d2"))).not.toBeInTheDocument();
     await userEvent.click(option);
 
-    // The picked deal supplies the default title.
-    expect(screen.getByDisplayValue("Schůzka — Web pro Acme")).toBeInTheDocument();
+    // The picked deal supplies the default title — the deal name, verbatim.
+    // (The picker input also shows the name, hence the role-scoped query.)
+    expect(screen.getByRole("textbox", { name: "Název" })).toHaveValue("Web pro Acme");
 
     await userEvent.click(screen.getByRole("button", { name: "Vytvořit událost" }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
@@ -255,7 +256,7 @@ describe("EventFormModal deal picker", () => {
     expect(post).toBeDefined();
     expect(JSON.parse(String(post![1]!.body))).toMatchObject({
       deal_id: "d1",
-      title: "Schůzka — Web pro Acme",
+      title: "Web pro Acme",
     });
   });
 
@@ -282,7 +283,7 @@ describe("EventFormModal deal picker", () => {
     // No picker; the bound deal shows in the subtitle and the title defaults.
     expect(screen.queryByTestId(testIds.events.dealPicker.input)).not.toBeInTheDocument();
     expect(screen.getByText("Velká zakázka")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("Schůzka — Velká zakázka")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Velká zakázka")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Vytvořit událost" }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());

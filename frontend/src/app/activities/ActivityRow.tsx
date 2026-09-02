@@ -161,6 +161,7 @@ export function ActivityRow({
   activity,
   hideDealName = false,
   onOpenEmail,
+  marker = "dot",
 }: {
   activity: ActivityItem;
   /** Suppress the "Obchod „…“ ·" prefix — redundant inside a single deal's
@@ -169,6 +170,8 @@ export function ActivityRow({
   /** When provided, email rows whose payload carries `email_id` render a
    *  "view email" link. Rows logged before the id existed stay plain. */
   onOpenEmail?: (emailId: string) => void;
+  /** "line" = the deal timeline's horizontal connector; "dot" everywhere else. */
+  marker?: "dot" | "line";
 }): JSX.Element {
   const { t } = useTranslation("common");
   const locale = useLocale();
@@ -184,17 +187,21 @@ export function ActivityRow({
 
   return (
     <li className="relative">
-      {/* Kind-labeled rows keep their label's color even read-only; anything
-          else (audit rows) is neutral so no system dot collides with a
-          user-picked label color. */}
-      <span
-        aria-hidden
-        className={cn(
-          "absolute -left-[26px] top-1 inline-block h-2.5 w-2.5 rounded-full",
-          activity.label ? null : "bg-text-tertiary",
-        )}
-        style={activity.label ? { backgroundColor: activity.label.color } : undefined}
-      />
+      {marker === "line" ? (
+        <span aria-hidden className="absolute -left-5 top-2.5 inline-block h-px w-3 bg-border-strong" />
+      ) : (
+        /* Kind-labeled rows keep their label's color even read-only; anything
+           else (audit rows) is neutral so no system dot collides with a
+           user-picked label color. */
+        <span
+          aria-hidden
+          className={cn(
+            "absolute -left-[26px] top-1 inline-block h-2.5 w-2.5 rounded-full",
+            activity.label ? null : "bg-text-tertiary",
+          )}
+          style={activity.label ? { backgroundColor: activity.label.color } : undefined}
+        />
+      )}
       <p className="text-sm font-medium text-text-primary">
         {dealName ? (
           <>
