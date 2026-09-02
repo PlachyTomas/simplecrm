@@ -22,6 +22,7 @@ import { useCurrentUser } from "@/auth/useCurrentUser";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { testIds } from "@/lib/testids";
+import { celebrateWin } from "@/lib/celebrate";
 import { useToast } from "@/lib/toast";
 
 /**
@@ -271,11 +272,13 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
             <>
               <button
                 type="button"
-                onClick={() =>
+                onClick={(e) => {
+                  const anchor = e.currentTarget;
                   markWon.mutate(undefined, {
+                    onSuccess: () => celebrateWin(anchor),
                     onError: () => toast.error(t("dealDetail.toast.winError")),
-                  })
-                }
+                  });
+                }}
                 disabled={markWon.isPending}
                 className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-accent px-4 text-sm font-semibold text-text-on-brand-accent transition-colors duration-fast hover:bg-brand-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
               >

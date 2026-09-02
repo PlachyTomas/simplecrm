@@ -733,9 +733,9 @@ function StageColumn({
         "group/column relative flex flex-col rounded-lg border border-border bg-surface transition-colors duration-fast",
         "before:pointer-events-none before:absolute before:inset-y-0 before:left-0 before:z-10 before:w-[3px] before:rounded-l-lg before:bg-[var(--stage-seam)]",
         "max-md:w-full max-md:shrink-0",
-        // min-w keeps columns readable (§6.3 kanban ~300px); flex-1 still
-        // stretches a few columns to fill the row on wide screens.
-        "md:min-w-[280px] md:flex-1",
+        // Columns shrink to a still-readable floor before the board starts
+        // scrolling (owner call: fit-first, scroll only past that).
+        "md:min-w-[220px] md:flex-1",
         isOver && "ring-2 ring-accent",
       )}
     >
