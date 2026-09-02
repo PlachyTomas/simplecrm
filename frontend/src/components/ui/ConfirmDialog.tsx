@@ -1,4 +1,5 @@
 import { type ReactNode, useId } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { testIds } from "@/lib/testids";
@@ -45,7 +46,9 @@ export function ConfirmDialog({
   const titleId = useId();
   const dialogRef = useModalDialog<HTMLDivElement>(onCancel, open);
   if (!open) return null;
-  return (
+  // Portaled to <body>: a transformed ancestor (a react-grid-layout cell)
+  // would otherwise become the containing block for this fixed overlay.
+  return createPortal(
     <div
       ref={dialogRef}
       tabIndex={-1}
@@ -87,6 +90,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

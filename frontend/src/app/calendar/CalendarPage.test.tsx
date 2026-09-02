@@ -217,9 +217,9 @@ describe("CalendarPage day panel", () => {
     const dayPanel = await screen.findByLabelText("Detail vybraného dne");
     const row = await within(dayPanel).findByTestId(testIds.calendar.dayEventRow("e1"));
 
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     await userEvent.click(within(row).getByRole("button", { name: "Smazat událost Schůzka" }));
-    expect(confirmSpy).toHaveBeenCalled();
+    expect(screen.getByTestId(testIds.confirmDialog.confirm)).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId(testIds.confirmDialog.cancel));
     expect(screen.queryByRole("heading", { name: "Upravit událost" })).not.toBeInTheDocument();
 
     await userEvent.click(row);

@@ -139,6 +139,8 @@
     "deleteButton": "Delete company",
     "deleting": "Deleting…",
     "deleteHint": "Deleting the company permanently removes all of its deals too.",
+    "deleteConfirmTitle": "Delete company?",
+    "deleteConfirmAction": "Delete",
     "deleteConfirm": "Delete company {{name}}? All of its deals will be removed too. This cannot be undone.",
     "deleteSuccess": "Company deleted.",
     "deleteError": "Failed to delete the company. Please try again.",

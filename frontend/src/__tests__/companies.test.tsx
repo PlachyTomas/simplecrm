@@ -206,6 +206,8 @@ describe("Companies screens", () => {
     renderAt(`/app/companies/${company.id}`, { token: "fake" });
     const user = userEvent.setup();
     await user.click(await screen.findByTestId("companies-delete-button"));
+    expect(confirmSpy).not.toHaveBeenCalled();
+    await user.click(await screen.findByTestId("confirm-dialog-confirm"));
 
     await waitFor(() =>
       expect(

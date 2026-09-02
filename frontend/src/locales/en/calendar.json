@@ -30,7 +30,9 @@
     "noEventsDay": "No events yet.",
     "noEventsMonth": "There are no events this month.",
     "moreEvents": "+{{count}} more",
+    "deleteConfirmTitle": "Delete this event?",
     "deleteConfirm": "Delete the event \"{{title}}\"?",
+    "deleteConfirmAction": "Delete",
     "deleteSuccess": "Event deleted.",
     "deleteError": "Failed to delete the event.",
     "noDeal": "No deal"

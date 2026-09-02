@@ -597,7 +597,6 @@ describe("EmailComposeModal — template picker", () => {
   it("fills subject and body silently when nothing was typed", async () => {
     stubTemplates();
     const { container } = wrap(<EmailComposeModal open onClose={vi.fn()} dealId="d1" />);
-    const confirmSpy = vi.spyOn(window, "confirm");
     const select = await screen.findByTestId(testIds.emails.compose.templateSelect);
     fireEvent.change(select, { target: { value: "tpl1" } });
     expect(screen.getByDisplayValue("Nabídka pro {firma}")).toBeInTheDocument();
@@ -605,22 +604,22 @@ describe("EmailComposeModal — template picker", () => {
     expect((container.querySelector("textarea") as HTMLTextAreaElement).value).toBe(
       "Dobrý den,\nposílám nabídku.",
     );
-    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.queryByTestId(testIds.confirmDialog.confirm)).not.toBeInTheDocument();
   });
 
   it("asks before overwriting existing text and keeps it on cancel", async () => {
     stubTemplates();
     // Reply mode prefills the subject → the picker must confirm first.
     wrap(<EmailComposeModal open onClose={vi.fn()} dealId="d1" replyTo={PARENT} />);
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     const select = await screen.findByTestId(testIds.emails.compose.templateSelect);
     fireEvent.change(select, { target: { value: "tpl1" } });
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId(testIds.confirmDialog.confirm)).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(testIds.confirmDialog.cancel));
     expect(screen.getByDisplayValue("Re: Nabídka")).toBeInTheDocument();
     expect(screen.queryByDisplayValue("Nabídka pro {firma}")).not.toBeInTheDocument();
 
-    confirmSpy.mockReturnValue(true);
     fireEvent.change(select, { target: { value: "tpl1" } });
+    fireEvent.click(screen.getByTestId(testIds.confirmDialog.confirm));
     expect(screen.getByDisplayValue("Nabídka pro {firma}")).toBeInTheDocument();
   });
 

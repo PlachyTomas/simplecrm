@@ -288,6 +288,8 @@ describe("Contacts split-view", () => {
     renderAt("/app/contacts/c1");
     const user = userEvent.setup();
     await user.click(await screen.findByTestId("contacts-delete-button"));
+    expect(confirmSpy).not.toHaveBeenCalled();
+    await user.click(await screen.findByTestId("confirm-dialog-confirm"));
 
     await waitFor(() =>
       expect(

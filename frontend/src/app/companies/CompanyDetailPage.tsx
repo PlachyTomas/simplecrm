@@ -11,6 +11,7 @@ import type { CompanyOut } from "@/app/companies/useCompanies";
 import { useDeleteCompany } from "@/app/companies/useDeleteCompany";
 import { useUpdateCompany } from "@/app/companies/useUpdateCompany";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ApiError } from "@/lib/api";
 import { externalLinkProps } from "@/lib/externalLink";
 import { AddContactModal } from "@/app/contacts/AddContactModal";
@@ -274,9 +275,9 @@ function CompanyContactRow({
   const deleteContact = useDeleteContact(contact.id);
   const fullName = `${contact.first_name} ${contact.last_name}`.trim();
   const isHighlighted = isMain || isAutoMain;
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   async function handleDelete() {
-    if (!window.confirm(tContacts("contactDetail.deleteConfirm", { name: fullName }))) return;
     try {
       await deleteContact.mutateAsync();
       toast.success(tContacts("contactDetail.deleteSuccess"));
@@ -289,6 +290,8 @@ function CompanyContactRow({
             ? tContacts("contactDetail.deleteConflict")
             : tContacts("contactDetail.deleteError"),
       );
+    } finally {
+      setConfirmDeleteOpen(false);
     }
   }
 
@@ -368,7 +371,7 @@ function CompanyContactRow({
           </button>
           <button
             type="button"
-            onClick={() => void handleDelete()}
+            onClick={() => setConfirmDeleteOpen(true)}
             disabled={deleteContact.isPending}
             aria-label={t("companyDetail.contactsTab.deleteContact", { name: fullName })}
             title={t("companyDetail.contactsTab.deleteContact", { name: fullName })}
@@ -379,6 +382,17 @@ function CompanyContactRow({
           </button>
         </span>
       ) : null}
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        danger
+        title={tContacts("contactDetail.deleteConfirmTitle")}
+        body={tContacts("contactDetail.deleteConfirm", { name: fullName })}
+        confirmLabel={tContacts("contactDetail.deleteConfirmAction")}
+        pendingLabel={tContacts("contactDetail.deleting")}
+        pending={deleteContact.isPending}
+        onCancel={() => setConfirmDeleteOpen(false)}
+        onConfirm={() => void handleDelete()}
+      />
     </li>
   );
 }
@@ -700,6 +714,7 @@ export function CompanyDetailPage() {
   const locale = useLocale();
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [editOpen, setEditOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const { data: company, isPending, isError } = useCompany(companyId);
   const { data: currentUser } = useCurrentUser();
   const { data: usersPage } = useOrgUsers();
@@ -715,7 +730,6 @@ export function CompanyDetailPage() {
   const canDelete = currentUser?.role === "admin";
 
   async function handleDelete() {
-    if (!window.confirm(t("companyDetail.deleteConfirm", { name: company!.name }))) return;
     try {
       await deleteCompany.mutateAsync();
       toast.success(t("companyDetail.deleteSuccess"));
@@ -727,6 +741,8 @@ export function CompanyDetailPage() {
         message = typeof detail === "string" ? detail : t("companyDetail.deleteConflict");
       }
       toast.error(message);
+    } finally {
+      setConfirmDeleteOpen(false);
     }
   }
 
@@ -858,7 +874,7 @@ export function CompanyDetailPage() {
             <p className="text-sm text-text-tertiary">{t("companyDetail.deleteHint")}</p>
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => setConfirmDeleteOpen(true)}
               disabled={deleteCompany.isPending}
               data-testid={testIds.companies.deleteButton}
               className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger disabled:opacity-60"
@@ -873,6 +889,17 @@ export function CompanyDetailPage() {
       ) : null}
 
       <EditCompanyModal open={editOpen} onClose={() => setEditOpen(false)} company={company} />
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        danger
+        title={t("companyDetail.deleteConfirmTitle")}
+        body={t("companyDetail.deleteConfirm", { name: company.name })}
+        confirmLabel={t("companyDetail.deleteConfirmAction")}
+        pendingLabel={t("companyDetail.deleting")}
+        pending={deleteCompany.isPending}
+        onCancel={() => setConfirmDeleteOpen(false)}
+        onConfirm={() => void handleDelete()}
+      />
     </div>
   );
 }

@@ -167,6 +167,8 @@
     "loading": "Loading…",
     "empty": "Nothing yet. Add the first company ID above.",
     "removeConfirm": "Remove company ID {{ico}} from the blocked list?",
+    "removeConfirmTitle": "Remove company ID?",
+    "removeConfirmButton": "Remove",
     "removeAriaLabel": "Remove {{ico}}",
     "reasons": {
       "competitor": "Competitor",
@@ -216,6 +218,8 @@
       "canInviteYes": "Yes",
       "canInviteNo": "No",
       "revokeConfirm": "Revoke the invitation for {{email}}?",
+      "revokeConfirmTitle": "Revoke the invitation?",
+      "revokeConfirmButton": "Revoke invitation",
       "revokeAriaLabel": "Revoke the invitation for {{email}}",
       "revokeSuccess": "Invitation revoked.",
       "revokeError": "Revoking the invitation failed."
@@ -233,6 +237,8 @@
     "errorLoad": "Couldn't load the user list.",
     "errorUpdate": "Update failed.",
     "cancelQueueConfirm": "This will cancel the entire planned user-count change. Continue?",
+    "cancelQueueConfirmTitle": "Cancel the planned change?",
+    "cancelQueueConfirmButton": "Cancel change",
     "cancelQueueError": "Cancelling the planned change failed.",
     "table": {
       "nameEmail": "Name / email",
@@ -254,6 +260,8 @@
     "active": "Active",
     "deactivated": "Deactivated",
     "deactivateConfirm": "Deactivate user {{name}}? They will lose access to the app immediately.",
+    "deactivateConfirmTitle": "Deactivate user?",
+    "deactivateConfirmButton": "Deactivate",
     "scheduledPillTitle": "This user will lose access on {{date}}.",
     "scheduledPillText": "Deactivation scheduled for {{date}}",
     "cancelScheduledAriaLabel": "Cancel scheduled deactivation",
@@ -277,6 +285,8 @@
     "saveButton": "Save",
     "deleteAriaLabel": "Delete team {{name}}",
     "deleteConfirm": "Delete team \"{{name}}\"?",
+    "deleteConfirmTitle": "Delete team?",
+    "deleteConfirmButton": "Delete",
     "table": {
       "name": "Name",
       "manager": "Manager",
@@ -461,7 +471,9 @@
       "moveDownAriaLabel": "Move down",
       "editAriaLabel": "Edit",
       "deleteAriaLabel": "Delete"
-    }
+    },
+    "deleteConfirmTitle": "Delete stage?",
+    "deleteConfirmAction": "Delete"
   },
   "permissions": {
     "visibility": {
@@ -519,12 +531,6 @@
     }
   },
   "import": {
-    "page": {
-      "pageTitle": "Import",
-      "title": "Bulk import",
-      "subtitle": "Upload one or more CSV files. For each, we'll check what it contains and you'll confirm the field mapping. You'll always see a preview before committing.",
-      "backLink": "Back to settings"
-    },
     "stepper": {
       "upload": "Upload files",
       "mapping": "Map columns",
@@ -628,6 +634,8 @@
     "editAriaLabel": "Edit template {{name}}",
     "deleteAriaLabel": "Delete template {{name}}",
     "deleteConfirm": "Really delete the template “{{name}}”?",
+    "deleteConfirmTitle": "Delete template?",
+    "deleteConfirmButton": "Delete",
     "errors": {
       "required": "Please fill in a name and a subject.",
       "duplicate": "A template with this name already exists.",
@@ -672,6 +680,8 @@
     "editAriaLabel": "Edit goal {{name}}",
     "deleteAriaLabel": "Delete goal {{name}}",
     "deleteConfirm": "Really delete the goal {{name}}?",
+    "deleteConfirmTitle": "Delete goal?",
+    "deleteConfirmButton": "Delete",
     "metric": {
       "won_value": "Value of deals won",
       "won_count": "Number of deals won"
@@ -715,6 +725,8 @@
     "errors": {
       "duplicate": "A label with this name already exists.",
       "generic": "Failed to save the label. Please try again."
-    }
+    },
+    "deleteConfirmTitle": "Delete label?",
+    "deleteConfirmAction": "Delete"
   }
 }

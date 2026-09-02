@@ -22,6 +22,8 @@
     "editLayout": "Edit layout",
     "addWidget": "Add widget",
     "resetLayout": "Reset to default",
+    "resetConfirmTitle": "Reset to the default layout?",
+    "resetConfirmAction": "Reset",
     "resetConfirm": "Reset to the default layout? Your changes will be lost.",
     "cancel": "Cancel",
     "save": "Save"

@@ -169,14 +169,13 @@ describe("EmailTemplatesSection", () => {
 
   it("deletes only after the confirm", async () => {
     const calls = stubFetch("admin");
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     renderSection();
     fireEvent.click(await screen.findByTestId(testIds.settings.emailTemplates.remove("tpl1")));
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByTestId(testIds.confirmDialog.cancel));
     expect(calls.some((c) => c.init?.method === "DELETE")).toBe(false);
 
-    confirmSpy.mockReturnValue(true);
     fireEvent.click(screen.getByTestId(testIds.settings.emailTemplates.remove("tpl1")));
+    fireEvent.click(screen.getByTestId(testIds.confirmDialog.confirm));
     await waitFor(() => expect(calls.some((c) => c.init?.method === "DELETE")).toBe(true));
   });
 });

@@ -12,6 +12,7 @@ import {
 } from "@/app/settings/useUsersTeams";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ApiError, apiFetch } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
@@ -33,6 +34,7 @@ function UserRow({
   onTeamChange,
   onCanInviteChange,
   onToggleActive,
+  onRequestDeactivate,
   onCapChange,
   onCancelScheduledDeactivation,
 }: {
@@ -45,6 +47,7 @@ function UserRow({
   onTeamChange: (teamId: string | null) => Promise<void>;
   onCanInviteChange: (next: boolean) => Promise<void>;
   onToggleActive: () => Promise<void>;
+  onRequestDeactivate: () => void;
   onCapChange: (next: number | null) => Promise<void>;
   onCancelScheduledDeactivation: () => void;
 }) {
@@ -148,7 +151,8 @@ function UserRow({
               // Deactivating revokes the member's login immediately — confirm
               // first so a stray click doesn't lock a colleague out (review UX
               // P1). Reactivating is harmless and needs no confirm.
-              if (u.is_active && !window.confirm(t("users.deactivateConfirm", { name: u.name }))) {
+              if (u.is_active) {
+                onRequestDeactivate();
                 return;
               }
               void onToggleActive();
@@ -195,6 +199,8 @@ export function UsersSection() {
   const qc = useQueryClient();
   const locale = useLocale();
   const [error, setError] = useState<string | null>(null);
+  const [deactivatingUser, setDeactivatingUser] = useState<UserOut | null>(null);
+  const [confirmCancelQueue, setConfirmCancelQueue] = useState(false);
 
   // Map of queued user IDs → formatted "DD.MM.RR" date so each row can
   // render the scheduled-deactivation pill without duplicating the math.
@@ -218,8 +224,12 @@ export function UsersSection() {
 
   function cancelQueueWithConfirm() {
     if (!sub) return;
-    const ok = window.confirm(t("users.cancelQueueConfirm"));
-    if (!ok) return;
+    setConfirmCancelQueue(true);
+  }
+
+  function confirmCancelQueueNow() {
+    setConfirmCancelQueue(false);
+    if (!sub) return;
     setError(null);
     void apiFetch("/api/v1/organizations/current/subscription/seat-count", {
       method: "PUT",
@@ -287,12 +297,37 @@ export function UsersSection() {
               onTeamChange={(teamId) => mutate(u.id, { team_id: teamId })}
               onCanInviteChange={(can_invite) => mutate(u.id, { can_invite })}
               onToggleActive={() => mutate(u.id, { is_active: !u.is_active })}
+              onRequestDeactivate={() => setDeactivatingUser(u)}
               onCapChange={(max_owned_companies) => mutate(u.id, { max_owned_companies })}
               onCancelScheduledDeactivation={cancelQueueWithConfirm}
             />
           ))}
         </tbody>
       </table>
+      <ConfirmDialog
+        open={deactivatingUser !== null}
+        title={t("users.deactivateConfirmTitle")}
+        body={
+          deactivatingUser ? t("users.deactivateConfirm", { name: deactivatingUser.name }) : null
+        }
+        confirmLabel={t("users.deactivateConfirmButton")}
+        danger
+        onCancel={() => setDeactivatingUser(null)}
+        onConfirm={() => {
+          if (!deactivatingUser) return;
+          const id = deactivatingUser.id;
+          setDeactivatingUser(null);
+          void mutate(id, { is_active: false });
+        }}
+      />
+      <ConfirmDialog
+        open={confirmCancelQueue}
+        title={t("users.cancelQueueConfirmTitle")}
+        body={t("users.cancelQueueConfirm")}
+        confirmLabel={t("users.cancelQueueConfirmButton")}
+        onCancel={() => setConfirmCancelQueue(false)}
+        onConfirm={confirmCancelQueueNow}
+      />
     </section>
   );
 }

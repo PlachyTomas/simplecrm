@@ -22,6 +22,8 @@
     "editLayout": "Upravit rozložení",
     "addWidget": "Přidat widget",
     "resetLayout": "Obnovit výchozí",
+    "resetConfirmTitle": "Obnovit výchozí rozložení?",
+    "resetConfirmAction": "Obnovit",
     "resetConfirm": "Opravdu chcete obnovit výchozí rozložení? Vaše úpravy budou ztraceny.",
     "cancel": "Zrušit",
     "save": "Uložit"

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useOrgTeams } from "@/app/settings/useUsersTeams";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ApiError, apiFetch } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
@@ -98,6 +99,7 @@ export function InvitationsSection() {
   const [draft, setDraft] = useState<NewInvite>(() => emptyInvite(defaultTeamId));
   const [error, setError] = useState<string | null>(null);
   const [lastInviteUrl, setLastInviteUrl] = useState<string | null>(null);
+  const [revokingInvite, setRevokingInvite] = useState<InvitationOut | null>(null);
 
   const canManage = currentUser?.role === "admin" || !!currentUser?.can_invite;
 
@@ -149,14 +151,17 @@ export function InvitationsSection() {
     }
   }
 
-  async function onRevoke(invite: InvitationOut) {
-    if (!window.confirm(t("invitations.pending.revokeConfirm", { email: invite.email }))) return;
+  async function confirmRevoke() {
+    const invite = revokingInvite;
+    if (!invite) return;
     try {
       await revoke.mutateAsync(invite.id);
       toast.success(t("invitations.pending.revokeSuccess"));
     } catch (err) {
       const msg = err instanceof Error ? err.message : t("invitations.pending.revokeError");
       toast.error(msg);
+    } finally {
+      setRevokingInvite(null);
     }
   }
 
@@ -287,13 +292,27 @@ export function InvitationsSection() {
                   key={inv.id}
                   invitation={inv}
                   teamName={teamItems.find((team) => team.id === inv.team_id)?.name ?? "—"}
-                  onRevoke={() => void onRevoke(inv)}
+                  onRevoke={() => setRevokingInvite(inv)}
                 />
               ))}
             </tbody>
           </table>
         )}
       </div>
+      <ConfirmDialog
+        open={revokingInvite !== null}
+        title={t("invitations.pending.revokeConfirmTitle")}
+        body={
+          revokingInvite
+            ? t("invitations.pending.revokeConfirm", { email: revokingInvite.email })
+            : null
+        }
+        confirmLabel={t("invitations.pending.revokeConfirmButton")}
+        danger
+        pending={revoke.isPending}
+        onCancel={() => setRevokingInvite(null)}
+        onConfirm={() => void confirmRevoke()}
+      />
     </section>
   );
 }

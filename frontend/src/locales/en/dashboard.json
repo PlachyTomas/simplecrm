@@ -68,6 +68,8 @@
     "noSeatsAvailable": "You have no free seats. Cancel a pending invitation, or increase the seat count in Settings → Organization.",
     "invitationReady": "Invitation for {{email}} ready.",
     "createFailed": "Failed to create the invitation.",
+    "revokeConfirmTitle": "Revoke this invite?",
+    "revokeConfirmAction": "Revoke invite",
     "revokeConfirm": "Cancel the invitation for {{email}}?",
     "revokeSuccess": "Invitation cancelled.",
     "revokeFailed": "Failed to cancel the invitation.",

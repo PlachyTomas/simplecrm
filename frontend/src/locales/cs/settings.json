@@ -167,6 +167,8 @@
     "loading": "Načítání…",
     "empty": "Zatím nic. Přidejte první IČO výše.",
     "removeConfirm": "Odstranit IČO {{ico}} z blokovaných?",
+    "removeConfirmTitle": "Odstranit IČO?",
+    "removeConfirmButton": "Odstranit",
     "removeAriaLabel": "Odstranit {{ico}}",
     "reasons": {
       "competitor": "Konkurent",
@@ -216,6 +218,8 @@
       "canInviteYes": "Ano",
       "canInviteNo": "Ne",
       "revokeConfirm": "Zrušit pozvánku pro {{email}}?",
+      "revokeConfirmTitle": "Zrušit pozvánku?",
+      "revokeConfirmButton": "Zrušit pozvánku",
       "revokeAriaLabel": "Zrušit pozvánku pro {{email}}",
       "revokeSuccess": "Pozvánka zrušena.",
       "revokeError": "Zrušení pozvánky selhalo."
@@ -233,6 +237,8 @@
     "errorLoad": "Seznam uživatelů se nepodařilo načíst.",
     "errorUpdate": "Aktualizace selhala.",
     "cancelQueueConfirm": "Tím zrušíte celou naplánovanou změnu počtu uživatelů. Pokračovat?",
+    "cancelQueueConfirmTitle": "Zrušit naplánovanou změnu?",
+    "cancelQueueConfirmButton": "Zrušit změnu",
     "cancelQueueError": "Zrušení naplánované změny se nezdařilo.",
     "table": {
       "nameEmail": "Jméno / email",
@@ -254,6 +260,8 @@
     "active": "Aktivní",
     "deactivated": "Deaktivovaný",
     "deactivateConfirm": "Opravdu deaktivovat uživatele {{name}}? Okamžitě ztratí přístup do aplikace.",
+    "deactivateConfirmTitle": "Deaktivovat uživatele?",
+    "deactivateConfirmButton": "Deaktivovat",
     "scheduledPillTitle": "Tento uživatel ztratí přístup {{date}}.",
     "scheduledPillText": "Deaktivace naplánovaná na {{date}}",
     "cancelScheduledAriaLabel": "Zrušit naplánovanou deaktivaci",
@@ -277,6 +285,8 @@
     "saveButton": "Uložit",
     "deleteAriaLabel": "Smazat tým {{name}}",
     "deleteConfirm": "Smazat tým \"{{name}}\"?",
+    "deleteConfirmTitle": "Smazat tým?",
+    "deleteConfirmButton": "Smazat",
     "table": {
       "name": "Název",
       "manager": "Manažer",
@@ -462,7 +472,9 @@
       "moveDownAriaLabel": "Posunout dolů",
       "editAriaLabel": "Upravit",
       "deleteAriaLabel": "Smazat"
-    }
+    },
+    "deleteConfirmTitle": "Smazat fázi?",
+    "deleteConfirmAction": "Smazat"
   },
   "permissions": {
     "visibility": {
@@ -520,12 +532,6 @@
     }
   },
   "import": {
-    "page": {
-      "pageTitle": "Import",
-      "title": "Hromadný import",
-      "subtitle": "Nahrajte jeden nebo více CSV souborů. U každého si ověříme, co obsahuje, a vy potvrdíte mapování polí. Náhled si vždy zobrazíte před zápisem.",
-      "backLink": "Zpět do nastavení"
-    },
     "stepper": {
       "upload": "Nahrát soubory",
       "mapping": "Namapovat sloupce",
@@ -633,6 +639,8 @@
     "editAriaLabel": "Upravit šablonu {{name}}",
     "deleteAriaLabel": "Smazat šablonu {{name}}",
     "deleteConfirm": "Opravdu smazat šablonu „{{name}}“?",
+    "deleteConfirmTitle": "Smazat šablonu?",
+    "deleteConfirmButton": "Smazat",
     "errors": {
       "required": "Vyplňte prosím název a předmět.",
       "duplicate": "Šablona s tímto názvem už existuje.",
@@ -677,6 +685,8 @@
     "editAriaLabel": "Upravit cíl {{name}}",
     "deleteAriaLabel": "Smazat cíl {{name}}",
     "deleteConfirm": "Opravdu smazat cíl {{name}}?",
+    "deleteConfirmTitle": "Smazat cíl?",
+    "deleteConfirmButton": "Smazat",
     "metric": {
       "won_value": "Hodnota vyhraných obchodů",
       "won_count": "Počet vyhraných obchodů"
@@ -722,6 +732,8 @@
     "errors": {
       "duplicate": "Štítek s tímto názvem už existuje.",
       "generic": "Štítek se nepodařilo uložit. Zkuste to prosím znovu."
-    }
+    },
+    "deleteConfirmTitle": "Smazat štítek?",
+    "deleteConfirmAction": "Smazat"
   }
 }

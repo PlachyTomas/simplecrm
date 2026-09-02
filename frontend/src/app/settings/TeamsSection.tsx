@@ -11,6 +11,7 @@ import {
   useOrgUsers,
   useUpdateTeam,
 } from "@/app/settings/useUsersTeams";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ApiError } from "@/lib/api";
 
 function managerOptions(users: UserOut[]) {
@@ -26,7 +27,7 @@ function TeamRow({
   team: TeamOut;
   users: UserOut[];
   onSave: (patch: { name: string; manager_user_id: string | null }) => Promise<void>;
-  onDelete: () => Promise<void>;
+  onDelete: () => void;
 }) {
   const { t } = useTranslation("settings");
   const [name, setName] = useState(team.name);
@@ -67,14 +68,14 @@ function TeamRow({
                 manager_user_id: managerId === "" ? null : managerId,
               })
             }
-            className="text-accent-foreground rounded-md bg-accent px-3 py-1 text-xs font-medium hover:bg-accent-hover disabled:opacity-50"
+            className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-text-on-accent hover:bg-accent-hover disabled:opacity-50"
           >
             {t("teams.saveButton")}
           </button>
           <button
             type="button"
             aria-label={t("teams.deleteAriaLabel", { name: team.name })}
-            onClick={() => void onDelete()}
+            onClick={onDelete}
             className="rounded-md p-1.5 text-text-secondary hover:bg-danger-subtle hover:text-danger"
           >
             <Trash2 size={16} strokeWidth={1.75} />
@@ -96,6 +97,7 @@ export function TeamsSection() {
   const [newName, setNewName] = useState("");
   const [newManagerId, setNewManagerId] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [deletingTeam, setDeletingTeam] = useState<TeamOut | null>(null);
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
@@ -113,13 +115,16 @@ export function TeamsSection() {
     }
   }
 
-  async function handleDelete(team: TeamOut) {
-    if (!window.confirm(t("teams.deleteConfirm", { name: team.name }))) return;
+  async function confirmDelete() {
+    const team = deletingTeam;
+    if (!team) return;
     setError(null);
     try {
       await deleteTeam.mutateAsync(team.id);
     } catch (err) {
       setError(err instanceof ApiError ? String(err.body) : t("teams.deleteError"));
+    } finally {
+      setDeletingTeam(null);
     }
   }
 
@@ -180,7 +185,7 @@ export function TeamsSection() {
         <button
           type="submit"
           disabled={createTeam.isPending}
-          className="text-accent-foreground inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium hover:bg-accent-hover disabled:opacity-50 sm:col-span-2"
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-text-on-accent hover:bg-accent-hover disabled:opacity-50 sm:col-span-2"
         >
           <Plus size={14} strokeWidth={1.75} /> {t("teams.addButton")}
         </button>
@@ -201,11 +206,21 @@ export function TeamsSection() {
               team={team}
               users={users.data.items}
               onSave={(patch) => handleSave(team, patch)}
-              onDelete={() => handleDelete(team)}
+              onDelete={() => setDeletingTeam(team)}
             />
           ))}
         </tbody>
       </table>
+      <ConfirmDialog
+        open={deletingTeam !== null}
+        title={t("teams.deleteConfirmTitle")}
+        body={deletingTeam ? t("teams.deleteConfirm", { name: deletingTeam.name }) : null}
+        confirmLabel={t("teams.deleteConfirmButton")}
+        danger
+        pending={deleteTeam.isPending}
+        onCancel={() => setDeletingTeam(null)}
+        onConfirm={() => void confirmDelete()}
+      />
     </section>
   );
 }

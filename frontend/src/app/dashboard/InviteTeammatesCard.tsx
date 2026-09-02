@@ -19,6 +19,7 @@ import { useOrgTeams, useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useAuth } from "@/auth/useAuth";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { useCurrentSubscription } from "@/components/billing/useCurrentSubscription";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ApiError, apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -151,6 +152,7 @@ export function InviteTeammatesCard({ variant = "standalone" }: InviteTeammatesC
 
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [confirmRevoke, setConfirmRevoke] = useState<InvitationOut | null>(null);
 
   if (!gate.visible || gate.seatCount == null || gate.activeMembers == null) return null;
 
@@ -193,13 +195,14 @@ export function InviteTeammatesCard({ variant = "standalone" }: InviteTeammatesC
     }
   }
 
-  async function onRevoke(inv: InvitationOut) {
-    if (!window.confirm(t("inviteTeammatesCard.revokeConfirm", { email: inv.email }))) return;
+  async function handleRevoke(inv: InvitationOut) {
     try {
       await revoke.mutateAsync(inv.id);
       toast.success(t("inviteTeammatesCard.revokeSuccess"));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("inviteTeammatesCard.revokeFailed"));
+    } finally {
+      setConfirmRevoke(null);
     }
   }
 
@@ -280,7 +283,11 @@ export function InviteTeammatesCard({ variant = "standalone" }: InviteTeammatesC
           </p>
           <ul className="mt-2 space-y-2">
             {pendingInvites.map((inv) => (
-              <PendingInviteRow key={inv.id} invitation={inv} onRevoke={() => void onRevoke(inv)} />
+              <PendingInviteRow
+                key={inv.id}
+                invitation={inv}
+                onRevoke={() => setConfirmRevoke(inv)}
+              />
             ))}
           </ul>
         </div>
@@ -293,6 +300,20 @@ export function InviteTeammatesCard({ variant = "standalone" }: InviteTeammatesC
         </Link>
         .
       </p>
+      <ConfirmDialog
+        open={!!confirmRevoke}
+        danger
+        title={t("inviteTeammatesCard.revokeConfirmTitle")}
+        body={
+          confirmRevoke
+            ? t("inviteTeammatesCard.revokeConfirm", { email: confirmRevoke.email })
+            : undefined
+        }
+        confirmLabel={t("inviteTeammatesCard.revokeConfirmAction")}
+        pending={revoke.isPending}
+        onCancel={() => setConfirmRevoke(null)}
+        onConfirm={() => confirmRevoke && void handleRevoke(confirmRevoke)}
+      />
     </section>
   );
 }

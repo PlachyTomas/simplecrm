@@ -19,6 +19,7 @@ import {
   type EventLabelOut,
 } from "@/app/events/useEventLabels";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ApiError } from "@/lib/api";
 import { testIds } from "@/lib/testids";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ function LabelRow({ label, canManage }: { label: EventLabelOut; canManage: boole
   const del = useDeleteEventLabel();
   const [name, setName] = useState(label.name);
   const [error, setError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const trimmed = name.trim();
   const dirty = trimmed.length > 0 && trimmed !== label.name;
@@ -57,12 +59,8 @@ function LabelRow({ label, canManage }: { label: EventLabelOut; canManage: boole
     }
   }
 
-  function handleDelete() {
-    const confirmed = window.confirm(
-      t("eventLabels.deleteConfirm", { name: label.name, count: label.usage_count }),
-    );
-    if (!confirmed) return;
-    del.mutate(label.id);
+  function confirmDelete() {
+    del.mutate(label.id, { onSettled: () => setConfirmOpen(false) });
   }
 
   return (
@@ -136,7 +134,7 @@ function LabelRow({ label, canManage }: { label: EventLabelOut; canManage: boole
             </button>
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => setConfirmOpen(true)}
               disabled={del.isPending}
               aria-label={t("eventLabels.deleteAriaLabel", { name: label.name })}
               data-testid={testIds.eventLabels.delete(label.id)}
@@ -153,6 +151,16 @@ function LabelRow({ label, canManage }: { label: EventLabelOut; canManage: boole
           {error}
         </p>
       ) : null}
+      <ConfirmDialog
+        open={confirmOpen}
+        title={t("eventLabels.deleteConfirmTitle")}
+        body={t("eventLabels.deleteConfirm", { name: label.name, count: label.usage_count })}
+        confirmLabel={t("eventLabels.deleteConfirmAction")}
+        danger
+        pending={del.isPending}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

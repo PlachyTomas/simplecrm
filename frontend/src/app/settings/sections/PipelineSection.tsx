@@ -11,6 +11,7 @@ import {
   useReorderStages,
   useUpdateStage,
 } from "@/app/settings/usePipelineSettings";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ApiError } from "@/lib/api";
 
 type StageType = "open" | "won" | "lost";
@@ -124,7 +125,7 @@ function StageForm({
         <button
           type="submit"
           disabled={busy}
-          className="text-accent-foreground rounded-md bg-accent px-3 py-1.5 text-sm font-medium hover:bg-accent-hover disabled:opacity-50"
+          className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-text-on-accent hover:bg-accent-hover disabled:opacity-50"
         >
           {submitLabel}
         </button>
@@ -219,6 +220,7 @@ export function PipelineSection() {
   const [addingOpen, setAddingOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<StageOut | null>(null);
 
   const stagesReady = !isPending && !isError && pipeline;
   const stages = stagesReady ? [...pipeline.stages].sort((a, b) => a.position - b.position) : [];
@@ -238,17 +240,19 @@ export function PipelineSection() {
     }
   }
 
-  async function handleDelete(stage: StageOut) {
-    if (!window.confirm(t("pipeline.deleteConfirm", { name: stage.name }))) return;
+  async function confirmDelete() {
+    if (!deleteTarget) return;
     setGlobalError(null);
     try {
-      await deleteStage.mutateAsync(stage.id);
+      await deleteStage.mutateAsync(deleteTarget.id);
     } catch (err) {
       if (err instanceof ApiError) {
         setGlobalError(String((err.body as { detail?: unknown })?.detail ?? err.message));
       } else {
         setGlobalError(err instanceof Error ? err.message : t("pipeline.deleteError"));
       }
+    } finally {
+      setDeleteTarget(null);
     }
   }
 
@@ -280,7 +284,7 @@ export function PipelineSection() {
               <button
                 type="button"
                 onClick={() => setAddingOpen(true)}
-                className="text-accent-foreground inline-flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium hover:bg-accent-hover"
+                className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-text-on-accent hover:bg-accent-hover"
               >
                 <Plus size={16} strokeWidth={1.75} /> {t("pipeline.addButton")}
               </button>
@@ -334,13 +338,23 @@ export function PipelineSection() {
                   canMoveDown={idx < stages.length - 1}
                   onMove={(dir) => void handleMove(idx, dir)}
                   onEdit={() => setEditingId(stage.id)}
-                  onDelete={() => void handleDelete(stage)}
+                  onDelete={() => setDeleteTarget(stage)}
                 />
               );
             })}
           </ol>
         </section>
       )}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={t("pipeline.deleteConfirmTitle")}
+        body={deleteTarget ? t("pipeline.deleteConfirm", { name: deleteTarget.name }) : ""}
+        confirmLabel={t("pipeline.deleteConfirmAction")}
+        danger
+        pending={deleteStage.isPending}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => void confirmDelete()}
+      />
     </>
   );
 }

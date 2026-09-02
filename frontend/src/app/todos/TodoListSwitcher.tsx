@@ -2,6 +2,7 @@ import { Check, Link2, Link2Off, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
 import { useModalDialog } from "@/lib/useModalDialog";
@@ -41,6 +42,7 @@ export function TodoListSwitcher({ open, onClose, lists, currentListId, onSelect
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [dealPickerOpen, setDealPickerOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const createList = useCreateTodoList();
   const updateList = useUpdateTodoList();
@@ -86,14 +88,15 @@ export function TodoListSwitcher({ open, onClose, lists, currentListId, onSelect
 
   async function handleDelete() {
     if (!current) return;
-    if (!window.confirm(t("switcher.deleteConfirm", { name: current.name }))) return;
     try {
       await deleteList.mutateAsync(current.id);
       const next = lists.find((l) => l.id !== current.id);
       if (next) onSelect(next.id);
+      setConfirmDeleteOpen(false);
       onClose();
     } catch {
       toast.error(t("switcher.deleteError"));
+      setConfirmDeleteOpen(false);
     }
   }
 
@@ -267,7 +270,7 @@ export function TodoListSwitcher({ open, onClose, lists, currentListId, onSelect
               <button
                 type="button"
                 data-testid={testIds.todos.switcher.delete}
-                onClick={() => void handleDelete()}
+                onClick={() => setConfirmDeleteOpen(true)}
                 className={cn(rowCls, "text-danger hover:bg-danger-subtle")}
               >
                 <Trash2 size={14} strokeWidth={1.75} aria-hidden className="shrink-0" />
@@ -283,6 +286,17 @@ export function TodoListSwitcher({ open, onClose, lists, currentListId, onSelect
         onClose={() => setDealPickerOpen(false)}
         onPick={(deal) => void handleDealChange(deal)}
         canClear={Boolean(current?.deal_id)}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        title={t("switcher.deleteConfirmTitle")}
+        body={current ? t("switcher.deleteConfirm", { name: current.name }) : null}
+        confirmLabel={t("switcher.deleteConfirmAction")}
+        danger
+        pending={deleteList.isPending}
+        onCancel={() => setConfirmDeleteOpen(false)}
+        onConfirm={() => void handleDelete()}
       />
     </>
   );

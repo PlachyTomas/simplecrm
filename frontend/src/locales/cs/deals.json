@@ -352,7 +352,9 @@
     "attendeeCount_one": "{{count}} účastník",
     "attendeeCount_few": "{{count}} účastníci",
     "attendeeCount_other": "{{count}} účastníků",
-    "meetLink": "Připojit se přes Google Meet"
+    "meetLink": "Připojit se přes Google Meet",
+    "confirmDeleteTitle": "Smazat událost?",
+    "confirmDeleteAction": "Smazat"
   },
   "eventFormModal": {
     "titleCreate": "Naplánovat událost",

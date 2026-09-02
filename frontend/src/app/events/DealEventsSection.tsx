@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { EventFormModal } from "@/app/events/EventFormModal";
 import { type CalendarEventOut, useDeleteEvent, useEvents } from "@/app/events/useEvents";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ChevronDown } from "lucide-react";
 import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
@@ -117,6 +118,7 @@ export function DealEventsSection({ dealId, dealName, companyId, locale }: DealE
   const deleteEvent = useDeleteEvent();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEventOut | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CalendarEventOut | null>(null);
 
   const { upcoming, past } = useMemo(() => {
     const now = Date.now();
@@ -129,10 +131,15 @@ export function DealEventsSection({ dealId, dealName, companyId, locale }: DealE
   }, [data]);
 
   function handleDelete(event: CalendarEventOut) {
-    if (!window.confirm(t("eventsSection.confirmDelete", { title: event.title }))) return;
-    deleteEvent.mutate(event.id, {
+    setDeleteTarget(event);
+  }
+
+  function confirmDelete() {
+    if (!deleteTarget) return;
+    deleteEvent.mutate(deleteTarget.id, {
       onSuccess: () => toast.success(t("eventsSection.toastDeleted")),
       onError: () => toast.error(t("eventsSection.toastDeleteError")),
+      onSettled: () => setDeleteTarget(null),
     });
   }
 
@@ -221,6 +228,16 @@ export function DealEventsSection({ dealId, dealName, companyId, locale }: DealE
         dealName={dealName}
         companyId={companyId}
         event={editingEvent}
+      />
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={t("eventsSection.confirmDeleteTitle")}
+        body={deleteTarget ? t("eventsSection.confirmDelete", { title: deleteTarget.title }) : ""}
+        confirmLabel={t("eventsSection.confirmDeleteAction")}
+        danger
+        pending={deleteEvent.isPending}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
       />
     </section>
   );

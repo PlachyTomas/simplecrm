@@ -141,7 +141,9 @@
   "templates": {
     "pickerLabel": "Template",
     "pickerPlaceholder": "No template",
+    "overwriteConfirmTitle": "Overwrite your draft?",
     "overwriteConfirm": "The template will overwrite the subject and body you started. Continue?",
+    "overwriteConfirmAction": "Overwrite",
     "mergeHint": "These fields are filled in when the email is sent:",
     "mergeHintEditor": "Click to insert a field at the cursor. Filled in when the email is sent:",
     "fields": {

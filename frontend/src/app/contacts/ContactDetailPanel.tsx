@@ -8,6 +8,7 @@ import { EditContactModal } from "@/app/contacts/EditContactModal";
 import { useContact, useDeleteContact, useUpdateContact } from "@/app/contacts/useContacts";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { CompanyCombobox } from "@/components/ui/CompanyCombobox";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { ApiError } from "@/lib/api";
 import { testIds } from "@/lib/testids";
@@ -29,6 +30,7 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
   const [editingCompany, setEditingCompany] = useState(false);
   const [pendingCompanyId, setPendingCompanyId] = useState("");
   const [editOpen, setEditOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   if (!contactId) {
     return (
@@ -81,7 +83,6 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
     (!!contact.company_id && !!company && company.owner_user_id === currentUser?.id);
 
   async function handleDelete() {
-    if (!window.confirm(t("contactDetail.deleteConfirm", { name: fullName }))) return;
     try {
       await deleteContact.mutateAsync();
       toast.success(t("contactDetail.deleteSuccess"));
@@ -95,6 +96,8 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
             ? t("contactDetail.deleteConflict")
             : t("contactDetail.deleteError"),
       );
+    } finally {
+      setConfirmDeleteOpen(false);
     }
   }
 
@@ -228,7 +231,7 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
         <section className="mt-auto border-t border-border-subtle pt-4">
           <button
             type="button"
-            onClick={handleDelete}
+            onClick={() => setConfirmDeleteOpen(true)}
             disabled={deleteContact.isPending}
             data-testid={testIds.contacts.deleteButton}
             className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:border-danger-subtle hover:bg-danger-subtle hover:text-danger disabled:opacity-60"
@@ -246,6 +249,17 @@ export function ContactDetailPanel({ contactId }: ContactDetailPanelProps) {
         onClose={() => setEditOpen(false)}
         contact={contact}
         companyName={company?.name}
+      />
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        danger
+        title={t("contactDetail.deleteConfirmTitle")}
+        body={t("contactDetail.deleteConfirm", { name: fullName })}
+        confirmLabel={t("contactDetail.deleteConfirmAction")}
+        pendingLabel={t("contactDetail.deleting")}
+        pending={deleteContact.isPending}
+        onCancel={() => setConfirmDeleteOpen(false)}
+        onConfirm={() => void handleDelete()}
       />
     </div>
   );

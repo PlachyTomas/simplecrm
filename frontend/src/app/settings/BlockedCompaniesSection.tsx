@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "@/auth/useAuth";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ApiError, apiFetch } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
@@ -78,6 +79,7 @@ export function BlockedCompaniesSection() {
   const [reason, setReason] = useState<BlockedCompanyReason>("competitor");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [removingRow, setRemovingRow] = useState<BlockedCompanyOut | null>(null);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -219,11 +221,7 @@ export function BlockedCompaniesSection() {
                   <td className="px-3 py-2 text-right">
                     <button
                       type="button"
-                      onClick={() => {
-                        if (window.confirm(t("blockedCompanies.removeConfirm", { ico: row.ico }))) {
-                          del.mutate(row.id);
-                        }
-                      }}
+                      onClick={() => setRemovingRow(row)}
                       aria-label={t("blockedCompanies.removeAriaLabel", { ico: row.ico })}
                       className="inline-flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary hover:bg-danger-subtle hover:text-danger"
                     >
@@ -236,6 +234,19 @@ export function BlockedCompaniesSection() {
           </tbody>
         </table>
       </div>
+      <ConfirmDialog
+        open={removingRow !== null}
+        title={t("blockedCompanies.removeConfirmTitle")}
+        body={removingRow ? t("blockedCompanies.removeConfirm", { ico: removingRow.ico }) : null}
+        confirmLabel={t("blockedCompanies.removeConfirmButton")}
+        danger
+        pending={del.isPending}
+        onCancel={() => setRemovingRow(null)}
+        onConfirm={() => {
+          if (!removingRow) return;
+          del.mutate(removingRow.id, { onSettled: () => setRemovingRow(null) });
+        }}
+      />
     </section>
   );
 }

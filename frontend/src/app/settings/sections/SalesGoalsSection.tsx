@@ -23,6 +23,7 @@ import {
 } from "@/app/goals/useSalesGoals";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ApiError } from "@/lib/api";
 import { formatNumber } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
@@ -187,6 +188,7 @@ export function SalesGoalsSection() {
   const canManage = user?.role === "admin" || user?.role === "manager";
   const [editing, setEditing] = useState<SalesGoal | null>(null);
   const [creating, setCreating] = useState(false);
+  const [deletingGoal, setDeletingGoal] = useState<SalesGoal | null>(null);
 
   const items = list.data?.items ?? [];
   const goalName = (g: SalesGoal) => g.user_name ?? t("salesGoals.wholeCompany");
@@ -256,11 +258,7 @@ export function SalesGoalsSection() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (window.confirm(t("salesGoals.deleteConfirm", { name: goalName(g) }))) {
-                          del.mutate(g.id);
-                        }
-                      }}
+                      onClick={() => setDeletingGoal(g)}
                       data-testid={testIds.settings.salesGoals.remove(g.id)}
                       aria-label={t("salesGoals.deleteAriaLabel", { name: goalName(g) })}
                       className="inline-flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary hover:bg-danger-subtle hover:text-danger"
@@ -284,6 +282,19 @@ export function SalesGoalsSection() {
           }}
         />
       ) : null}
+      <ConfirmDialog
+        open={deletingGoal !== null}
+        title={t("salesGoals.deleteConfirmTitle")}
+        body={deletingGoal ? t("salesGoals.deleteConfirm", { name: goalName(deletingGoal) }) : null}
+        confirmLabel={t("salesGoals.deleteConfirmButton")}
+        danger
+        pending={del.isPending}
+        onCancel={() => setDeletingGoal(null)}
+        onConfirm={() => {
+          if (!deletingGoal) return;
+          del.mutate(deletingGoal.id, { onSettled: () => setDeletingGoal(null) });
+        }}
+      />
     </section>
   );
 }

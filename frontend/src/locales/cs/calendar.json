@@ -31,7 +31,9 @@
     "noEventsDay": "Zatím žádné události.",
     "noEventsMonth": "V tomto měsíci nejsou žádné události.",
     "moreEvents": "+{{count}} další",
+    "deleteConfirmTitle": "Smazat událost?",
     "deleteConfirm": "Smazat událost \"{{title}}\"?",
+    "deleteConfirmAction": "Smazat",
     "deleteSuccess": "Událost smazána.",
     "deleteError": "Událost se nepodařilo smazat.",
     "noDeal": "Bez obchodu"

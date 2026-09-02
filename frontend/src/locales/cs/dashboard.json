@@ -68,6 +68,8 @@
     "noSeatsAvailable": "Nemáte volné místo. Zrušte čekající pozvánku, nebo navyšte počet v Nastavení → Organizace.",
     "invitationReady": "Pozvánka pro {{email}} připravena.",
     "createFailed": "Vytvoření pozvánky se nezdařilo.",
+    "revokeConfirmTitle": "Zrušit pozvánku?",
+    "revokeConfirmAction": "Zrušit pozvánku",
     "revokeConfirm": "Zrušit pozvánku pro {{email}}?",
     "revokeSuccess": "Pozvánka zrušena.",
     "revokeFailed": "Zrušení pozvánky selhalo.",

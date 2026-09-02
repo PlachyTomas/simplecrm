@@ -61,6 +61,8 @@
     "editButton": "Upravit kontakt",
     "deleteButton": "Smazat kontakt",
     "deleting": "Mažu…",
+    "deleteConfirmTitle": "Smazat kontakt?",
+    "deleteConfirmAction": "Smazat",
     "deleteConfirm": "Opravdu smazat kontakt {{name}}? Tuto akci nelze vzít zpět.",
     "deleteSuccess": "Kontakt byl smazán.",
     "deleteForbidden": "Na smazání tohoto kontaktu nemáte oprávnění.",

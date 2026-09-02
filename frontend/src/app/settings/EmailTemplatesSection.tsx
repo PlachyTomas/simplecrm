@@ -11,6 +11,7 @@ import {
   useUpdateEmailTemplate,
 } from "@/app/emails/useEmailTemplates";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
@@ -189,6 +190,7 @@ export function EmailTemplatesSection() {
   const canManage = user?.role === "admin" || user?.role === "manager";
   const [editing, setEditing] = useState<EmailTemplateOut | null>(null);
   const [creating, setCreating] = useState(false);
+  const [deletingTemplate, setDeletingTemplate] = useState<EmailTemplateOut | null>(null);
 
   const items = list.data ?? [];
 
@@ -248,11 +250,7 @@ export function EmailTemplatesSection() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (window.confirm(t("emailTemplates.deleteConfirm", { name: tpl.name }))) {
-                        del.mutate(tpl.id);
-                      }
-                    }}
+                    onClick={() => setDeletingTemplate(tpl)}
                     data-testid={testIds.settings.emailTemplates.remove(tpl.id)}
                     aria-label={t("emailTemplates.deleteAriaLabel", { name: tpl.name })}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary hover:bg-danger-subtle hover:text-danger"
@@ -275,6 +273,23 @@ export function EmailTemplatesSection() {
           }}
         />
       ) : null}
+      <ConfirmDialog
+        open={deletingTemplate !== null}
+        title={t("emailTemplates.deleteConfirmTitle")}
+        body={
+          deletingTemplate
+            ? t("emailTemplates.deleteConfirm", { name: deletingTemplate.name })
+            : null
+        }
+        confirmLabel={t("emailTemplates.deleteConfirmButton")}
+        danger
+        pending={del.isPending}
+        onCancel={() => setDeletingTemplate(null)}
+        onConfirm={() => {
+          if (!deletingTemplate) return;
+          del.mutate(deletingTemplate.id, { onSettled: () => setDeletingTemplate(null) });
+        }}
+      />
     </section>
   );
 }

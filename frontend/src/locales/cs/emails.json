@@ -143,7 +143,9 @@
   "templates": {
     "pickerLabel": "Šablona",
     "pickerPlaceholder": "Bez šablony",
+    "overwriteConfirmTitle": "Přepsat rozepsaný e-mail?",
     "overwriteConfirm": "Šablona přepíše rozepsaný předmět i text. Pokračovat?",
+    "overwriteConfirmAction": "Přepsat",
     "mergeHint": "Tato pole se doplní až při odeslání:",
     "mergeHintEditor": "Kliknutím vložíte pole na pozici kurzoru. Doplní se při odeslání:",
     "fields": {

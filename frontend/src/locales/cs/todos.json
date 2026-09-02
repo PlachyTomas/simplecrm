@@ -34,7 +34,9 @@
     "linkDeal": "Propojit s obchodem",
     "unlinkDeal": "Zrušit propojení s obchodem",
     "delete": "Smazat seznam",
+    "deleteConfirmTitle": "Smazat seznam?",
     "deleteConfirm": "Smazat seznam „{{name}}“ i se všemi jeho úkoly?",
+    "deleteConfirmAction": "Smazat",
     "createError": "Seznam se nepodařilo vytvořit.",
     "saveError": "Seznam se nepodařilo uložit.",
     "deleteError": "Seznam se nepodařilo smazat."

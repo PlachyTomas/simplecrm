@@ -142,6 +142,8 @@
     "deleteButton": "Smazat firmu",
     "deleting": "Mažu…",
     "deleteHint": "Smazáním firmy nenávratně odstraníte i všechny její obchody.",
+    "deleteConfirmTitle": "Smazat firmu?",
+    "deleteConfirmAction": "Smazat",
     "deleteConfirm": "Opravdu smazat firmu {{name}}? Odstraní se i všechny její obchody. Tuto akci nelze vzít zpět.",
     "deleteSuccess": "Firma byla smazána.",
     "deleteError": "Firmu se nepodařilo smazat. Zkuste to prosím znovu.",

@@ -1,5 +1,5 @@
 import { Download, Pencil, Plus, RotateCcw, Save, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate } from "react-router-dom";
 
@@ -27,6 +27,7 @@ import {
 import { useExportCsv } from "@/app/reports/dashboard/useExportCsv";
 import { WidgetByType } from "@/app/reports/dashboard/widgets/WidgetByType";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { WidgetSkeleton } from "@/components/widget-dashboard/WidgetFrame";
 import { WidgetGrid } from "@/components/widget-dashboard/WidgetGrid";
 import { WidgetPicker, type WidgetPickerGroup } from "@/components/widget-dashboard/WidgetPicker";
@@ -64,12 +65,25 @@ export function ReportsPage() {
   const reset = useResetDashboardConfig();
   const exportCsv = useExportCsv();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  const resetResolver = useRef<((confirmed: boolean) => void) | null>(null);
 
   const editor = useDashboardEditor<DashboardConfig>({
     loaded: config.data,
     onSave: (draft) => save.mutateAsync(draft),
-    onReset: () => reset.mutateAsync(),
-    confirmReset: () => window.confirm(tw("editor.resetConfirm")),
+    // The dialog stays open (pending spinner) until the reset settles.
+    onReset: async () => {
+      try {
+        await reset.mutateAsync();
+      } finally {
+        setConfirmResetOpen(false);
+      }
+    },
+    confirmReset: () =>
+      new Promise<boolean>((resolve) => {
+        resetResolver.current = resolve;
+        setConfirmResetOpen(true);
+      }),
   });
   const { isEditMode, working, setDraft } = editor;
 
@@ -246,6 +260,23 @@ export function ReportsPage() {
         onClose={() => setPickerOpen(false)}
         groups={pickerGroups}
         onAdd={handleAddWidget}
+      />
+
+      <ConfirmDialog
+        open={confirmResetOpen}
+        title={tw("editor.resetConfirmTitle")}
+        body={tw("editor.resetConfirm")}
+        confirmLabel={tw("editor.resetConfirmAction")}
+        pending={reset.isPending}
+        onCancel={() => {
+          setConfirmResetOpen(false);
+          resetResolver.current?.(false);
+          resetResolver.current = null;
+        }}
+        onConfirm={() => {
+          resetResolver.current?.(true);
+          resetResolver.current = null;
+        }}
       />
     </div>
   );

@@ -33,7 +33,9 @@
     "linkDeal": "Link to a deal",
     "unlinkDeal": "Remove the deal link",
     "delete": "Delete list",
+    "deleteConfirmTitle": "Delete this list?",
     "deleteConfirm": "Delete the list “{{name}}” and all its todos?",
+    "deleteConfirmAction": "Delete",
     "createError": "Couldn't create the list.",
     "saveError": "Couldn't save the list.",
     "deleteError": "Couldn't delete the list."

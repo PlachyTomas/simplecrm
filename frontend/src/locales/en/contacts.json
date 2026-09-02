@@ -61,6 +61,8 @@
     "editButton": "Edit contact",
     "deleteButton": "Delete contact",
     "deleting": "Deleting…",
+    "deleteConfirmTitle": "Delete contact?",
+    "deleteConfirmAction": "Delete",
     "deleteConfirm": "Delete contact {{name}}? This cannot be undone.",
     "deleteSuccess": "Contact deleted.",
     "deleteForbidden": "You don't have permission to delete this contact.",

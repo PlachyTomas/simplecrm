@@ -344,7 +344,9 @@
     "allDayLabel": "All day",
     "attendeeCount_one": "{{count}} attendee",
     "attendeeCount_other": "{{count}} attendees",
-    "meetLink": "Join Google Meet"
+    "meetLink": "Join Google Meet",
+    "confirmDeleteTitle": "Delete event?",
+    "confirmDeleteAction": "Delete"
   },
   "eventFormModal": {
     "titleCreate": "Schedule event",

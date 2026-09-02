@@ -20,6 +20,7 @@ import {
   useGoogleCalendarConnect,
   useGoogleCalendarStatus,
 } from "@/app/settings/useGoogleCalendar";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
@@ -234,6 +235,7 @@ export function CalendarPage() {
   const [selectedKey, setSelectedKey] = useState<string>(dayKey(today));
   const [editingEvent, setEditingEvent] = useState<CalendarEventOut | null>(null);
   const [creating, setCreating] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<CalendarEventOut | null>(null);
 
   const days = useMemo(
     () => (zoom === "week" ? weekGrid(anchor) : monthGrid(anchor.getFullYear(), anchor.getMonth())),
@@ -325,10 +327,15 @@ export function CalendarPage() {
   }
 
   function handleDelete(event: CalendarEventOut) {
-    if (!window.confirm(t("calendarPage.deleteConfirm", { title: event.title }))) return;
-    deleteEvent.mutate(event.id, {
+    setEventToDelete(event);
+  }
+
+  function confirmDelete() {
+    if (!eventToDelete) return;
+    deleteEvent.mutate(eventToDelete.id, {
       onSuccess: () => toast.success(t("calendarPage.deleteSuccess")),
       onError: () => toast.error(t("calendarPage.deleteError")),
+      onSettled: () => setEventToDelete(null),
     });
   }
 
@@ -642,6 +649,19 @@ export function CalendarPage() {
         onClose={closeModal}
         event={editingEvent}
         initialDate={creating ? selectedKey : undefined}
+      />
+
+      <ConfirmDialog
+        open={eventToDelete !== null}
+        title={t("calendarPage.deleteConfirmTitle")}
+        body={
+          eventToDelete ? t("calendarPage.deleteConfirm", { title: eventToDelete.title }) : null
+        }
+        confirmLabel={t("calendarPage.deleteConfirmAction")}
+        danger
+        pending={deleteEvent.isPending}
+        onCancel={() => setEventToDelete(null)}
+        onConfirm={confirmDelete}
       />
     </div>
   );

@@ -7,6 +7,7 @@ import {
   useEmailTemplates,
   useMergeFields,
 } from "@/app/emails/useEmailTemplates";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { testIds } from "@/lib/testids";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +49,7 @@ export function EmailTemplatePicker({
   const { t } = useTranslation("emails");
   const { data } = useEmailTemplates(enabled);
   const [selectedId, setSelectedId] = useState("");
+  const [pendingTemplate, setPendingTemplate] = useState<EmailTemplateOut | null>(null);
 
   // Array guard, not just a null check: a failed/odd response must degrade to
   // "no picker", never to a render crash inside the compose modal.
@@ -63,28 +65,49 @@ export function EmailTemplatePicker({
     if (!template) return;
     // Prefilled text (a Re: subject) counts as content worth protecting —
     // the user can't tell "typed" from "prefilled" once it's on screen.
-    if (hasDraft && !window.confirm(t("templates.overwriteConfirm"))) return;
+    if (hasDraft) {
+      setPendingTemplate(template);
+      return;
+    }
     setSelectedId(id);
     onApply(template);
   };
 
   return (
-    <label className="block">
-      <span className="text-xs font-medium text-text-secondary">{t("templates.pickerLabel")}</span>
-      <select
-        value={selectedId}
-        data-testid={selectTestId}
-        onChange={(e) => handleChange(e.target.value)}
-        className="mt-1 block h-9 w-full rounded-md border border-border bg-surface-overlay px-2 text-sm text-text-primary focus:border-accent focus:outline-none"
-      >
-        <option value="">{t("templates.pickerPlaceholder")}</option>
-        {templates.map((tpl) => (
-          <option key={tpl.id} value={tpl.id}>
-            {tpl.name}
-          </option>
-        ))}
-      </select>
-    </label>
+    <>
+      <label className="block">
+        <span className="text-xs font-medium text-text-secondary">
+          {t("templates.pickerLabel")}
+        </span>
+        <select
+          value={selectedId}
+          data-testid={selectTestId}
+          onChange={(e) => handleChange(e.target.value)}
+          className="mt-1 block h-9 w-full rounded-md border border-border bg-surface-overlay px-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+        >
+          <option value="">{t("templates.pickerPlaceholder")}</option>
+          {templates.map((tpl) => (
+            <option key={tpl.id} value={tpl.id}>
+              {tpl.name}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <ConfirmDialog
+        open={pendingTemplate !== null}
+        title={t("templates.overwriteConfirmTitle")}
+        body={t("templates.overwriteConfirm")}
+        confirmLabel={t("templates.overwriteConfirmAction")}
+        onCancel={() => setPendingTemplate(null)}
+        onConfirm={() => {
+          if (!pendingTemplate) return;
+          setSelectedId(pendingTemplate.id);
+          onApply(pendingTemplate);
+          setPendingTemplate(null);
+        }}
+      />
+    </>
   );
 }
 

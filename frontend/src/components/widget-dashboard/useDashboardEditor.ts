@@ -8,10 +8,11 @@ interface UseDashboardEditorOptions<C> {
   /** Reset to the server default (DELETE). Called after `confirmReset`, if provided. */
   onReset: () => Promise<unknown>;
   /**
-   * Optional guard shown before a reset — return `false` to abort. Reports
-   * wires this to `window.confirm(...)`; omit it to reset without a prompt.
+   * Optional guard shown before a reset — resolve to `false` to abort.
+   * Callers wire this to a state-driven ConfirmDialog (the promise resolves
+   * from the dialog's onConfirm/onCancel); omit it to reset without a prompt.
    */
-  confirmReset?: () => boolean;
+  confirmReset?: () => boolean | Promise<boolean>;
 }
 
 export interface DashboardEditor<C> {
@@ -88,7 +89,7 @@ export function useDashboardEditor<C>({
   }, [draft, onSave]);
 
   const reset = useCallback(async () => {
-    if (confirmReset && !confirmReset()) return;
+    if (confirmReset && !(await confirmReset())) return;
     await onReset();
     setIsEditMode(false);
     setDraft(null);

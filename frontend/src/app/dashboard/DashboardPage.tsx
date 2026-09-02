@@ -1,5 +1,5 @@
 import { Pencil, Plus, RotateCcw, Save, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AddCompanyModal } from "@/app/companies/AddCompanyModal";
@@ -8,6 +8,7 @@ import { AddDealModal } from "@/app/deals/AddDealModal";
 import { EventFormModal } from "@/app/events/EventFormModal";
 import { usePipelineBoard } from "@/app/pipeline/useBoard";
 import { useCurrentUser } from "@/auth/useCurrentUser";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { WidgetSkeleton } from "@/components/widget-dashboard/WidgetFrame";
 import { WidgetGrid } from "@/components/widget-dashboard/WidgetGrid";
 import { MobileWidgetList } from "@/components/widget-dashboard/MobileWidgetList";
@@ -85,12 +86,25 @@ export function DashboardPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [configWidgetId, setConfigWidgetId] = useState<string | null>(null);
   const [openAction, setOpenAction] = useState<QuickAction | null>(null);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  const resetResolver = useRef<((confirmed: boolean) => void) | null>(null);
 
   const editor = useDashboardEditor<HomeDashboardConfig>({
     loaded: config.data,
     onSave: (draft) => save.mutateAsync(draft),
-    onReset: () => reset.mutateAsync(),
-    confirmReset: () => window.confirm(tw("editor.resetConfirm")),
+    // The dialog stays open (pending spinner) until the reset settles.
+    onReset: async () => {
+      try {
+        await reset.mutateAsync();
+      } finally {
+        setConfirmResetOpen(false);
+      }
+    },
+    confirmReset: () =>
+      new Promise<boolean>((resolve) => {
+        resetResolver.current = resolve;
+        setConfirmResetOpen(true);
+      }),
   });
   const { isEditMode, working, setDraft } = editor;
 
@@ -305,6 +319,23 @@ export function DashboardPage() {
         onCreated={() => setOpenAction(null)}
       />
       <EventFormModal open={openAction === "activity"} onClose={() => setOpenAction(null)} />
+
+      <ConfirmDialog
+        open={confirmResetOpen}
+        title={tw("editor.resetConfirmTitle")}
+        body={tw("editor.resetConfirm")}
+        confirmLabel={tw("editor.resetConfirmAction")}
+        pending={reset.isPending}
+        onCancel={() => {
+          setConfirmResetOpen(false);
+          resetResolver.current?.(false);
+          resetResolver.current = null;
+        }}
+        onConfirm={() => {
+          resetResolver.current?.(true);
+          resetResolver.current = null;
+        }}
+      />
     </div>
   );
 }
