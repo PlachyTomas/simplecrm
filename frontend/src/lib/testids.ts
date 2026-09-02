@@ -391,4 +391,10 @@ export const testIds = {
     addressZip: "billing-address-zip",
     submit: "billing-submit",
   },
+  marketing: {
+    compare: {
+      simplecrmCard: "compare-simplecrm-card",
+      table: "compare-table",
+    },
+  },
 } as const;

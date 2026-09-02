@@ -32,6 +32,7 @@ import { openCookieSettings } from "@/marketing/cookie-consent-controls";
 import { COMGATE_INFO, LEGAL_ENTITY } from "@/marketing/legal-entity";
 import { AresDemoSection } from "@/marketing/AresDemoSection";
 import { CalendarDemoSection } from "@/marketing/CalendarDemoSection";
+import { CompareSection } from "@/marketing/CompareSection";
 import { InteractivePipeline } from "@/marketing/InteractivePipeline";
 import { ReportsDemoSection } from "@/marketing/ReportsDemoSection";
 import {
@@ -55,6 +56,7 @@ type NavLink =
 const NAV_LINKS: NavLink[] = [
   { kind: "anchor", href: "#funkce", labelKey: "nav.features" },
   { kind: "route", slug: "cenik", labelKey: "nav.pricing" },
+  { kind: "anchor", href: "#srovnani", labelKey: "nav.compare" },
   { kind: "anchor", href: "#faq", labelKey: "nav.faq" },
   { kind: "route", slug: "kontakt", labelKey: "nav.contact" },
 ];
@@ -915,6 +917,7 @@ export function LandingPage() {
         <ReportsDemoSection />
         <CalendarDemoSection />
         <Pricing />
+        <CompareSection />
         <Faq />
       </main>
       <Footer />

@@ -1,4 +1,49 @@
 {
+  "compare": {
+    "eyebrow": "Srovnání",
+    "title": "Stejné funkce. Zlomek ceny.",
+    "subtitle": "Srovnáváme tarify, které pokrývají to, co má SimpleCRM v jediném plánu — podle veřejných ceníků výrobců.",
+    "simplecrmTier": "Jediný plán",
+    "fiveSeats": "5 lidí měsíčně",
+    "vatExclusive": "bez DPH",
+    "simplecrmNote": "{{perSeat}} za uživatele. Všechny funkce v ceně.",
+    "perSeat": "{{perSeat}} za uživatele měsíčně.",
+    "vendorNotes": {
+      "pipedrive": "Vlastní dashboardy a týmy až v tarifu Premium (€295 za 5 lidí).",
+      "raynet": "Tarif Start (399 Kč) končí u 3 uživatelů. Hromadný e-mailing jen přes placené integrace.",
+      "hubspot": "K tomu povinný jednorázový onboarding za €1 470.",
+      "freshsales": "Cenu v EUR ani CZK výrobce neuvádí (jen USD)."
+    },
+    "columnFeature": "Funkce",
+    "included": "v ceně",
+    "notes": {
+      "addon": "kampaně jako placený doplněk",
+      "integrationsOnly": "jen přes placené integrace",
+      "notListed": "neuvádí",
+      "branded": "s brandingem výrobce",
+      "capped": "s limity",
+      "sequences": "jako sekvence"
+    },
+    "axes": {
+      "pipeline": "Kanban pipeline",
+      "companiesContacts": "Firmy a kontakty",
+      "emailFromCrm": "E-maily přímo ze CRM",
+      "emailTemplates": "Šablony e-mailů",
+      "emailTracking": "Sledování otevření a prokliků",
+      "bulkEmail": "Hromadné e-maily",
+      "googleCalendar": "Synchronizace s Google Kalendářem",
+      "customReports": "Vlastní reporty a dashboardy",
+      "goalsForecasting": "Prodejní cíle a predikce",
+      "dealRotting": "Hlídání stagnujících obchodů",
+      "importMigration": "Import CSV a migrace z jiného CRM",
+      "rolesTeams": "Role, oprávnění a týmy",
+      "api": "API"
+    },
+    "disclaimerPrices": "Ceny k {{date}} z veřejných ceníků výrobců, za uživatele měsíčně při ročním předplatném, v měně uváděné výrobcem (bez přepočtu). Mohou se měnit — ověřte je prosím u výrobce.",
+    "disclaimerMethod": "U konkurence uvádíme nejnižší tarif, který podle veřejného srovnání funkcí výrobce pokrývá rozsah SimpleCRM. „Neuvádí“ znamená, že výrobce zařazení funkce do tarifů veřejně nepopisuje.",
+    "disclaimerSources": "Zdroje:",
+    "disclaimerTrademarks": "Pipedrive, RAYNET, HubSpot a Freshsales jsou ochranné známky svých vlastníků. SimpleCRM s nimi není nijak spojen."
+  },
   "meta": {
     "landingTitle": "Jednoduché CRM pro malé prodejní týmy",
     "pricingTitle": "Ceník",
@@ -9,6 +54,7 @@
   "nav": {
     "features": "Funkce",
     "pricing": "Ceník",
+    "compare": "Srovnání",
     "faq": "FAQ",
     "contact": "Kontakt",
     "login": "Přihlásit se",

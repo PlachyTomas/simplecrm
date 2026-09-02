@@ -1,4 +1,49 @@
 {
+  "compare": {
+    "eyebrow": "Comparison",
+    "title": "Same features. A fraction of the price.",
+    "subtitle": "We compare the tiers that cover what SimpleCRM includes in its single plan — based on the vendors' public price lists.",
+    "simplecrmTier": "Single plan",
+    "fiveSeats": "5 people per month",
+    "vatExclusive": "excl. VAT",
+    "simplecrmNote": "{{perSeat}} per user. Every feature included.",
+    "perSeat": "{{perSeat}} per user per month.",
+    "vendorNotes": {
+      "pipedrive": "Custom dashboards and teams only from the Premium tier (€295 for 5 people).",
+      "raynet": "The Start tier (399 Kč) is capped at 3 users. Bulk emailing only via paid integrations.",
+      "hubspot": "Plus a mandatory one-time onboarding fee of €1,470.",
+      "freshsales": "No EUR or CZK price published (USD only)."
+    },
+    "columnFeature": "Feature",
+    "included": "included",
+    "notes": {
+      "addon": "campaigns as a paid add-on",
+      "integrationsOnly": "only via paid integrations",
+      "notListed": "not published",
+      "branded": "with vendor branding",
+      "capped": "with limits",
+      "sequences": "as sequences"
+    },
+    "axes": {
+      "pipeline": "Kanban pipeline",
+      "companiesContacts": "Companies and contacts",
+      "emailFromCrm": "Email straight from the CRM",
+      "emailTemplates": "Email templates",
+      "emailTracking": "Open and click tracking",
+      "bulkEmail": "Bulk emails",
+      "googleCalendar": "Google Calendar sync",
+      "customReports": "Custom reports and dashboards",
+      "goalsForecasting": "Sales goals and forecasting",
+      "dealRotting": "Idle-deal alerts",
+      "importMigration": "CSV import and CRM migration",
+      "rolesTeams": "Roles, permissions, teams",
+      "api": "API"
+    },
+    "disclaimerPrices": "Prices as of {{date}} from the vendors' public price lists, per user per month with annual billing, in the currency each vendor lists (no conversion). They may change — please verify with the vendor.",
+    "disclaimerMethod": "For each competitor we show the lowest tier that, according to the vendor's public feature comparison, covers SimpleCRM's scope. \"Not published\" means the vendor does not publicly document the feature's tier placement.",
+    "disclaimerSources": "Sources:",
+    "disclaimerTrademarks": "Pipedrive, RAYNET, HubSpot and Freshsales are trademarks of their respective owners. SimpleCRM is not affiliated with any of them."
+  },
   "meta": {
     "landingTitle": "Simple CRM for small sales teams",
     "pricingTitle": "Pricing",
@@ -9,6 +54,7 @@
   "nav": {
     "features": "Features",
     "pricing": "Pricing",
+    "compare": "Compare",
     "faq": "FAQ",
     "contact": "Contact",
     "login": "Sign in",
