@@ -11,6 +11,7 @@
 
 import { useTranslation } from "react-i18next";
 
+import type { HomeDatePreset } from "@/app/dashboard/homeLayout";
 import type { HomeWidgetEntry, HomeWidgetType } from "@/app/dashboard/useHomeDashboard";
 import {
   homeWidgetIcon,
@@ -43,8 +44,8 @@ interface Props {
   entry: HomeWidgetEntry;
   isEditMode: boolean;
   onRemove: () => void;
-  /** Open the date-preset config popover for this widget id. */
-  onConfigOpen: (id: string) => void;
+  /** The dashboard-wide date range every framed widget renders with. */
+  datePreset: HomeDatePreset;
   /** Fire a quick action (open its create modal). */
   onAction: (type: HomeWidgetType) => void;
   /** Persist which todo list a todo widget shows. */
@@ -55,7 +56,7 @@ export function HomeWidgetByType({
   entry,
   isEditMode,
   onRemove,
-  onConfigOpen,
+  datePreset,
   onAction,
   onSelectList,
 }: Props) {
@@ -99,12 +100,7 @@ export function HomeWidgetByType({
 
   if (type === "velocity") {
     return (
-      <HomeVelocityWidget
-        entry={entry}
-        isEditMode={isEditMode}
-        onRemove={onRemove}
-        onConfigOpen={onConfigOpen}
-      />
+      <HomeVelocityWidget isEditMode={isEditMode} onRemove={onRemove} datePreset={datePreset} />
     );
   }
 
@@ -115,7 +111,7 @@ export function HomeWidgetByType({
         entry={entry}
         isEditMode={isEditMode}
         onRemove={onRemove}
-        onConfigOpen={onConfigOpen}
+        datePreset={datePreset}
       />
     );
   }

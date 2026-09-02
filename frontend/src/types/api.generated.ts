@@ -6042,6 +6042,8 @@ export interface components {
             widgets?: components["schemas"]["HomeWidgetEntry"][];
             /** Mobileorder */
             mobileOrder?: string[];
+            /** Datepreset */
+            datePreset?: ("last_7_days" | "last_30_days" | "this_quarter" | "this_year" | "last_12_months") | null;
         };
         /**
          * HomeWidgetEntry

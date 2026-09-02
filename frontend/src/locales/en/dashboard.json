@@ -51,10 +51,6 @@
     "velocity": "Average days a deal spends in each stage.",
     "todo_list": "A personal todo list. Private to you, and each todo can point at a deal."
   },
-  "widgetConfig": {
-    "title": "Widget settings",
-    "dateRangeLabel": "Date range"
-  },
   "widgetUnavailable": {
     "title": "Not available.",
     "short": "Not available"

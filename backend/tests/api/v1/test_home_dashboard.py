@@ -473,3 +473,51 @@ async def test_default_admin_gets_everything(
     assert "invite_teammates" in types
     assert "sales_leaderboard" in types
     assert "velocity" in types
+
+
+async def test_global_date_preset_round_trips_and_rejects_unknown(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """The dashboard-wide preset survives PUT->GET in camelCase and only
+    accepts the backend's preset vocabulary."""
+    org = await _make_org(db_session, owned_cleanup)
+    user = await _make_user(db_session, owned_cleanup, org, role=UserRole.manager)
+
+    payload = {"version": 1, "widgets": [], "mobileOrder": [], "datePreset": "this_year"}
+    put_resp = await client.put(_URL, headers=_auth(user), json=payload)
+    assert put_resp.status_code == 200, put_resp.text
+    assert put_resp.json()["datePreset"] == "this_year"
+
+    get_resp = await client.get(_URL, headers=_auth(user))
+    assert get_resp.status_code == 200
+    assert get_resp.json()["datePreset"] == "this_year"
+
+    bad = {**payload, "datePreset": "custom"}
+    assert (await client.put(_URL, headers=_auth(user), json=bad)).status_code == 422
+
+
+async def test_global_date_preset_seeds_from_legacy_widget_preset(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    """Configs saved before the global picker carry per-widget presets; the
+    read path promotes the first one so nobody's range silently resets."""
+    org = await _make_org(db_session, owned_cleanup)
+    user = await _make_user(db_session, owned_cleanup, org, role=UserRole.manager)
+
+    payload = {
+        "version": 1,
+        "widgets": [
+            {
+                "id": "wid_stale",
+                "position": {"x": 0, "y": 0, "w": 6, "h": 4},
+                "config": {"type": "stale_deals", "date_preset": "this_quarter"},
+            }
+        ],
+        "mobileOrder": ["wid_stale"],
+    }
+    put_resp = await client.put(_URL, headers=_auth(user), json=payload)
+    assert put_resp.status_code == 200, put_resp.text
+
+    get_resp = await client.get(_URL, headers=_auth(user))
+    assert get_resp.status_code == 200
+    assert get_resp.json()["datePreset"] == "this_quarter"

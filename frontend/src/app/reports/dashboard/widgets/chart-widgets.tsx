@@ -35,7 +35,6 @@ interface BaseWidgetProps {
   isEditMode: boolean;
   onRemove: () => void;
   /** Optional per-widget settings gear (home dashboard's date preset). */
-  onConfigClick?: () => void;
 }
 
 function narrowConfig<T extends Config["type"]>(
@@ -100,7 +99,6 @@ export function SalesForecastWidget(props: BaseWidgetProps) {
       label={t(WIDGET_LABEL_KEY.sales_forecast)}
       isEditMode={props.isEditMode}
       onRemove={props.onRemove}
-      onConfigClick={props.onConfigClick}
     >
       {q.isPending ? (
         <WidgetSkeleton />
@@ -153,7 +151,6 @@ export function LostReasonsBreakdownWidget(props: BaseWidgetProps) {
       label={t(WIDGET_LABEL_KEY.lost_reasons_breakdown)}
       isEditMode={props.isEditMode}
       onRemove={props.onRemove}
-      onConfigClick={props.onConfigClick}
     >
       {q.isPending ? (
         <WidgetSkeleton />
@@ -200,7 +197,6 @@ export function SalesLeaderboardWidget(props: BaseWidgetProps) {
       label={t(WIDGET_LABEL_KEY.sales_leaderboard)}
       isEditMode={props.isEditMode}
       onRemove={props.onRemove}
-      onConfigClick={props.onConfigClick}
     >
       {q.isPending ? (
         <WidgetSkeleton />
@@ -264,7 +260,6 @@ export function RepActivityWidget(props: BaseWidgetProps) {
       label={t(WIDGET_LABEL_KEY.rep_activity)}
       isEditMode={props.isEditMode}
       onRemove={props.onRemove}
-      onConfigClick={props.onConfigClick}
     >
       {q.isPending ? (
         <WidgetSkeleton />

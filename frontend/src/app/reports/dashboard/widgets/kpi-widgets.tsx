@@ -41,7 +41,6 @@ interface BaseWidgetProps {
   isEditMode: boolean;
   onRemove: () => void;
   /** Optional per-widget settings gear (home dashboard's date preset). */
-  onConfigClick?: () => void;
 }
 
 /**
@@ -403,15 +402,10 @@ interface FrameProps extends BaseWidgetProps {
   children: React.ReactNode;
 }
 
-function Frame({ entry: _entry, isEditMode, onRemove, onConfigClick, type, children }: FrameProps) {
+function Frame({ entry: _entry, isEditMode, onRemove, type, children }: FrameProps) {
   const { t } = useTranslation("reports");
   return (
-    <WidgetFrame
-      label={t(WIDGET_LABEL_KEY[type])}
-      isEditMode={isEditMode}
-      onRemove={onRemove}
-      onConfigClick={onConfigClick}
-    >
+    <WidgetFrame label={t(WIDGET_LABEL_KEY[type])} isEditMode={isEditMode} onRemove={onRemove}>
       {children}
     </WidgetFrame>
   );

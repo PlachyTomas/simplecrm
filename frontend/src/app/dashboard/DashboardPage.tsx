@@ -22,10 +22,12 @@ import { usePageTitle } from "@/lib/usePageTitle";
 import { HomeWidgetByType } from "@/app/dashboard/HomeWidgetByType";
 import {
   addWidget,
+  HOME_PRESETS,
   removeWidget,
-  setWidgetDatePreset,
   setWidgetListId,
+  type HomeDatePreset,
 } from "@/app/dashboard/homeLayout";
+import { PRESET_LABEL_KEY } from "@/app/reports/dashboard/dateRange";
 import { buildHomePickerGroups } from "@/app/dashboard/homeWidgetCatalog";
 import {
   useHomeDashboardConfig,
@@ -35,10 +37,6 @@ import {
   type HomeWidgetEntry,
   type HomeWidgetType,
 } from "@/app/dashboard/useHomeDashboard";
-import {
-  WidgetConfigPopover,
-  type HomeDatePreset,
-} from "@/app/dashboard/widgets/WidgetConfigPopover";
 
 /**
  * Extract a friendly first name. The backend's `user.name` is "first last"
@@ -84,7 +82,6 @@ export function DashboardPage() {
   const save = useSaveHomeDashboardConfig();
   const reset = useResetHomeDashboardConfig();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [configWidgetId, setConfigWidgetId] = useState<string | null>(null);
   const [openAction, setOpenAction] = useState<QuickAction | null>(null);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
   const resetResolver = useRef<((confirmed: boolean) => void) | null>(null);
@@ -148,11 +145,6 @@ export function DashboardPage() {
     setDraft({ ...working, mobileOrder: nextOrder });
   }
 
-  function handlePresetChange(preset: HomeDatePreset) {
-    if (!working || !configWidgetId) return;
-    setDraft(setWidgetDatePreset(working, configWidgetId, preset));
-  }
-
   /**
    * Switching a todo widget's list is a normal-mode action, not a layout
    * edit, so it can't route through the draft the way the date preset
@@ -179,14 +171,14 @@ export function DashboardPage() {
     );
   }
 
-  const configEntry = configWidgetId ? widgets.find((w) => w.id === configWidgetId) : undefined;
+  const globalPreset: HomeDatePreset = working?.datePreset ?? "last_30_days";
 
   const renderEntry = (entry: HomeWidgetEntry) => (
     <HomeWidgetByType
       entry={entry}
       isEditMode={isEditMode}
       onRemove={() => handleRemoveWidget(entry.id)}
-      onConfigOpen={setConfigWidgetId}
+      datePreset={globalPreset}
       onAction={handleAction}
       onSelectList={handleSelectList}
     />
@@ -210,6 +202,24 @@ export function DashboardPage() {
         <div className="flex flex-wrap items-center gap-2">
           {isEditMode ? (
             <>
+              <label className="inline-flex items-center">
+                <span className="sr-only">{tw("editor.rangeAria")}</span>
+                <select
+                  value={globalPreset}
+                  onChange={(e) =>
+                    working &&
+                    setDraft({ ...working, datePreset: e.target.value as HomeDatePreset })
+                  }
+                  data-testid={testIds.dashboard.globalRange}
+                  className="h-9 rounded-md border border-border bg-surface px-2 text-sm font-medium text-text-secondary focus:border-accent focus:outline-none"
+                >
+                  {HOME_PRESETS.map((preset) => (
+                    <option key={preset} value={preset}>
+                      {tReports(PRESET_LABEL_KEY[preset])}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <button
                 type="button"
                 onClick={() => setPickerOpen(true)}
@@ -295,13 +305,6 @@ export function DashboardPage() {
         onClose={() => setPickerOpen(false)}
         groups={pickerGroups}
         onAdd={handleAddWidget}
-      />
-
-      <WidgetConfigPopover
-        open={!!configEntry}
-        onClose={() => setConfigWidgetId(null)}
-        value={(configEntry?.config.date_preset ?? null) as HomeDatePreset | null}
-        onChange={handlePresetChange}
       />
 
       {openAction === "deal" ? <DealQuickAction open onClose={() => setOpenAction(null)} /> : null}

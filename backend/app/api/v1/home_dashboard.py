@@ -55,6 +55,12 @@ async def get_home_dashboard(
         cfg = HomeDashboardConfig.model_validate(raw)
     except ValidationError:
         cfg = default_home_dashboard_config(user, user.organization)
+    # Configs saved before the global range picker carry per-widget presets;
+    # seed the global value from the first one so nobody's range resets.
+    if cfg.date_preset is None:
+        cfg.date_preset = next(
+            (w.config.date_preset for w in cfg.widgets if w.config.date_preset), None
+        )
     return _serialize_home_dashboard_config(cfg)
 
 

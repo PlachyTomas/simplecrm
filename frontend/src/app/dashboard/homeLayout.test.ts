@@ -5,7 +5,6 @@ import {
   desktopOrderIds,
   effectiveMobileOrder,
   removeWidget,
-  setWidgetDatePreset,
   setWidgetListId,
   widgetListId,
 } from "@/app/dashboard/homeLayout";
@@ -89,15 +88,6 @@ describe("removeWidget", () => {
     const next = removeWidget(c, "b");
     expect(next.widgets!.map((w) => w.id)).toEqual(["a"]);
     expect(next.mobileOrder).toEqual(["a"]);
-  });
-});
-
-describe("setWidgetDatePreset", () => {
-  it("writes the preset into the target entry only", () => {
-    const c = config([entry("a", 0, 0, "velocity"), entry("b", 6, 0, "stale_deals")]);
-    const next = setWidgetDatePreset(c, "a", "this_quarter");
-    expect(next.widgets![0]!.config.date_preset).toBe("this_quarter");
-    expect(next.widgets![1]!.config.date_preset).toBeUndefined();
   });
 });
 

@@ -1,4 +1,4 @@
-import { GripVertical, Settings2, X } from "lucide-react";
+import { GripVertical, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -8,7 +8,6 @@ interface WidgetFrameProps {
   label: string;
   isEditMode: boolean;
   onRemove?: () => void;
-  onConfigClick?: () => void;
   /** Optional right-side header slot — per-widget controls (e.g. metric picker). */
   controls?: ReactNode;
   /** Body. Pass the loading/empty/error variant when needed. */
@@ -21,7 +20,7 @@ interface WidgetFrameProps {
  * Shared shell for every widget-dashboard widget (Reports and Home).
  * Header carries the label, an
  * optional gear button for the per-widget config sheet (only when
- * `onConfigClick` is provided), and — in edit mode — a drag handle on
+ * In edit mode a drag handle rides
  * the left and an X on the right. The drag handle gets the
  * `widget-drag-handle` class so `react-grid-layout` only initiates a
  * drag from that exact element rather than the whole card.
@@ -30,7 +29,6 @@ export function WidgetFrame({
   label,
   isEditMode,
   onRemove,
-  onConfigClick,
   controls,
   children,
   className,
@@ -56,16 +54,6 @@ export function WidgetFrame({
         ) : null}
         <h3 className="flex-1 truncate text-sm font-semibold text-text-primary">{label}</h3>
         {controls}
-        {onConfigClick ? (
-          <button
-            type="button"
-            onClick={onConfigClick}
-            aria-label={t("widgetFrame.widgetSettings")}
-            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-text-tertiary hover:bg-surface-overlay hover:text-text-primary"
-          >
-            <Settings2 size={14} strokeWidth={1.75} aria-hidden />
-          </button>
-        ) : null}
         {isEditMode && onRemove ? (
           <button
             type="button"

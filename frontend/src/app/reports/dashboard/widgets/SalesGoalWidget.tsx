@@ -42,7 +42,6 @@ interface Props {
   globalFilters: GlobalFilters;
   isEditMode: boolean;
   onRemove: () => void;
-  onConfigClick?: () => void;
 }
 
 function narrowConfig(config: Config): Extract<Config, { type: "sales_goal" }> {
@@ -73,12 +72,7 @@ export function SalesGoalWidget(props: Props) {
   const goal: SalesGoal | undefined = inScope.find((g) => g.metric === config.metric) ?? inScope[0];
 
   return (
-    <WidgetFrame
-      label={label}
-      isEditMode={props.isEditMode}
-      onRemove={props.onRemove}
-      onConfigClick={props.onConfigClick}
-    >
+    <WidgetFrame label={label} isEditMode={props.isEditMode} onRemove={props.onRemove}>
       {q.isPending ? (
         <WidgetSkeleton />
       ) : q.isError ? (

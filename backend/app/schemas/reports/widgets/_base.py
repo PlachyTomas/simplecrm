@@ -13,22 +13,19 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+DatePreset = Literal[
+    "last_7_days",
+    "last_30_days",
+    "this_quarter",
+    "this_year",
+    "last_12_months",
+]
+
 
 class WidgetConfigBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    # Optional per-widget date preset. Used by the home dashboard, where
-    # each widget carries its own range (there's no global filter bar).
-    # Storage only — no endpoint logic reads it; the client resolves the
-    # preset to a concrete from/to. The Reports page ignores it (its
-    # global filter bar wins). None → client treats as `last_30_days`.
-    date_preset: (
-        Literal[
-            "last_7_days",
-            "last_30_days",
-            "this_quarter",
-            "this_year",
-            "last_12_months",
-        ]
-        | None
-    ) = None
+    # Legacy per-widget date preset. Storage only — kept so configs saved
+    # before the home dashboard's GLOBAL range picker still load; no UI
+    # writes or reads it anymore (HomeDashboardConfig.date_preset wins).
+    date_preset: DatePreset | None = None

@@ -8,6 +8,7 @@ import { nextRowY } from "@/app/reports/dashboard/reportsWidgetCatalog";
 import { makeWidgetId } from "@/components/widget-dashboard/widgetId";
 
 import { defaultHomeWidgetSize } from "@/app/dashboard/homeWidgetCatalog";
+import { VISIBLE_PRESETS } from "@/app/reports/dashboard/dateRange";
 import type {
   HomeDashboardConfig,
   HomeWidgetEntry,
@@ -108,16 +109,8 @@ export function widgetListId(config: HomeWidgetEntry["config"]): string | null {
   return config.type === "todo_list" ? (config.list_id ?? null) : null;
 }
 
-/** Write a per-widget date preset into the entry's config. */
-export function setWidgetDatePreset(
-  config: HomeDashboardConfig,
-  id: string,
-  preset: NonNullable<HomeWidgetEntry["config"]["date_preset"]>,
-): HomeDashboardConfig {
-  return {
-    ...config,
-    widgets: (config.widgets ?? []).map((w) =>
-      w.id === id ? { ...w, config: { ...w.config, date_preset: preset } } : w,
-    ),
-  };
-}
+/** The backend is the authority on which presets a home dashboard may
+ * store; the picker offers exactly that set. */
+export type HomeDatePreset = NonNullable<HomeDashboardConfig["datePreset"]>;
+
+export const HOME_PRESETS = VISIBLE_PRESETS.filter((p): p is HomeDatePreset => p !== "custom");

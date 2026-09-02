@@ -76,7 +76,7 @@ describe("HomeWidgetByType", () => {
               entry={entry}
               isEditMode={false}
               onRemove={vi.fn()}
-              onConfigOpen={vi.fn()}
+              datePreset="last_30_days"
               onAction={vi.fn()}
               onSelectList={vi.fn()}
               {...overrides}
@@ -146,9 +146,8 @@ describe("HomeWidgetByType", () => {
     expect(url).not.toContain("owner_user_id");
   });
 
-  it("shows the edit-mode config gear on reports widgets", () => {
+  it("renders no per-widget config gear — the range picker is global", () => {
     renderWidget(entryOf("stale_deals"), { isEditMode: true });
-    // The gear rides WidgetFrame's onConfigClick slot (no testid of its own).
-    expect(screen.getByRole("button", { name: "Nastavení widgetu" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Nastavení widgetu" })).not.toBeInTheDocument();
   });
 });

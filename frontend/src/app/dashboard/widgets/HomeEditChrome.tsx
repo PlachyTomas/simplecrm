@@ -1,4 +1,4 @@
-import { GripVertical, Settings2, X } from "lucide-react";
+import { GripVertical, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -11,8 +11,6 @@ interface HomeEditChromeProps {
   /** Resolved widget label, used for control aria-labels. */
   label: string;
   onRemove?: () => void;
-  /** Provide to show the per-widget config gear (date preset). */
-  onConfigClick?: () => void;
   children: ReactNode;
 }
 
@@ -30,7 +28,6 @@ export function HomeEditChrome({
   widgetId,
   label,
   onRemove,
-  onConfigClick,
   children,
 }: HomeEditChromeProps) {
   const { t } = useTranslation("widgets");
@@ -47,17 +44,6 @@ export function HomeEditChrome({
         >
           <GripVertical size={14} strokeWidth={1.75} aria-hidden />
         </button>
-        {onConfigClick ? (
-          <button
-            type="button"
-            onClick={onConfigClick}
-            aria-label={t("widgetFrame.widgetSettings")}
-            data-testid={testIds.dashboard.widgetConfig.open(widgetId)}
-            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-text-tertiary hover:bg-surface-overlay hover:text-text-primary"
-          >
-            <Settings2 size={14} strokeWidth={1.75} aria-hidden />
-          </button>
-        ) : null}
         {onRemove ? (
           <button
             type="button"

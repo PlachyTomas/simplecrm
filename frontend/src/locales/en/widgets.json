@@ -1,7 +1,6 @@
 {
   "widgetFrame": {
     "moveWidget": "Move widget",
-    "widgetSettings": "Widget settings",
     "removeWidget": "Remove widget",
     "loading": "Loading widget",
     "loadError": "Failed to load the widget.",
@@ -26,6 +25,7 @@
     "resetConfirmAction": "Reset",
     "resetConfirm": "Reset to the default layout? Your changes will be lost.",
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "rangeAria": "Date range for all widgets"
   }
 }

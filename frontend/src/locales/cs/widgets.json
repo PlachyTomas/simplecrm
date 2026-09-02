@@ -1,7 +1,6 @@
 {
   "widgetFrame": {
     "moveWidget": "Přesunout widget",
-    "widgetSettings": "Nastavení widgetu",
     "removeWidget": "Odebrat widget",
     "loading": "Načítání widgetu",
     "loadError": "Widget se nepodařilo načíst.",
@@ -26,6 +25,7 @@
     "resetConfirmAction": "Obnovit",
     "resetConfirm": "Opravdu chcete obnovit výchozí rozložení? Vaše úpravy budou ztraceny.",
     "cancel": "Zrušit",
-    "save": "Uložit"
+    "save": "Uložit",
+    "rangeAria": "Období všech widgetů"
   }
 }

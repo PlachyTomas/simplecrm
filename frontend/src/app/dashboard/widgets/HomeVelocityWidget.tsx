@@ -11,43 +11,31 @@ import {
 import { formatNumber } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
 
-import type { HomeWidgetEntry } from "@/app/dashboard/useHomeDashboard";
+import type { HomeDatePreset } from "@/app/dashboard/homeLayout";
 import { HomeWidgetUnavailable } from "@/app/dashboard/widgets/HomeWidgetUnavailable";
 
 interface HomeVelocityWidgetProps {
-  entry: HomeWidgetEntry;
   isEditMode: boolean;
   onRemove: () => void;
-  /** Open the date-preset config popover for this widget. */
-  onConfigOpen: (id: string) => void;
+  /** The dashboard-wide date range (edit toolbar owns changing it). */
+  datePreset: HomeDatePreset;
 }
 
 /**
  * Pipeline-velocity list (average days in each stage), ported from the old
- * `ManagerWidgets`. Respects the widget's `date_preset` (default last 30
- * days) and exposes the config gear so the range can be changed per widget.
+ * `ManagerWidgets`. Renders the dashboard's global date range.
  */
-export function HomeVelocityWidget({
-  entry,
-  isEditMode,
-  onRemove,
-  onConfigOpen,
-}: HomeVelocityWidgetProps) {
+export function HomeVelocityWidget({ isEditMode, onRemove, datePreset }: HomeVelocityWidgetProps) {
   const { t } = useTranslation("dashboard");
   const locale = useLocale();
-  const preset = entry.config.date_preset ?? "last_30_days";
-  const range = useMemo(() => resolvePreset({ preset, from: null, to: null }), [preset]);
+  const range = useMemo(
+    () => resolvePreset({ preset: datePreset, from: null, to: null }),
+    [datePreset],
+  );
   const velocity = useVelocity(range);
 
   return (
-    <WidgetFrame
-      label={t("widgetLabels.velocity")}
-      isEditMode={isEditMode}
-      onRemove={onRemove}
-      // The preset writes into the edit draft, so the gear only shows in
-      // edit mode — matching the analytics widgets' overlay gear.
-      onConfigClick={isEditMode ? () => onConfigOpen(entry.id) : undefined}
-    >
+    <WidgetFrame label={t("widgetLabels.velocity")} isEditMode={isEditMode} onRemove={onRemove}>
       {velocity.isPending ? (
         <WidgetSkeleton />
       ) : velocity.isError || !velocity.data ? (

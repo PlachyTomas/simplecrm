@@ -48,7 +48,7 @@ from app.schemas.reports.widgets import (
     WinRateConfig,
     WonVsPaidConfig,
 )
-from app.schemas.reports.widgets._base import WidgetConfigBase
+from app.schemas.reports.widgets._base import DatePreset, WidgetConfigBase
 
 # ---------------------------------------------------------------------------
 # Home-only widget configs. No extra fields (they inherit the optional
@@ -177,6 +177,9 @@ class HomeDashboardConfig(BaseModel):
     # Mobile stack order — a list of widget ids. Desktop uses (y, x); the
     # mobile view reorders independently without touching positions.
     mobile_order: list[str] = Field(default_factory=list, alias="mobileOrder")
+    # Global widget date range, edited from the dashboard's edit toolbar
+    # (one preset for every widget). None → client treats as last_30_days.
+    date_preset: DatePreset | None = Field(default=None, alias="datePreset")
 
     @model_validator(mode="after")
     def _check_widgets(self) -> HomeDashboardConfig:

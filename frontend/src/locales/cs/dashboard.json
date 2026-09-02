@@ -51,10 +51,6 @@
     "velocity": "Průměrný počet dní obchodu v jednotlivých fázích.",
     "todo_list": "Osobní seznam úkolů. Vidíte jen své a úkol můžete propojit s obchodem."
   },
-  "widgetConfig": {
-    "title": "Nastavení widgetu",
-    "dateRangeLabel": "Časové období"
-  },
   "widgetUnavailable": {
     "title": "Není dostupné.",
     "short": "Není dostupné"
