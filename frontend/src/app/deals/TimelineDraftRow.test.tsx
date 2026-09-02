@@ -61,9 +61,8 @@ function time() {
   return screen.getByTestId(ids.timelineDraftTime) as HTMLInputElement;
 }
 
-/** Focus leaving the whole draft — what actually commits it. */
-function leaveDraft(relatedTarget: Element | null = null) {
-  fireEvent.blur(draft(), { relatedTarget });
+function submit() {
+  return screen.getByTestId(ids.timelineDraftSubmit) as HTMLButtonElement;
 }
 
 describe("TimelineDraftRow", () => {
@@ -73,58 +72,61 @@ describe("TimelineDraftRow", () => {
     toastError.mockReset();
   });
 
-  it("does not POST when the draft was never touched", async () => {
+  it("keeps the add button disabled while the draft is empty", () => {
     render(<TimelineDraftRow dealId="d1" />);
-    leaveDraft();
-    await waitFor(() => expect(mutateAsync).not.toHaveBeenCalled());
-  });
-
-  it("does not POST when the body holds only whitespace", async () => {
-    render(<TimelineDraftRow dealId="d1" />);
+    expect(submit()).toBeDisabled();
     fireEvent.change(body(), { target: { value: "   " } });
-    leaveDraft();
-    await waitFor(() => expect(mutateAsync).not.toHaveBeenCalled());
+    expect(submit()).toBeDisabled();
+    fireEvent.click(submit());
+    expect(mutateAsync).not.toHaveBeenCalled();
   });
 
-  it("POSTs once on blur after typing, then clears the field", async () => {
+  it("never POSTs on blur — the regression that added entries mid-edit", async () => {
+    render(<TimelineDraftRow dealId="d1" />);
+    fireEvent.change(body(), { target: { value: "Rozepsaná poznámka" } });
+    // Focus leaving for the kind picker (or anywhere else) must not commit.
+    fireEvent.blur(draft(), { relatedTarget: null });
+    await waitFor(() => expect(mutateAsync).not.toHaveBeenCalled());
+    expect(body().value).toBe("Rozepsaná poznámka");
+  });
+
+  it("POSTs once on the add button, then clears the field", async () => {
     render(<TimelineDraftRow dealId="d1" />);
     fireEvent.change(body(), { target: { value: "Zavolal jsem Petrovi" } });
-    leaveDraft();
+    fireEvent.click(submit());
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
     expect(posted()).toMatchObject({ body: "Zavolal jsem Petrovi", label_id: null });
     await waitFor(() => expect(body().value).toBe(""));
   });
 
-  it("stays put while focus moves between the draft's own fields", async () => {
-    render(<TimelineDraftRow dealId="d1" />);
-    fireEvent.change(body(), { target: { value: "Rozpracováno" } });
-    // Tabbing from the text input to the time input inside the same draft.
-    leaveDraft(time());
-    await waitFor(() => expect(mutateAsync).not.toHaveBeenCalled());
-    expect(body().value).toBe("Rozpracováno");
-  });
-
   it("commits a kind on its own, with no description", async () => {
     render(<TimelineDraftRow dealId="d1" />);
     fireEvent.click(screen.getByTestId(ids.timelineDraftKind));
-    leaveDraft();
+    fireEvent.click(submit());
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
     expect(posted()).toMatchObject({ label_id: "label-1", body: null });
   });
 
-  it("commits on Ctrl+Enter without waiting for blur", async () => {
+  it("commits on plain Enter in the text field", async () => {
     render(<TimelineDraftRow dealId="d1" />);
     fireEvent.change(body(), { target: { value: "Poslal jsem nabídku" } });
-    fireEvent.keyDown(body(), { key: "Enter", ctrlKey: true });
+    fireEvent.keyDown(body(), { key: "Enter" });
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
     expect(posted()).toMatchObject({ body: "Poslal jsem nabídku" });
+  });
+
+  it("commits on Ctrl+Enter as before", async () => {
+    render(<TimelineDraftRow dealId="d1" />);
+    fireEvent.change(body(), { target: { value: "Zápis z jednání" } });
+    fireEvent.keyDown(body(), { key: "Enter", ctrlKey: true });
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
   });
 
   it("sends the naive local time as a tz-aware instant", async () => {
     render(<TimelineDraftRow dealId="d1" />);
     fireEvent.change(body(), { target: { value: "Schůzka" } });
     fireEvent.change(time(), { target: { value: "2026-08-10T09:00" } });
-    leaveDraft();
+    fireEvent.click(submit());
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
     // 9:00 local — whatever offset the runner sits at — never 9:00 UTC.
     expect(posted().occurred_at).toBe(new Date(2026, 7, 10, 9, 0, 0, 0).toISOString());
@@ -134,7 +136,7 @@ describe("TimelineDraftRow", () => {
     render(<TimelineDraftRow dealId="d1" />);
     fireEvent.change(body(), { target: { value: "Zpětný zápis" } });
     fireEvent.change(time(), { target: { value: "2026-08-10T09:00" } });
-    leaveDraft();
+    fireEvent.click(submit());
     await waitFor(() => expect(time().value).not.toBe("2026-08-10T09:00"));
     const reset = new Date(time().value).getTime();
     expect(Math.abs(reset - Date.now())).toBeLessThan(120_000);
@@ -144,9 +146,40 @@ describe("TimelineDraftRow", () => {
     mutateAsync.mockRejectedValueOnce(new Error("boom"));
     render(<TimelineDraftRow dealId="d1" />);
     fireEvent.change(body(), { target: { value: "Nepovede se" } });
-    leaveDraft();
+    fireEvent.click(submit());
     await waitFor(() => expect(toastError).toHaveBeenCalledTimes(1));
     expect(body().value).toBe("Nepovede se");
+  });
+
+  it("leaves Enter on the kind chip to the chip itself — no premature POST", async () => {
+    render(<TimelineDraftRow dealId="d1" />);
+    fireEvent.change(body(), { target: { value: "Rozepsaná poznámka" } });
+    // Keyboard path of the original bug: Enter on the picker trigger must
+    // open the picker (native button activation), never commit the draft.
+    fireEvent.keyDown(screen.getByTestId(ids.timelineDraftKind), { key: "Enter" });
+    await waitFor(() => expect(mutateAsync).not.toHaveBeenCalled());
+    expect(body().value).toBe("Rozepsaná poznámka");
+  });
+
+  it("ignores an IME candidate-confirming Enter", async () => {
+    render(<TimelineDraftRow dealId="d1" />);
+    fireEvent.change(body(), { target: { value: "変換中" } });
+    fireEvent.keyDown(body(), { key: "Enter", isComposing: true });
+    await waitFor(() => expect(mutateAsync).not.toHaveBeenCalled());
+    expect(body().value).toBe("変換中");
+  });
+
+  it("POSTs once for two rapid activations and refocuses the text field", async () => {
+    let resolve!: (v: unknown) => void;
+    mutateAsync.mockImplementationOnce(() => new Promise((r) => (resolve = r)));
+    render(<TimelineDraftRow dealId="d1" />);
+    fireEvent.change(body(), { target: { value: "Dvojklik" } });
+    fireEvent.click(submit());
+    fireEvent.click(submit());
+    resolve({ id: "a1" });
+    await waitFor(() => expect(body().value).toBe(""));
+    expect(mutateAsync).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(body());
   });
 
   it("clears the draft on Escape without saving", async () => {

@@ -1,3 +1,4 @@
+import { Plus } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -9,11 +10,11 @@ import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
 
 /**
- * The "Přidat akci" composer that opens the deal's timeline.
+ * The composer that opens the deal's timeline.
  *
- * There is deliberately **no Save button**: the draft commits when focus
- * leaves it as a whole (or on ⌘/Ctrl+Enter), and an untouched draft — no
- * kind, no text — never writes anything. Escape throws the draft away.
+ * The draft commits ONLY on an explicit action — the plus button, Enter, or
+ * ⌘/Ctrl+Enter. Nothing saves on blur: half-written notes must survive a
+ * detour into the kind picker. Escape throws the draft away.
  */
 export function TimelineDraftRow({ dealId }: { dealId: string }) {
   const { t } = useTranslation("deals");
@@ -25,9 +26,12 @@ export function TimelineDraftRow({ dealId }: { dealId: string }) {
   const [kind, setKind] = useState<EventLabelBrief | null>(null);
   const [body, setBody] = useState("");
   const [when, setWhen] = useState(() => toLocalInputValue(new Date()));
-  // ⌘/Ctrl+Enter fires the commit, then the focus change that follows would
-  // fire a second one against state that has not been cleared yet.
+  const bodyRef = useRef<HTMLInputElement | null>(null);
+  // Enter fires the commit; a second Enter before the POST returns would
+  // fire another one against state that has not been cleared yet.
   const inFlight = useRef(false);
+
+  const empty = !body.trim() && !kind;
 
   function reset() {
     setKind(null);
@@ -37,7 +41,6 @@ export function TimelineDraftRow({ dealId }: { dealId: string }) {
 
   async function commit() {
     const trimmed = body.trim();
-    // An untouched draft is not an entry. Nothing to send, nothing to say.
     if (!trimmed && !kind) return;
     if (inFlight.current) return;
     inFlight.current = true;
@@ -49,6 +52,9 @@ export function TimelineDraftRow({ dealId }: { dealId: string }) {
       });
       // Fresh "now" for the next entry — not the stale value the page loaded with.
       reset();
+      // The emptied draft disables the + button; without a new focus target
+      // the browser drops focus to <body> and keyboard users start over.
+      bodyRef.current?.focus();
     } catch {
       // Never eat the user's typing: the draft stays exactly as it is.
       toast.error(t("dealDetail.timeline.draft.saveError"));
@@ -57,17 +63,16 @@ export function TimelineDraftRow({ dealId }: { dealId: string }) {
     }
   }
 
-  function handleBlur(e: React.FocusEvent<HTMLFieldSetElement>) {
-    // Blur also fires while tabbing between the draft's own controls (and
-    // into the kind picker's dropdown, which lives inside this fieldset).
-    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
-    void commit();
-  }
-
   function handleKeyDown(e: React.KeyboardEvent<HTMLFieldSetElement>) {
     // The kind picker handles its own Enter/Escape and marks them handled.
     if (e.defaultPrevented) return;
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    // Buttons keep their native Enter (opening the kind picker, the + itself);
+    // an IME's candidate-confirming Enter must never commit mid-composition.
+    if (
+      e.key === "Enter" &&
+      !(e.target instanceof HTMLButtonElement) &&
+      !e.nativeEvent.isComposing
+    ) {
       e.preventDefault();
       void commit();
     } else if (e.key === "Escape") {
@@ -78,13 +83,10 @@ export function TimelineDraftRow({ dealId }: { dealId: string }) {
   return (
     <fieldset
       data-testid={testIds.deals.detail.timelineDraft}
-      onBlur={handleBlur}
+      aria-label={t("dealDetail.timeline.draft.legend")}
       onKeyDown={handleKeyDown}
-      className="rounded-lg border border-border-subtle bg-surface-overlay px-3 pb-3"
+      className="rounded-lg border border-border-subtle bg-surface-overlay p-3"
     >
-      <legend className="px-1 text-xs font-medium text-text-secondary">
-        {t("dealDetail.timeline.draft.legend")}
-      </legend>
       <div className="flex flex-wrap items-center gap-2">
         <ActivityKindPicker
           value={kind}
@@ -96,6 +98,7 @@ export function TimelineDraftRow({ dealId }: { dealId: string }) {
         </label>
         <input
           id={bodyId}
+          ref={bodyRef}
           type="text"
           value={body}
           maxLength={2000}
@@ -115,6 +118,17 @@ export function TimelineDraftRow({ dealId }: { dealId: string }) {
           data-testid={testIds.deals.detail.timelineDraftTime}
           className="h-9 rounded-md border border-border bg-surface px-2 text-sm tabular-nums text-text-primary transition-colors duration-fast focus:border-accent focus:outline-none"
         />
+        <button
+          type="button"
+          onClick={() => void commit()}
+          disabled={empty}
+          aria-label={t("dealDetail.timeline.draft.legend")}
+          title={t("dealDetail.timeline.draft.legend")}
+          data-testid={testIds.deals.detail.timelineDraftSubmit}
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Plus size={16} strokeWidth={1.75} aria-hidden />
+        </button>
       </div>
       <p className="mt-2 text-xs text-text-tertiary">{t("dealDetail.timeline.draft.hint")}</p>
     </fieldset>

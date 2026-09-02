@@ -257,7 +257,7 @@
         "bodyLabel": "Description",
         "bodyPlaceholder": "What did you do?",
         "timeLabel": "When",
-        "hint": "Saves itself when you click away.",
+        "hint": "Add with the + button or Enter. Escape discards the draft.",
         "saveError": "Could not save the action. Please try again."
       },
       "entry": {

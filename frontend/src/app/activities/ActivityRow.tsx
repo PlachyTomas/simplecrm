@@ -13,6 +13,7 @@ import {
 import type { ActivityOut } from "@/app/activities/useActivities";
 import { formatDate } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
+import { cn } from "@/lib/utils";
 
 /**
  * The backend denormalizes the actor's name onto each activity row, but the
@@ -183,9 +184,16 @@ export function ActivityRow({
 
   return (
     <li className="relative">
+      {/* Kind-labeled rows keep their label's color even read-only; anything
+          else (audit rows) is neutral so no system dot collides with a
+          user-picked label color. */}
       <span
         aria-hidden
-        className="absolute -left-[26px] top-1 inline-block h-2.5 w-2.5 rounded-full bg-accent"
+        className={cn(
+          "absolute -left-[26px] top-1 inline-block h-2.5 w-2.5 rounded-full",
+          activity.label ? null : "bg-text-tertiary",
+        )}
+        style={activity.label ? { backgroundColor: activity.label.color } : undefined}
       />
       <p className="text-sm font-medium text-text-primary">
         {dealName ? (

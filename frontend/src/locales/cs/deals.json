@@ -264,7 +264,7 @@
         "bodyLabel": "Popis",
         "bodyPlaceholder": "Co jste udělali?",
         "timeLabel": "Kdy",
-        "hint": "Uloží se samo, jakmile kliknete jinam.",
+        "hint": "Přidáte tlačítkem + nebo klávesou Enter. Escape koncept zahodí.",
         "saveError": "Akci se nepodařilo uložit. Zkuste to prosím znovu."
       },
       "entry": {

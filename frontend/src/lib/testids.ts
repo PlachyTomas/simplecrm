@@ -129,6 +129,7 @@ export const testIds = {
       timelineDraftKind: "deals-detail-timeline-draft-kind",
       timelineDraftBody: "deals-detail-timeline-draft-body",
       timelineDraftTime: "deals-detail-timeline-draft-time",
+      timelineDraftSubmit: "deals-detail-timeline-draft-submit",
       timelineEntry: (id: string) => `deals-detail-timeline-entry-${id}`,
       timelineEntryBody: (id: string) => `deals-detail-timeline-entry-body-${id}`,
       timelineEntryKind: (id: string) => `deals-detail-timeline-entry-kind-${id}`,

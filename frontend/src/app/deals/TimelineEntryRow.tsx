@@ -186,11 +186,15 @@ function EditableEntry({ activity }: { activity: ActivityItem }) {
       />
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <ActivityKindPicker
-            value={label}
-            onChange={saveKind}
-            testId={testIds.deals.detail.timelineEntryKind(activity.id)}
-          />
+          {/* Out-dent by the controls' own padding so the text edge lines up
+              with the read-only rows' titles (they start at the column edge). */}
+          <div className="-ml-2 inline-block">
+            <ActivityKindPicker
+              value={label}
+              onChange={saveKind}
+              testId={testIds.deals.detail.timelineEntryKind(activity.id)}
+            />
+          </div>
           <textarea
             ref={bodyRef}
             rows={1}
@@ -208,9 +212,9 @@ function EditableEntry({ activity }: { activity: ActivityItem }) {
               window.clearTimeout(debounce.current);
               saveBody(text);
             }}
-            className="mt-0.5 w-full resize-none rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-sm text-text-primary transition-colors duration-fast hover:border-border focus:border-accent focus:outline-none"
+            className="-ml-1.5 mt-0.5 w-full resize-none rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-sm text-text-primary transition-colors duration-fast hover:border-border focus:border-accent focus:outline-none"
           />
-          <p className="mt-0.5 flex flex-wrap items-center gap-x-1 px-1.5 text-xs text-text-tertiary">
+          <p className="-ml-1.5 mt-0.5 flex flex-wrap items-center gap-x-1 px-1.5 text-xs text-text-tertiary">
             {actor ? <span>{actor} ·</span> : null}
             {editingTime ? (
               <input
