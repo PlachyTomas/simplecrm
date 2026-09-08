@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -148,6 +148,7 @@ async def list_organizations(
                 SubscriptionStatus,
                 subs_by_org[o.id].status if o.id in subs_by_org else "trialing",
             ),
+            access_status=_org_access_status(subs_by_org.get(o.id), o),
             is_comp=subs_by_org[o.id].is_comp if o.id in subs_by_org else False,
             user_count=user_counts.get(o.id, 0),
             trial_ends_at=o.trial_ends_at,
@@ -171,6 +172,15 @@ def _access_status(sub: Subscription) -> str:
     if sub.status == "trialing":
         return "trialing"
     return "active"
+
+
+def _org_access_status(sub: Subscription | None, org: Organization) -> str:
+    """Nothing flips `status` when a trial runs out, so the list derives
+    expiry the same way the pay-gate does (`deps.require_active_trial_or_subscription`
+    falls back to `trial_ends_at` for orgs without a subscription row)."""
+    if sub is not None:
+        return _access_status(sub)
+    return "trialing" if org.trial_ends_at > datetime.now(tz=UTC) else "gated"
 
 
 def _subscription_payload(sub: Subscription) -> SubscriptionOut:

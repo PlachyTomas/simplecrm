@@ -48,6 +48,8 @@
     "fromPrefix": "From: {{address}}",
     "unknown": "unknown sender",
     "reply": "Reply",
+    "campaignBadge": "Bulk email",
+    "campaignBadgeTitle": "Sent as part of a bulk campaign — open campaign history",
     "opened": "Opened",
     "openedWithCount": "Opened {{n}}×",
     "openedTooltip": "First opened {{at}}",
@@ -158,7 +160,7 @@
   },
   "mailPage": {
     "title": "Emails",
-    "subtitle": "An overview of emails sent from SimpleCRM. Receiving mail is in the works.",
+    "subtitle": "An overview of emails sent from SimpleCRM, bulk campaigns included. Receiving mail is in the works.",
     "searchLabel": "Search emails",
     "searchPlaceholder": "Search subject, text, address…",
     "typeFilterLabel": "Filter by type",
@@ -205,6 +207,8 @@
   },
   "detail": {
     "title": "Email detail",
+    "campaign": "Campaign",
+    "campaignLink": "Bulk email — campaign history",
     "loading": "Loading…",
     "loadError": "The email could not be loaded.",
     "sender": "Sender",

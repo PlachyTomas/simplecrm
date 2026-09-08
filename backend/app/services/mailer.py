@@ -36,7 +36,7 @@ from app.db.models import (
 )
 from app.schemas.sent_email import SentEmailCreate
 from app.services.activity_log import record_activity
-from app.services.email import Email, EmailAttachment, send_email_via
+from app.services.email import Email, EmailAttachment, new_message_id, send_email_via
 from app.services.email_tracking import build_tracked_html, new_tracking_token
 from app.services.merge_fields import (
     MergeContext,
@@ -59,11 +59,6 @@ class SmtpCredentialsUnreadableError(SmtpNotVerifiedError):
     identical — re-enter the password in Settings. Existing handlers keep
     returning their 409 instead of leaking an unhandled 500 out of a send.
     """
-
-
-def _message_id(from_email: str) -> str:
-    domain = from_email.rpartition("@")[2] or "simplecrm.cz"
-    return f"<{uuid.uuid4().hex}@{domain}>"
 
 
 async def _merge_context(
@@ -147,7 +142,7 @@ async def send_user_email(
 
     thread_id = reply_parent.thread_id if reply_parent else uuid.uuid4()
     in_reply_to = reply_parent.message_id if reply_parent else None
-    message_id = _message_id(row.from_email)
+    message_id = new_message_id(row.from_email)
 
     company_id = deal.company_id if deal else (company.id if company else None)
 

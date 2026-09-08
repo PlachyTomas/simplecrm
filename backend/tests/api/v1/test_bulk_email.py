@@ -9,20 +9,27 @@ from datetime import UTC, datetime
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
 from app.core.token_crypto import encrypt_token
 from app.db.models import (
+    Activity,
+    ActivityEntityType,
+    ActivityType,
     Company,
+    Deal,
+    EmailCampaignRecipient,
     EmailRecipientStatus,
     Organization,
+    SentEmail,
     User,
     UserRole,
     UserSmtpSettings,
 )
 from app.db.session import AsyncSessionLocal
+from app.services.pipeline import create_default_pipeline
 
 
 @pytest.fixture
@@ -82,18 +89,32 @@ def _auth(user: User) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+def _fake_result(unit, status: EmailRecipientStatus, error: str | None) -> dict[str, object]:
+    return {
+        "company_id": unit.company_id,
+        "contact_id": unit.contact_id,
+        "email": unit.email,
+        "company_name": unit.company_name,
+        "status": status,
+        "error": error,
+        "sent_at": datetime.now(tz=UTC) if status is EmailRecipientStatus.sent else None,
+        "tracking_token": unit.tracking_token,
+        "rendered_subject": f"Nabídka pro {unit.company_name}",
+        "rendered_body": f"Dobrý den, {unit.company_name}",
+        "message_id": f"<{uuid.uuid4().hex}@firma.cz>",
+    }
+
+
 def _fake_loop(config, subject, body, context, signature, units, attachments):
+    return [_fake_result(u, EmailRecipientStatus.sent, None) for u in units]
+
+
+def _fake_loop_second_fails(config, subject, body, context, signature, units, attachments):
     return [
-        {
-            "company_id": u.company_id,
-            "contact_id": u.contact_id,
-            "email": u.email,
-            "company_name": u.company_name,
-            "status": EmailRecipientStatus.sent,
-            "error": None,
-            "sent_at": datetime.now(tz=UTC),
-        }
-        for u in units
+        _fake_result(u, EmailRecipientStatus.sent, None)
+        if i == 0
+        else _fake_result(u, EmailRecipientStatus.failed, "550 mailbox unavailable")
+        for i, u in enumerate(units)
     ]
 
 
@@ -229,3 +250,221 @@ async def test_campaign_detail_cross_user_scoping(
         f"/api/v1/companies/bulk-email/campaigns/{campaign_id}", headers=_auth(admin)
     )
     assert r2.status_code == 200
+
+
+async def test_send_writes_sent_emails_rows_linked_to_campaign(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("app.services.bulk_email._run_send_loop", _fake_loop)
+    org, sales = await _seed_user(db_session, owned_cleanup)
+    await _verify_smtp(db_session, sales, org)
+    co = Company(organization_id=org.id, name="ACME", email="acme@x.cz", owner_user_id=sales.id)
+    db_session.add(co)
+    await db_session.commit()
+    payload = {
+        "subject": "Nabídka pro {firma}",
+        "body": "Dobrý den, {firma}",
+        "recipients": [{"company_id": str(co.id), "emails": ["acme@x.cz"]}],
+    }
+    r = await client.post(
+        "/api/v1/companies/bulk-email/send",
+        data={"payload": json.dumps(payload)},
+        headers=_auth(sales),
+    )
+    assert r.status_code == 200, r.text
+    campaign_id = r.json()["id"]
+    recipient = (
+        await db_session.execute(
+            select(EmailCampaignRecipient).where(
+                EmailCampaignRecipient.campaign_id == uuid.UUID(campaign_id)
+            )
+        )
+    ).scalar_one()
+
+    rows = (
+        (await db_session.execute(select(SentEmail).where(SentEmail.company_id == co.id)))
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 1
+    row = rows[0]
+    assert str(row.campaign_id) == campaign_id
+    assert row.sender_user_id == sales.id
+    assert row.to_emails == ["acme@x.cz"]
+    # The history shows what the recipient got — merge fields resolved.
+    assert row.subject == "Nabídka pro ACME"
+    assert row.body == "Dobrý den, ACME"
+    assert row.status.value == "sent"
+    assert row.deal_id is None
+    # One token drives both the recipient row and the history row.
+    assert row.tracking_token is not None
+    assert row.tracking_token == recipient.tracking_token
+
+    history = await client.get(f"/api/v1/emails?company_id={co.id}", headers=_auth(sales))
+    assert history.status_code == 200, history.text
+    items = history.json()["items"]
+    assert [i["id"] for i in items] == [str(row.id)]
+    assert items[0]["campaign_id"] == campaign_id
+
+    activity = (
+        await db_session.execute(
+            select(Activity).where(
+                Activity.company_id == co.id,
+                Activity.activity_type == ActivityType.email_sent,
+            )
+        )
+    ).scalar_one()
+    assert activity.payload["campaign_id"] == campaign_id
+    assert activity.payload["email_id"] == str(row.id)
+
+
+async def test_send_with_create_deals_links_rows_to_the_new_deal(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("app.services.bulk_email._run_send_loop", _fake_loop)
+    org, sales = await _seed_user(db_session, owned_cleanup)
+    await create_default_pipeline(db_session, org.id)
+    await db_session.commit()
+    await _verify_smtp(db_session, sales, org)
+    co = Company(organization_id=org.id, name="ACME", email="acme@x.cz", owner_user_id=sales.id)
+    db_session.add(co)
+    await db_session.commit()
+    payload = {
+        "subject": "Nabídka",
+        "body": "Dobrý den",
+        "create_deals": True,
+        "deal_title": "Kampaň září",
+        "recipients": [{"company_id": str(co.id), "emails": ["acme@x.cz"]}],
+    }
+    r = await client.post(
+        "/api/v1/companies/bulk-email/send",
+        data={"payload": json.dumps(payload)},
+        headers=_auth(sales),
+    )
+    assert r.status_code == 200, r.text
+
+    deal = (await db_session.execute(select(Deal).where(Deal.company_id == co.id))).scalar_one()
+    assert deal.name == "Kampaň září"
+    row = (
+        await db_session.execute(select(SentEmail).where(SentEmail.company_id == co.id))
+    ).scalar_one()
+    assert row.deal_id == deal.id
+
+    history = await client.get(f"/api/v1/emails?deal_id={deal.id}", headers=_auth(sales))
+    assert history.status_code == 200, history.text
+    assert [i["id"] for i in history.json()["items"]] == [str(row.id)]
+
+    # The mail is logged on the deal it opened, so the deal's Průběh shows it.
+    activity = (
+        await db_session.execute(
+            select(Activity).where(
+                Activity.company_id == co.id, Activity.activity_type == ActivityType.email_sent
+            )
+        )
+    ).scalar_one()
+    assert activity.entity_type == ActivityEntityType.deal
+    assert activity.entity_id == deal.id
+    assert activity.payload["deal_name"] == "Kampaň září"
+    assert activity.payload["email_id"] == str(row.id)
+
+
+async def test_send_records_failed_recipients_as_failed_rows_and_skips_skipped(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("app.services.bulk_email._run_send_loop", _fake_loop_second_fails)
+    org, sales = await _seed_user(db_session, owned_cleanup)
+    await _verify_smtp(db_session, sales, org)
+    ok = Company(organization_id=org.id, name="OK", email="ok@x.cz", owner_user_id=sales.id)
+    bad = Company(organization_id=org.id, name="Bad", email="bad@x.cz", owner_user_id=sales.id)
+    db_session.add_all([ok, bad])
+    await db_session.commit()
+    payload = {
+        "subject": "Nabídka",
+        "body": "Dobrý den",
+        "recipients": [
+            {"company_id": str(ok.id), "emails": ["ok@x.cz"]},
+            {"company_id": str(bad.id), "emails": ["bad@x.cz"]},
+            # Not one of the company's addresses → skipped, never attempted.
+            {"company_id": str(ok.id), "emails": ["stranger@elsewhere.cz"]},
+        ],
+    }
+    r = await client.post(
+        "/api/v1/companies/bulk-email/send",
+        data={"payload": json.dumps(payload)},
+        headers=_auth(sales),
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert (body["sent_count"], body["failed_count"], body["skipped_count"]) == (1, 1, 1)
+
+    rows = (
+        (await db_session.execute(select(SentEmail).where(SentEmail.organization_id == org.id)))
+        .scalars()
+        .all()
+    )
+    by_company = {row.company_id: row for row in rows}
+    assert set(by_company) == {ok.id, bad.id}
+    assert by_company[ok.id].status.value == "sent"
+    assert by_company[bad.id].status.value == "failed"
+    assert by_company[bad.id].error == "550 mailbox unavailable"
+    assert by_company[bad.id].sent_at is None
+    # A failed attempt is not a sent mail — no activity for it.
+    activities = (
+        (
+            await db_session.execute(
+                select(Activity).where(
+                    Activity.organization_id == org.id,
+                    Activity.activity_type == ActivityType.email_sent,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert [a.company_id for a in activities] == [ok.id]
+
+
+async def test_send_never_persists_a_foreign_company_id_on_a_skip_row(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    owned_cleanup: dict[str, list],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("app.services.bulk_email._run_send_loop", _fake_loop)
+    org, sales = await _seed_user(db_session, owned_cleanup)
+    await _verify_smtp(db_session, sales, org)
+    co = Company(organization_id=org.id, name="ACME", email="acme@x.cz", owner_user_id=sales.id)
+    db_session.add(co)
+    await db_session.commit()
+    payload = {
+        "subject": "Nabídka",
+        "body": "Dobrý den",
+        "recipients": [
+            {"company_id": str(co.id), "emails": ["acme@x.cz"]},
+            # A UUID that exists in no org: skipped, and it must not reach the
+            # recipient row's FK (that would 500 after the first mail went out).
+            {"company_id": str(uuid.uuid4()), "emails": ["x@y.cz"]},
+        ],
+    }
+    r = await client.post(
+        "/api/v1/companies/bulk-email/send",
+        data={"payload": json.dumps(payload)},
+        headers=_auth(sales),
+    )
+    assert r.status_code == 200, r.text
+    assert (r.json()["sent_count"], r.json()["skipped_count"]) == (1, 1)
+    detail = await client.get(
+        f"/api/v1/companies/bulk-email/campaigns/{r.json()['id']}", headers=_auth(sales)
+    )
+    skipped = next(x for x in detail.json()["recipients"] if x["status"] == "skipped")
+    assert skipped["company_id"] is None
+    assert skipped["error"] == "not_allowed"

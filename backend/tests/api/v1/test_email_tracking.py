@@ -536,3 +536,70 @@ async def test_campaign_detail_reports_open_and_click_aggregates(
     row = next(c for c in listing.json()["items"] if c["id"] == str(campaign.id))
     assert row["opened_count"] == 1
     assert row["clicked_count"] == 1
+
+
+async def test_campaign_token_updates_the_recipient_and_the_history_row(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    admin, company, _ = await _seed(db_session, owned_cleanup)
+    token = new_tracking_token()
+    campaign = EmailCampaign(
+        organization_id=admin.organization_id,
+        created_by_user_id=admin.id,
+        subject="Kampaň",
+        body="Text https://example.com/x",
+        from_email="admin@example.com",
+        total=1,
+        sent_count=1,
+        failed_count=0,
+        skipped_count=0,
+    )
+    campaign.recipients.append(
+        EmailCampaignRecipient(
+            company_id=company.id,
+            email="a@ex.cz",
+            company_name="Acme",
+            status=EmailRecipientStatus.sent,
+            tracking_token=token,
+        )
+    )
+    db_session.add(campaign)
+    await db_session.flush()
+    db_session.add(
+        SentEmail(
+            organization_id=admin.organization_id,
+            sender_user_id=admin.id,
+            company_id=company.id,
+            campaign_id=campaign.id,
+            to_emails=["a@ex.cz"],
+            cc_emails=[],
+            bcc_emails=[],
+            subject="Kampaň",
+            body="Text https://example.com/x",
+            attachment_filenames=[],
+            status="sent",
+            message_id=f"<{uuid.uuid4().hex}@example.com>",
+            thread_id=uuid.uuid4(),
+            tracking_token=token,
+        )
+    )
+    await db_session.commit()
+
+    assert (await client.get(f"/api/v1/t/o/{token}")).status_code == 200
+    u = encode_target("https://example.com/x")
+    assert (
+        await client.get(f"/api/v1/t/c/{token}?u={u}&s={sign_target(token, u)}")
+    ).status_code == 302
+
+    db_session.expire_all()
+    recipient = (
+        await db_session.execute(
+            select(EmailCampaignRecipient).where(EmailCampaignRecipient.tracking_token == token)
+        )
+    ).scalar_one()
+    history = (
+        await db_session.execute(select(SentEmail).where(SentEmail.tracking_token == token))
+    ).scalar_one()
+    assert (recipient.open_count, recipient.click_count) == (1, 1)
+    assert (history.open_count, history.click_count) == (1, 1)
+    assert recipient.opened_at is not None and history.opened_at is not None

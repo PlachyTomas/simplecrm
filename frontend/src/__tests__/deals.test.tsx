@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -297,7 +297,7 @@ describe("Deals list + detail", () => {
     expect(await screen.findByText("Region: Morava")).toBeInTheDocument();
   });
 
-  it("gates the deal e-mail button behind SMTP with a link to Nastavení → Integrace", async () => {
+  it("wraps a long deal name and hides the e-mail button while the composer is parked", async () => {
     const deal = makeDeal({
       id: "gate-deal",
       name: "Dlouhý název obchodu který se nemá ořezávat",
@@ -330,16 +330,10 @@ describe("Deals list + detail", () => {
     // #12: the deal name must wrap, not truncate.
     expect(heading.className).not.toContain("truncate");
 
-    // #2: gated button is focusable (aria-disabled), not natively disabled.
-    const mailButton = screen.getByRole("button", { name: /Poslat e-mail/ });
-    expect(mailButton).toHaveAttribute("aria-disabled", "true");
-    expect(mailButton).not.toBeDisabled();
-
-    // Focusing reveals the popover with the fix-it link to the integrations page.
-    fireEvent.focus(mailButton);
-    expect(await screen.findByText(/Nejprve nastavte a ověřte SMTP/)).toBeInTheDocument();
-    const link = screen.getByRole("link", { name: /Nastavení → Integrace/ });
-    expect(link).toHaveAttribute("href", "/app/settings/integrations");
+    // The one-to-one composer is parked (lib/features): no send button, no
+    // SMTP gate popover — the e-mail history block itself stays.
+    expect(screen.queryByRole("button", { name: /Poslat e-mail/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Historie e-mailů/ })).toBeInTheDocument();
   });
 
   it("empty state points users at the Kanban for creating deals", async () => {

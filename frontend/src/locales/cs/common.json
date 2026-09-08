@@ -229,7 +229,7 @@
         },
         "quickActions": {
           "title": "Blesk = akce bez opuštění boardu",
-          "body": "Otevřete ⚡ na libovolné kartě: e-mail, událost, poznámka i záznam hovoru — vše se uloží do Průběhu obchodu."
+          "body": "Otevřete ⚡ na libovolné kartě: událost, poznámka i záznam hovoru — vše se uloží do Průběhu obchodu."
         },
         "preview": {
           "title": "Náhled bez klikání",
@@ -265,7 +265,7 @@
         },
         "mainContact": {
           "title": "Hlavní kontakt firmy",
-          "body": "Hvězdičkou v detailu firmy (záložka Kontakty) určíte hlavní kontakt — ten se pak předvyplňuje do e-mailů i nových obchodů."
+          "body": "Hvězdičkou v detailu firmy (záložka Kontakty) určíte hlavní kontakt — ten se pak předvyplňuje do nových obchodů."
         }
       },
       "deals": {

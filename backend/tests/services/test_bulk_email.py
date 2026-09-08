@@ -30,6 +30,7 @@ from app.services.bulk_email import (
     resolve_recipients,
     send_campaign,
 )
+from app.services.email import new_message_id
 from app.services.pipeline import create_default_pipeline
 
 
@@ -457,3 +458,12 @@ async def test_org_tracking_opt_out_disables_campaign_tracking(
     plain = _plain_part(mime)
     assert plain.rstrip("\n") == "Odkaz https://example.com/x"
     assert "/t/o/" not in plain and "/t/c/" not in plain
+
+
+def test_new_message_id_uses_the_bare_address_domain() -> None:
+    # Campaign senders are formatted as "Name <addr>"; the header must not
+    # inherit the closing bracket.
+    assert new_message_id("Eva Demo <eva@demo.cz>").endswith("@demo.cz>")
+    assert new_message_id("eva@demo.cz").endswith("@demo.cz>")
+    assert new_message_id("Eva Demo <eva@demo.cz>").count(">") == 1
+    assert new_message_id("Firma, s.r.o. <info@firma.cz>").endswith("@firma.cz>")

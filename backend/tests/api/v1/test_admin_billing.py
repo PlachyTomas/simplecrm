@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from httpx import AsyncClient
@@ -113,6 +114,32 @@ async def test_list_orgs_super_admin_sees_paginated(
     found = next(item for item in body["items"] if item["name"] == "Admin Test Org")
     assert found["plan_code"] == "trial"
     assert found["status"] == "trialing"
+    assert found["access_status"] == "trialing"
+
+
+async def test_list_orgs_flags_an_expired_trial_as_gated(
+    client: AsyncClient, db_session: AsyncSession, owned_emails: list[str]
+) -> None:
+    org, admin = await _seed_org_with_super_admin(db_session, owned_emails)
+    # Nothing flips `status` when a trial runs out — the admin list has to
+    # derive expiry the same way the pay-gate does.
+    long_ago = datetime.now(tz=UTC) - timedelta(days=60)
+    org.trial_ends_at = long_ago
+    sub = (
+        await db_session.execute(select(Subscription).where(Subscription.organization_id == org.id))
+    ).scalar_one()
+    sub.current_period_ends_at = long_ago
+    await db_session.commit()
+
+    token = create_access_token(admin.id, admin.organization_id, admin.role)
+    response = await client.get(
+        "/api/v1/admin/organizations?q=Admin Test Org",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    found = next(item for item in response.json()["items"] if item["id"] == str(org.id))
+    assert found["status"] == "trialing"
+    assert found["access_status"] == "gated"
 
 
 async def test_list_orgs_rejects_non_super_admin(

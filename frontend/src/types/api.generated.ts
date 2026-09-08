@@ -943,20 +943,8 @@ export interface paths {
         put?: never;
         /**
          * Move Deal Stage
-         * @description Drag-and-drop endpoint for the kanban board.
-         *
-         *     Syncs `closed_at` and `lost_reason` to the destination stage's type:
-         *       * Drag into a `won` stage  → set `closed_at = now`, clear lost_reason,
-         *         refresh the company's last_order_at + ownership_expires_at (matches
-         *         `mark-won` semantics; otherwise the deal would be invisible from
-         *         the board's won-window filter).
-         *       * Drag into a `lost` stage → set `closed_at = now` so the deal is
-         *         marked terminal. `lost_reason` is left as-is — drag has no UI for
-         *         capturing it; the founder can edit via the deal detail page.
-         *       * Drag into an `open` stage → clear `closed_at` and `lost_reason`
-         *         ("reopen"). Without this, dragging a won deal back to an earlier
-         *         stage would leave `closed_at` set, and the board's visibility
-         *         filter would hide the row.
+         * @description Drag-and-drop endpoint for the kanban board — see `_transition_stage`
+         *     for the won/lost/open semantics.
          */
         post: operations["move_deal_stage_api_v1_deals__deal_id__move_stage_post"];
         delete?: never;
@@ -4173,6 +4161,8 @@ export interface components {
              * @enum {string}
              */
             status: "trialing" | "pending_activation" | "active" | "past_due" | "canceled";
+            /** Access Status */
+            access_status: string;
             /** Is Comp */
             is_comp: boolean;
             /** User Count */
@@ -7618,6 +7608,8 @@ export interface components {
             deal_id?: string | null;
             /** Company Id */
             company_id?: string | null;
+            /** Campaign Id */
+            campaign_id?: string | null;
             /** @default outbound */
             direction: components["schemas"]["EmailDirection"];
             /** From Email */
@@ -7713,6 +7705,8 @@ export interface components {
             deal_id?: string | null;
             /** Company Id */
             company_id?: string | null;
+            /** Campaign Id */
+            campaign_id?: string | null;
             /** @default outbound */
             direction: components["schemas"]["EmailDirection"];
             /** From Email */
@@ -7787,6 +7781,8 @@ export interface components {
             deal_id?: string | null;
             /** Company Id */
             company_id?: string | null;
+            /** Campaign Id */
+            campaign_id?: string | null;
             /** @default outbound */
             direction: components["schemas"]["EmailDirection"];
             /** From Email */

@@ -227,7 +227,7 @@
         },
         "quickActions": {
           "title": "The bolt = act without leaving the board",
-          "body": "Open ⚡ on any card: email, event, note or a logged call — everything lands in the deal's timeline."
+          "body": "Open ⚡ on any card: event, note or a logged call — everything lands in the deal's timeline."
         },
         "preview": {
           "title": "Peek without clicking",
@@ -263,7 +263,7 @@
         },
         "mainContact": {
           "title": "A company's main contact",
-          "body": "The star in a company's detail (Contacts tab) sets the main contact — it then prefills into emails and new deals."
+          "body": "The star in a company's detail (Contacts tab) sets the main contact — it then prefills into new deals."
         }
       },
       "deals": {

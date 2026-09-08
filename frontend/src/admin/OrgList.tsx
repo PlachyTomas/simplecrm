@@ -35,6 +35,13 @@ function statusPillSpec(
   if (row.is_comp) {
     return { label: t("orgList.status.complementary"), className: "bg-info-subtle text-info" };
   }
+  // `status` never leaves "trialing" on its own; expiry is a derived state.
+  if (row.status === "trialing" && row.access_status === "gated") {
+    return {
+      label: t("orgList.status.trialExpired"),
+      className: "bg-warning-subtle text-warning",
+    };
+  }
   switch (row.status) {
     case "trialing":
       return { label: t(ORG_STATUS_KEY.trialing), className: "bg-info-subtle text-info" };

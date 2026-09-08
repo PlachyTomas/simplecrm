@@ -6,6 +6,7 @@ import { useCreateDealCall, useCreateDealNote } from "@/app/activities/useActivi
 import { EmailComposeModal } from "@/app/emails/EmailComposeModal";
 import { EventFormModal } from "@/app/events/EventFormModal";
 import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings";
+import { SINGLE_EMAIL_COMPOSE_ENABLED } from "@/lib/features";
 import { testIds } from "@/lib/testids";
 import { useModalDialog } from "@/lib/useModalDialog";
 import { useToast } from "@/lib/toast";
@@ -241,15 +242,17 @@ export function DealQuickActionsModal({ deal, open, onClose }: DealQuickActionsM
           </div>
         ) : view === "menu" ? (
           <ul className="mt-5 space-y-2">
-            <ActionRow
-              icon={Mail}
-              label={t("quickActions.email.label")}
-              description={t("quickActions.email.description")}
-              onClick={() => setView("email")}
-              testId={testIds.pipeline.quickActions.email}
-              disabled={!smtpReady}
-              hint={t("quickActions.email.smtpHint")}
-            />
+            {SINGLE_EMAIL_COMPOSE_ENABLED ? (
+              <ActionRow
+                icon={Mail}
+                label={t("quickActions.email.label")}
+                description={t("quickActions.email.description")}
+                onClick={() => setView("email")}
+                testId={testIds.pipeline.quickActions.email}
+                disabled={!smtpReady}
+                hint={t("quickActions.email.smtpHint")}
+              />
+            ) : null}
             <ActionRow
               icon={CalendarPlus}
               label={t("quickActions.event.label")}

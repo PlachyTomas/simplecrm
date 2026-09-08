@@ -33,6 +33,12 @@ function statusPillSpec(
   if (sub.is_comp) {
     return { label: t("orgDetail.status.complementary"), className: "bg-info-subtle text-info" };
   }
+  if (sub.status === "trialing" && sub.access_status === "gated") {
+    return {
+      label: t("orgDetail.status.trialExpired"),
+      className: "bg-warning-subtle text-warning",
+    };
+  }
   if (sub.plan?.code === "enterprise" && sub.status === "active") {
     return { label: t("orgDetail.status.activeEnterprise"), className: "bg-info-subtle text-info" };
   }

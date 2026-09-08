@@ -131,6 +131,20 @@ export function EmailDetailModal({
                     </Link>
                   </MetaRow>
                 ) : null}
+                {email.campaign_id ? (
+                  <MetaRow label={t("detail.campaign")}>
+                    <Link
+                      to="/app/email-campaigns"
+                      onClick={() => {
+                        onClose();
+                        onNavigate?.();
+                      }}
+                      className="text-accent hover:text-accent-hover"
+                    >
+                      {t("detail.campaignLink")}
+                    </Link>
+                  </MetaRow>
+                ) : null}
               </dl>
               <p className="mt-4 whitespace-pre-wrap break-words border-t border-border-subtle pt-4 text-sm text-text-primary">
                 {email.body.trim() !== "" ? email.body : t("detail.noBody")}

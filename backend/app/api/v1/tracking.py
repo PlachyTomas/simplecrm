@@ -50,15 +50,17 @@ async def _record_event(session: AsyncSession, token: str, *, clicked: bool) -> 
 
     Written as a single UPDATE per table (`coalesce` keeps the *first*
     timestamp) so concurrent opens can't lose a count to a read-modify-write
-    race. Composer sends and campaign recipients share the token space;
-    `sent_emails` is checked first because it's the far more common surface.
-    Returns whether a row matched — callers only use it for logging/tests.
+    race. A campaign mail lives in both tables under one token (the recipient
+    row drives the campaign page, the `sent_emails` mirror drives the company
+    and deal histories), so every table is updated on every hit.
+    Returns whether any row matched — callers only use it for logging/tests.
     """
     now = datetime.now(tz=UTC)
     models: tuple[type[SentEmail] | type[EmailCampaignRecipient], ...] = (
         SentEmail,
         EmailCampaignRecipient,
     )
+    matched = False
     for model in models:
         values: dict[str, Any]
         if clicked:
@@ -75,9 +77,10 @@ async def _record_event(session: AsyncSession, token: str, *, clicked: bool) -> 
             update(model).where(model.tracking_token == token).values(**values).returning(model.id)
         )
         if result.first() is not None:
-            await session.commit()
-            return True
-    return False
+            matched = True
+    if matched:
+        await session.commit()
+    return matched
 
 
 @router.get(

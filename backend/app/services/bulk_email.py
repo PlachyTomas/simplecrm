@@ -42,6 +42,8 @@ from app.db.models import (
     EmailRecipientStatus,
     Organization,
     Pipeline,
+    SentEmail,
+    SentEmailStatus,
     Stage,
     StageType,
     User,
@@ -55,7 +57,7 @@ from app.schemas.bulk_email import (
     RecipientCandidate,
 )
 from app.schemas.contact import ContactOut
-from app.services.email import Email, EmailAttachment, SmtpConfig, _build_mime
+from app.services.email import Email, EmailAttachment, SmtpConfig, _build_mime, new_message_id
 from app.services.email_tracking import build_tracked_html, new_tracking_token
 from app.services.merge_fields import (
     MergeContext,
@@ -102,6 +104,20 @@ class _SendUnit:
     # None rather than "", because the token column carries a UNIQUE index
     # that would reject a second empty string.
     tracking_token: str | None = None
+
+
+@dataclass(frozen=True)
+class _PreparedUnit:
+    """One recipient's mail, rendered before the connection opens so a connect
+    failure still records the exact text that would have gone out. The MIME is
+    built per send — holding every encoded attachment at once would multiply
+    the attachment size by the recipient count."""
+
+    unit: _SendUnit
+    subject: str
+    body: str
+    message_id: str
+    message: Email
 
 
 # ---------------------------------------------------------------------------
@@ -316,6 +332,54 @@ def _open_smtp(config: SmtpConfig) -> smtplib.SMTP:
     return client
 
 
+def _prepare_units(
+    config: SmtpConfig,
+    subject: str,
+    body: str,
+    base_context: MergeContext,
+    signature: str | None,
+    units: list[_SendUnit],
+    attachments: tuple[EmailAttachment, ...],
+) -> list[_PreparedUnit]:
+    prepared: list[_PreparedUnit] = []
+    for unit in units:
+        context = replace(
+            base_context,
+            company_name=unit.company_name,
+            contact_name=unit.contact_name,
+            contact_first_name=unit.contact_first_name,
+        )
+        rendered_subject, rendered_body = render_message(subject, body, context)
+        # Signature goes on before tracking so the pixel/link rewriting sees
+        # the final text; merge fields resolve inside it too.
+        rendered_body = apply_signature(rendered_body, apply_merge_fields(signature or "", context))
+        message_id = new_message_id(config.sender)
+        message = Email(
+            to=unit.email,
+            subject=rendered_subject,
+            body=rendered_body,
+            # Tracking is rendered per recipient: the merge fields are already
+            # substituted, and each addressee gets their own token.
+            html_body=(
+                build_tracked_html(rendered_body, unit.tracking_token)
+                if unit.tracking_token
+                else None
+            ),
+            message_id=message_id,
+            attachments=attachments,
+        )
+        prepared.append(
+            _PreparedUnit(
+                unit=unit,
+                subject=rendered_subject,
+                body=rendered_body,
+                message_id=message_id,
+                message=message,
+            )
+        )
+    return prepared
+
+
 def _run_send_loop(
     config: SmtpConfig,
     subject: str,
@@ -328,53 +392,31 @@ def _run_send_loop(
     """Blocking send over one reused connection. Returns one result dict per
     unit. Reconnects once on a dropped connection; if the connection can't be
     established at all, every unit is marked failed."""
+    prepared = _prepare_units(config, subject, body, base_context, signature, units, attachments)
     results: list[dict[str, object]] = []
     try:
         client: smtplib.SMTP | None = _open_smtp(config)
     except (smtplib.SMTPException, OSError, ssl.SSLError) as exc:
-        return [_result(u, EmailRecipientStatus.failed, str(exc)) for u in units]
+        return [_result(p, EmailRecipientStatus.failed, str(exc)) for p in prepared]
 
-    for unit in units:
-        context = replace(
-            base_context,
-            company_name=unit.company_name,
-            contact_name=unit.contact_name,
-            contact_first_name=unit.contact_first_name,
-        )
-        rendered_subject, rendered_body = render_message(subject, body, context)
-        # Signature goes on before tracking so the pixel/link rewriting sees
-        # the final text; merge fields resolve inside it too.
-        rendered_body = apply_signature(rendered_body, apply_merge_fields(signature or "", context))
-        message = Email(
-            to=unit.email,
-            subject=rendered_subject,
-            body=rendered_body,
-            # Tracking is rendered per recipient: the merge fields are already
-            # substituted, and each addressee gets their own token.
-            html_body=(
-                build_tracked_html(rendered_body, unit.tracking_token)
-                if unit.tracking_token
-                else None
-            ),
-            attachments=attachments,
-        )
-        mime = _build_mime(message, sender=config.sender)
+    for item in prepared:
+        mime = _build_mime(item.message, sender=config.sender)
         try:
             if client is None:
                 client = _open_smtp(config)
             client.send_message(mime)
-            results.append(_result(unit, EmailRecipientStatus.sent, None))
+            results.append(_result(item, EmailRecipientStatus.sent, None))
         except smtplib.SMTPServerDisconnected:
             # Reconnect once and retry this unit.
             try:
                 client = _open_smtp(config)
                 client.send_message(mime)
-                results.append(_result(unit, EmailRecipientStatus.sent, None))
+                results.append(_result(item, EmailRecipientStatus.sent, None))
             except (smtplib.SMTPException, OSError, ssl.SSLError) as exc:
                 client = None
-                results.append(_result(unit, EmailRecipientStatus.failed, str(exc)))
+                results.append(_result(item, EmailRecipientStatus.failed, str(exc)))
         except (smtplib.SMTPException, OSError, ssl.SSLError) as exc:
-            results.append(_result(unit, EmailRecipientStatus.failed, str(exc)))
+            results.append(_result(item, EmailRecipientStatus.failed, str(exc)))
 
     if client is not None:
         with contextlib.suppress(smtplib.SMTPException, OSError):
@@ -382,14 +424,19 @@ def _run_send_loop(
     return results
 
 
-def _result(unit: _SendUnit, status: EmailRecipientStatus, error: str | None) -> dict[str, object]:
+def _result(
+    item: _PreparedUnit, status: EmailRecipientStatus, error: str | None
+) -> dict[str, object]:
+    unit = item.unit
     return {
         "company_id": unit.company_id,
         "contact_id": unit.contact_id,
         "email": unit.email,
         "company_name": unit.company_name,
         "status": status,
-        "error": error,
+        # Both the recipient row and the history mirror store this in a
+        # String(500); a multi-line 550 from a relay can be far longer.
+        "error": error[:500] if error is not None else None,
         "sent_at": datetime.now(tz=UTC) if status is EmailRecipientStatus.sent else None,
         # Persist the token whenever one was minted, regardless of outcome: it is
         # already inside the MIME handed to the SMTP server, so a unit recorded as
@@ -397,6 +444,10 @@ def _result(unit: _SendUnit, status: EmailRecipientStatus, error: str | None) ->
         # multi-recipient failure) would otherwise leave a live pixel whose opens
         # match no row and vanish silently.
         "tracking_token": unit.tracking_token,
+        # The history row shows what the recipient actually got, not the template.
+        "rendered_subject": item.subject,
+        "rendered_body": item.body,
+        "message_id": item.message_id,
     }
 
 
@@ -451,7 +502,8 @@ async def send_campaign(
         company = allowed.get(recip.company_id)
         first_email = recip.emails[0]
         if company is None:
-            skipped.append(_skip(recip.company_id, "?", first_email, "not_allowed"))
+            # Not one of the caller's companies — never persist the id it sent.
+            skipped.append(_skip(None, "?", first_email, "not_allowed"))
             continue
         if company.ico and company.ico in blocked:
             skipped.append(_skip(company.id, company.name, first_email, "blocked"))
@@ -545,7 +597,7 @@ async def send_campaign(
             campaign.skipped_count += 1
         campaign.recipients.append(
             EmailCampaignRecipient(
-                company_id=r["company_id"] if r["company_id"] != "?" else None,
+                company_id=r["company_id"],
                 contact_id=r.get("contact_id"),
                 email=r["email"],
                 company_name=r["company_name"],
@@ -561,16 +613,19 @@ async def send_campaign(
     await session.flush()
 
     # Side effects, deduped to one per company that received at least one mail.
-    # Sent results always carry a real company UUID (only skips use "?").
+    # Sent results always carry a real company UUID.
     sent_company_ids: set[uuid.UUID] = {
         cast(uuid.UUID, r["company_id"])
         for r in sent_results
         if r["status"] is EmailRecipientStatus.sent
     }
-    if sent_company_ids:
-        if payload.create_deals:
-            await _create_deals(session, user, sent_company_ids, payload, allowed)
-        await _log_activities(session, user, sent_company_ids, campaign)
+    deals_by_company: dict[uuid.UUID, Deal] = {}
+    if sent_company_ids and payload.create_deals:
+        deals_by_company = await _create_deals(session, user, sent_company_ids, payload, allowed)
+    first_sent_by_company = _record_sent_emails(
+        session, user, campaign, sent_results, deals_by_company, attachment
+    )
+    _log_activities(session, user, campaign, first_sent_by_company, deals_by_company)
 
     await session.commit()
     # Re-fetch with recipients eagerly loaded so callers (the /send response
@@ -586,7 +641,7 @@ async def send_campaign(
 
 
 def _skip(
-    company_id: uuid.UUID | str, company_name: str, email: str, reason: str
+    company_id: uuid.UUID | None, company_name: str, email: str, reason: str
 ) -> dict[str, object]:
     return {
         "company_id": company_id,
@@ -605,7 +660,7 @@ async def _create_deals(
     company_ids: set[uuid.UUID],
     payload: BulkEmailSendIn,
     companies: dict[uuid.UUID, Company],
-) -> None:
+) -> dict[uuid.UUID, Deal]:
     org_id = cast(uuid.UUID, user.organization_id)
     stage = await _first_open_stage(session, org_id)
     if stage is None:
@@ -613,40 +668,111 @@ async def _create_deals(
             "bulk_email.create_deals.no_stage",
             extra={"organization_id": str(org_id)},
         )
-        return
+        return {}
     org = await session.get(Organization, org_id)
     currency = org.currency if org is not None else "CZK"
     name = payload.deal_title or payload.subject
+    deals: dict[uuid.UUID, Deal] = {}
     for company_id in company_ids:
-        session.add(
-            Deal(
-                organization_id=org_id,
-                company_id=company_id,
-                stage_id=stage.id,
-                owner_user_id=user.id,
-                name=name,
-                value=Decimal("0"),
-                currency=currency,
-            )
+        deal = Deal(
+            organization_id=org_id,
+            company_id=company_id,
+            stage_id=stage.id,
+            owner_user_id=user.id,
+            name=name,
+            value=Decimal("0"),
+            currency=currency,
         )
+        session.add(deal)
+        deals[company_id] = deal
+    # Flush so the ids exist for the history rows that point at these deals.
+    await session.flush()
+    return deals
 
 
-async def _log_activities(
+def _record_sent_emails(
     session: AsyncSession,
     user: User,
-    company_ids: set[uuid.UUID],
     campaign: EmailCampaign,
+    results: list[dict[str, object]],
+    deals_by_company: dict[uuid.UUID, Deal],
+    attachment: BulkAttachment | None,
+) -> dict[uuid.UUID, SentEmail]:
+    """Mirror every attempted recipient into `sent_emails`, so the company, deal
+    and Mail-page histories show campaign mail next to composer mail. Skipped
+    recipients never left the building and get no row. Returns the first
+    delivered row per company — the one the timeline activity links to."""
+    first_sent: dict[uuid.UUID, SentEmail] = {}
+    for r in results:
+        status = r["status"]
+        if status is EmailRecipientStatus.skipped:
+            continue
+        company_id = cast(uuid.UUID, r["company_id"])
+        deal = deals_by_company.get(company_id)
+        row = SentEmail(
+            # Explicit id: the activity payload links to this row before flush.
+            id=uuid.uuid4(),
+            organization_id=campaign.organization_id,
+            sender_user_id=user.id,
+            campaign_id=campaign.id,
+            company_id=company_id,
+            deal_id=deal.id if deal is not None else None,
+            to_emails=[cast(str, r["email"])],
+            cc_emails=[],
+            bcc_emails=[],
+            # `.get` with the template as fallback: tests (and any custom send
+            # loop) may hand back result dicts without the rendered text.
+            subject=cast(str, r.get("rendered_subject") or campaign.subject),
+            body=cast(str, r.get("rendered_body") or campaign.body),
+            attachment_filenames=[attachment.filename] if attachment is not None else [],
+            status=(
+                SentEmailStatus.sent
+                if status is EmailRecipientStatus.sent
+                else SentEmailStatus.failed
+            ),
+            error=cast(str | None, r["error"]),
+            message_id=cast(str, r.get("message_id") or new_message_id(campaign.from_email)),
+            thread_id=uuid.uuid4(),
+            sent_at=cast(datetime | None, r["sent_at"]),
+            tracking_token=cast(str | None, r.get("tracking_token")),
+        )
+        session.add(row)
+        if status is EmailRecipientStatus.sent:
+            first_sent.setdefault(company_id, row)
+    return first_sent
+
+
+def _log_activities(
+    session: AsyncSession,
+    user: User,
+    campaign: EmailCampaign,
+    first_sent_by_company: dict[uuid.UUID, SentEmail],
+    deals_by_company: dict[uuid.UUID, Deal],
 ) -> None:
     org_id = cast(uuid.UUID, user.organization_id)
-    for company_id in company_ids:
+    for company_id, sent in first_sent_by_company.items():
+        # `email_id` lets the timeline open the stored mail; the subject is the
+        # rendered one the company actually received. A campaign that opened a
+        # deal logs on that deal, like the composer, so its Průběh shows the mail.
+        payload: dict[str, object] = {
+            "subject": sent.subject,
+            "campaign_id": str(campaign.id),
+            "email_id": str(sent.id),
+        }
+        deal = deals_by_company.get(company_id)
+        if deal is not None:
+            entity_type, entity_id = ActivityEntityType.deal, deal.id
+            payload["deal_name"] = deal.name
+        else:
+            entity_type, entity_id = ActivityEntityType.company, company_id
         session.add(
             Activity(
                 organization_id=org_id,
-                entity_type=ActivityEntityType.company,
-                entity_id=company_id,
+                entity_type=entity_type,
+                entity_id=entity_id,
                 company_id=company_id,
                 user_id=user.id,
                 activity_type=ActivityType.email_sent,
-                payload={"subject": campaign.subject, "campaign_id": str(campaign.id)},
+                payload=payload,
             )
         )

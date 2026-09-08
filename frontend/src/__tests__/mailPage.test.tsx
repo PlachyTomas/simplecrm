@@ -39,6 +39,7 @@ function makeMail(overrides: Record<string, unknown> = {}) {
     sender_user_id: ME.id,
     deal_id: "d1",
     company_id: "co1",
+    campaign_id: null,
     direction: "outbound",
     from_email: null,
     to_emails: ["jan@acme.cz"],
@@ -164,8 +165,21 @@ describe("Mail page", () => {
     const dialog = await screen.findByTestId(testIds.emails.mail.detailDialog);
     expect(dialog).toBeInTheDocument();
     expect(await screen.findByText(/posílám nabídku/)).toBeInTheDocument();
-    // Reply is offered on the Mail page (it hosts the compose modal).
-    expect(screen.getByTestId(testIds.emails.mail.detailReply)).toBeInTheDocument();
+    // The one-to-one composer is parked (lib/features), so no Reply here.
+    expect(screen.queryByTestId(testIds.emails.mail.detailReply)).not.toBeInTheDocument();
+  });
+
+  it("marks rows mirrored from a bulk campaign and links them to the campaign history", async () => {
+    stubApi([makeMail(), makeMail({ id: "e2", subject: "Podzimní akce", campaign_id: "camp-1" })]);
+    renderAt("/app/emails");
+
+    await screen.findByRole("button", { name: "Podzimní akce" });
+    expect(
+      screen.queryByTestId(testIds.emails.history.campaignBadge("e1")),
+    ).not.toBeInTheDocument();
+    const badge = screen.getByTestId(testIds.emails.history.campaignBadge("e2"));
+    expect(badge).toHaveTextContent("Hromadný e-mail");
+    expect(badge).toHaveAttribute("href", "/app/email-campaigns");
   });
 
   it("offers Přiřadit only on unmatched rows and opens the link dialog", async () => {
@@ -199,7 +213,9 @@ describe("Mail page", () => {
     await screen.findByRole("button", { name: "Nabídka služeb" });
 
     expect(
-      screen.getByText("Přehled e-mailů odeslaných ze SimpleCRM. Příjem e-mailů připravujeme."),
+      screen.getByText(
+        "Přehled e-mailů odeslaných ze SimpleCRM včetně hromadných kampaní. Příjem e-mailů připravujeme.",
+      ),
     ).toBeInTheDocument();
     // Inbound capture is parked: no "?" helper, no Přijaté filter option.
     expect(screen.queryByTestId("mail-help-button")).not.toBeInTheDocument();

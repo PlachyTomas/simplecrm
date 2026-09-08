@@ -227,6 +227,7 @@ export const testIds = {
     history: {
       row: (id: string) => `email-history-row-${id}`,
       inboundBadge: (id: string) => `email-history-inbound-badge-${id}`,
+      campaignBadge: (id: string) => `email-history-campaign-badge-${id}`,
     },
   },
   settings: {

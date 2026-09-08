@@ -27,6 +27,7 @@
     "status": {
       "complementary": "Komplementární",
       "trialing": "Zkušební verze",
+      "trialExpired": "Zkušební verze vypršela",
       "pendingActivation": "Čeká na platbu",
       "active": "Aktivní",
       "pastDue": "Po splatnosti",
@@ -62,6 +63,7 @@
       "complementary": "Komplementární",
       "activeEnterprise": "Aktivní · Enterprise",
       "trialing": "Zkušební verze",
+      "trialExpired": "Zkušební verze vypršela",
       "pendingActivation": "Čeká na platbu",
       "active": "Aktivní",
       "pastDue": "Po splatnosti",

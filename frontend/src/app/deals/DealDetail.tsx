@@ -20,6 +20,7 @@ import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings"
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { SINGLE_EMAIL_COMPOSE_ENABLED } from "@/lib/features";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { testIds } from "@/lib/testids";
 import { celebrateWin } from "@/lib/celebrate";
@@ -312,16 +313,18 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
               <Pencil size={14} strokeWidth={1.75} /> {t("dealDetail.edit")}
             </button>
           ) : null}
-          <GatedMailButton
-            verified={isSmtpVerified(smtp)}
-            onClick={() => {
-              setReplyTarget(null);
-              setComposeOpen(true);
-            }}
-            className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
-          >
-            <Mail size={14} strokeWidth={1.75} /> {t("dealDetail.sendEmail")}
-          </GatedMailButton>
+          {SINGLE_EMAIL_COMPOSE_ENABLED ? (
+            <GatedMailButton
+              verified={isSmtpVerified(smtp)}
+              onClick={() => {
+                setReplyTarget(null);
+                setComposeOpen(true);
+              }}
+              className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
+            >
+              <Mail size={14} strokeWidth={1.75} /> {t("dealDetail.sendEmail")}
+            </GatedMailButton>
+          ) : null}
           {user?.role === "admin" ? (
             <button
               type="button"
@@ -538,14 +541,18 @@ export function DealDetail({ dealId, onClose }: DealDetailProps) {
           dealId={deal.id}
           locale={locale}
           collapsible
-          onReply={(email) => {
-            setReplyTarget(email);
-            setComposeOpen(true);
-          }}
+          onReply={
+            SINGLE_EMAIL_COMPOSE_ENABLED
+              ? (email) => {
+                  setReplyTarget(email);
+                  setComposeOpen(true);
+                }
+              : undefined
+          }
         />
       </div>
 
-      {composeOpen ? (
+      {SINGLE_EMAIL_COMPOSE_ENABLED && composeOpen ? (
         <EmailComposeModal
           key={replyTarget?.id ?? "new"}
           open

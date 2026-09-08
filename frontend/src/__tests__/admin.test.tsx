@@ -77,6 +77,7 @@ const ORG_LIST = {
       plan_code: "trial",
       plan_display: "Zkušební verze (30 dní)",
       status: "trialing",
+      access_status: "trialing",
       is_comp: false,
       user_count: 8,
       trial_ends_at: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
@@ -89,14 +90,29 @@ const ORG_LIST = {
       plan_code: "monthly",
       plan_display: "Měsíční",
       status: "active",
+      access_status: "active",
       is_comp: false,
       user_count: 12,
       trial_ends_at: new Date(Date.now() - 60 * 86400 * 1000).toISOString(),
       current_period_ends_at: new Date(Date.now() + 15 * 86400 * 1000).toISOString(),
       last_activity_at: new Date(Date.now() - 1 * 3600 * 1000).toISOString(),
     },
+    {
+      id: "00000000-0000-0000-0000-0000000000cc",
+      name: "Stale Trial s.r.o.",
+      plan_code: "trial",
+      plan_display: "Zkušební verze (30 dní)",
+      // `status` never flips on expiry — the backend derives `access_status`.
+      status: "trialing",
+      access_status: "gated",
+      is_comp: false,
+      user_count: 1,
+      trial_ends_at: new Date(Date.now() - 60 * 86400 * 1000).toISOString(),
+      current_period_ends_at: new Date(Date.now() - 60 * 86400 * 1000).toISOString(),
+      last_activity_at: null,
+    },
   ],
-  total: 2,
+  total: 3,
 };
 
 const BILLING_SETTINGS = {
@@ -213,6 +229,15 @@ describe("Admin surface", () => {
     // The list query is async — wait for the rows to settle.
     await waitFor(() => expect(screen.getByText(/^Example s\.r\.o\.$/)).toBeInTheDocument());
     expect(screen.getByText(/^Foo Corp\.$/)).toBeInTheDocument();
+  });
+
+  it("shows an expired-trial pill for a trialing org whose access is gated", async () => {
+    setupFetch();
+    renderAt("/admin");
+    await screen.findByText(/^Stale Trial s\.r\.o\.$/);
+    expect(screen.getByText("Zkušební verze vypršela")).toBeInTheDocument();
+    // The live trial keeps the plain pill.
+    expect(screen.getByText("Zkušební verze")).toBeInTheDocument();
   });
 
   it("search input → backend receives the q query param (debounced)", async () => {

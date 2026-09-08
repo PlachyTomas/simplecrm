@@ -13,10 +13,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import smtplib
 import ssl
+import uuid
 from dataclasses import dataclass, field
 from email.message import EmailMessage
+from email.utils import parseaddr
 from pathlib import Path
 from typing import Any, Literal
 
@@ -86,6 +89,16 @@ class Email:
     # Defaults to "info" since everything except customer-facing
     # invoices should come from info@simplecrm.cz.
     sender_role: SenderRole = "info"
+
+
+def new_message_id(sender: str) -> str:
+    """A fresh RFC 5322 Message-ID under the sender's domain. Accepts a bare
+    address or a display-name form; the angle-bracket part wins because an
+    unquoted comma in the name (`Firma, s.r.o. <a@b.cz>`) defeats `parseaddr`."""
+    bracketed = re.search(r"<([^<>]+)>\s*$", sender)
+    address = bracketed.group(1) if bracketed else parseaddr(sender)[1] or sender
+    domain = address.rpartition("@")[2] or "simplecrm.cz"
+    return f"<{uuid.uuid4().hex}@{domain}>"
 
 
 def render_email(name: str, lang: str, /, *, to: str, **ctx: Any) -> Email:

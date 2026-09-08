@@ -29,6 +29,7 @@ import type { SentEmailOut } from "@/app/emails/useEmails";
 import { usePipelineBoard } from "@/app/pipeline/useBoard";
 import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
+import { SINGLE_EMAIL_COMPOSE_ENABLED } from "@/lib/features";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { testIds } from "@/lib/testids";
 import { useToast } from "@/lib/toast";
@@ -494,9 +495,11 @@ function DealsTab({ company, locale }: { company: CompanyOut; locale: string }) 
                 <th scope="col" className={DEALS_TH}>
                   {t("companyDetail.dealsTab.columns.status")}
                 </th>
-                <th scope="col" className={`${DEALS_TH} text-right`}>
-                  {t("companyDetail.dealsTab.columns.actions")}
-                </th>
+                {SINGLE_EMAIL_COMPOSE_ENABLED ? (
+                  <th scope="col" className={`${DEALS_TH} text-right`}>
+                    {t("companyDetail.dealsTab.columns.actions")}
+                  </th>
+                ) : null}
               </tr>
             </thead>
             <tbody className="divide-y divide-border-subtle">
@@ -540,17 +543,22 @@ function DealsTab({ company, locale }: { company: CompanyOut; locale: string }) 
                   <td className="px-4 py-3 text-sm">
                     <DealStatusBadge closedAt={d.closed_at} lostReason={d.lost_reason} />
                   </td>
-                  {/* Stop row-click (open detail) when using the mail action. */}
-                  <td className="px-4 py-3 text-right text-sm" onClick={(e) => e.stopPropagation()}>
-                    <GatedMailButton
-                      verified={smtpVerified}
-                      onClick={() => setComposeDeal(d)}
-                      ariaLabel={t("companyDetail.dealsTab.sendEmailAria", { name: d.name })}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-tertiary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary"
+                  {SINGLE_EMAIL_COMPOSE_ENABLED ? (
+                    /* Stop row-click (open detail) when using the mail action. */
+                    <td
+                      className="px-4 py-3 text-right text-sm"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      <Mail size={16} strokeWidth={1.75} aria-hidden />
-                    </GatedMailButton>
-                  </td>
+                      <GatedMailButton
+                        verified={smtpVerified}
+                        onClick={() => setComposeDeal(d)}
+                        ariaLabel={t("companyDetail.dealsTab.sendEmailAria", { name: d.name })}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-tertiary transition-colors duration-fast hover:bg-surface-overlay hover:text-text-primary"
+                      >
+                        <Mail size={16} strokeWidth={1.75} aria-hidden />
+                      </GatedMailButton>
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>
@@ -564,7 +572,7 @@ function DealsTab({ company, locale }: { company: CompanyOut; locale: string }) 
         stages={stageOptions}
         lockedCompany={{ id: company.id, name: company.name }}
       />
-      {composeDeal ? (
+      {SINGLE_EMAIL_COMPOSE_ENABLED && composeDeal ? (
         <EmailComposeModal
           key={composeDeal.id}
           open
@@ -587,26 +595,32 @@ function EmailsTab({ company, locale }: { company: CompanyOut; locale: string })
     <section className="rounded-lg border border-border bg-surface p-6">
       <div className="flex items-baseline justify-between">
         <h2 className="text-lg font-semibold">{t("companyDetail.emailsTab.title")}</h2>
-        <GatedMailButton
-          verified={isSmtpVerified(smtp)}
-          onClick={() => {
-            setReplyTarget(null);
-            setComposeOpen(true);
-          }}
-          className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-text-on-accent hover:bg-accent-hover"
-        >
-          <Mail size={14} strokeWidth={2} /> {t("companyDetail.emailsTab.sendButton")}
-        </GatedMailButton>
+        {SINGLE_EMAIL_COMPOSE_ENABLED ? (
+          <GatedMailButton
+            verified={isSmtpVerified(smtp)}
+            onClick={() => {
+              setReplyTarget(null);
+              setComposeOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-text-on-accent hover:bg-accent-hover"
+          >
+            <Mail size={14} strokeWidth={2} /> {t("companyDetail.emailsTab.sendButton")}
+          </GatedMailButton>
+        ) : null}
       </div>
       <EmailHistorySection
         companyId={company.id}
         locale={locale}
-        onReply={(email) => {
-          setReplyTarget(email);
-          setComposeOpen(true);
-        }}
+        onReply={
+          SINGLE_EMAIL_COMPOSE_ENABLED
+            ? (email) => {
+                setReplyTarget(email);
+                setComposeOpen(true);
+              }
+            : undefined
+        }
       />
-      {composeOpen ? (
+      {SINGLE_EMAIL_COMPOSE_ENABLED && composeOpen ? (
         <EmailComposeModal
           key={replyTarget?.id ?? "new"}
           open

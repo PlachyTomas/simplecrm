@@ -251,6 +251,8 @@ class AdminOrgRow(BaseModel):
     plan_code: str
     plan_display: str
     status: SubscriptionStatus
+    access_status: str
+    """Same rule as `SubscriptionOut.access_status`: trialing | active | grace | gated | comp."""
     is_comp: bool
     user_count: int
     trial_ends_at: datetime

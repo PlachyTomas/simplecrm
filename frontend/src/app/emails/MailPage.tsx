@@ -8,7 +8,7 @@ import { useDeals } from "@/app/deals/useDeals";
 import { EmailComposeModal } from "@/app/emails/EmailComposeModal";
 import { EmailDetailModal } from "@/app/emails/EmailDetailModal";
 import { LinkEmailDialog } from "@/app/emails/LinkEmailDialog";
-import { EngagementChips, StatusBadge } from "@/app/emails/EmailHistorySection";
+import { CampaignBadge, EngagementChips, StatusBadge } from "@/app/emails/EmailHistorySection";
 import {
   type MailListFilters,
   type SentEmailListItem,
@@ -18,6 +18,7 @@ import {
 import { useCompanies } from "@/app/companies/useCompanies";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SINGLE_EMAIL_COMPOSE_ENABLED } from "@/lib/features";
 import { useLocale } from "@/lib/i18n/useLocale";
 import { testIds } from "@/lib/testids";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
@@ -372,6 +373,7 @@ export function MailPage() {
                         </button>
                         <StatusBadge email={email} />
                         <EngagementChips email={email} locale={locale} />
+                        <CampaignBadge email={email} />
                         {/* Unmatched mail is a lead nobody can act on yet —
                             filing it is the row's one action. */}
                         {!email.company_id && !email.deal_id ? (
@@ -444,12 +446,16 @@ export function MailPage() {
         emailId={openEmailId}
         onClose={() => setOpenEmailId(null)}
         onSwitch={setOpenEmailId}
-        onReply={(email) => {
-          setOpenEmailId(null);
-          setReplyTarget(email);
-        }}
+        onReply={
+          SINGLE_EMAIL_COMPOSE_ENABLED
+            ? (email) => {
+                setOpenEmailId(null);
+                setReplyTarget(email);
+              }
+            : undefined
+        }
       />
-      {replyTarget ? (
+      {SINGLE_EMAIL_COMPOSE_ENABLED && replyTarget ? (
         <EmailComposeModal open onClose={() => setReplyTarget(null)} replyTo={replyTarget} />
       ) : null}
       <LinkEmailDialog

@@ -48,6 +48,8 @@
     "fromPrefix": "Od: {{address}}",
     "unknown": "neznámý odesílatel",
     "reply": "Odpovědět",
+    "campaignBadge": "Hromadný e-mail",
+    "campaignBadgeTitle": "Odesláno v hromadné kampani — otevřít historii kampaní",
     "opened": "Otevřeno",
     "openedWithCount": "Otevřeno {{n}}×",
     "openedTooltip": "Poprvé otevřeno {{at}}",
@@ -160,7 +162,7 @@
   },
   "mailPage": {
     "title": "E-maily",
-    "subtitle": "Přehled e-mailů odeslaných ze SimpleCRM. Příjem e-mailů připravujeme.",
+    "subtitle": "Přehled e-mailů odeslaných ze SimpleCRM včetně hromadných kampaní. Příjem e-mailů připravujeme.",
     "searchLabel": "Hledat v e-mailech",
     "searchPlaceholder": "Hledat předmět, text, adresu…",
     "typeFilterLabel": "Filtr podle typu",
@@ -209,6 +211,8 @@
   },
   "detail": {
     "title": "Detail e-mailu",
+    "campaign": "Kampaň",
+    "campaignLink": "Hromadný e-mail — historie kampaní",
     "loading": "Načítám…",
     "loadError": "E-mail se nepodařilo načíst.",
     "sender": "Odesílatel",

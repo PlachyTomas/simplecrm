@@ -39,6 +39,7 @@ class SentEmail(Base):
     __table_args__ = (
         Index("ix_sent_emails_deal_id", "deal_id"),
         Index("ix_sent_emails_company_id", "company_id"),
+        Index("ix_sent_emails_campaign_id", "campaign_id"),
         Index("ix_sent_emails_thread_id", "thread_id"),
         Index("ix_sent_emails_organization_id_created_at", "organization_id", "created_at"),
         Index("ix_sent_emails_tracking_token", "tracking_token", unique=True),
@@ -73,6 +74,12 @@ class SentEmail(Base):
     company_id: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True),
         ForeignKey("companies.id", ondelete="SET NULL"),
+    )
+    # Set on rows mirrored from a bulk campaign (one per attempted recipient),
+    # NULL on composer sends and captured mail.
+    campaign_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("email_campaigns.id", ondelete="SET NULL"),
     )
 
     direction: Mapped[EmailDirection] = mapped_column(

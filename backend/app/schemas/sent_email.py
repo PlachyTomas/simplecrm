@@ -44,6 +44,8 @@ class SentEmailOut(BaseModel):
     sender_user_id: uuid.UUID | None = None
     deal_id: uuid.UUID | None = None
     company_id: uuid.UUID | None = None
+    # Set when the row mirrors one recipient of a bulk campaign.
+    campaign_id: uuid.UUID | None = None
     # `inbound` rows come from Smart BCC (the user BCC'd their magic address);
     # `from_email` is the correspondent on those, NULL on outbound sends.
     direction: EmailDirection = EmailDirection.outbound

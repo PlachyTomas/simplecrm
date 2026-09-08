@@ -27,6 +27,7 @@
     "status": {
       "complementary": "Complimentary",
       "trialing": "Trial",
+      "trialExpired": "Trial expired",
       "pendingActivation": "Awaiting payment",
       "active": "Active",
       "pastDue": "Past due",
@@ -61,6 +62,7 @@
       "complementary": "Complimentary",
       "activeEnterprise": "Active · Enterprise",
       "trialing": "Trial",
+      "trialExpired": "Trial expired",
       "pendingActivation": "Awaiting payment",
       "active": "Active",
       "pastDue": "Past due",

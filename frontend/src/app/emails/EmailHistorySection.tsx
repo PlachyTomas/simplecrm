@@ -1,6 +1,7 @@
 import { ChevronDown, Reply } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 
 import { EmailDetailModal } from "@/app/emails/EmailDetailModal";
 import { type SentEmailOut, useCompanyEmails, useDealEmails } from "@/app/emails/useEmails";
@@ -11,7 +12,8 @@ interface EmailHistorySectionProps {
   dealId?: string;
   companyId?: string;
   locale: string;
-  onReply: (email: SentEmailOut) => void;
+  /** Absent while the composer is parked — rows then carry no Reply button. */
+  onReply?: (email: SentEmailOut) => void;
   /** Deal detail collapses the section by default (viewport-fit research);
    *  the company Emails tab exists to show it, so it stays expanded there. */
   collapsible?: boolean;
@@ -60,6 +62,22 @@ const CHIP = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-med
  * are never opened, and a permanent "unopened" chip would be pure noise.
  * Inbound rows carry no pixel and no rewritten links, so they never get chips.
  */
+/** Rows mirrored from a bulk campaign link back to the campaigns history. */
+export function CampaignBadge({ email }: { email: SentEmailOut }) {
+  const { t } = useTranslation("emails");
+  if (!email.campaign_id) return null;
+  return (
+    <Link
+      to="/app/email-campaigns"
+      data-testid={testIds.emails.history.campaignBadge(email.id)}
+      title={t("history.campaignBadgeTitle")}
+      className="inline-flex items-center rounded-full bg-surface-overlay px-2 py-0.5 text-xs font-medium text-text-secondary transition-colors duration-fast hover:text-text-primary"
+    >
+      {t("history.campaignBadge")}
+    </Link>
+  );
+}
+
 export function EngagementChips({ email, locale }: { email: SentEmailOut; locale: string }) {
   const { t } = useTranslation("emails");
   if (isInboundEmail(email)) return null;
@@ -158,6 +176,7 @@ export function EmailHistorySection({
                   </button>
                   <StatusBadge email={email} />
                   <EngagementChips email={email} locale={locale} />
+                  <CampaignBadge email={email} />
                 </div>
                 <p className="mt-0.5 truncate text-xs text-text-tertiary">
                   {/* Inbound rows show the correspondent (From); on outbound
@@ -173,13 +192,15 @@ export function EmailHistorySection({
                   · {dt.format(new Date(email.sent_at ?? email.created_at))}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => onReply(email)}
-                className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-surface-overlay px-2.5 py-1 text-xs font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
-              >
-                <Reply size={13} strokeWidth={1.75} aria-hidden /> {t("history.reply")}
-              </button>
+              {onReply ? (
+                <button
+                  type="button"
+                  onClick={() => onReply(email)}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-surface-overlay px-2.5 py-1 text-xs font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-elevated hover:text-text-primary"
+                >
+                  <Reply size={13} strokeWidth={1.75} aria-hidden /> {t("history.reply")}
+                </button>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -188,10 +209,14 @@ export function EmailHistorySection({
         emailId={openEmailId}
         onClose={() => setOpenEmailId(null)}
         onSwitch={setOpenEmailId}
-        onReply={(email) => {
-          setOpenEmailId(null);
-          onReply(email);
-        }}
+        onReply={
+          onReply
+            ? (email) => {
+                setOpenEmailId(null);
+                onReply(email);
+              }
+            : undefined
+        }
       />
     </section>
   );
