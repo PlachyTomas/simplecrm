@@ -11,6 +11,7 @@ import {
   useResolveRecipients,
   useSendBulkEmail,
 } from "@/app/companies/bulk-email/useBulkEmail";
+import { useCompanyFilterOptions } from "@/app/companies/useCompanies";
 import { EmailTemplatePicker, MergeFieldHint } from "@/app/emails/EmailTemplatePicker";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { testIds } from "@/lib/testids";
@@ -55,6 +56,11 @@ function emailOptions(c: RecipientCandidate, t: TFunction<"emails">): EmailOptio
 const inputClass =
   "mt-1 block w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none";
 
+const filterSelectClass =
+  "h-9 max-w-[12rem] truncate rounded-md border border-border bg-surface-overlay px-2 text-xs font-medium text-text-secondary focus:border-accent focus:outline-none";
+
+const NO_FILTERS: BulkEmailFilters = { unowned: false };
+
 const SKIP_LABEL_KEY: Record<string, ParseKeys<"emails">> = {
   no_email: "wizard.skipReasonNoEmail",
   blocked: "wizard.skipReasonBlocked",
@@ -63,20 +69,23 @@ const SKIP_LABEL_KEY: Record<string, ParseKeys<"emails">> = {
 export function BulkEmailWizard({
   open,
   onClose,
-  initialFilters,
+  initialFilters = NO_FILTERS,
 }: {
   open: boolean;
   onClose: () => void;
-  initialFilters: BulkEmailFilters;
+  /** Pre-seeded targeting; the recipient step lets the user change it. */
+  initialFilters?: BulkEmailFilters;
 }) {
   const { t } = useTranslation("emails");
   const toast = useToast();
   const navigate = useNavigate();
   const { data: usersPage } = useOrgUsers();
+  const { data: filterOptions } = useCompanyFilterOptions();
   const resolve = useResolveRecipients();
   const send = useSendBulkEmail();
 
   const [step, setStep] = useState(1);
+  const [filters, setFilters] = useState<BulkEmailFilters>(initialFilters);
   const [candidates, setCandidates] = useState<RecipientCandidate[] | null>(null);
   const [selected, setSelected] = useState<Record<string, string[]>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -87,20 +96,13 @@ export function BulkEmailWizard({
   const [dealTitle, setDealTitle] = useState("");
   const [result, setResult] = useState<CampaignOut | null>(null);
 
-  // On open, auto-resolve recipients from the handed-in Firmy filters (no filter step).
-  useEffect(() => {
-    if (!open) return;
-    setStep(1);
+  // Resolving picks every emailable company's default address by default.
+  const resolveWith = (next: BulkEmailFilters) => {
+    setFilters(next);
     setCandidates(null);
     setSelected({});
     setExpanded(new Set());
-    setSubject("");
-    setBody("");
-    setAttachment(null);
-    setCreateDeals(false);
-    setDealTitle("");
-    setResult(null);
-    resolve.mutate(initialFilters, {
+    resolve.mutate(next, {
       onSuccess: (cands) => {
         setCandidates(cands);
         const initial: Record<string, string[]> = {};
@@ -111,6 +113,18 @@ export function BulkEmailWizard({
       },
       onError: () => toast.error(t("wizard.loadRecipientsError")),
     });
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    setStep(1);
+    setSubject("");
+    setBody("");
+    setAttachment(null);
+    setCreateDeals(false);
+    setDealTitle("");
+    setResult(null);
+    resolveWith(initialFilters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -140,17 +154,13 @@ export function BulkEmailWizard({
   const selectNoCompanies = () => setSelected({});
 
   const usersById = new Map((usersPage?.items ?? []).map((u) => [u.id, u.name] as const));
-  const summaryParts: string[] = [];
-  if (initialFilters.unowned) summaryParts.push(t("wizard.filterUnowned"));
-  else if (initialFilters.owner_user_id)
-    summaryParts.push(
-      usersById.get(initialFilters.owner_user_id) ?? t("wizard.filterUnknownOwner"),
-    );
-  if (initialFilters.industry) summaryParts.push(initialFilters.industry);
-  if (initialFilters.city) summaryParts.push(initialFilters.city);
-  const filterSummary = summaryParts.length
-    ? summaryParts.join(" · ")
-    : t("wizard.filterAllPortfolio");
+  const ownerValue = filters.unowned ? "unowned" : (filters.owner_user_id ?? "all");
+  const onOwnerChange = (value: string) =>
+    resolveWith({
+      ...filters,
+      unowned: value === "unowned",
+      owner_user_id: value === "all" || value === "unowned" ? null : value,
+    });
 
   const toggleEmail = (companyId: string, email: string) => {
     setSelected((prev) => {
@@ -236,7 +246,10 @@ export function BulkEmailWizard({
           <SendResult
             result={result}
             onClose={onClose}
-            onHistory={() => navigate("/app/email-campaigns")}
+            onHistory={() => {
+              navigate("/app/emails");
+              onClose();
+            }}
           />
         ) : (
           <>
@@ -262,10 +275,53 @@ export function BulkEmailWizard({
               {step === 1 ? (
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs text-text-tertiary">
-                      {t("wizard.filterLabel")}{" "}
-                      <span className="text-text-secondary">{filterSummary}</span>
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <select
+                        aria-label={t("wizard.filterOwnerLabel")}
+                        data-testid={testIds.emails.bulkWizard.ownerFilter}
+                        value={ownerValue}
+                        onChange={(e) => onOwnerChange(e.target.value)}
+                        className={filterSelectClass}
+                      >
+                        <option value="all">{t("wizard.filterOwnerAll")}</option>
+                        {(filterOptions?.owner_user_ids ?? []).map((id) => (
+                          <option key={id} value={id}>
+                            {usersById.get(id) ?? "—"}
+                          </option>
+                        ))}
+                        <option value="unowned">{t("wizard.filterUnowned")}</option>
+                      </select>
+                      <select
+                        aria-label={t("wizard.filterIndustryLabel")}
+                        data-testid={testIds.emails.bulkWizard.industryFilter}
+                        value={filters.industry ?? ""}
+                        onChange={(e) =>
+                          resolveWith({ ...filters, industry: e.target.value || null })
+                        }
+                        className={filterSelectClass}
+                      >
+                        <option value="">{t("wizard.filterIndustryAll")}</option>
+                        {(filterOptions?.industries ?? []).map((i) => (
+                          <option key={i} value={i}>
+                            {i}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        aria-label={t("wizard.filterCityLabel")}
+                        data-testid={testIds.emails.bulkWizard.cityFilter}
+                        value={filters.city ?? ""}
+                        onChange={(e) => resolveWith({ ...filters, city: e.target.value || null })}
+                        className={filterSelectClass}
+                      >
+                        <option value="">{t("wizard.filterCityAll")}</option>
+                        {(filterOptions?.cities ?? []).map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                     {(candidates ?? []).some((c) => c.emailable) ? (
                       <div className="flex items-center gap-2 text-xs">
                         <button
@@ -460,7 +516,7 @@ export function BulkEmailWizard({
                 <button
                   type="button"
                   onClick={() => setStep(2)}
-                  disabled={totalSelected === 0}
+                  disabled={totalSelected === 0 || candidates === null}
                   className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {t("wizard.nextWithCount", { count: totalSelected })}

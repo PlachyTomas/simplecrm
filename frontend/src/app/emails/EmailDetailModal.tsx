@@ -134,7 +134,7 @@ export function EmailDetailModal({
                 {email.campaign_id ? (
                   <MetaRow label={t("detail.campaign")}>
                     <Link
-                      to="/app/email-campaigns"
+                      to="/app/emails"
                       onClick={() => {
                         onClose();
                         onNavigate?.();

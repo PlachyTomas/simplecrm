@@ -80,3 +80,23 @@ Reported, not fixed (owner decision):
 - Mail page "Nepřiřazené" filter, bulk assign bar and LinkEmailDialog only ever match inbound rows, which are parked. Dead UI; remove or revive together with inbound.
 - Flipping the flag back on needs the two tutorial sentences restored.
 - Historic campaigns are not backfilled into `sent_emails`.
+
+## Follow-up 2026-09-09 — Kampaně is the home of bulk e-mail
+
+Owner asks: move campaign launching to the (renamed) E-maily nav item, keep the icon, and keep the Firmy button as well.
+
+- Sidebar/More/G M shortcut: "E-maily" → **Kampaně** (Mail icon kept, route `/app/emails` unchanged; `/app/email-campaigns` redirects there).
+- `/app/emails` = `CampaignsPage`: h1 Kampaně, primary **Nový hromadný e-mail** (SMTP-gated via the shared `SmtpPrompt`), tabs **Kampaně** (the old campaign history, now `CampaignsList`) and **Odeslané e-maily** (`?tab=sent`, the old mail list).
+- Wizard step 1 gained its own Vlastník / Obor / Město selects (re-resolves recipients on change), so a campaign launched from Kampaně can still be targeted. Launched from Firmy it is pre-seeded with the list filters exactly as before.
+- Firmy header: button stays, the "Historie" link is gone (history lives on Kampaně).
+- Tours: companies `bulk-email` step re-worded ("z tohoto výběru"); emails tour = Nový hromadný e-mail + Odeslané e-maily tab.
+
+### Owner verification todo (addendum)
+
+1. Sidebar shows **Kampaně** with the envelope icon; mobile Více page too; `G` then `M` lands on it; Nastavení → Zkratky lists "Přejít na Kampaně".
+2. `/app/emails`: Kampaně tab lists past campaigns (expand one → per-recipient table), **Nový hromadný e-mail** opens the wizard; change Obor/Město/Vlastník in step 1 → recipient list refreshes; finish a send → "Zobrazit historii" lands back on the list with the new campaign on top.
+3. Tab **Odeslané e-maily**: the old list, filters, search and the "Hromadný e-mail" pill (now linking to Kampaně) all work; URL carries `?tab=sent`.
+4. `/app/companies`: **Hromadný e-mail** button still there and still pre-filtered by the list's Vlastník/Obor/Město; the "Historie" link is gone. With SMTP unverified both buttons show the same "Nejdřív nastavte odesílání e-mailů" prompt whose CTA opens Nastavení → Integrace.
+5. `/app/email-campaigns` (old bookmark) redirects to Kampaně.
+6. Tours: run the Firmy tour (bulk step) and the Kampaně tour (two steps) — anchors highlight the button and the Odeslané e-maily tab. English UI: Campaigns / New bulk email / Sent emails.
+7. Console: no red errors on the routes above.

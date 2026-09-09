@@ -11,8 +11,6 @@
   },
   "companiesList": {
     "pageTitle": "Companies",
-    "historyLinkTitle": "Bulk email history",
-    "historyLinkLabel": "History",
     "bulkEmailButton": "Bulk email",
     "addButton": "Add company",
     "searchLabel": "Search companies",
@@ -39,10 +37,6 @@
     "paginationOf": "of",
     "prevPage": "Previous page",
     "nextPage": "Next page",
-    "smtpPromptTitle": "Set up email sending first",
-    "smtpPromptBody": "Bulk emails are sent from your own mailbox. Set up and verify your SMTP connection in the integration settings.",
-    "smtpPromptClose": "Close",
-    "smtpPromptCta": "Set up SMTP",
     "columns": {
       "name": "Name",
       "ico": "Company ID (IČO)",

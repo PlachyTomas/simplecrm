@@ -61,9 +61,20 @@
     "hint": "Set up and verify SMTP first.",
     "settingsLink": "Settings → Integrations"
   },
+  "campaignsPage": {
+    "title": "Campaigns",
+    "subtitle": "Bulk emails from your own mailbox and an overview of everything that left SimpleCRM.",
+    "newButton": "New bulk email",
+    "tabCampaigns": "Campaigns",
+    "tabSent": "Sent emails"
+  },
+  "smtpPrompt": {
+    "title": "Set up email sending first",
+    "body": "Bulk emails are sent from your own mailbox. Set up and verify your SMTP connection in the integration settings.",
+    "close": "Close",
+    "cta": "Set up SMTP"
+  },
   "campaigns": {
-    "pageTitle": "Bulk email history",
-    "backToCompanies": "Back to companies",
     "subtitle": "Overview of sent campaigns and delivery status per recipient.",
     "loadError": "Failed to load history.",
     "emptyTitle": "No campaigns yet",
@@ -97,10 +108,13 @@
     "stepRecipients": "Recipients",
     "stepText": "Text",
     "stepSend": "Send",
-    "filterLabel": "Filter:",
+    "filterOwnerLabel": "Owner",
+    "filterOwnerAll": "All owners",
     "filterUnowned": "Unassigned",
-    "filterUnknownOwner": "selected owner",
-    "filterAllPortfolio": "your entire portfolio",
+    "filterIndustryLabel": "Industry",
+    "filterIndustryAll": "All industries",
+    "filterCityLabel": "City",
+    "filterCityAll": "All cities",
     "selectAll": "Select all",
     "selectNone": "Clear selection",
     "loadingCompanies": "Loading companies…",
@@ -159,7 +173,6 @@
     }
   },
   "mailPage": {
-    "title": "Emails",
     "subtitle": "An overview of emails sent from SimpleCRM, bulk campaigns included. Receiving mail is in the works.",
     "searchLabel": "Search emails",
     "searchPlaceholder": "Search subject, text, address…",

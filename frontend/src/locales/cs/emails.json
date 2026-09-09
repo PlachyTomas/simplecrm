@@ -61,9 +61,20 @@
     "hint": "Nejprve nastavte a ověřte SMTP.",
     "settingsLink": "Nastavení → Integrace"
   },
+  "campaignsPage": {
+    "title": "Kampaně",
+    "subtitle": "Hromadné e-maily z vaší vlastní schránky a přehled všeho, co ze SimpleCRM odešlo.",
+    "newButton": "Nový hromadný e-mail",
+    "tabCampaigns": "Kampaně",
+    "tabSent": "Odeslané e-maily"
+  },
+  "smtpPrompt": {
+    "title": "Nejdřív nastavte odesílání e-mailů",
+    "body": "Hromadné e-maily se odesílají z vaší vlastní schránky. Nastavte a ověřte své SMTP připojení v nastavení integrací.",
+    "close": "Zavřít",
+    "cta": "Nastavit SMTP"
+  },
   "campaigns": {
-    "pageTitle": "Historie hromadných e-mailů",
-    "backToCompanies": "Zpět na firmy",
     "subtitle": "Přehled odeslaných kampaní a stav doručení jednotlivých příjemců.",
     "loadError": "Historii se nepodařilo načíst.",
     "emptyTitle": "Zatím žádné kampaně",
@@ -98,10 +109,13 @@
     "stepRecipients": "Příjemci",
     "stepText": "Text",
     "stepSend": "Odeslání",
-    "filterLabel": "Filtr:",
+    "filterOwnerLabel": "Vlastník",
+    "filterOwnerAll": "Všichni vlastníci",
     "filterUnowned": "Nezabrané",
-    "filterUnknownOwner": "vybraný vlastník",
-    "filterAllPortfolio": "vaše celé portfolio",
+    "filterIndustryLabel": "Obor",
+    "filterIndustryAll": "Všechny obory",
+    "filterCityLabel": "Město",
+    "filterCityAll": "Všechna města",
     "selectAll": "Vybrat vše",
     "selectNone": "Zrušit výběr",
     "loadingCompanies": "Načítání firem…",
@@ -161,7 +175,6 @@
     }
   },
   "mailPage": {
-    "title": "E-maily",
     "subtitle": "Přehled e-mailů odeslaných ze SimpleCRM včetně hromadných kampaní. Příjem e-mailů připravujeme.",
     "searchLabel": "Hledat v e-mailech",
     "searchPlaceholder": "Hledat předmět, text, adresu…",

@@ -223,6 +223,16 @@ export const testIds = {
     },
     bulkWizard: {
       templateSelect: "bulk-email-template-select",
+      ownerFilter: "bulk-email-owner-filter",
+      industryFilter: "bulk-email-industry-filter",
+      cityFilter: "bulk-email-city-filter",
+    },
+    campaigns: {
+      newButton: "campaigns-new-button",
+      tabCampaigns: "campaigns-tab-campaigns",
+      tabSent: "campaigns-tab-sent",
+      list: "campaigns-list",
+      smtpPrompt: "campaigns-smtp-prompt",
     },
     history: {
       row: (id: string) => `email-history-row-${id}`,

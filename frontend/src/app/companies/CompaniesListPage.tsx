@@ -14,7 +14,6 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
-  History,
   LayoutGrid,
   Mail,
   Plus,
@@ -24,18 +23,19 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { AddCompanyModal } from "@/app/companies/AddCompanyModal";
 import { BulkEmailWizard } from "@/app/companies/bulk-email/BulkEmailWizard";
-import { OwnershipBadge } from "@/app/companies/OwnershipBadge";
 import { type BulkEmailFilters } from "@/app/companies/bulk-email/useBulkEmail";
+import { OwnershipBadge } from "@/app/companies/OwnershipBadge";
 import {
   type CompanyOut,
   type CompanySortKey,
   useCompanies,
   useCompanyFilterOptions,
 } from "@/app/companies/useCompanies";
+import { SmtpPrompt } from "@/app/emails/SmtpPrompt";
 import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
@@ -180,13 +180,13 @@ export function CompaniesListPage() {
   const smtpReady = isSmtpVerified(smtp);
 
   const ownerUserId = ownerFilter !== "all" && ownerFilter !== "unowned" ? ownerFilter : undefined;
+  // The wizard opens targeting exactly what the list shows.
   const bulkFilters: BulkEmailFilters = {
     owner_user_id: ownerUserId ?? null,
     unowned: ownerFilter === "unowned",
     industry: industry || null,
     city: city || null,
   };
-
   const onBulkClick = () => (smtpReady ? setBulkOpen(true) : setSmtpPromptOpen(true));
   // Translate the React Table sort state into the backend's sort/order
   // params. We always carry a single sort spec (multi-column server sort
@@ -562,13 +562,6 @@ export function CompaniesListPage() {
           <p className="mt-1 text-sm text-text-tertiary">{t("companyCount", { count: total })}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Link
-            to="/app/email-campaigns"
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface-overlay px-3 text-sm font-medium text-text-secondary transition-colors duration-fast hover:text-text-primary"
-            title={t("companiesList.historyLinkTitle")}
-          >
-            <History size={16} strokeWidth={1.75} /> {t("companiesList.historyLinkLabel")}
-          </Link>
           <button
             type="button"
             onClick={onBulkClick}
@@ -909,37 +902,7 @@ export function CompaniesListPage() {
         onClose={() => setBulkOpen(false)}
         initialFilters={bulkFilters}
       />
-
-      {smtpPromptOpen ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="smtp-prompt-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 px-4 backdrop-blur-sm"
-        >
-          <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-xl">
-            <h2 id="smtp-prompt-title" className="text-base font-semibold text-text-primary">
-              {t("companiesList.smtpPromptTitle")}
-            </h2>
-            <p className="mt-2 text-sm text-text-secondary">{t("companiesList.smtpPromptBody")}</p>
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setSmtpPromptOpen(false)}
-                className="h-9 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary hover:text-text-primary"
-              >
-                {t("companiesList.smtpPromptClose")}
-              </button>
-              <Link
-                to="/app/settings?tab=integrations"
-                className="inline-flex h-9 items-center rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent hover:opacity-90"
-              >
-                {t("companiesList.smtpPromptCta")}
-              </Link>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <SmtpPrompt open={smtpPromptOpen} onClose={() => setSmtpPromptOpen(false)} />
     </div>
   );
 }

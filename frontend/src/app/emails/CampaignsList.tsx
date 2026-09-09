@@ -1,8 +1,7 @@
 import type { ParseKeys } from "i18next";
-import { ArrowLeft, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
 
 import {
   type CampaignOut,
@@ -12,7 +11,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDate, formatPercent } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
-import { usePageTitle } from "@/lib/usePageTitle";
+import { testIds } from "@/lib/testids";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABEL_KEY: Record<string, ParseKeys<"emails">> = {
@@ -27,25 +26,16 @@ const STATUS_CLASS: Record<string, string> = {
   skipped: "text-text-tertiary",
 };
 
-export function EmailCampaignsPage() {
+/** Every campaign with its per-recipient outcome — the Kampaně tab's body. */
+export function CampaignsList() {
   const { t } = useTranslation("emails");
-  usePageTitle(t("campaigns.pageTitle"));
   const { data, isPending, isError } = useEmailCampaigns();
   const [openId, setOpenId] = useState<string | null>(null);
   const locale = useLocale();
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8">
-      <div className="mb-6">
-        <Link
-          to="/app/companies"
-          className="inline-flex items-center gap-1 text-sm text-text-tertiary hover:text-text-primary"
-        >
-          <ArrowLeft size={14} strokeWidth={1.75} /> {t("campaigns.backToCompanies")}
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold">{t("campaigns.pageTitle")}</h1>
-        <p className="mt-1 text-sm text-text-tertiary">{t("campaigns.subtitle")}</p>
-      </div>
+    <div data-testid={testIds.emails.campaigns.list}>
+      <p className="mb-4 text-sm text-text-tertiary">{t("campaigns.subtitle")}</p>
 
       {isError ? (
         <div className="rounded-md border border-danger-subtle bg-danger-subtle px-4 py-3 text-sm text-danger">

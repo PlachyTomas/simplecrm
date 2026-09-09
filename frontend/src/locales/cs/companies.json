@@ -14,8 +14,6 @@
   },
   "companiesList": {
     "pageTitle": "Firmy",
-    "historyLinkTitle": "Historie hromadných e-mailů",
-    "historyLinkLabel": "Historie",
     "bulkEmailButton": "Hromadný e-mail",
     "addButton": "Přidat firmu",
     "searchLabel": "Hledat firmu",
@@ -42,10 +40,6 @@
     "paginationOf": "z",
     "prevPage": "Předchozí stránka",
     "nextPage": "Další stránka",
-    "smtpPromptTitle": "Nejdřív nastavte odesílání e-mailů",
-    "smtpPromptBody": "Hromadné e-maily se odesílají z vaší vlastní schránky. Nastavte a ověřte své SMTP připojení v nastavení integrací.",
-    "smtpPromptClose": "Zavřít",
-    "smtpPromptCta": "Nastavit SMTP",
     "columns": {
       "name": "Název",
       "ico": "IČO",

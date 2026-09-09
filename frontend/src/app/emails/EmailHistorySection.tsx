@@ -68,7 +68,7 @@ export function CampaignBadge({ email }: { email: SentEmailOut }) {
   if (!email.campaign_id) return null;
   return (
     <Link
-      to="/app/email-campaigns"
+      to="/app/emails"
       data-testid={testIds.emails.history.campaignBadge(email.id)}
       title={t("history.campaignBadgeTitle")}
       className="inline-flex items-center rounded-full bg-surface-overlay px-2 py-0.5 text-xs font-medium text-text-secondary transition-colors duration-fast hover:text-text-primary"

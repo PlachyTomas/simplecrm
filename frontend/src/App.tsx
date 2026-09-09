@@ -7,14 +7,13 @@ import { AppShell } from "@/app/AppShell";
 import { MorePage } from "@/app/MorePage";
 import { BillingReturnPage } from "@/app/billing/BillingReturnPage";
 import { CalendarPage } from "@/app/calendar/CalendarPage";
-import { EmailCampaignsPage } from "@/app/companies/bulk-email/EmailCampaignsPage";
 import { CompaniesListPage } from "@/app/companies/CompaniesListPage";
 import { CompanyDetailPage } from "@/app/companies/CompanyDetailPage";
 import { ContactsPage } from "@/app/contacts/ContactsPage";
 import { DashboardPage } from "@/app/dashboard/DashboardPage";
 import { DealDetailRedirect } from "@/app/deals/DealDetailRedirect";
 import { DealsListPage } from "@/app/deals/DealsListPage";
-import { MailPage } from "@/app/emails/MailPage";
+import { CampaignsPage } from "@/app/emails/CampaignsPage";
 import { FeedbackPage } from "@/app/feedback/FeedbackPage";
 import { PipelinePage } from "@/app/pipeline/PipelinePage";
 import { ReportsPage } from "@/app/reports/ReportsPage";
@@ -129,13 +128,13 @@ export function AppRoutes() {
         <Route index element={<DashboardPage />} />
         <Route path="companies" element={<CompaniesListPage />} />
         <Route path="companies/:companyId" element={<CompanyDetailPage />} />
-        <Route path="email-campaigns" element={<EmailCampaignsPage />} />
+        <Route path="email-campaigns" element={<Navigate to="/app/emails" replace />} />
         <Route path="pipeline" element={<PipelinePage />} />
         <Route path="contacts" element={<ContactsPage />} />
         <Route path="contacts/:contactId" element={<ContactsPage />} />
         <Route path="deals" element={<DealsListPage />} />
         <Route path="deals/:dealId" element={<DealDetailRedirect />} />
-        <Route path="emails" element={<MailPage />} />
+        <Route path="emails" element={<CampaignsPage />} />
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsLayout />}>

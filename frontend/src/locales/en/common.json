@@ -169,7 +169,7 @@
     "companies": "Companies",
     "contacts": "Contacts",
     "deals": "Deals",
-    "emails": "Emails",
+    "emails": "Campaigns",
     "calendar": "Calendar",
     "reports": "Reports",
     "settings": "Settings",
@@ -248,8 +248,8 @@
           "body": "When adding a company, enter only its registration number (IČO) — we pull the name, address and legal form from the public ARES registry."
         },
         "bulkEmail": {
-          "title": "Bulk email with merge fields",
-          "body": "Select companies and send a personalized bulk email — fields like {kontakt_jmeno} or {firma} resolve per recipient. Take the text from a saved template; the History link shows how past sends did."
+          "title": "Bulk email to this selection",
+          "body": "Filter the companies and the Bulk email button addresses exactly this selection — you still tick the recipients. Sent campaigns, delivery included, live under Campaigns."
         },
         "ownership": {
           "title": "Companies don't rot in drawers",
@@ -285,13 +285,13 @@
         }
       },
       "emails": {
-        "filters": {
-          "title": "Nothing gets lost",
-          "body": "Mail without a matched company waits under the Unmatched filter. The Company and Deal filters pull up one case's correspondence, and search covers message text and addresses too."
+        "newCampaign": {
+          "title": "Bulk email with merge fields",
+          "body": "New bulk email lets you pick companies by owner, industry or city and send a personalized email — fields like {kontakt_jmeno} or {firma} resolve per recipient. Take the text from a saved template; every send stays in this list with delivery and opens per recipient."
         },
-        "tracking": {
+        "sentMail": {
           "title": "Know what they read",
-          "body": "Switch the filter to Sent: messages show Opened and Clicked chips, and a failed delivery shows an Error chip. Click a subject to open the whole thread."
+          "body": "The Sent emails tab shows every message on its own: Opened and Clicked chips, an Error chip when delivery failed, Company and Deal filters, and search across text and addresses. Click a subject to open the whole thread."
         }
       },
       "calendar": {
@@ -382,7 +382,7 @@
       "goCompanies": "Go to Companies",
       "goContacts": "Go to Contacts",
       "goDeals": "Go to Deals",
-      "goEmails": "Go to Emails",
+      "goEmails": "Go to Campaigns",
       "goCalendar": "Go to Calendar",
       "goReports": "Go to Reports",
       "goSettings": "Go to Settings"

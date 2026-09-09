@@ -1,13 +1,16 @@
 import type { TFunction } from "i18next";
-import { ChevronLeft, ChevronRight, Inbox, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Inbox, Mail, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
+import { BulkEmailWizard } from "@/app/companies/bulk-email/BulkEmailWizard";
 import { useDeals } from "@/app/deals/useDeals";
+import { CampaignsList } from "@/app/emails/CampaignsList";
 import { EmailComposeModal } from "@/app/emails/EmailComposeModal";
 import { EmailDetailModal } from "@/app/emails/EmailDetailModal";
 import { LinkEmailDialog } from "@/app/emails/LinkEmailDialog";
+import { SmtpPrompt } from "@/app/emails/SmtpPrompt";
 import { CampaignBadge, EngagementChips, StatusBadge } from "@/app/emails/EmailHistorySection";
 import {
   type MailListFilters,
@@ -16,6 +19,7 @@ import {
   useMailList,
 } from "@/app/emails/useEmails";
 import { useCompanies } from "@/app/companies/useCompanies";
+import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SINGLE_EMAIL_COMPOSE_ENABLED } from "@/lib/features";
@@ -23,6 +27,7 @@ import { useLocale } from "@/lib/i18n/useLocale";
 import { testIds } from "@/lib/testids";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { usePageTitle } from "@/lib/usePageTitle";
+import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 25;
 
@@ -50,15 +55,108 @@ function counterparty(email: SentEmailListItem, t: TFunction<"emails">): string 
   return t("mailPage.toShort", { address: (first ?? "—") + more });
 }
 
+type CampaignsTab = "campaigns" | "sent";
+
+const SENT_TAB_PARAMS = ["q", "type", "company", "deal", "mine", "page"] as const;
+
 /**
- * The unified Mail page (email suite Stage 0), currently presented as a
- * sent-mail overview: inbound capture is parked, so the page lists mail sent
- * from SimpleCRM plus any historic captured rows. Rows open
+ * Kampaně — the home of outbound mail while the one-to-one composer is
+ * parked: launch a bulk campaign, review past campaigns per recipient, and
+ * (second tab) browse every mail that left SimpleCRM.
+ */
+export function CampaignsPage() {
+  const { t } = useTranslation("emails");
+  usePageTitle(t("campaignsPage.title"));
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Links saved while this route was the plain mail list carry list params
+  // without `tab` — they still belong on the sent tab.
+  const tab: CampaignsTab =
+    searchParams.get("tab") === "sent" || SENT_TAB_PARAMS.some((param) => searchParams.has(param))
+      ? "sent"
+      : "campaigns";
+  const { data: smtp } = useSmtpSettings();
+  const smtpReady = isSmtpVerified(smtp);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [smtpPromptOpen, setSmtpPromptOpen] = useState(false);
+
+  // Each tab owns its query string; the sent tab's filters die with it.
+  const switchTab = (next: CampaignsTab) => {
+    if (next === tab) return;
+    setSearchParams(next === "sent" ? { tab: "sent" } : {}, { replace: true });
+  };
+
+  const tabs: { key: CampaignsTab; label: string; testId: string }[] = [
+    {
+      key: "campaigns",
+      label: t("campaignsPage.tabCampaigns"),
+      testId: testIds.emails.campaigns.tabCampaigns,
+    },
+    { key: "sent", label: t("campaignsPage.tabSent"), testId: testIds.emails.campaigns.tabSent },
+  ];
+
+  return (
+    <div className="px-4 py-6 md:px-8 md:py-8">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">{t("campaignsPage.title")}</h1>
+          <p className="mt-1 text-sm text-text-tertiary">{t("campaignsPage.subtitle")}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => (smtpReady ? setWizardOpen(true) : setSmtpPromptOpen(true))}
+          data-testid={testIds.emails.campaigns.newButton}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
+        >
+          <Mail size={16} strokeWidth={1.75} /> {t("campaignsPage.newButton")}
+        </button>
+      </div>
+
+      <div className="mb-6 border-b border-border-subtle">
+        <ul role="tablist" className="-mb-px flex gap-1 overflow-x-auto">
+          {tabs.map((item) => {
+            const isActive = tab === item.key;
+            return (
+              <li key={item.key} role="presentation">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls={`campaigns-panel-${item.key}`}
+                  id={`campaigns-tab-${item.key}`}
+                  data-testid={item.testId}
+                  onClick={() => switchTab(item.key)}
+                  className={cn(
+                    "inline-flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium transition-colors duration-fast",
+                    isActive
+                      ? "border-accent text-accent"
+                      : "border-transparent text-text-secondary hover:text-text-primary",
+                  )}
+                >
+                  {item.label}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      <div role="tabpanel" id={`campaigns-panel-${tab}`} aria-labelledby={`campaigns-tab-${tab}`}>
+        {tab === "sent" ? <SentMailTab /> : <CampaignsList />}
+      </div>
+
+      {wizardOpen ? <BulkEmailWizard open onClose={() => setWizardOpen(false)} /> : null}
+      <SmtpPrompt open={smtpPromptOpen} onClose={() => setSmtpPromptOpen(false)} />
+    </div>
+  );
+}
+
+/**
+ * Every mail that left SimpleCRM (composer sends, campaign recipients, plus
+ * any historic captured rows — inbound capture is parked). Rows open
  * `EmailDetailModal`; unmatched rows carry the assign flow.
  */
-export function MailPage() {
+function SentMailTab() {
   const { t } = useTranslation("emails");
-  usePageTitle("E-maily");
   const locale = useLocale();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -174,11 +272,8 @@ export function MailPage() {
   };
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">{t("mailPage.title")}</h1>
-        <p className="mt-1 text-sm text-text-tertiary">{t("mailPage.subtitle")}</p>
-      </div>
+    <div>
+      <p className="mb-4 text-sm text-text-tertiary">{t("mailPage.subtitle")}</p>
 
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
         <label className="relative block md:max-w-md md:flex-1">

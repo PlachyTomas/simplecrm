@@ -83,7 +83,7 @@ describe("EmailHistorySection — campaign rows and parked composer", () => {
       testIds.emails.history.campaignBadge("camp-row-1"),
     );
     expect(badge).toHaveTextContent("Hromadný e-mail");
-    expect(badge).toHaveAttribute("href", "/app/email-campaigns");
+    expect(badge).toHaveAttribute("href", "/app/emails");
 
     const composedRow = screen.getByTestId(testIds.emails.history.row("out-1"));
     expect(

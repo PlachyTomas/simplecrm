@@ -188,20 +188,17 @@ export const PAGE_TOURS: Record<TourId, TourStep[]> = {
   ],
   emails: [
     {
-      id: "filters",
-      anchorTestId: testIds.emails.mail.typeFilter,
-      titleKey: "tutorial.tours.emails.filters.title",
-      bodyKey: "tutorial.tours.emails.filters.body",
+      id: "new-campaign",
+      anchorTestId: testIds.emails.campaigns.newButton,
+      titleKey: "tutorial.tours.emails.newCampaign.title",
+      bodyKey: "tutorial.tours.emails.newCampaign.body",
       accent: "indigo",
     },
     {
-      id: "tracking",
-      // The copy talks about the status badges on rows — spotlight the first
-      // mail row rather than re-highlighting the filter from the prior step.
-      anchorTestId: "mail-row-",
-      anchorIsPrefix: true,
-      titleKey: "tutorial.tours.emails.tracking.title",
-      bodyKey: "tutorial.tours.emails.tracking.body",
+      id: "sent-mail",
+      anchorTestId: testIds.emails.campaigns.tabSent,
+      titleKey: "tutorial.tours.emails.sentMail.title",
+      bodyKey: "tutorial.tours.emails.sentMail.body",
       accent: "magenta",
     },
   ],

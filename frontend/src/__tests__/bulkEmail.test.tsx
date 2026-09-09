@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppRoutes } from "@/App";
 import { AuthProvider } from "@/auth/AuthContext";
+import { testIds } from "@/lib/testids";
 
 const ME_RESPONSE = {
   id: "00000000-0000-0000-0000-000000000001",
@@ -64,6 +65,9 @@ function baseRoutes(smtp: unknown) {
     if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME_RESPONSE);
     if (url.includes("/api/v1/me/smtp")) return jsonResponse(smtp);
     if (url.includes("/api/v1/companies?")) return jsonResponse(EMPTY_LIST);
+    if (url.includes("/api/v1/companies/filter-options"))
+      return jsonResponse({ industries: ["Strojírenství"], cities: [], owner_user_ids: [] });
+    if (url.includes("/api/v1/companies/bulk-email/campaigns")) return jsonResponse(EMPTY_LIST);
     if (url.includes("/api/v1/users?")) return jsonResponse(EMPTY_LIST);
     void init;
     return null;
@@ -149,5 +153,80 @@ describe("Bulk email", () => {
 
     // Step 3: compose.
     expect(await screen.findByPlaceholderText(/nová nabídka pro/i)).toBeInTheDocument();
+  });
+
+  it("launches from Kampaně with its own recipient filters and re-resolves on change", async () => {
+    const routes = baseRoutes(VERIFIED_SMTP);
+    const resolveBodies: unknown[] = [];
+    fetchMock.mockImplementation(async (input, init) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.includes("/api/v1/companies/bulk-email/recipients")) {
+        resolveBodies.push(JSON.parse(String(init?.body ?? "{}")));
+        return jsonResponse([
+          {
+            company_id: "c1",
+            company_name: "ACME s.r.o.",
+            default_email: "acme@x.cz",
+            contacts: [],
+            emailable: true,
+            skip_reason: null,
+          },
+        ]);
+      }
+      const r = routes(url, init);
+      if (r) return r;
+      throw new Error(`Unexpected fetch: ${String(input)}`);
+    });
+
+    const user = userEvent.setup();
+    renderAt("/app/emails");
+
+    await user.click(await screen.findByTestId(testIds.emails.campaigns.newButton));
+    expect(await screen.findByRole("heading", { name: /^Hromadný e-mail$/i })).toBeInTheDocument();
+    await screen.findByText(/ACME s\.r\.o\./);
+    // Opened from Kampaně there is no list to inherit from: whole portfolio.
+    expect(resolveBodies[0]).toEqual({ unowned: false });
+
+    await user.selectOptions(
+      screen.getByTestId(testIds.emails.bulkWizard.industryFilter),
+      "Strojírenství",
+    );
+    await screen.findByText(/ACME s\.r\.o\./);
+    expect(resolveBodies[1]).toMatchObject({ industry: "Strojírenství" });
+
+    // The owner select writes both fields: Nezabrané clears the owner id.
+    await user.selectOptions(screen.getByTestId(testIds.emails.bulkWizard.ownerFilter), "unowned");
+    await screen.findByText(/ACME s\.r\.o\./);
+    expect(resolveBodies[2]).toMatchObject({
+      unowned: true,
+      owner_user_id: null,
+      industry: "Strojírenství",
+    });
+  });
+
+  it("redirects the old /app/email-campaigns bookmark to Kampaně", async () => {
+    const routes = baseRoutes(VERIFIED_SMTP);
+    fetchMock.mockImplementation(async (input, init) => {
+      const r = routes(input as string, init);
+      if (r) return r;
+      throw new Error(`Unexpected fetch: ${String(input)}`);
+    });
+    renderAt("/app/email-campaigns");
+    expect(await screen.findByRole("heading", { level: 1, name: "Kampaně" })).toBeInTheDocument();
+  });
+
+  it("gates the Kampaně button behind verified SMTP too", async () => {
+    const routes = baseRoutes({ configured: false });
+    fetchMock.mockImplementation(async (input, init) => {
+      const r = routes(input as string, init);
+      if (r) return r;
+      throw new Error(`Unexpected fetch: ${String(input)}`);
+    });
+
+    const user = userEvent.setup();
+    renderAt("/app/emails");
+    await user.click(await screen.findByTestId(testIds.emails.campaigns.newButton));
+    expect(await screen.findByTestId(testIds.emails.campaigns.smtpPrompt)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /^Hromadný e-mail$/i })).toBeNull();
   });
 });

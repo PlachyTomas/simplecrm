@@ -90,7 +90,7 @@ function renderAt(path: string) {
   );
 }
 
-describe("Mail page", () => {
+describe("Kampaně page", () => {
   const fetchMock = vi.fn<typeof fetch>();
   const originalFetch = globalThis.fetch;
 
@@ -103,11 +103,14 @@ describe("Mail page", () => {
     globalThis.fetch = originalFetch;
   });
 
-  /** Shared route table; per-test rows via `mails`. */
-  function stubApi(mails: unknown[], detail?: unknown) {
+  /** Shared route table; per-test rows via `mails` (and campaigns for the first tab). */
+  function stubApi(mails: unknown[], detail?: unknown, campaigns: unknown[] = []) {
     fetchMock.mockImplementation(async (input) => {
       const url = typeof input === "string" ? input : (input as Request).url;
       if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME);
+      if (url.includes("/api/v1/me/smtp")) return jsonResponse({ configured: false });
+      if (url.includes("/api/v1/companies/bulk-email/campaigns"))
+        return jsonResponse(pageOf(campaigns));
       if (detail && /\/api\/v1\/emails\/[^?]+$/.test(url)) return jsonResponse(detail);
       if (url.includes("/api/v1/emails?")) return jsonResponse(pageOf(mails));
       if (url.includes("/api/v1/companies")) return jsonResponse(pageOf([]));
@@ -115,6 +118,36 @@ describe("Mail page", () => {
       throw new Error(`Unexpected fetch: ${url}`);
     });
   }
+
+  it("opens on the campaign list with the launch button, and the sent tab is one click away", async () => {
+    stubApi([makeMail()], undefined, [
+      {
+        id: "camp-1",
+        subject: "Podzimní akce",
+        from_email: "eva@demo.cz",
+        attachment_filename: null,
+        total: 3,
+        sent_count: 2,
+        failed_count: 1,
+        skipped_count: 0,
+        created_at: "2026-09-01T09:00:00+00:00",
+        opened_count: 0,
+        clicked_count: 0,
+        open_rate: 0,
+        click_rate: 0,
+      },
+    ]);
+    renderAt("/app/emails");
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Kampaně" })).toBeInTheDocument();
+    expect(screen.getByTestId(testIds.emails.campaigns.newButton)).toBeInTheDocument();
+    expect(await screen.findByText("Podzimní akce")).toBeInTheDocument();
+    // Individual mails live on the second tab.
+    expect(screen.queryByRole("button", { name: "Nabídka služeb" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId(testIds.emails.campaigns.tabSent));
+    expect(await screen.findByRole("button", { name: "Nabídka služeb" })).toBeInTheDocument();
+    expect(screen.getByTestId("location-probe")).toHaveTextContent("tab=sent");
+  });
 
   it("lists captured mail with direction badge and entity names", async () => {
     stubApi([
@@ -130,7 +163,7 @@ describe("Mail page", () => {
         deal_id: null,
       }),
     ]);
-    renderAt("/app/emails");
+    renderAt("/app/emails?tab=sent");
 
     expect(await screen.findByRole("button", { name: "Nabídka služeb" })).toBeInTheDocument();
     expect(screen.getByText("Acme s.r.o.")).toBeInTheDocument();
@@ -142,7 +175,7 @@ describe("Mail page", () => {
 
   it("maps the Nepřiřazené quick filter to unmatched=true", async () => {
     stubApi([makeMail()]);
-    renderAt("/app/emails");
+    renderAt("/app/emails?tab=sent");
     await screen.findByRole("button", { name: "Nabídka služeb" });
 
     await userEvent.selectOptions(screen.getByTestId(testIds.emails.mail.typeFilter), "unmatched");
@@ -159,7 +192,7 @@ describe("Mail page", () => {
   it("opens the detail modal with body and thread from a row's subject", async () => {
     const row = makeMail();
     stubApi([row], { ...row, thread: [row] });
-    renderAt("/app/emails");
+    renderAt("/app/emails?tab=sent");
 
     await userEvent.click(await screen.findByRole("button", { name: "Nabídka služeb" }));
     const dialog = await screen.findByTestId(testIds.emails.mail.detailDialog);
@@ -171,7 +204,7 @@ describe("Mail page", () => {
 
   it("marks rows mirrored from a bulk campaign and links them to the campaign history", async () => {
     stubApi([makeMail(), makeMail({ id: "e2", subject: "Podzimní akce", campaign_id: "camp-1" })]);
-    renderAt("/app/emails");
+    renderAt("/app/emails?tab=sent");
 
     await screen.findByRole("button", { name: "Podzimní akce" });
     expect(
@@ -179,7 +212,7 @@ describe("Mail page", () => {
     ).not.toBeInTheDocument();
     const badge = screen.getByTestId(testIds.emails.history.campaignBadge("e2"));
     expect(badge).toHaveTextContent("Hromadný e-mail");
-    expect(badge).toHaveAttribute("href", "/app/email-campaigns");
+    expect(badge).toHaveAttribute("href", "/app/emails");
   });
 
   it("offers Přiřadit only on unmatched rows and opens the link dialog", async () => {
@@ -196,7 +229,7 @@ describe("Mail page", () => {
         deal_name: null,
       }),
     ]);
-    renderAt("/app/emails");
+    renderAt("/app/emails?tab=sent");
     await screen.findByRole("button", { name: "Poptávka bez firmy" });
 
     // Matched row has no assign chip; unmatched does.
@@ -209,7 +242,7 @@ describe("Mail page", () => {
 
   it("declares itself a sent-mail overview — no received filter, no BCC help", async () => {
     stubApi([makeMail()]);
-    renderAt("/app/emails");
+    renderAt("/app/emails?tab=sent");
     await screen.findByRole("button", { name: "Nabídka služeb" });
 
     expect(
@@ -225,9 +258,19 @@ describe("Mail page", () => {
     expect(options.map((o) => (o as HTMLOptionElement).value)).toEqual(["", "sent", "unmatched"]);
   });
 
+  it("opens a pre-rename bookmark with list params on the sent tab", async () => {
+    stubApi([makeMail()]);
+    renderAt("/app/emails?company=co1");
+    expect(await screen.findByRole("button", { name: "Nabídka služeb" })).toBeInTheDocument();
+    expect(screen.getByTestId(testIds.emails.campaigns.tabSent)).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
   it("strips a stale type=received bookmark from the URL instead of carrying it", async () => {
     stubApi([makeMail()]);
-    renderAt("/app/emails?type=received");
+    renderAt("/app/emails?tab=sent&type=received");
     await screen.findByRole("button", { name: "Nabídka služeb" });
 
     const select = screen.getByTestId(testIds.emails.mail.typeFilter) as HTMLSelectElement;

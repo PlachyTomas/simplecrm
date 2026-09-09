@@ -171,7 +171,7 @@
     "companies": "Firmy",
     "contacts": "Kontakty",
     "deals": "Obchody",
-    "emails": "E-maily",
+    "emails": "Kampaně",
     "calendar": "Kalendář",
     "reports": "Reporty",
     "settings": "Nastavení",
@@ -250,8 +250,8 @@
           "body": "Při přidání firmy zadejte jen IČO — název, adresu i právní formu natáhneme z veřejného registru ARES."
         },
         "bulkEmail": {
-          "title": "Hromadný e-mail s poli",
-          "body": "Vyberte firmy a pošlete personalizovaný hromadný e-mail — pole jako {kontakt_jmeno} nebo {firma} doplníme za každého příjemce. Text vezmete z uložené šablony a výsledky rozeslání ukáže odkaz Historie."
+          "title": "Hromadný e-mail z tohoto výběru",
+          "body": "Vyfiltrujte firmy a tlačítkem Hromadný e-mail oslovíte přesně tento výběr — příjemce si ještě odškrtáte. Odeslané kampaně i s doručením najdete v Kampaních."
         },
         "ownership": {
           "title": "Firmy se v šuplíku neztrácejí",
@@ -287,13 +287,13 @@
         }
       },
       "emails": {
-        "filters": {
-          "title": "Nic se neztratí",
-          "body": "Pošta bez napárované firmy čeká pod filtrem Nepřiřazené. Filtry Firma a Obchod vyberou korespondenci k jednomu případu a hledání prochází i text zprávy a adresy."
+        "newCampaign": {
+          "title": "Hromadný e-mail s poli",
+          "body": "Tlačítkem Nový hromadný e-mail vyberete firmy podle vlastníka, oboru či města a pošlete personalizovaný e-mail — pole jako {kontakt_jmeno} nebo {firma} doplníme za každého příjemce. Text vezmete z uložené šablony a každé rozeslání zůstane v tomto seznamu i s doručením a otevřením po příjemcích."
         },
-        "tracking": {
+        "sentMail": {
           "title": "Víte, co si přečetli",
-          "body": "Přepněte filtr na Odeslané: u zpráv uvidíte štítky Otevřeno a Prokliknuto, a když doručení selže, štítek Chyba. Kliknutím na předmět otevřete celé vlákno."
+          "body": "Záložka Odeslané e-maily ukazuje každou zprávu zvlášť: štítky Otevřeno a Prokliknuto, při selhání doručení Chyba, filtry Firma a Obchod a hledání v textu i adresách. Kliknutím na předmět otevřete celé vlákno."
         }
       },
       "calendar": {
@@ -384,7 +384,7 @@
       "goCompanies": "Přejít na Firmy",
       "goContacts": "Přejít na Kontakty",
       "goDeals": "Přejít na Obchody",
-      "goEmails": "Přejít na E-maily",
+      "goEmails": "Přejít na Kampaně",
       "goCalendar": "Přejít na Kalendář",
       "goReports": "Přejít na Reporty",
       "goSettings": "Přejít do Nastavení"
