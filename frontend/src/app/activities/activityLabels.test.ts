@@ -68,6 +68,15 @@ describe("activityLabels", () => {
     ).toBeNull();
   });
 
+  it("reads the body of every hand-logged type from the shared `note` key", () => {
+    for (const type of ["manual_action", "note", "call_logged"] as const) {
+      expect(
+        activityDetail({ activity_type: type, payload: { note: "Domluveno na nabídce XY" } }),
+      ).toEqual({ kind: "text", value: "Domluveno na nabídce XY" });
+      expect(activityDetail({ activity_type: type, payload: {} })).toBeNull();
+    }
+  });
+
   it("returns null when there is no extra detail", () => {
     expect(activityDetail({ activity_type: "stage_change", payload: {} })).toBeNull();
     expect(activityDetail({ activity_type: "deal_updated", payload: { changed: [] } })).toBeNull();

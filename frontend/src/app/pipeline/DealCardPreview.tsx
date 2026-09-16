@@ -3,10 +3,15 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
-import { ACTIVITY_LABEL_KEY } from "@/app/activities/activityLabels";
+import {
+  ACTIVITY_LABEL_KEY,
+  activityDetail,
+  activityDetailText,
+} from "@/app/activities/activityLabels";
 import { useActivities } from "@/app/activities/useActivities";
 import { DEAL_TIMELINE_TYPES } from "@/app/deals/DealTimelineSection";
 import { useDeal } from "@/app/deals/useDeals";
+import { type EventLabelBrief, labelTint } from "@/app/events/useEventLabels";
 import { useEvents } from "@/app/events/useEvents";
 import { formatDate } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/useLocale";
@@ -157,8 +162,16 @@ export function useDealCardPreview(ref: React.RefObject<HTMLElement>) {
 
 interface PreviewRow {
   key: string;
+  /** Plain-text heading; replaced by the kind chip when `label` is set. */
   title: string;
+  label?: EventLabelBrief | null;
+  detail?: string;
   meta: string;
+}
+
+/** The card preview is a glance, not the timeline — one line per entry. */
+function firstLine(text: string): string {
+  return (text.split("\n").find((line) => line.trim() !== "") ?? "").trim();
 }
 
 /**
@@ -219,28 +232,30 @@ export function DealCardPreview({
       .filter((a) => a.activity_type === "note")
       .map((a) => {
         const payload = (a.payload ?? {}) as Record<string, unknown>;
-        const body = typeof payload.note === "string" ? payload.note : "";
-        // First line only — the card preview is a glance, not the timeline.
-        const firstLine = body.split("\n").find((line) => line.trim() !== "") ?? "";
         return {
           key: a.id,
-          title: firstLine.trim(),
+          title: firstLine(typeof payload.note === "string" ? payload.note : ""),
           meta: formatDate(a.created_at, locale, { dateStyle: "medium" }),
         };
       })
       .filter((row) => row.title !== "");
   }, [activitiesPage, locale]);
 
-  // Newest activity of any type — the endpoint returns them created_at desc,
+  // Newest activity of any type — the endpoint returns them occurred_at desc,
   // so `items[0]` is it. Answers "what last happened here" without opening
-  // the deal; the notes section below only ever shows note-type rows.
+  // the deal; the notes section below only ever shows note-type rows. Reads
+  // like the timeline row: the kind chip (or the type label when the entry
+  // has no kind), the body, and the user-chosen time.
   const lastAction = useMemo<PreviewRow | null>(() => {
     const latest = activitiesPage?.items?.[0];
     if (!latest) return null;
+    const detail = activityDetail(latest);
     return {
       key: latest.id,
       title: tCommon(ACTIVITY_LABEL_KEY[latest.activity_type]),
-      meta: formatDate(latest.created_at, locale, { dateStyle: "medium" }),
+      label: latest.label ?? null,
+      detail: detail ? firstLine(activityDetailText(detail, tCommon)) : undefined,
+      meta: formatDate(latest.occurred_at, locale, { dateStyle: "medium" }),
     };
   }, [activitiesPage, locale, tCommon]);
 
@@ -340,7 +355,24 @@ function PreviewSection({
       <ul className="mt-1 space-y-1">
         {visible.map((row) => (
           <li key={row.key}>
-            <span className="block truncate text-text-primary">{row.title}</span>
+            {row.label ? (
+              <span
+                className="inline-flex h-5 max-w-full items-center gap-1 rounded-full px-1.5 font-medium"
+                style={{ backgroundColor: labelTint(row.label.color), color: row.label.color }}
+              >
+                <span
+                  aria-hidden
+                  className="h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: row.label.color }}
+                />
+                <span className="min-w-0 truncate">{row.label.name}</span>
+              </span>
+            ) : (
+              <span className="block truncate text-text-primary">{row.title}</span>
+            )}
+            {row.detail ? (
+              <span className="block truncate text-text-primary">{row.detail}</span>
+            ) : null}
             <span className="block text-text-tertiary">{row.meta}</span>
           </li>
         ))}

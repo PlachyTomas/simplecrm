@@ -1,4 +1,3 @@
-import type { TFunction } from "i18next";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -6,9 +5,8 @@ import { useTranslation } from "react-i18next";
 import {
   ACTIVITY_LABEL_KEY,
   activityDetail,
-  type ActivityDetailValue,
+  activityDetailText,
   changeFieldLabelKey,
-  fieldLabelKey,
 } from "@/app/activities/activityLabels";
 import type { ActivityOut } from "@/app/activities/useActivities";
 import { formatDate } from "@/lib/format";
@@ -38,25 +36,6 @@ function formatDateTime(iso: string, locale: string): string {
   return Number.isNaN(d.getTime())
     ? iso
     : formatDate(d, locale, { dateStyle: "medium", timeStyle: "short" });
-}
-
-/** Turn a structured `ActivityDetailValue` into display text. */
-function renderDetail(detail: ActivityDetailValue, t: TFunction<"common">): string {
-  switch (detail.kind) {
-    case "text":
-      return detail.value;
-    case "stageChangeFromTo":
-      return t("activities.stageChangeFromTo", { from: detail.from, to: detail.to });
-    case "stageChangeTo":
-      return t("activities.stageChangeTo", { to: detail.to });
-    case "fieldsChanged":
-      return detail.fields
-        .map((field) => {
-          const key = fieldLabelKey(field);
-          return key ? t(key) : field;
-        })
-        .join(", ");
-  }
 }
 
 function DetailLine({ children }: { children: ReactNode }) {
@@ -137,7 +116,7 @@ function ActivityDetail({
         return <ChangesDetail entries={entries} entityType={activity.entity_type} />;
     }
     const legacy = activityDetail(activity);
-    return legacy ? <DetailLine>{renderDetail(legacy, t)}</DetailLine> : null;
+    return legacy ? <DetailLine>{activityDetailText(legacy, t)}</DetailLine> : null;
   }
 
   // Calendar events carry a title and an ISO start time.
@@ -149,7 +128,7 @@ function ActivityDetail({
   }
 
   const detail = activityDetail(activity);
-  return detail ? <DetailLine>{renderDetail(detail, t)}</DetailLine> : null;
+  return detail ? <DetailLine>{activityDetailText(detail, t)}</DetailLine> : null;
 }
 
 /**

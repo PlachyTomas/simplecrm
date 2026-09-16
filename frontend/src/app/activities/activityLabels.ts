@@ -1,4 +1,4 @@
-import type { ParseKeys } from "i18next";
+import type { ParseKeys, TFunction } from "i18next";
 
 import type { ActivityOut } from "@/app/activities/useActivities";
 import type { components } from "@/types/api.generated";
@@ -115,8 +115,8 @@ export function fieldLabelKey(field: string): CommonKey | null {
  * Structured detail drawn from the activity's payload (the deal name, the
  * event title, the changed fields…) for the rendering component to turn
  * into text. `null` when there's nothing extra to say. Kept key/data-only
- * (no translated strings) since this module has no `t()` of its own — the
- * component translates.
+ * (no translated strings) since this module has no `t()` of its own —
+ * {@link activityDetailText} translates with the caller's `t`.
  */
 export type ActivityDetailValue =
   | { kind: "text"; value: string }
@@ -130,13 +130,10 @@ export function activityDetail(
   const p = (a.payload ?? {}) as Record<string, unknown>;
   const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v : null);
   switch (a.activity_type) {
-    case "note": {
-      // Free-text note written from the pipeline card / deal detail.
-      const note = str(p.note);
-      return note ? { kind: "text", value: note } : null;
-    }
+    case "manual_action":
+    case "note":
     case "call_logged": {
-      // Optional summary — a call logged without one carries no detail line.
+      // The backend files the body of every hand-logged type under `note`.
       const note = str(p.note);
       return note ? { kind: "text", value: note } : null;
     }
@@ -174,5 +171,24 @@ export function activityDetail(
     }
     default:
       return null;
+  }
+}
+
+/** Turn a structured {@link ActivityDetailValue} into display text. */
+export function activityDetailText(detail: ActivityDetailValue, t: TFunction<"common">): string {
+  switch (detail.kind) {
+    case "text":
+      return detail.value;
+    case "stageChangeFromTo":
+      return t("activities.stageChangeFromTo", { from: detail.from, to: detail.to });
+    case "stageChangeTo":
+      return t("activities.stageChangeTo", { to: detail.to });
+    case "fieldsChanged":
+      return detail.fields
+        .map((field) => {
+          const key = fieldLabelKey(field);
+          return key ? t(key) : field;
+        })
+        .join(", ");
   }
 }
