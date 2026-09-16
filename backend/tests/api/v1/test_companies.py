@@ -272,6 +272,10 @@ async def test_list_companies_filters_by_owner_industry_city(
     by_industry = await client.get("/api/v1/companies?industry=IT", headers=_auth(admin))
     assert {c["name"] for c in by_industry.json()["items"]} == {"A", "B"}
 
+    # Substring, case- and diacritic-insensitive: "stav" finds "Stavebnictví".
+    by_industry_part = await client.get("/api/v1/companies?industry=stav", headers=_auth(admin))
+    assert {c["name"] for c in by_industry_part.json()["items"]} == {"C"}
+
     by_city = await client.get("/api/v1/companies?city=Praha", headers=_auth(admin))
     assert {c["name"] for c in by_city.json()["items"]} == {"A", "C"}
 

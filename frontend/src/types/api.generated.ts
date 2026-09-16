@@ -4637,7 +4637,10 @@ export interface components {
          *     owned companies in the caller's scope (enforced server-side).
          */
         BulkEmailFilters: {
-            /** Industry */
+            /**
+             * Industry
+             * @description Case- and diacritic-insensitive substring.
+             */
             industry?: string | null;
             /** City */
             city?: string | null;
@@ -4654,6 +4657,8 @@ export interface components {
             has_won_deal?: boolean | null;
             /** No Order Since Days */
             no_order_since_days?: number | null;
+            /** Company Ids */
+            company_ids?: string[] | null;
         };
         /** CalendarEventCreate */
         CalendarEventCreate: {
@@ -9835,7 +9840,7 @@ export interface operations {
                 ownership?: string | null;
                 /** @description Filter to companies owned by this specific user. */
                 owner_user_id?: string | null;
-                /** @description Exact industry match. */
+                /** @description Case- and diacritic-insensitive substring of the industry. */
                 industry?: string | null;
                 /** @description Exact registered-seat city match. */
                 city?: string | null;

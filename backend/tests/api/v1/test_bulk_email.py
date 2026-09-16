@@ -468,3 +468,57 @@ async def test_send_never_persists_a_foreign_company_id_on_a_skip_row(
     skipped = next(x for x in detail.json()["recipients"] if x["status"] == "skipped")
     assert skipped["company_id"] is None
     assert skipped["error"] == "not_allowed"
+
+
+async def test_recipients_industry_filter_is_a_folded_substring_match(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, sales = await _seed_user(db_session, owned_cleanup)
+    machines = Company(
+        organization_id=org.id,
+        name="Machines",
+        email="m@x.cz",
+        owner_user_id=sales.id,
+        industry="Strojírenství",
+    )
+    food = Company(
+        organization_id=org.id,
+        name="Food",
+        email="f@x.cz",
+        owner_user_id=sales.id,
+        industry="Potravinářství",
+    )
+    db_session.add_all([machines, food])
+    await db_session.commit()
+
+    r = await client.post(
+        "/api/v1/companies/bulk-email/recipients",
+        json={"industry": "stroji"},
+        headers=_auth(sales),
+    )
+    assert r.status_code == 200, r.text
+    assert {c["company_name"] for c in r.json()} == {"Machines"}
+
+
+async def test_recipients_by_company_ids_stay_in_scope_and_ignore_filters(
+    client: AsyncClient, db_session: AsyncSession, owned_cleanup: dict[str, list]
+) -> None:
+    org, sales = await _seed_user(db_session, owned_cleanup)
+    mine = Company(
+        organization_id=org.id,
+        name="Mine",
+        email="m@x.cz",
+        owner_user_id=sales.id,
+        industry="Strojírenství",
+    )
+    pool = Company(organization_id=org.id, name="Pool", email="p@x.cz", owner_user_id=None)
+    db_session.add_all([mine, pool])
+    await db_session.commit()
+
+    r = await client.post(
+        "/api/v1/companies/bulk-email/recipients",
+        json={"company_ids": [str(mine.id), str(pool.id)], "industry": "nesmysl"},
+        headers=_auth(sales),
+    )
+    assert r.status_code == 200, r.text
+    assert [c["company_name"] for c in r.json()] == ["Mine"]

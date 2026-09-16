@@ -45,7 +45,12 @@ export const testIds = {
   companies: {
     addButton: "companies-add-button",
     bulkEmailButton: "companies-bulk-email-button",
+    bulkContinue: "companies-bulk-continue",
+    selectPage: "companies-select-page",
+    selectRow: (id: string) => `companies-select-${id}`,
     ownerFilter: "companies-owner-filter",
+    industryFilter: "companies-industry-filter",
+    clearFilters: "companies-clear-filters",
     openDealsFilter: "companies-open-deals-filter",
     deleteButton: "companies-delete-button",
     contactRowView: (id: string) => `company-contact-view-${id}`,
@@ -226,6 +231,9 @@ export const testIds = {
       ownerFilter: "bulk-email-owner-filter",
       industryFilter: "bulk-email-industry-filter",
       cityFilter: "bulk-email-city-filter",
+      selectAll: "bulk-email-select-all",
+      recipientsTotal: "bulk-email-recipients-total",
+      companyCheckbox: (companyId: string) => `bulk-email-company-${companyId}`,
     },
     campaigns: {
       newButton: "campaigns-new-button",

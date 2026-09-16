@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -25,6 +25,25 @@ const ME_RESPONSE = {
 };
 
 const EMPTY_LIST = { items: [], total: 0, limit: 50, offset: 0 };
+
+const COMPANY_ROW = {
+  id: "c1",
+  organization_id: ME_RESPONSE.organization.id,
+  name: "ACME s.r.o.",
+  ico: "27082440",
+  dic: null,
+  address_street: null,
+  address_city: "Praha",
+  address_zip: null,
+  legal_form: null,
+  website: null,
+  note: null,
+  owner_user_id: null,
+  last_order_at: null,
+  ownership_expires_at: "2027-05-01T00:00:00+00:00",
+  created_at: "2026-04-15T08:00:00+00:00",
+  updated_at: "2026-04-15T08:00:00+00:00",
+};
 
 const VERIFIED_SMTP = {
   host: "mail.x.cz",
@@ -106,11 +125,13 @@ describe("Bulk email", () => {
     expect(screen.queryByRole("heading", { name: /^Hromadný e-mail$/i })).toBeNull();
   });
 
-  it("opens the wizard and advances past the recipient step when SMTP is verified", async () => {
+  it("picks companies on Firmy, then opens the wizard on exactly those, without filters", async () => {
     const routes = baseRoutes(VERIFIED_SMTP);
+    const resolveBodies: unknown[] = [];
     fetchMock.mockImplementation(async (input, init) => {
       const url = typeof input === "string" ? input : (input as Request).url;
       if (url.includes("/api/v1/companies/bulk-email/recipients")) {
+        resolveBodies.push(JSON.parse(String(init?.body ?? "{}")));
         return jsonResponse([
           {
             company_id: "c1",
@@ -120,15 +141,18 @@ describe("Bulk email", () => {
             emailable: true,
             skip_reason: null,
           },
-          {
-            company_id: "c2",
-            company_name: "NoEmail s.r.o.",
-            default_email: null,
-            contacts: [],
-            emailable: false,
-            skip_reason: "no_email",
-          },
         ]);
+      }
+      if (url.includes("/api/v1/companies?")) {
+        return jsonResponse({
+          items: [
+            { ...COMPANY_ROW, id: "c1", name: "ACME s.r.o." },
+            { ...COMPANY_ROW, id: "c2", name: "Jiná s.r.o." },
+          ],
+          total: 2,
+          limit: 25,
+          offset: 0,
+        });
       }
       const r = routes(url, init);
       if (r) return r;
@@ -138,21 +162,43 @@ describe("Bulk email", () => {
     const user = userEvent.setup();
     renderAt("/app/companies");
 
+    // Nothing floats until something is ticked.
     await user.click(await screen.findByRole("button", { name: /hromadný e-mail/i }));
-    // Wizard opens on the recipient step and auto-resolves from the Firmy filters.
+    expect(screen.queryByTestId(testIds.companies.bulkContinue)).toBeNull();
+    await user.click(await screen.findByTestId(testIds.companies.selectRow("c1")));
+    await user.click(screen.getByTestId(testIds.companies.bulkContinue));
+
     expect(await screen.findByRole("heading", { name: /^Hromadný e-mail$/i })).toBeInTheDocument();
+    await screen.findByRole("button", { name: /další \(1\)/i });
+    expect(resolveBodies[0]).toEqual({ unowned: false, company_ids: ["c1"] });
+    // Explicit picks: no filter row in the dialog.
+    expect(screen.queryByTestId(testIds.emails.bulkWizard.industryFilter)).toBeNull();
 
-    // Recipient step: matched company shown, skipped one greyed with reason.
-    expect(await screen.findByText(/ACME s\.r\.o\./)).toBeInTheDocument();
-    expect(screen.getByText(/bez e-mailu/i)).toBeInTheDocument();
-
-    // Default recipient pre-selected → "Další (1)" enabled.
-    const next = screen.getByRole("button", { name: /další \(1\)/i });
-    expect(next).toBeEnabled();
-    await user.click(next);
-
-    // Step 3: compose.
+    await user.click(screen.getByRole("button", { name: /další \(1\)/i }));
     expect(await screen.findByPlaceholderText(/nová nabídka pro/i)).toBeInTheDocument();
+  });
+
+  it("leaves selection mode and empties the basket on Zrušit výběr", async () => {
+    const routes = baseRoutes(VERIFIED_SMTP);
+    fetchMock.mockImplementation(async (input, init) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.includes("/api/v1/companies?")) {
+        return jsonResponse({ items: [COMPANY_ROW], total: 1, limit: 25, offset: 0 });
+      }
+      const r = routes(url, init);
+      if (r) return r;
+      throw new Error(`Unexpected fetch: ${String(input)}`);
+    });
+
+    const user = userEvent.setup();
+    renderAt("/app/companies");
+    await user.click(await screen.findByRole("button", { name: /hromadný e-mail/i }));
+    await user.click(await screen.findByTestId(testIds.companies.selectPage));
+    expect(screen.getByTestId(testIds.companies.bulkContinue)).toHaveTextContent("Pokračovat (1)");
+
+    await user.click(screen.getByRole("button", { name: /zrušit výběr/i }));
+    expect(screen.queryByTestId(testIds.companies.bulkContinue)).toBeNull();
+    expect(screen.queryByTestId(testIds.companies.selectPage)).toBeNull();
   });
 
   it("launches from Kampaně with its own recipient filters and re-resolves on change", async () => {
@@ -187,21 +233,80 @@ describe("Bulk email", () => {
     // Opened from Kampaně there is no list to inherit from: whole portfolio.
     expect(resolveBodies[0]).toEqual({ unowned: false });
 
-    await user.selectOptions(
-      screen.getByTestId(testIds.emails.bulkWizard.industryFilter),
-      "Strojírenství",
-    );
-    await screen.findByText(/ACME s\.r\.o\./);
-    expect(resolveBodies[1]).toMatchObject({ industry: "Strojírenství" });
+    // Obor is a free-text "contains" filter, re-resolved once typing pauses.
+    await user.type(screen.getByTestId(testIds.emails.bulkWizard.industryFilter), "stroj");
+    await waitFor(() => expect(resolveBodies).toHaveLength(2));
+    expect(resolveBodies[1]).toMatchObject({ industry: "stroj" });
 
     // The owner select writes both fields: Nezabrané clears the owner id.
     await user.selectOptions(screen.getByTestId(testIds.emails.bulkWizard.ownerFilter), "unowned");
-    await screen.findByText(/ACME s\.r\.o\./);
+    await waitFor(() => expect(resolveBodies).toHaveLength(3));
     expect(resolveBodies[2]).toMatchObject({
       unowned: true,
       owner_user_id: null,
-      industry: "Strojírenství",
+      industry: "stroj",
     });
+  });
+
+  it("preselects every contact address; header and row checkboxes toggle whole sets", async () => {
+    const routes = baseRoutes(VERIFIED_SMTP);
+    fetchMock.mockImplementation(async (input, init) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.includes("/api/v1/companies/bulk-email/recipients")) {
+        return jsonResponse([
+          {
+            company_id: "c1",
+            company_name: "ACME s.r.o.",
+            default_email: "info@acme.cz",
+            contacts: [
+              { id: "p1", first_name: "Jan", last_name: "Novák", email: "jan@acme.cz" },
+              { id: "p2", first_name: "Eva", last_name: "Malá", email: "eva@acme.cz" },
+            ],
+            emailable: true,
+            skip_reason: null,
+          },
+          {
+            company_id: "c2",
+            company_name: "Solo s.r.o.",
+            default_email: "solo@x.cz",
+            contacts: [],
+            emailable: true,
+            skip_reason: null,
+          },
+        ]);
+      }
+      const r = routes(url, init);
+      if (r) return r;
+      throw new Error(`Unexpected fetch: ${String(input)}`);
+    });
+
+    const user = userEvent.setup();
+    renderAt("/app/emails");
+    await user.click(await screen.findByTestId(testIds.emails.campaigns.newButton));
+    await screen.findByText(/ACME s\.r\.o\./);
+
+    // Contacts only for ACME (the generic info@ stays unticked), the lone
+    // company address for Solo: 3 of 4.
+    expect(screen.getByTestId(testIds.emails.bulkWizard.recipientsTotal)).toHaveTextContent(
+      "Vybráno 3 z 4 příjemců",
+    );
+    expect(screen.getByText("2 z 3 příjemců")).toBeInTheDocument();
+    expect(screen.getByText("1 příjemce")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /další \(3\)/i })).toBeEnabled();
+
+    // Partial → everything, everything → nothing.
+    const all = screen.getByTestId(testIds.emails.bulkWizard.selectAll) as HTMLInputElement;
+    expect(all.indeterminate).toBe(true);
+    await user.click(all);
+    expect(screen.getByRole("button", { name: /další \(4\)/i })).toBeEnabled();
+    expect(all.checked).toBe(true);
+    await user.click(all);
+    expect(screen.getByRole("button", { name: /další \(0\)/i })).toBeDisabled();
+
+    // A row checkbox ticks every address of that company.
+    await user.click(screen.getByTestId(testIds.emails.bulkWizard.companyCheckbox("c1")));
+    expect(screen.getByRole("button", { name: /další \(3\)/i })).toBeEnabled();
+    expect(screen.getByText("3 příjemci")).toBeInTheDocument();
   });
 
   it("redirects the old /app/email-campaigns bookmark to Kampaně", async () => {

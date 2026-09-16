@@ -183,6 +183,33 @@ describe("Companies screens", () => {
     );
   });
 
+  it("sends the typed Obor filter as a substring param once typing pauses", async () => {
+    fetchMock.mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith("/api/v1/auth/me")) return jsonResponse(ME_RESPONSE);
+      if (url.includes("/api/v1/companies?")) {
+        return jsonResponse({ items: [makeCompany()], total: 1, limit: 25, offset: 0 });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    renderAt("/app/companies", { token: "fake" });
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: /^firmy$/i })).toBeInTheDocument(),
+    );
+    const user = userEvent.setup();
+    await user.type(screen.getByTestId("companies-industry-filter"), "stav");
+
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([i]) => {
+          const u = typeof i === "string" ? i : (i as Request).url;
+          return u.includes("/api/v1/companies?") && u.includes("industry=stav");
+        }),
+      ).toBe(true),
+    );
+  });
+
   it("lets an admin delete a company from the detail page", async () => {
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     const company = makeCompany();

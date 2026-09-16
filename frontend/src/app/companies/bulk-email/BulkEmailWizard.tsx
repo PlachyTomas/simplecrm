@@ -1,9 +1,10 @@
-import type { ParseKeys, TFunction } from "i18next";
+import type { ParseKeys } from "i18next";
 import { ChevronDown, ChevronRight, Mail, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { defaultEmails, emailOptions } from "@/app/companies/bulk-email/recipientSelection";
 import {
   type BulkEmailFilters,
   type CampaignOut,
@@ -14,44 +15,14 @@ import {
 import { useCompanyFilterOptions } from "@/app/companies/useCompanies";
 import { EmailTemplatePicker, MergeFieldHint } from "@/app/emails/EmailTemplatePicker";
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
+import { checkState, TriStateCheckbox } from "@/components/ui/tri-state-checkbox";
 import { testIds } from "@/lib/testids";
 import { ApiError } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
-interface EmailOption {
-  email: string;
-  label: string;
-  contactId: string | null;
-}
-
-/** Build the selectable address list for a company: its default address
- * first (a contact's name when it maps to one, else a generic company-email
- * label), then any remaining contacts that have an email. */
-function emailOptions(c: RecipientCandidate, t: TFunction<"emails">): EmailOption[] {
-  const out: EmailOption[] = [];
-  const seen = new Set<string>();
-  const contactByEmail = new Map<string, RecipientCandidate["contacts"][number]>();
-  for (const ct of c.contacts) {
-    if (ct.email) contactByEmail.set(ct.email.toLowerCase(), ct);
-  }
-  if (c.default_email) {
-    const ct = contactByEmail.get(c.default_email.toLowerCase());
-    out.push({
-      email: c.default_email,
-      label: ct ? `${ct.first_name} ${ct.last_name}` : t("wizard.defaultEmailLabel"),
-      contactId: ct?.id ?? null,
-    });
-    seen.add(c.default_email.toLowerCase());
-  }
-  for (const ct of c.contacts) {
-    if (ct.email && !seen.has(ct.email.toLowerCase())) {
-      out.push({ email: ct.email, label: `${ct.first_name} ${ct.last_name}`, contactId: ct.id });
-      seen.add(ct.email.toLowerCase());
-    }
-  }
-  return out;
-}
+/** Typing pause before the Obor filter re-resolves the company list. */
+const INDUSTRY_DEBOUNCE_MS = 300;
 
 const inputClass =
   "mt-1 block w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:border-accent focus:outline-none";
@@ -69,23 +40,38 @@ const SKIP_LABEL_KEY: Record<string, ParseKeys<"emails">> = {
 export function BulkEmailWizard({
   open,
   onClose,
+  onSent,
   initialFilters = NO_FILTERS,
+  companyIds,
 }: {
   open: boolean;
   onClose: () => void;
+  /** Fires once a campaign went out, before the result screen closes. */
+  onSent?: (campaign: CampaignOut) => void;
   /** Pre-seeded targeting; the recipient step lets the user change it. */
   initialFilters?: BulkEmailFilters;
+  /** Hand-picked companies (Firmy selection). The recipient step then lists
+   *  exactly these and shows no filters. */
+  companyIds?: string[];
 }) {
   const { t } = useTranslation("emails");
   const toast = useToast();
   const navigate = useNavigate();
   const { data: usersPage } = useOrgUsers();
   const { data: filterOptions } = useCompanyFilterOptions();
-  const resolve = useResolveRecipients();
+  const { mutate: resolveMutate, isPending: resolvePending } = useResolveRecipients();
   const send = useSendBulkEmail();
+  const industryListId = useId();
+
+  const seedFilters = useMemo<BulkEmailFilters>(
+    () => (companyIds ? { unowned: false, company_ids: companyIds } : initialFilters),
+    [companyIds, initialFilters],
+  );
+  const showFilters = companyIds === undefined;
 
   const [step, setStep] = useState(1);
-  const [filters, setFilters] = useState<BulkEmailFilters>(initialFilters);
+  const [filters, setFilters] = useState<BulkEmailFilters>(seedFilters);
+  const [industryQuery, setIndustryQuery] = useState(seedFilters.industry ?? "");
   const [candidates, setCandidates] = useState<RecipientCandidate[] | null>(null);
   const [selected, setSelected] = useState<Record<string, string[]>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -96,24 +82,33 @@ export function BulkEmailWizard({
   const [dealTitle, setDealTitle] = useState("");
   const [result, setResult] = useState<CampaignOut | null>(null);
 
-  // Resolving picks every emailable company's default address by default.
-  const resolveWith = (next: BulkEmailFilters) => {
-    setFilters(next);
-    setCandidates(null);
-    setSelected({});
-    setExpanded(new Set());
-    resolve.mutate(next, {
-      onSuccess: (cands) => {
-        setCandidates(cands);
-        const initial: Record<string, string[]> = {};
-        for (const c of cands) {
-          if (c.emailable && c.default_email) initial[c.company_id] = [c.default_email];
-        }
-        setSelected(initial);
-      },
-      onError: () => toast.error(t("wizard.loadRecipientsError")),
-    });
-  };
+  const companyEmailLabel = t("wizard.defaultEmailLabel");
+  const optionsFor = (c: RecipientCandidate) => emailOptions(c, companyEmailLabel);
+
+  // Resolving preselects every emailable company's recipients (see
+  // `defaultEmails`); the list is then trimmed by hand.
+  const resolveWith = useCallback(
+    (next: BulkEmailFilters) => {
+      setFilters(next);
+      setCandidates(null);
+      setSelected({});
+      setExpanded(new Set());
+      resolveMutate(next, {
+        onSuccess: (cands) => {
+          setCandidates(cands);
+          const initial: Record<string, string[]> = {};
+          for (const c of cands) {
+            if (c.emailable) {
+              initial[c.company_id] = defaultEmails(emailOptions(c, companyEmailLabel));
+            }
+          }
+          setSelected(initial);
+        },
+        onError: () => toast.error(t("wizard.loadRecipientsError")),
+      });
+    },
+    [companyEmailLabel, resolveMutate, t, toast],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -124,9 +119,21 @@ export function BulkEmailWizard({
     setCreateDeals(false);
     setDealTitle("");
     setResult(null);
-    resolveWith(initialFilters);
+    setIndustryQuery(seedFilters.industry ?? "");
+    resolveWith(seedFilters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Obor is typed, not picked: re-resolve once the typing pauses.
+  useEffect(() => {
+    const next = industryQuery.trim() || null;
+    if (next === (filters.industry ?? null)) return;
+    const id = window.setTimeout(
+      () => resolveWith({ ...filters, industry: next }),
+      INDUSTRY_DEBOUNCE_MS,
+    );
+    return () => window.clearTimeout(id);
+  }, [industryQuery, filters, resolveWith]);
 
   useEffect(() => {
     if (!open) return;
@@ -144,14 +151,19 @@ export function BulkEmailWizard({
 
   if (!open) return null;
 
-  const selectAllCompanies = () => {
+  const emailable = (candidates ?? []).filter((c) => c.emailable);
+  const totalAvailable = emailable.reduce((n, c) => n + optionsFor(c).length, 0);
+
+  const setAllSelected = (on: boolean) => {
     const next: Record<string, string[]> = {};
-    for (const c of candidates ?? []) {
-      if (c.emailable && c.default_email) next[c.company_id] = [c.default_email];
-    }
+    if (on) for (const c of emailable) next[c.company_id] = optionsFor(c).map((o) => o.email);
     setSelected(next);
   };
-  const selectNoCompanies = () => setSelected({});
+  const setCompanySelected = (c: RecipientCandidate, on: boolean) =>
+    setSelected((prev) => ({
+      ...prev,
+      [c.company_id]: on ? optionsFor(c).map((o) => o.email) : [],
+    }));
 
   const usersById = new Map((usersPage?.items ?? []).map((u) => [u.id, u.name] as const));
   const ownerValue = filters.unowned ? "unowned" : (filters.owner_user_id ?? "all");
@@ -187,7 +199,7 @@ export function BulkEmailWizard({
       .filter(([, emails]) => emails.length > 0)
       .map(([companyId, emails]) => {
         const cand = candidateById.get(companyId);
-        const opts = cand ? emailOptions(cand, t) : [];
+        const opts = cand ? optionsFor(cand) : [];
         const firstContact = opts.find((o) => o.email === emails[0])?.contactId ?? null;
         return { company_id: companyId, emails, contact_id: firstContact };
       });
@@ -204,7 +216,10 @@ export function BulkEmailWizard({
         attachment,
       },
       {
-        onSuccess: (campaign) => setResult(campaign),
+        onSuccess: (campaign) => {
+          setResult(campaign);
+          onSent?.(campaign);
+        },
         onError: (err) =>
           toast.error(
             err instanceof ApiError && err.status === 422
@@ -214,8 +229,6 @@ export function BulkEmailWizard({
       },
     );
   };
-
-  const emailableCount = (candidates ?? []).filter((c) => c.emailable).length;
 
   return (
     <div
@@ -274,7 +287,7 @@ export function BulkEmailWizard({
             <div className="flex-1 overflow-y-auto px-5 py-4">
               {step === 1 ? (
                 <div className="space-y-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                  {showFilters ? (
                     <div className="flex flex-wrap items-center gap-2">
                       <select
                         aria-label={t("wizard.filterOwnerLabel")}
@@ -291,22 +304,21 @@ export function BulkEmailWizard({
                         ))}
                         <option value="unowned">{t("wizard.filterUnowned")}</option>
                       </select>
-                      <select
+                      <input
+                        type="text"
+                        list={industryListId}
                         aria-label={t("wizard.filterIndustryLabel")}
+                        placeholder={t("wizard.filterIndustryPlaceholder")}
                         data-testid={testIds.emails.bulkWizard.industryFilter}
-                        value={filters.industry ?? ""}
-                        onChange={(e) =>
-                          resolveWith({ ...filters, industry: e.target.value || null })
-                        }
-                        className={filterSelectClass}
-                      >
-                        <option value="">{t("wizard.filterIndustryAll")}</option>
+                        value={industryQuery}
+                        onChange={(e) => setIndustryQuery(e.target.value)}
+                        className={cn(filterSelectClass, "w-40 placeholder:font-normal")}
+                      />
+                      <datalist id={industryListId}>
                         {(filterOptions?.industries ?? []).map((i) => (
-                          <option key={i} value={i}>
-                            {i}
-                          </option>
+                          <option key={i} value={i} />
                         ))}
-                      </select>
+                      </datalist>
                       <select
                         aria-label={t("wizard.filterCityLabel")}
                         data-testid={testIds.emails.bulkWizard.cityFilter}
@@ -322,27 +334,24 @@ export function BulkEmailWizard({
                         ))}
                       </select>
                     </div>
-                    {(candidates ?? []).some((c) => c.emailable) ? (
-                      <div className="flex items-center gap-2 text-xs">
-                        <button
-                          type="button"
-                          onClick={selectAllCompanies}
-                          className="text-accent hover:text-accent-hover"
-                        >
-                          {t("wizard.selectAll")}
-                        </button>
-                        <span className="text-text-tertiary">·</span>
-                        <button
-                          type="button"
-                          onClick={selectNoCompanies}
-                          className="text-text-secondary hover:text-text-primary"
-                        >
-                          {t("wizard.selectNone")}
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                  {resolve.isPending ? (
+                  ) : null}
+                  {emailable.length > 0 ? (
+                    <label className="flex items-center gap-2 rounded-md border border-border-subtle bg-surface-overlay px-3 py-2 text-xs font-medium text-text-secondary">
+                      <TriStateCheckbox
+                        state={checkState(totalSelected, totalAvailable)}
+                        onChange={setAllSelected}
+                        ariaLabel={t("wizard.selectAllRecipients")}
+                        testId={testIds.emails.bulkWizard.selectAll}
+                      />
+                      <span data-testid={testIds.emails.bulkWizard.recipientsTotal}>
+                        {t("wizard.recipientsTotal", {
+                          selected: totalSelected,
+                          total: totalAvailable,
+                        })}
+                      </span>
+                    </label>
+                  ) : null}
+                  {resolvePending ? (
                     <p className="py-8 text-center text-sm text-text-tertiary">
                       {t("wizard.loadingCompanies")}
                     </p>
@@ -353,7 +362,7 @@ export function BulkEmailWizard({
                     </p>
                   ) : null}
                   {(candidates ?? []).map((c) => {
-                    const opts = emailOptions(c, t);
+                    const opts = optionsFor(c);
                     const chosen = selected[c.company_id] ?? [];
                     return (
                       <div
@@ -366,22 +375,38 @@ export function BulkEmailWizard({
                         )}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-text-primary">
-                              {c.company_name}
-                            </p>
-                            {c.emailable ? (
-                              <p className="text-xs text-text-tertiary">
-                                {t("wizard.addressesSelected", { count: chosen.length })}
+                          <div className="flex min-w-0 items-center gap-2">
+                            <TriStateCheckbox
+                              state={c.emailable ? checkState(chosen.length, opts.length) : "none"}
+                              disabled={!c.emailable}
+                              onChange={(on) => setCompanySelected(c, on)}
+                              ariaLabel={t("wizard.selectCompanyRecipients", {
+                                name: c.company_name,
+                              })}
+                              testId={testIds.emails.bulkWizard.companyCheckbox(c.company_id)}
+                            />
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-text-primary">
+                                {c.company_name}
                               </p>
-                            ) : (
-                              <p className="text-xs text-warning">
-                                {t("wizard.skippedPrefix")}{" "}
-                                {c.skip_reason && c.skip_reason in SKIP_LABEL_KEY
-                                  ? t(SKIP_LABEL_KEY[c.skip_reason]!)
-                                  : c.skip_reason}
-                              </p>
-                            )}
+                              {c.emailable ? (
+                                <p className="text-xs text-text-tertiary">
+                                  {chosen.length === opts.length
+                                    ? t("wizard.recipientsAll", { count: opts.length })
+                                    : t("wizard.recipientsPartial", {
+                                        selected: chosen.length,
+                                        total: opts.length,
+                                      })}
+                                </p>
+                              ) : (
+                                <p className="text-xs text-warning">
+                                  {t("wizard.skippedPrefix")}{" "}
+                                  {c.skip_reason && c.skip_reason in SKIP_LABEL_KEY
+                                    ? t(SKIP_LABEL_KEY[c.skip_reason]!)
+                                    : c.skip_reason}
+                                </p>
+                              )}
+                            </div>
                           </div>
                           {c.emailable && opts.length > 0 ? (
                             <button
@@ -543,7 +568,7 @@ export function BulkEmailWizard({
                 </button>
               )}
             </footer>
-            {step === 1 && emailableCount === 0 && candidates ? (
+            {step === 1 && emailable.length === 0 && candidates ? (
               <p className="px-5 pb-3 text-xs text-text-tertiary">
                 {t("wizard.noEmailableCompanies")}
               </p>

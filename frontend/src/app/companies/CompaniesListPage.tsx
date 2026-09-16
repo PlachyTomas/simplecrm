@@ -11,23 +11,23 @@ import {
   ArrowUp,
   ArrowUpDown,
   Building2,
+  Check,
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
+  FilterX,
   LayoutGrid,
   Mail,
   Plus,
   Search,
   Table2,
-  X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { AddCompanyModal } from "@/app/companies/AddCompanyModal";
 import { BulkEmailWizard } from "@/app/companies/bulk-email/BulkEmailWizard";
-import { type BulkEmailFilters } from "@/app/companies/bulk-email/useBulkEmail";
 import { OwnershipBadge } from "@/app/companies/OwnershipBadge";
 import {
   type CompanyOut,
@@ -40,6 +40,8 @@ import { isSmtpVerified, useSmtpSettings } from "@/app/settings/useSmtpSettings"
 import { useOrgUsers } from "@/app/settings/useUsersTeams";
 import { useCurrentUser } from "@/auth/useCurrentUser";
 import { EmptyState } from "@/components/ui/empty-state";
+import { TooltipIconButton } from "@/components/ui/tooltip-icon-button";
+import { checkState, TriStateCheckbox } from "@/components/ui/tri-state-checkbox";
 import { externalLinkProps } from "@/lib/externalLink";
 import { testIds } from "@/lib/testids";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
@@ -104,7 +106,15 @@ export function CompaniesListPage() {
   ];
   const [searchInput, setSearchInput] = useState(() => searchParams.get("q") ?? "");
   const debouncedSearch = useDebouncedValue(searchInput, 300);
+  const [industryInput, setIndustryInput] = useState(() => searchParams.get("industry") ?? "");
+  const debouncedIndustry = useDebouncedValue(industryInput, 300);
+  const industryListId = useId();
   const [viewMode, setViewMode] = useState<ViewMode>(readStoredViewMode);
+  // Bulk e-mail selection: a basket of company ids that survives paging,
+  // sorting and filter changes, so one campaign can be assembled across
+  // several searches. Page state only — leaving Firmy drops it.
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   // Immutably patch the query string. Changing any filter resets pagination
   // unless the page itself is being set. Empty / default values drop the param
@@ -135,6 +145,13 @@ export function CompaniesListPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch]);
 
+  // Same for the typed Obor filter.
+  useEffect(() => {
+    if ((searchParams.get("industry") ?? "") === debouncedIndustry) return;
+    patchParams({ industry: debouncedIndustry || null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedIndustry]);
+
   const setPage = (updater: number | ((p: number) => number)) => {
     const nextPage = typeof updater === "function" ? updater(page) : updater;
     patchParams({ page: nextPage > 0 ? String(nextPage) : null }, false);
@@ -142,10 +159,16 @@ export function CompaniesListPage() {
 
   const clearFilters = () => {
     setSearchInput("");
+    setIndustryInput("");
     patchParams({ owner: null, industry: null, city: null, q: null, openDeals: null });
   };
   const hasActiveFilters =
-    ownerFilter !== "all" || industry !== "" || city !== "" || openDeals || searchInput !== "";
+    ownerFilter !== "all" ||
+    industry !== "" ||
+    industryInput !== "" ||
+    city !== "" ||
+    openDeals ||
+    searchInput !== "";
 
   useEffect(() => {
     try {
@@ -180,14 +203,25 @@ export function CompaniesListPage() {
   const smtpReady = isSmtpVerified(smtp);
 
   const ownerUserId = ownerFilter !== "all" && ownerFilter !== "unowned" ? ownerFilter : undefined;
-  // The wizard opens targeting exactly what the list shows.
-  const bulkFilters: BulkEmailFilters = {
-    owner_user_id: ownerUserId ?? null,
-    unowned: ownerFilter === "unowned",
-    industry: industry || null,
-    city: city || null,
+
+  const exitSelection = () => {
+    setSelecting(false);
+    setSelectedIds(new Set());
   };
-  const onBulkClick = () => (smtpReady ? setBulkOpen(true) : setSmtpPromptOpen(true));
+  // "Hromadný e-mail" toggles selection mode; the wizard itself opens from
+  // the floating "Pokračovat" button once something is ticked.
+  const onBulkClick = () => {
+    if (!smtpReady) setSmtpPromptOpen(true);
+    else if (selecting) exitSelection();
+    else setSelecting(true);
+  };
+  const toggleSelected = (id: string) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   // Translate the React Table sort state into the backend's sort/order
   // params. We always carry a single sort spec (multi-column server sort
   // isn't supported and the UI never produces it).
@@ -229,6 +263,19 @@ export function CompaniesListPage() {
     }
     return map;
   }, [usersPage]);
+
+  const pageIds = (companies?.items ?? []).map((c) => c.id);
+  const pageSelectedCount = pageIds.filter((id) => selectedIds.has(id)).length;
+  const setPageSelected = (on: boolean) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of pageIds) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  const selectedList = useMemo(() => [...selectedIds], [selectedIds]);
 
   const columns = useMemo(() => {
     const helper = createColumnHelper<CompanyOut>();
@@ -565,10 +612,17 @@ export function CompaniesListPage() {
           <button
             type="button"
             onClick={onBulkClick}
+            aria-pressed={selecting}
             data-testid={testIds.companies.bulkEmailButton}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface-overlay px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:text-text-primary"
+            className={cn(
+              "inline-flex h-10 items-center justify-center gap-2 rounded-md border px-4 text-sm font-medium transition-colors duration-fast",
+              selecting
+                ? "border-accent bg-accent-subtle text-accent"
+                : "border-border bg-surface-overlay text-text-secondary hover:text-text-primary",
+            )}
           >
-            <Mail size={16} strokeWidth={1.75} /> {t("companiesList.bulkEmailButton")}
+            <Mail size={16} strokeWidth={1.75} />{" "}
+            {selecting ? t("companiesList.bulkEmailCancel") : t("companiesList.bulkEmailButton")}
           </button>
           <button
             type="button"
@@ -614,19 +668,24 @@ export function CompaniesListPage() {
             ))}
             <option value="unowned">{t("companiesList.unowned")}</option>
           </select>
-          <select
+          <input
+            type="text"
+            list={industryListId}
             aria-label={t("companiesList.industryFilterLabel")}
-            value={industry}
-            onChange={(e) => patchParams({ industry: e.target.value })}
-            className={FILTER_SELECT_CLASS}
-          >
-            <option value="">{t("companiesList.industryAll")}</option>
+            placeholder={t("companiesList.industryFilterPlaceholder")}
+            data-testid={testIds.companies.industryFilter}
+            value={industryInput}
+            onChange={(e) => setIndustryInput(e.target.value)}
+            className={cn(
+              FILTER_SELECT_CLASS,
+              "w-40 placeholder:font-normal placeholder:text-text-placeholder",
+            )}
+          />
+          <datalist id={industryListId}>
             {(filterOptions?.industries ?? []).map((i) => (
-              <option key={i} value={i}>
-                {i}
-              </option>
+              <option key={i} value={i} />
             ))}
-          </select>
+          </datalist>
           <select
             aria-label={t("companiesList.cityFilterLabel")}
             value={city}
@@ -656,13 +715,13 @@ export function CompaniesListPage() {
             {t("companiesList.openDealsFilter")}
           </button>
           {hasActiveFilters ? (
-            <button
-              type="button"
+            <TooltipIconButton
+              label={t("companiesList.clearFilters")}
               onClick={clearFilters}
-              className="inline-flex h-9 items-center gap-1 rounded-md px-2 text-xs font-medium text-text-secondary hover:text-text-primary"
+              testId={testIds.companies.clearFilters}
             >
-              <X size={14} strokeWidth={1.75} aria-hidden /> {t("companiesList.clearFilters")}
-            </button>
+              <FilterX size={16} strokeWidth={1.75} aria-hidden />
+            </TooltipIconButton>
           ) : null}
         </div>
         <div
@@ -745,14 +804,40 @@ export function CompaniesListPage() {
               const company = row.original;
               return (
                 <li key={row.id}>
+                  {/* In selection mode the whole card is the toggle (a real
+                      checkbox can't nest inside a button), so the box is
+                      decorative and the state lives on aria-pressed. */}
                   <button
                     type="button"
-                    onClick={() => openCompany(company.id)}
-                    className="flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors duration-fast hover:bg-surface-overlay"
+                    onClick={() =>
+                      selecting ? toggleSelected(company.id) : openCompany(company.id)
+                    }
+                    aria-pressed={selecting ? selectedIds.has(company.id) : undefined}
+                    className={cn(
+                      "flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors duration-fast hover:bg-surface-overlay",
+                      selecting && selectedIds.has(company.id) && "bg-accent-subtle",
+                    )}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-medium text-text-primary">
-                        {company.name}
+                      <span className="flex min-w-0 items-center gap-2">
+                        {selecting ? (
+                          <span
+                            aria-hidden
+                            className={cn(
+                              "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                              selectedIds.has(company.id)
+                                ? "border-accent bg-accent text-text-on-accent"
+                                : "border-border-strong bg-surface",
+                            )}
+                          >
+                            {selectedIds.has(company.id) ? (
+                              <Check size={12} strokeWidth={2.5} />
+                            ) : null}
+                          </span>
+                        ) : null}
+                        <span className="truncate text-sm font-medium text-text-primary">
+                          {company.name}
+                        </span>
                       </span>
                       <OwnershipBadge
                         ownershipExpiresAt={company.ownership_expires_at}
@@ -782,6 +867,19 @@ export function CompaniesListPage() {
               <thead>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
+                    {selecting ? (
+                      <th
+                        scope="col"
+                        className={cn("w-8", viewMode === "table" ? "px-2 py-1.5" : "px-4 py-3")}
+                      >
+                        <TriStateCheckbox
+                          state={checkState(pageSelectedCount, pageIds.length)}
+                          onChange={setPageSelected}
+                          ariaLabel={t("companiesList.selectPageLabel")}
+                          testId={testIds.companies.selectPage}
+                        />
+                      </th>
+                    ) : null}
                     {headerGroup.headers.map((header) => {
                       const sortState = header.column.getIsSorted();
                       const canSort = header.column.getCanSort();
@@ -840,9 +938,27 @@ export function CompaniesListPage() {
                 {table.getRowModel().rows.map((row) => (
                   <tr
                     key={row.id}
-                    onClick={() => openCompany(row.original.id)}
-                    className="cursor-pointer transition-colors duration-fast hover:bg-surface-overlay"
+                    onClick={() =>
+                      selecting ? toggleSelected(row.original.id) : openCompany(row.original.id)
+                    }
+                    data-selected={selecting && selectedIds.has(row.original.id) ? "" : undefined}
+                    className={cn(
+                      "cursor-pointer transition-colors duration-fast hover:bg-surface-overlay",
+                      selecting && selectedIds.has(row.original.id) && "bg-accent-subtle",
+                    )}
                   >
+                    {selecting ? (
+                      <td className={viewMode === "table" ? "px-2 py-1.5" : "px-4 py-3"}>
+                        <TriStateCheckbox
+                          state={selectedIds.has(row.original.id) ? "all" : "none"}
+                          onChange={() => toggleSelected(row.original.id)}
+                          ariaLabel={t("companiesList.selectRowLabel", {
+                            name: row.original.name,
+                          })}
+                          testId={testIds.companies.selectRow(row.original.id)}
+                        />
+                      </td>
+                    ) : null}
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
@@ -897,10 +1013,31 @@ export function CompaniesListPage() {
         onCreated={handleCreated}
       />
 
+      {selecting && selectedIds.size > 0 ? (
+        // Above the mobile tab bar on phones; the halo is the "pulse" and
+        // stays still for users who asked for reduced motion.
+        <div className="fixed bottom-20 left-1/2 z-40 -translate-x-1/2 md:bottom-6">
+          <span
+            aria-hidden
+            className="absolute inset-0 rounded-full bg-accent opacity-30 motion-safe:animate-ping"
+          />
+          <button
+            type="button"
+            onClick={() => setBulkOpen(true)}
+            data-testid={testIds.companies.bulkContinue}
+            className="relative inline-flex h-12 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-text-on-accent shadow-lg transition-colors duration-fast hover:bg-accent-hover"
+          >
+            <Mail size={16} strokeWidth={1.75} aria-hidden />{" "}
+            {t("companiesList.bulkContinue", { count: selectedIds.size })}
+          </button>
+        </div>
+      ) : null}
+
       <BulkEmailWizard
         open={bulkOpen}
         onClose={() => setBulkOpen(false)}
-        initialFilters={bulkFilters}
+        companyIds={selectedList}
+        onSent={exitSelection}
       />
       <SmtpPrompt open={smtpPromptOpen} onClose={() => setSmtpPromptOpen(false)} />
     </div>

@@ -258,7 +258,11 @@ async def list_companies(
     owner_user_id: uuid.UUID | None = Query(
         default=None, description="Filter to companies owned by this specific user."
     ),
-    industry: str | None = Query(default=None, max_length=120, description="Exact industry match."),
+    industry: str | None = Query(
+        default=None,
+        max_length=120,
+        description="Case- and diacritic-insensitive substring of the industry.",
+    ),
     city: str | None = Query(
         default=None, max_length=120, description="Exact registered-seat city match."
     ),
@@ -296,7 +300,7 @@ async def list_companies(
     if owner_user_id is not None:
         base = base.where(Company.owner_user_id == owner_user_id)
     if industry:
-        base = base.where(Company.industry == industry)
+        base = base.where(folded_ilike_contains(Company.industry, industry))
     if city:
         base = base.where(Company.address_city == city)
     if has_open_deals:

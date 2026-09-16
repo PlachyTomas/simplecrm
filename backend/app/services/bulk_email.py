@@ -50,6 +50,7 @@ from app.db.models import (
     UserRole,
     UserSmtpSettings,
 )
+from app.db.search import folded_ilike_contains
 from app.schemas.bulk_email import (
     MAX_RECIPIENTS,
     BulkEmailFilters,
@@ -204,7 +205,7 @@ async def _owned_companies_query(
 
     if filters is not None:
         if filters.industry:
-            base = base.where(Company.industry == filters.industry)
+            base = base.where(folded_ilike_contains(Company.industry, filters.industry))
         if filters.city:
             base = base.where(Company.address_city == filters.city)
         if filters.stage_id is not None:
@@ -233,7 +234,11 @@ async def resolve_recipients(
     session: AsyncSession, user: User, filters: BulkEmailFilters
 ) -> list[RecipientCandidate]:
     org_id = cast(uuid.UUID, user.organization_id)  # guaranteed by require_org_membership
-    stmt = await _owned_companies_query(session, user, filters=filters)
+    stmt = (
+        await _owned_companies_query(session, user, only_ids=filters.company_ids)
+        if filters.company_ids is not None
+        else await _owned_companies_query(session, user, filters=filters)
+    )
     companies = list((await session.execute(stmt.order_by(Company.name))).scalars().all())
     contacts = await _contacts_by_company(session, [c.id for c in companies])
     blocked = await _blocked_icos(session, org_id)

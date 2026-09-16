@@ -19,7 +19,9 @@ class BulkEmailFilters(BaseModel):
     """Filter criteria for choosing target companies. Always restricted to
     owned companies in the caller's scope (enforced server-side)."""
 
-    industry: str | None = Field(default=None, max_length=120)
+    industry: str | None = Field(
+        default=None, max_length=120, description="Case- and diacritic-insensitive substring."
+    )
     city: str | None = Field(default=None, max_length=120)
     # Managers/admins may target a specific owner; ignored (forced to self)
     # for salespeople.
@@ -33,6 +35,9 @@ class BulkEmailFilters(BaseModel):
     has_won_deal: bool | None = None
     # Company's last order is older than N days (or it never ordered).
     no_order_since_days: int | None = Field(default=None, ge=1, le=3650)
+    # Hand-picked on the Firmy list. When set, the criteria above are ignored:
+    # the caller already chose the companies; only visibility scope applies.
+    company_ids: list[uuid.UUID] | None = Field(default=None, max_length=MAX_RECIPIENTS)
 
 
 class RecipientCandidate(BaseModel):
