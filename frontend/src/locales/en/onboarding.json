@@ -58,8 +58,7 @@
     "errors": {
       "nameRequired": "Enter the organization name.",
       "seatRange": "Number of users must be between 1 and 500.",
-      "generic": "Creation failed.",
-      "declarationRequired": "To create an organization you must confirm the declaration and agree to the terms."
+      "generic": "Creation failed."
     },
     "nameStep": {
       "intro": "Start with a name. Company details can be filled in anytime later.",
@@ -87,7 +86,7 @@
       "savingsSuffix": "compared to the monthly plan."
     },
     "declaration": {
-      "text": "I confirm that I am using SimpleCRM in the course of my business or profession (Section 420 of the Czech Civil Code) and I agree to the",
+      "text": "By continuing to the next step I confirm that I am using SimpleCRM in the course of my business or profession (Section 420 of the Czech Civil Code) and I agree to the",
       "terms": "Terms of Service",
       "complaints": "Complaints Policy",
       "delivery": "Delivery and Payment Terms",

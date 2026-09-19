@@ -57,7 +57,6 @@ export function CreateOrgPage() {
   const [seatCount, setSeatCount] = useState<number>(1);
   const [planCode, setPlanCode] = useState<PlanCode>("monthly");
   const [error, setError] = useState<string | null>(null);
-  const [declared, setDeclared] = useState(false);
 
   const mutation = useMutation<CurrentUser, Error, SubmitBody>({
     mutationFn: (body) =>
@@ -81,10 +80,6 @@ export function CreateOrgPage() {
     if (step === 1) {
       if (name.trim().length === 0) {
         setError(t("createOrg.errors.nameRequired"));
-        return;
-      }
-      if (!declared) {
-        setError(t("createOrg.errors.declarationRequired"));
         return;
       }
       setStep(2);
@@ -165,12 +160,7 @@ export function CreateOrgPage() {
 
           <form onSubmit={onSubmit} className="mt-6 space-y-5">
             {step === 1 ? (
-              <NameStep
-                name={name}
-                setName={setName}
-                declared={declared}
-                setDeclared={setDeclared}
-              />
+              <NameStep name={name} setName={setName} />
             ) : step === 2 ? (
               <SeatsStep seatCount={seatCount} setSeatCount={setSeatCount} planCode={planCode} />
             ) : (
@@ -183,6 +173,25 @@ export function CreateOrgPage() {
               </p>
             ) : null}
 
+            {step === 1 ? (
+              <p
+                data-testid={testIds.onboarding.wizard.declaration}
+                className="text-xs text-text-secondary"
+              >
+                {t("createOrg.declaration.text")}{" "}
+                <LegalLink to="/obchodni-podminky">{t("createOrg.declaration.terms")}</LegalLink>,{" "}
+                <LegalLink to="/reklamacni-podminky">
+                  {t("createOrg.declaration.complaints")}
+                </LegalLink>
+                ,{" "}
+                <LegalLink to="/dodaci-a-platebni-podminky">
+                  {t("createOrg.declaration.delivery")}
+                </LegalLink>{" "}
+                {t("createOrg.declaration.and")}{" "}
+                <LegalLink to="/zpracovatelska-smlouva">{t("createOrg.declaration.dpa")}</LegalLink>
+                .
+              </p>
+            ) : null}
             <div className="flex items-center justify-between gap-3">
               <button
                 type="button"
@@ -198,9 +207,8 @@ export function CreateOrgPage() {
                 <button
                   type="button"
                   onClick={goNext}
-                  disabled={step === 1 && !declared}
                   data-testid={testIds.onboarding.wizard.next}
-                  className="inline-flex h-10 items-center gap-1.5 rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-10 items-center gap-1.5 rounded-md bg-accent px-5 text-sm font-semibold text-text-on-accent transition-colors duration-fast hover:bg-accent-hover"
                 >
                   {t("createOrg.next")}
                   <ArrowRight size={16} strokeWidth={1.75} />
@@ -287,17 +295,7 @@ function StepDots({ step }: { step: Step }) {
   );
 }
 
-function NameStep({
-  name,
-  setName,
-  declared,
-  setDeclared,
-}: {
-  name: string;
-  setName: (v: string) => void;
-  declared: boolean;
-  setDeclared: (v: boolean) => void;
-}) {
+function NameStep({ name, setName }: { name: string; setName: (v: string) => void }) {
   const { t } = useTranslation("onboarding");
   return (
     <div>
@@ -326,27 +324,6 @@ function NameStep({
           />
         </div>
       </label>
-      <div className="mt-5 flex items-start gap-3 text-sm text-text-secondary">
-        <input
-          id="onboarding-declaration"
-          type="checkbox"
-          checked={declared}
-          onChange={(e) => setDeclared(e.target.checked)}
-          aria-required
-          data-testid={testIds.onboarding.wizard.declaration}
-          className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-accent"
-        />
-        <p>
-          <label htmlFor="onboarding-declaration">{t("createOrg.declaration.text")}</label>{" "}
-          <LegalLink to="/obchodni-podminky">{t("createOrg.declaration.terms")}</LegalLink>,{" "}
-          <LegalLink to="/reklamacni-podminky">{t("createOrg.declaration.complaints")}</LegalLink>,{" "}
-          <LegalLink to="/dodaci-a-platebni-podminky">
-            {t("createOrg.declaration.delivery")}
-          </LegalLink>{" "}
-          {t("createOrg.declaration.and")}{" "}
-          <LegalLink to="/zpracovatelska-smlouva">{t("createOrg.declaration.dpa")}</LegalLink>.
-        </p>
-      </div>
     </div>
   );
 }

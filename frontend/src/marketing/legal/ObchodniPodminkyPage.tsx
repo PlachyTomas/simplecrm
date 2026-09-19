@@ -64,11 +64,11 @@ export function ObchodniPodminkyPage() {
         <p>
           3.1 Uživatel se registruje na simplecrm.cz zadáním jména, kontaktního e-mailu a hesla,
           nebo přihlášením přes účet Google, a následným založením organizace. Při založení
-          organizace Uživatel zaškrtnutím samostatného pole potvrzuje, že Službu používá v rámci své
+          organizace Uživatel pokračováním na další krok potvrzuje, že Službu používá v rámci své
           podnikatelské činnosti nebo samostatného výkonu povolání a že se seznámil s těmito VOP,
           Reklamačními podmínkami, Dodacími a platebními podmínkami a Smlouvou o zpracování osobních
-          údajů a souhlasí s nimi; bez tohoto potvrzení organizaci nelze založit. Fakturační údaje
-          včetně IČO uvádí nejpozději při volbě placeného Plánu.
+          údajů a souhlasí s nimi; toto potvrzení je zobrazeno přímo u tlačítka pro pokračování.
+          Fakturační údaje včetně IČO uvádí nejpozději při volbě placeného Plánu.
         </p>
         <p>
           3.2 Smlouva je uzavřena okamžikem založení organizace po potvrzení podle čl. 3.1.

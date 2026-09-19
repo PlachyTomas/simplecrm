@@ -35,21 +35,20 @@ describe("CreateOrgPage business declaration", () => {
     );
   });
 
-  it("keeps the next button disabled until the declaration is ticked", () => {
+  it("shows the declaration on the first step and continues without a checkbox", () => {
     renderPage();
     const next = screen.getByTestId(testIds.onboarding.wizard.next);
-    expect(next).toBeDisabled();
+    expect(next).toBeEnabled();
+    expect(screen.getByTestId(testIds.onboarding.wizard.declaration)).toHaveTextContent(
+      /Pokračováním na další krok potvrzuji/,
+    );
 
     fireEvent.change(screen.getByTestId(testIds.onboarding.wizard.nameInput), {
       target: { value: "Acme s.r.o." },
     });
-    expect(next).toBeDisabled();
-
-    fireEvent.click(screen.getByTestId(testIds.onboarding.wizard.declaration));
-    expect(next).toBeEnabled();
-
     fireEvent.click(next);
     expect(screen.getByTestId(testIds.onboarding.wizard.seatCountInput)).toBeInTheDocument();
+    expect(screen.queryByTestId(testIds.onboarding.wizard.declaration)).not.toBeInTheDocument();
   });
 
   it("links every legal document in a new tab", () => {
