@@ -140,6 +140,11 @@
       "submitting": "Mažeme…",
       "cancel": "Zrušit",
       "genericError": "Smazání se nezdařilo. Zkuste to prosím znovu."
+    },
+    "termsRecord": {
+      "title": "Potvrzení podmínek",
+      "accepted": "Obchodní podmínky a Zpracovatelskou smlouvu (verze {{version}}) potvrdil administrátor při založení organizace dne {{date}}.",
+      "missing": "Organizace byla založena před zavedením záznamu o potvrzení podmínek; záznam u ní zatím neevidujeme."
     }
   },
   "blockedCompanies": {
@@ -527,7 +532,7 @@
       "title": "Sledování e-mailů",
       "subtitleCard": "Měření otevření a prokliků u e-mailů odeslaných z aplikace.",
       "label": "Měřit otevření a prokliky e-mailů",
-      "subtitle": "Když je vypnuto, aplikace nevkládá do e-mailů sledovací pixel ani nepřepisuje odkazy — a to pro celou organizaci, včetně hromadných kampaní. Vypněte, pokud podle Vašeho výkladu GDPR a ePrivacy vyžaduje sledování souhlas příjemce.",
+      "subtitle": "Když je vypnuto, aplikace nevkládá do e-mailů sledovací pixel ani nepřepisuje odkazy — a to pro celou organizaci, včetně hromadných kampaní. Sledování otevření a prokliků může podle § 89 odst. 3 zákona č. 127/2005 Sb. vyžadovat souhlas příjemce; právní základ vůči příjemcům zajišťujete Vy jako správce.",
       "error": "Uložení se nezdařilo."
     }
   },

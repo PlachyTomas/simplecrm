@@ -47,7 +47,7 @@ async def _signup_and_create_org(client: AsyncClient, profile: GoogleProfile) ->
         access = callback.headers["location"].split("#access_token=", 1)[1]
         await client.post(
             "/api/v1/onboarding/organization",
-            json={"name": "Feedback Org", "seat_count": 3},
+            json={"business_declaration": True, "name": "Feedback Org", "seat_count": 3},
             headers={"Authorization": f"Bearer {access}"},
         )
     finally:

@@ -211,7 +211,7 @@ async def test_create_organization_promotes_to_admin_with_default_team(
 
         create = await client.post(
             "/api/v1/onboarding/organization",
-            json={"name": "Acme s.r.o."},
+            json={"business_declaration": True, "name": "Acme s.r.o."},
             headers={"Authorization": f"Bearer {access_token}"},
         )
         assert create.status_code == 201, create.text
@@ -357,7 +357,7 @@ async def test_refresh_bypasses_trial_gate_for_expired_orgs(
     # 201 (just created) or 409 (already exists from a prior test run).
     create_resp = await client.post(
         "/api/v1/onboarding/organization",
-        json={"name": "Trial Test"},
+        json={"business_declaration": True, "name": "Trial Test"},
         headers={"Authorization": f"Bearer {access_token}"},
     )
     assert create_resp.status_code in (201, 409)

@@ -60,6 +60,8 @@ class OrganizationOut(BaseModel):
     currency: str
     trial_ends_at: datetime
     stripe_customer_id: str | None = None
+    terms_accepted_at: datetime | None = None
+    terms_version: str | None = None
     show_leaderboard_to_salespeople: bool
     email_tracking_enabled: bool
     ownership_window_days: int

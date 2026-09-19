@@ -154,5 +154,7 @@ class User(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    organization: Mapped[Organization | None] = relationship(back_populates="users")
+    organization: Mapped[Organization | None] = relationship(
+        back_populates="users", foreign_keys=[organization_id]
+    )
     team: Mapped[Team | None] = relationship(back_populates="members", foreign_keys=[team_id])

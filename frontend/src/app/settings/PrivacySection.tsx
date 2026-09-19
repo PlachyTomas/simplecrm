@@ -145,6 +145,20 @@ export function PrivacySection() {
         </div>
       </div>
 
+      <div className="rounded-lg border border-border bg-surface p-6">
+        <h2 className="text-lg font-semibold text-text-primary">
+          {t("privacy.termsRecord.title")}
+        </h2>
+        <p className="mt-2 text-sm text-text-secondary">
+          {org.data?.terms_accepted_at
+            ? t("privacy.termsRecord.accepted", {
+                date: formatDate(org.data.terms_accepted_at, locale),
+                version: org.data.terms_version ?? "—",
+              })
+            : t("privacy.termsRecord.missing")}
+        </p>
+      </div>
+
       {me.data?.role === "admin" && org.data ? <DangerZone orgName={org.data.name} /> : null}
     </section>
   );

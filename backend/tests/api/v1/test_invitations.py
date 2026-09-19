@@ -45,7 +45,7 @@ async def _signup_and_create_org(
         # capped by the founding admin's slot.
         create = await client.post(
             "/api/v1/onboarding/organization",
-            json={"name": org_name, "seat_count": 25},
+            json={"business_declaration": True, "name": org_name, "seat_count": 25},
             headers={"Authorization": f"Bearer {access}"},
         )
         if create.status_code not in (201, 409):
@@ -416,7 +416,7 @@ async def test_invite_returns_422_when_seat_limit_reached(
             access = callback.headers["location"].split("#access_token=", 1)[1]
             await ac.post(
                 "/api/v1/onboarding/organization",
-                json={"name": "Cap Org", "seat_count": 1},
+                json={"business_declaration": True, "name": "Cap Org", "seat_count": 1},
                 headers={"Authorization": f"Bearer {access}"},
             )
         finally:

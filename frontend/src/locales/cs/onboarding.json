@@ -59,7 +59,8 @@
     "errors": {
       "nameRequired": "Zadejte název organizace.",
       "seatRange": "Počet uživatelů musí být v rozsahu 1–500.",
-      "generic": "Vytvoření selhalo."
+      "generic": "Vytvoření selhalo.",
+      "declarationRequired": "Pro založení organizace je nutné potvrdit prohlášení a souhlas s podmínkami."
     },
     "nameStep": {
       "intro": "Začněte názvem. Detaily firmy lze doplnit kdykoli později.",
@@ -85,6 +86,14 @@
       "weInvoice": "fakturujeme",
       "savingsPrefix": "Ušetříte",
       "savingsSuffix": "oproti měsíčnímu plánu."
+    },
+    "declaration": {
+      "text": "Potvrzuji, že SimpleCRM používám v rámci své podnikatelské činnosti nebo samostatného výkonu povolání (§ 420 OZ), a souhlasím s",
+      "terms": "Obchodními podmínkami",
+      "complaints": "Reklamačními podmínkami",
+      "delivery": "Dodacími a platebními podmínkami",
+      "and": "a",
+      "dpa": "Zpracovatelskou smlouvou"
     }
   }
 }

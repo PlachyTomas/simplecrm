@@ -394,6 +394,7 @@ export const testIds = {
   onboarding: {
     wizard: {
       nameInput: "onboarding-name-input",
+      declaration: "onboarding-declaration",
       seatCountInput: "onboarding-seat-count-input",
       next: "onboarding-next",
       back: "onboarding-back",

@@ -9,6 +9,9 @@ founding user is always promoted to admin and dropped into that team.
 
 from __future__ import annotations
 
+import uuid
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,6 +35,9 @@ async def create_organization_with_admin(
     address_city: str | None = None,
     address_zip: str | None = None,
     legal_form: str | None = None,
+    terms_accepted_at: datetime | None = None,
+    terms_version: str | None = None,
+    terms_accepted_by_user_id: uuid.UUID | None = None,
 ) -> Organization:
     """Create a new Organization and promote `founder` to its admin.
 
@@ -58,6 +64,9 @@ async def create_organization_with_admin(
         address_city=address_city,
         address_zip=address_zip,
         legal_form=legal_form,
+        terms_accepted_at=terms_accepted_at,
+        terms_version=terms_version,
+        terms_accepted_by_user_id=terms_accepted_by_user_id,
     )
     session.add(organization)
     await session.flush()

@@ -8,6 +8,7 @@ either no org yet (`POST /onboarding/organization`) or no auth at all
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -15,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.companies import get_registry_cache, get_registry_rate_limiter
 from app.core.deps import get_current_user
+from app.core.legal import TERMS_VERSION
 from app.db import get_db
 from app.db.models import User
 from app.schemas.auth import CurrentUser
@@ -87,6 +89,9 @@ async def create_organization(
         founder=user,
         seat_count=payload.seat_count,
         intended_plan_code=payload.intended_plan_code,
+        terms_accepted_at=datetime.now(UTC),
+        terms_version=TERMS_VERSION,
+        terms_accepted_by_user_id=user.id,
         **billing_kwargs,
     )
     await session.commit()

@@ -4,7 +4,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Enum, Index, Integer, String, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -70,6 +70,13 @@ class Organization(Base):
     # only goes out once per org. NULL = never sent.
     billing_info_reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # Stamped once at org creation from the declaration checkbox; NULL = org predates it.
+    terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    terms_version: Mapped[str | None] = mapped_column(String(16))
+    terms_accepted_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL", use_alter=True)
+    )
+
     # When False (the default for new orgs), salespeople do not see the
     # team/user leaderboards in Reporty or on the dashboard. Admins/managers
     # always see them. Admins flip this in Settings → Oprávnění.
@@ -121,7 +128,9 @@ class Organization(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     users: Mapped[list[User]] = relationship(
-        back_populates="organization", cascade="all, delete-orphan"
+        back_populates="organization",
+        cascade="all, delete-orphan",
+        foreign_keys="User.organization_id",
     )
     teams: Mapped[list[Team]] = relationship(
         back_populates="organization", cascade="all, delete-orphan"

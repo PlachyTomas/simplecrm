@@ -520,7 +520,11 @@ async def _bootstrap_org_admin(client: AsyncClient, *, email: str, name: str) ->
         access = cb.headers["location"].split("#access_token=", 1)[1]
         create = await client.post(
             "/api/v1/onboarding/organization",
-            json={"name": f"Org-{secrets.token_hex(2)}", "seat_count": 25},
+            json={
+                "business_declaration": True,
+                "name": f"Org-{secrets.token_hex(2)}",
+                "seat_count": 25,
+            },
             headers={"Authorization": f"Bearer {access}"},
         )
         if create.status_code not in (201, 409):

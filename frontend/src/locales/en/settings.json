@@ -140,6 +140,11 @@
       "submitting": "Deleting…",
       "cancel": "Cancel",
       "genericError": "Deletion failed. Please try again."
+    },
+    "termsRecord": {
+      "title": "Terms acceptance",
+      "accepted": "The Terms of Service and the Data Processing Agreement (version {{version}}) were accepted by the administrator when the organization was created on {{date}}.",
+      "missing": "This organization was created before acceptance records were introduced; no record exists for it yet."
     }
   },
   "blockedCompanies": {
@@ -526,7 +531,7 @@
       "title": "Email tracking",
       "subtitleCard": "Measuring opens and clicks on emails sent from the app.",
       "label": "Measure email opens and clicks",
-      "subtitle": "When off, the app embeds no tracking pixel and rewrites no links — for the whole organization, bulk campaigns included. Switch it off if your reading of GDPR and ePrivacy requires recipient consent for tracking.",
+      "subtitle": "When off, the app embeds no tracking pixel and rewrites no links — for the whole organization, bulk campaigns included. Open and click tracking may require recipient consent under § 89(3) of the Czech Electronic Communications Act; you, as the controller, are responsible for the legal basis towards recipients.",
       "error": "Saving failed."
     }
   },

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -75,3 +76,5 @@ class CreateOrganizationIn(BaseModel):
     # onto the org so the invoice nudge banner disappears immediately.
     # ARES failures don't block onboarding — just the IČO is saved.
     ico: str | None = Field(default=None, pattern=r"^\d{8}$")
+    # Literal[True]: an unticked or missing declaration is a 422, never a silent default.
+    business_declaration: Literal[True]

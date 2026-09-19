@@ -5313,6 +5313,11 @@ export interface components {
             intended_plan_code?: string | null;
             /** Ico */
             ico?: string | null;
+            /**
+             * Business Declaration
+             * @constant
+             */
+            business_declaration: true;
         };
         /** CurrencyMismatchOut */
         CurrencyMismatchOut: {
@@ -6802,6 +6807,10 @@ export interface components {
             trial_ends_at: string;
             /** Stripe Customer Id */
             stripe_customer_id?: string | null;
+            /** Terms Accepted At */
+            terms_accepted_at?: string | null;
+            /** Terms Version */
+            terms_version?: string | null;
             /** Show Leaderboard To Salespeople */
             show_leaderboard_to_salespeople: boolean;
             /** Email Tracking Enabled */
