@@ -33,7 +33,7 @@ Rule for every rewrite: vague where the law allows, precise where it demands, ne
 
 1. ~~Ship the F1 acceptance record~~ DONE 2026-09-19 for new organisations (uncommitted): declaration checkbox on the org-creation step, `business_declaration: Literal[True]` on `POST /onboarding/organization` (422 without it), `organizations.terms_accepted_at/terms_version/terms_accepted_by_user_id` stamped server-side (migration d7e8f9a0b1c2, `TERMS_VERSION` in `app/core/legal.py` mirrors `LEGAL_EFFECTIVE_DATE`), shown in Nastavení → Soukromí; VOP 1.3/3.1/3.2 and DPA čl. 11 now describe it. Follow-up: existing organisations have no record — blocking dialog for admins at next login.
 2. F5: purge job vs. the truthful wording now applied; contacts/companies CSV export outside the pay-gate.
-3. F8: unsubscribe link + List-Unsubscribe in bulk mail; tracking default off.
+3. F8: OWNER ACCEPTED THE RISK 2026-09-19 — no default footer, no unsubscribe link. Reassessed after discussion: the sender (customer) carries the § 7 zák. 480/2004 Sb. duties, a reply address counts as a valid refusal address and the blocked-companies list is a manual suppression mechanism, so the provider's own exposure is P2 (contractual/reputational), not P1. DPA čl. 10 allocates the duty to the customer. Do not re-raise unless campaign volumes reach Gmail/Yahoo bulk-sender thresholds.
 4. F7: persist recurring-payment consent; pre-charge e-mail for annual plans.
 5. F4: confirm Google Cloud DPA / Cloudflare DPA (SCC) are in place before publishing the transfer sentence; self-host the two fonts to drop Google Fonts.
 6. F3: relabel „Soukromá osoba" in the billing form.
