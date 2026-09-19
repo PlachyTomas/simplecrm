@@ -72,7 +72,7 @@
     "cancelBulletPrefix": "Cancel recurring payments in Settings → Subscription or by emailing support — see",
     "cancelLinkText": "Subscription & payments",
     "consentPrefix": "I agree to recurring payments under the terms above and to",
-    "termsLinkText": "Art. 6 of the Terms of Service",
+    "termsLinkText": "the Terms of Service",
     "period": {
       "annual": "annually",
       "monthly": "monthly",

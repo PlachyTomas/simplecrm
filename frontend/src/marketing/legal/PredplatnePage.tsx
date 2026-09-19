@@ -1,7 +1,7 @@
 import { Check } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { COMGATE_INFO, LEGAL_ENTITY } from "@/marketing/legal-entity";
+import { COMGATE_INFO, LEGAL_EFFECTIVE_DATE, LEGAL_ENTITY } from "@/marketing/legal-entity";
 import { LegalPageLayout, Section } from "@/marketing/legal/LegalPageLayout";
 
 /**
@@ -13,6 +13,7 @@ export function PredplatnePage() {
   return (
     <LegalPageLayout
       title="Předplatné a platby"
+      effectiveDate={LEGAL_EFFECTIVE_DATE}
       lead={
         <p>
           Tato stránka shrnuje, jak funguje předplatné a opakované platby v SimpleCRM. Plné podmínky
@@ -20,7 +21,7 @@ export function PredplatnePage() {
           <Link to="/obchodni-podminky#cl-6" className="underline hover:text-text-primary">
             čl. 6 Obchodních podmínek
           </Link>
-          .
+          . Tato stránka je informativní; v případě rozporu mají přednost Obchodní podmínky.
         </p>
       }
     >
@@ -43,7 +44,7 @@ export function PredplatnePage() {
             Stržení probíhá vždy první den nového zúčtovacího období.
           </SubscribeBullet>
           <SubscribeBullet>Platby trvají do doby, než je zrušíte.</SubscribeBullet>
-          <SubscribeBullet>O každé platbě dostanete e-mail s daňovým dokladem.</SubscribeBullet>
+          <SubscribeBullet>O každé platbě dostanete e-mail s fakturou.</SubscribeBullet>
           <SubscribeBullet>
             O jakékoli změně ceny vás informujeme e-mailem alespoň 30 dní předem.
           </SubscribeBullet>

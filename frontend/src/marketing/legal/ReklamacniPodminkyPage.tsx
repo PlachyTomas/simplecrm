@@ -71,7 +71,7 @@ export function ReklamacniPodminkyPage() {
           <li>čeho se reklamací domáháte (oprava, sleva z ceny, odstoupení od Smlouvy).</li>
         </ol>
         <p>
-          3.2 Přijetí reklamace potvrdíme e-mailem do 2 pracovních dnů. Reklamaci vyřídíme
+          3.2 Přijetí reklamace potvrdíme e-mailem bez zbytečného odkladu. Reklamaci vyřídíme
           nejpozději do 30 dnů od jejího doručení; o výsledku Uživatele informujeme e-mailem.
         </p>
         <p>
@@ -88,8 +88,9 @@ export function ReklamacniPodminkyPage() {
         </p>
         <p>
           4.2 Peníze vracíme stejnou cestou, jakou byla platba provedena — zpravidla na platební
-          kartu či bankovní účet prostřednictvím platební brány Comgate. O provedeném vrácení
-          Uživatele informujeme e-mailem včetně opravného daňového dokladu.
+          kartu či bankovní účet prostřednictvím platební brány Comgate; platbu provedenou bankovním
+          převodem vracíme na účet, ze kterého byla přijata. O provedeném vrácení Uživatele
+          informujeme e-mailem včetně opravného dokladu (dobropisu).
         </p>
       </Section>
 

@@ -47,55 +47,88 @@ export function OchranaOsobnichUdajuPage() {
             <dt className="text-text-tertiary">Právní základ:</dt>
             <dd>čl. 6 odst. 1 písm. b) GDPR (smlouva), čl. 6 odst. 1 písm. c) GDPR (účetnictví)</dd>
             <dt className="text-text-tertiary">Doba uchování:</dt>
-            <dd>po dobu trvání smlouvy + 10 let (zákon č. 563/1991 Sb.)</dd>
+            <dd>
+              po dobu trvání smlouvy a dále po dobu, po kterou musíme uchovávat účetní a daňové
+              doklady (až 10 let)
+            </dd>
           </dl>
         </article>
 
         <article className="rounded-md border border-border-subtle bg-surface-overlay p-4">
           <h3 className="font-semibold text-text-primary">b) Údaje o užívání služby</h3>
-          <p className="mt-1 text-xs text-text-tertiary">IP adresa, log-in, akce v aplikaci</p>
+          <p className="mt-1 text-xs text-text-tertiary">
+            záznamy o přihlášení a o akcích provedených v aplikaci (kdo, co a kdy)
+          </p>
           <dl className="mt-2 grid gap-1 text-sm sm:grid-cols-[10rem_1fr]">
             <dt className="text-text-tertiary">Účel:</dt>
             <dd>zabezpečení, audit, technická podpora</dd>
             <dt className="text-text-tertiary">Právní základ:</dt>
-            <dd>čl. 6 odst. 1 písm. f) GDPR (oprávněný zájem)</dd>
+            <dd>
+              čl. 6 odst. 1 písm. f) GDPR — oprávněný zájem na zabezpečení účtů, prokazatelnosti
+              změn dat a řešení požadavků podpory
+            </dd>
             <dt className="text-text-tertiary">Doba uchování:</dt>
-            <dd>12 měsíců</dd>
+            <dd>po dobu trvání smlouvy a dále do smazání organizace</dd>
           </dl>
+          <p className="mt-2 text-xs text-text-tertiary">
+            IP adresu neukládáme; využíváme ji pouze při zpracování požadavku k omezení jeho
+            četnosti.
+          </p>
         </article>
 
         <article className="rounded-md border border-border-subtle bg-surface-overlay p-4">
-          <h3 className="font-semibold text-text-primary">c) Marketingové údaje</h3>
-          <p className="mt-1 text-xs text-text-tertiary">e-mail pro newsletter</p>
+          <h3 className="font-semibold text-text-primary">
+            c) Obchodní sdělení stávajícím zákazníkům
+          </h3>
+          <p className="mt-1 text-xs text-text-tertiary">kontaktní e-mail zákazníka</p>
           <dl className="mt-2 grid gap-1 text-sm sm:grid-cols-[10rem_1fr]">
             <dt className="text-text-tertiary">Účel:</dt>
-            <dd>zasílání obchodních sdělení o našich službách</dd>
+            <dd>případné zasílání informací o našich vlastních obdobných službách</dd>
             <dt className="text-text-tertiary">Právní základ:</dt>
             <dd>
-              čl. 6 odst. 1 písm. f) GDPR (oprávněný zájem u stávajících zákazníků dle § 7 zák. č.
-              480/2004 Sb.); souhlas u ostatních
+              čl. 6 odst. 1 písm. f) GDPR — oprávněný zájem na informování stávajících zákazníků, §
+              7 odst. 3 zákona č. 480/2004 Sb.
             </dd>
             <dt className="text-text-tertiary">Doba uchování:</dt>
-            <dd>do odvolání souhlasu / odhlášení</dd>
+            <dd>do odmítnutí, které lze učinit odpovědí na kteroukoli takovou zprávu</dd>
           </dl>
         </article>
       </Section>
 
       <Section id="prijemci" title="3. Příjemci osobních údajů">
-        <p>Vaše údaje předáváme pouze:</p>
+        <p>Vaše údaje předáváme těmto příjemcům:</p>
         <ul className="list-disc space-y-1 pl-5">
-          <li>poskytovateli hostingu a denních záloh — Hetzner Online GmbH, Německo, EU,</li>
-          <li>platební bráně Comgate, a.s., Česká republika,</li>
+          <li>Hetzner Online GmbH (Německo) — provoz aplikace a databáze,</li>
+          <li>Comgate, a.s. (Česká republika) — platební brána,</li>
           <li>
-            poskytovateli transakční a marketingové e-mailové komunikace — Zoho Corporation B.V.,
-            datacentrum Amsterdam, Nizozemsko,
+            Zoho Corporation B.V. (datacentrum Amsterdam, Nizozemsko) — odesílání e-mailů z aplikace
+            (potvrzení, faktury, upozornění),
           </li>
-          <li>účetní po dohodě.</li>
+          <li>
+            Google Ireland Limited, resp. Google LLC — přihlášení přes účet Google (e-mail, jméno,
+            profilový obrázek, identifikátor účtu), volitelné propojení s Kalendářem Google (obsah
+            událostí, e-mail propojeného účtu, přístupové tokeny) a písma Google Fonts načítaná při
+            zobrazení našich webových stránek (IP adresa návštěvníka),
+          </li>
+          <li>
+            Cloudflare, Inc. — příjem e-mailů přeposlaných na adresu v doméně in.simplecrm.cz
+            (funkce Smart BCC), včetně obsahu zprávy a příloh,
+          </li>
+          <li>případně účetní, v rozsahu fakturačních údajů.</li>
         </ul>
         <p>
-          Fakturační agendu vedeme in-house ve vlastní aplikaci — žádný externí fakturační systém k
-          Vašim údajům přístup nemá. Všichni dodavatelé sídlí nebo zpracovávají údaje v EU/EHP; mimo
-          EU údaje nepředáváme.
+          Zadáte-li IČO, dotazujeme se na veřejný rejstřík ARES vedený Ministerstvem financí ČR.
+        </p>
+        <p>
+          Fakturační agendu vedeme ve vlastní aplikaci — žádný externí fakturační systém k Vašim
+          údajům přístup nemá. Aplikaci a databázi provozujeme u společnosti Hetzner Online GmbH v
+          Německu. U příjemců Google a Cloudflare může dojít k předání údajů do Spojených států
+          amerických; předání se opírá o standardní smluvní doložky podle čl. 46 odst. 2 písm. c)
+          GDPR obsažené ve smluvních podmínkách těchto příjemců.
+        </p>
+        <p>
+          Informace získané z rozhraní Google API používáme v souladu s Google API Services User
+          Data Policy včetně požadavků Limited Use.
         </p>
       </Section>
 
@@ -133,10 +166,9 @@ export function OchranaOsobnichUdajuPage() {
 
       <Section id="zabezpeceni" title="5. Zabezpečení">
         <p>
-          Údaje jsou chráněny šifrovaným přenosem (HTTPS/TLS), denními zálohami uchovávanými mimo
-          produkční prostředí, logováním administrátorských přístupů a izolací mezi organizacemi na
-          úrovni aplikační vrstvy. Šifrování databáze v klidu (at rest) plánujeme nasadit v rámci
-          přechodu na šifrovaný diskový svazek.
+          Osobní údaje chráníme technickými a organizačními opatřeními přiměřenými rizikům
+          zpracování (čl. 32 GDPR), zejména šifrovaným přenosem dat, řízením přístupů, oddělením dat
+          jednotlivých organizací a evidencí přístupů našich pověřených osob k datům zákazníků.
         </p>
       </Section>
 
@@ -152,6 +184,11 @@ export function OchranaOsobnichUdajuPage() {
             VOP
           </Link>
           .
+        </p>
+        <p>
+          Je-li v organizaci zákazníka zapnuto sledování e-mailů, zaznamenáváme jako zpracovatel
+          otevření zprávy a kliknutí na odkaz ve vazbě na e-mailovou adresu příjemce; podrobnosti
+          stanoví čl. 9 DPA.
         </p>
       </Section>
 

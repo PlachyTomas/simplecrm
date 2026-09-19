@@ -31,9 +31,9 @@ export function ObchodniPodminkyPage() {
           souladu s § 2389a a násl. OZ jako smlouva o poskytování digitální služby.
         </p>
         <p>
-          1.3 Tyto VOP se vztahují <strong>výhradně na vztahy mezi podnikateli (B2B)</strong>.
-          Uživatel uzavřením Smlouvy prohlašuje, že je podnikatelem ve smyslu § 420 OZ a jedná v
-          rámci své podnikatelské činnosti. Služba není určena spotřebitelům ve smyslu § 419 OZ.
+          1.3 Tyto VOP upravují vztahy mezi podnikateli. Služba je určena podnikatelům ve smyslu §
+          420 OZ pro jejich podnikatelskou činnost a není nabízena spotřebitelům ve smyslu § 419 OZ;
+          Uživatel to potvrzuje při založení organizace podle čl. 3.1.
         </p>
       </Section>
 
@@ -62,14 +62,20 @@ export function ObchodniPodminkyPage() {
 
       <Section id="cl-3" title="3. Uzavření smlouvy a registrace">
         <p>
-          3.1 Uživatel se registruje vyplněním formuláře na simplecrm.cz, kde uvádí zejména název
-          firmy, fakturační údaje, jméno administrátora a kontaktní e-mail. Uzavřením Smlouvy
-          Uživatel potvrzuje, že je podnikatelem ve smyslu § 420 OZ a jedná v rámci své
-          podnikatelské činnosti (viz též čl. 1.3).
+          3.1 Uživatel se registruje na simplecrm.cz zadáním jména, kontaktního e-mailu a hesla,
+          nebo přihlášením přes účet Google, a následným založením organizace. Při založení
+          organizace Uživatel zaškrtnutím samostatného pole potvrzuje, že Službu používá v rámci své
+          podnikatelské činnosti nebo samostatného výkonu povolání a že se seznámil s těmito VOP,
+          Reklamačními podmínkami, Dodacími a platebními podmínkami a Smlouvou o zpracování osobních
+          údajů a souhlasí s nimi; bez tohoto potvrzení organizaci nelze založit. Fakturační údaje
+          včetně IČO uvádí nejpozději při volbě placeného Plánu.
         </p>
         <p>
-          3.2 Smlouva je uzavřena okamžikem odeslání potvrzujícího e-mailu Poskytovatelem na
-          e-mailovou adresu Uživatele.
+          3.2 Smlouva je uzavřena okamžikem založení organizace po potvrzení podle čl. 3.1.
+          Poskytovatel eviduje datum a čas potvrzení, uživatele, který je učinil, a verzi
+          potvrzených dokumentů; záznam je Uživateli dostupný v administraci v sekci Nastavení →
+          Soukromí. Znění VOP účinné k okamžiku uzavření Smlouvy je zveřejněno na
+          simplecrm.cz/obchodni-podminky.
         </p>
         <p>3.3 Smlouva se uzavírá na dobu neurčitou s možností výpovědi dle čl. 9.</p>
       </Section>
@@ -80,29 +86,50 @@ export function ObchodniPodminkyPage() {
           účtu, a to bez nutnosti zadání platební karty.
         </p>
         <p>
-          4.2 Po skončení zkušebního období nedojde k automatickému strhávání platby. Pro
-          pokračování ve Službě musí Uživatel aktivně zvolit Plán a zadat platební metodu.
+          4.2 Po skončení zkušebního období nedojde k automatickému stržení platby. Pro pokračování
+          ve Službě Uživatel zvolí Plán a uhradí cenu způsobem podle čl. 5.2. Faktura vystavená před
+          koncem zkušebního období je výzvou k platbě; bez její úhrady Uživateli nic neúčtujeme.
+        </p>
+      </Section>
+
+      <Section id="cl-4a" title="4a. Odstoupení od Smlouvy uzavřené spotřebitelem">
+        <p>
+          4a.1 Je-li Uživatel přes čl. 1.3 v postavení spotřebitele, může od Smlouvy odstoupit ve
+          lhůtě 14 dnů ode dne jejího uzavření, a to i bez udání důvodu, jakýmkoli jednoznačným
+          prohlášením zaslaným na{" "}
+          <a href={`mailto:${LEGAL_ENTITY.email}`} className="underline hover:text-text-primary">
+            {LEGAL_ENTITY.email}
+          </a>
+          . Vzorový formulář pro odstoupení zašle Poskytovatel na žádost e-mailem.
+        </p>
+        <p>
+          4a.2 Odstoupí-li spotřebitel podle čl. 4a.1, vrátí Poskytovatel uhrazenou cenu do 14 dnů
+          ode dne doručení odstoupení, a to stejným způsobem, jakým platbu přijal.
         </p>
       </Section>
 
       <Section id="cl-5" title="5. Cena a platební podmínky">
         <p>
           5.1 Cena za Službu je stanovena Ceníkem zveřejněným na simplecrm.cz a je uvedena v Kč za
-          jednoho uživatele za jeden kalendářní měsíc. Poskytovatel není plátcem DPH.
+          jednoho uživatele a jeden kalendářní měsíc. U ročního Zúčtovacího období se cena za
+          dvanáct měsíců hradí jednorázově předem ve výši podle Ceníku. Poskytovatel není plátcem
+          DPH.
         </p>
         <p>
-          5.2 Cena je hrazena předem na začátku každého Zúčtovacího období prostřednictvím platební
-          brány Comgate. Daňový doklad bude Uživateli vystaven elektronicky a zaslán na kontaktní
-          e-mail.
+          5.2 Cena je hrazena předem na začátku každého Zúčtovacího období, a to prostřednictvím
+          platební brány Comgate nebo bankovním převodem podle údajů na vystavené faktuře. Fakturu
+          Uživateli vystavíme elektronicky a zašleme na kontaktní e-mail.
         </p>
         <p>
           5.3 Pokud se Uživatel rozhodne pro automatické obnovování předplatného (viz čl. 6), platí
           podmínky opakovaných plateb.
         </p>
         <p>
-          5.4 Poskytovatel je oprávněn jednostranně změnit cenu Služby. Změnu oznámí Uživateli
-          e-mailem nejméně 30 dnů předem. Uživatel má právo Smlouvu vypovědět ke dni účinnosti nové
-          ceny.
+          5.4 Poskytovatel je oprávněn změnit cenu Služby v rozsahu vyvolaném změnou právních
+          předpisů, změnou cen subdodavatelů infrastruktury a plateb nebo rozšířením rozsahu funkcí
+          Služby. Změnu oznámí Uživateli e-mailem nejméně 30 dnů před její účinností. Uživatel je
+          oprávněn změnu odmítnout a Smlouvu vypovědět ke dni účinnosti nové ceny; do té doby platí
+          cena původní.
         </p>
       </Section>
 
@@ -122,9 +149,10 @@ export function ObchodniPodminkyPage() {
           </li>
           <li>frekvence stržení odpovídá zvolenému Zúčtovacímu období (měsíčně nebo ročně),</li>
           <li>opakované platby budou trvat do doby, než je Uživatel zruší,</li>
-          <li>o každé stržené platbě obdrží potvrzení (daňový doklad) na svůj e-mail,</li>
+          <li>o každé stržené platbě obdrží fakturu na svůj e-mail,</li>
           <li>
-            o jakékoliv změně výše stržené částky nebo frekvence bude předem informován e-mailem.
+            o změně výše stržené částky nebo frekvence, kterou nevyvolal sám změnou Plánu nebo počtu
+            uživatelských licencí, bude předem informován e-mailem.
           </li>
         </ol>
         <p>6.3 Uživatel může automatické obnovování kdykoli zrušit:</p>
@@ -142,6 +170,12 @@ export function ObchodniPodminkyPage() {
           6.4 Zrušením opakovaných plateb nedochází k automatickému ukončení Smlouvy — Smlouva trvá
           do konce zaplaceného Zúčtovacího období, po jeho uplynutí dojde k pozastavení účtu, pokud
           Uživatel neprovede úhradu jinou cestou.
+        </p>
+        <p>
+          6.5 Nepodaří-li se platbu z uložené karty provést, Poskytovatel pokus o stržení opakuje;
+          stav platby je Uživateli viditelný v administraci v sekci Nastavení → Předplatné. Přístup
+          ke Službě zůstává zachován ještě 7 dnů po dni, kdy měla být platba provedena; poté je účet
+          pozastaven do doby úhrady.
         </p>
       </Section>
 
@@ -166,26 +200,36 @@ export function ObchodniPodminkyPage() {
         </p>
         <p>
           8.2 Poskytovatel je oprávněn dočasně pozastavit Službu z důvodů údržby, technické poruchy,
-          vyšší moci nebo zásahu třetí strany.
+          vyšší moci nebo zásahu třetí strany, a to po dobu nezbytně nutnou k odstranění příčiny.
         </p>
         <p>
           8.3 Poskytovatel zajistí dostupnost aktualizací Služby nezbytných pro udržení její
           funkčnosti.
         </p>
         <p>
-          8.4 Poskytovatel je oprávněn jednostranně měnit funkce Služby. O zásadních změnách
-          (omezení funkcí) informuje Uživatele e-mailem alespoň 30 dnů předem.
+          8.4 Poskytovatel je oprávněn měnit funkce Služby. Omezuje-li změna funkci, kterou Uživatel
+          užívá, oznámí ji Poskytovatel e-mailem alespoň 30 dnů předem a Uživatel je oprávněn
+          Smlouvu z tohoto důvodu vypovědět ke dni účinnosti změny; v takovém případě vrátí
+          Poskytovatel poměrnou část ceny uhrazené za nevyčerpanou část probíhajícího Zúčtovacího
+          období do 14 dnů.
         </p>
       </Section>
 
       <Section id="cl-9" title="9. Ukončení smlouvy">
         <p>
-          9.1 Uživatel může Smlouvu kdykoli vypovědět bez udání důvodu zrušením účtu v administraci.
-          Výpověď je účinná ke konci aktuálního Zúčtovacího období.
+          9.1 Uživatel může Smlouvu kdykoli vypovědět bez udání důvodu zrušením předplatného v
+          administraci (Nastavení → Předplatné) nebo e-mailem na{" "}
+          <a href={`mailto:${LEGAL_ENTITY.email}`} className="underline hover:text-text-primary">
+            {LEGAL_ENTITY.email}
+          </a>
+          . Výpověď je účinná ke konci aktuálního Zúčtovacího období; do té doby zůstává Služba
+          dostupná a cena uhrazená za probíhající Zúčtovací období se nevrací.
         </p>
         <p>
           9.2 Poskytovatel může Smlouvu vypovědět s 30denní výpovědní lhůtou nebo odstoupit při
-          porušení Smlouvy ze strany Uživatele.
+          podstatném porušení Smlouvy ze strany Uživatele. Vypoví-li Smlouvu Poskytovatel, vrátí
+          Uživateli poměrnou část ceny uhrazené za nevyčerpanou část Zúčtovacího období do 14 dnů od
+          skončení výpovědní doby.
         </p>
       </Section>
 
@@ -206,10 +250,13 @@ export function ObchodniPodminkyPage() {
           podstatném porušení.
         </p>
         <p>
-          10.4 Celková výše náhrady škody vůči Uživateli je omezena částkou rovnající se ceně Služby
-          zaplacené Uživatelem za posledních 12 měsíců předcházejících vzniku škody. Vyloučena je
-          odpovědnost za ušlý zisk a následné/nepřímé škody. Uživatel s tímto omezením výslovně
-          souhlasí.
+          10.4 Je-li Uživatel podnikatelem, je celková výše náhrady škody Poskytovatele vůči němu
+          omezena částkou odpovídající ceně Služby uhrazené Uživatelem za 12 měsíců předcházejících
+          vzniku škody; v tomto rozsahu se nehradí ušlý zisk ani následné a nepřímé škody. Omezení
+          podle věty první se vztahuje i na nároky z více samostatných událostí v témže Zúčtovacím
+          období. Omezení se neuplatní na újmu způsobenou úmyslně nebo z hrubé nedbalosti, na újmu
+          na přirozených právech člověka a na újmu způsobenou slabší straně; v těchto případech se
+          škoda hradí v rozsahu stanoveném zákonem.
         </p>
         <p>
           10.5 Podrobný postup reklamace, vrácení peněz a storna Služby upravují samostatné{" "}
@@ -262,11 +309,17 @@ export function ObchodniPodminkyPage() {
           příslušné obecné soudy České republiky.
         </p>
         <p>
-          13.2 Poskytovatel je oprávněn tyto VOP jednostranně měnit. O změně bude Uživatel
-          informován e-mailem alespoň 30 dnů před účinností. Uživatel je oprávněn Smlouvu z důvodu
-          nesouhlasu se změnou vypovědět ke dni účinnosti změny.
+          13.2 Poskytovatel je oprávněn tyto VOP měnit v rozsahu vyvolaném změnou právních předpisů
+          nebo rozhodovací praxe, změnou rozsahu funkcí Služby, změnou způsobů platby a změnou
+          subdodavatelů. O změně informuje Uživatele e-mailem alespoň 30 dnů před její účinností.
+          Uživatel je oprávněn změnu odmítnout a Smlouvu z tohoto důvodu vypovědět ke dni účinnosti
+          změny.
         </p>
         <p>13.3 Tyto VOP nabývají účinnosti dne {LEGAL_EFFECTIVE_DATE}.</p>
+        <p>
+          13.4 Je-li Uživatel přes čl. 1.3 v postavení spotřebitele, je k mimosoudnímu řešení sporu
+          ze Smlouvy věcně příslušná Česká obchodní inspekce, internetová adresa www.coi.cz.
+        </p>
       </Section>
     </LegalPageLayout>
   );

@@ -32,7 +32,7 @@ export const LEGAL_ENTITY = {
 /** Comgate operator block — texts mandated by Comgate's "loga-a-udaje-na-webu" doc. */
 export const COMGATE_INFO = {
   legalText:
-    "Online platby pro nás zajišťuje platební brána Comgate. Poskytovatel služby, společnost Comgate a.s. je licencovaná Platební instituce působící pod dohledem České národní banky. Platby probíhající skrze platební bránu jsou plně zabezpečeny a veškeré informace jsou šifrovány.",
+    "Online platby pro nás zajišťuje platební brána Comgate. Poskytovatel služby, společnost Comgate a.s. je licencovaná Platební instituce působící pod dohledem České národní banky. Platby probíhající skrze platební bránu jsou plně zabezpečeny a veškeré informace jsou šifrovány. Další informace a kontakty na www.comgate.eu.",
   /** Odkaz na platební bránu — Comgate vyžaduje uvedení poskytovatele s tímto odkazem. */
   gatewayUrl: "https://www.comgate.eu/cs/platebni-brana",
   /** Nápověda Comgate k jednotlivým platebním metodám (odkazy požaduje Comgate). */
@@ -41,9 +41,9 @@ export const COMGATE_INFO = {
   contact: {
     name: "Comgate, a.s.",
     address: "Gočárova třída 1754/48b, 500 02 Hradec Králové",
-    // E-mail pro reklamace a dotazy k platbám dle pokynu Comgate (loga-a-udaje-na-webu).
-    email: "podpora@comgate.cz",
-    phone: "+420 228 224 267",
+    // Payment-support contact per comgate.eu/cs/kontakty (checked 2026-09-19).
+    email: "platby-podpora@comgate.cz",
+    phone: "+420 288 288 700",
   },
 } as const;
 

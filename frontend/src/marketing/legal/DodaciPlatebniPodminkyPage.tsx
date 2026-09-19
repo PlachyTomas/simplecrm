@@ -37,21 +37,18 @@ export function DodaciPlatebniPodminkyPage() {
           bez platební karty, na 30 dní zdarma.
         </p>
         <p>
-          1.3 <strong>Placený plán:</strong> Služba (resp. její prodloužení) je aktivována ihned po
-          potvrzení platby platební bránou — zpravidla do několika minut od zaplacení. O aktivaci
-          Uživatele informujeme e-mailem.
+          1.3 <strong>Placený plán:</strong> při platbě přes platební bránu zpřístupníme Službu
+          bezprostředně po potvrzení platby branou. Při platbě bankovním převodem zpřístupníme
+          Službu bez zbytečného odkladu po připsání částky na náš účet, zpravidla do jednoho
+          pracovního dne. Stav předplatného vidíte v administraci v sekci Nastavení → Předplatné.
         </p>
+        <p>1.4 Po každé přijaté platbě zašleme na kontaktní e-mail fakturu.</p>
         <p>
-          1.4 Po každé přijaté platbě zašleme na kontaktní e-mail potvrzení spolu s daňovým dokladem
-          (fakturou).
-        </p>
-        <p>
-          1.5 Pokud by Služba nebyla zpřístupněna do 24 hodin od potvrzení platby, kontaktujte nás
-          na{" "}
+          1.5 Nezpřístupníme-li Službu ve lhůtách podle čl. 1.3, kontaktujte nás na{" "}
           <a href={`mailto:${LEGAL_ENTITY.email}`} className="underline hover:text-text-primary">
             {LEGAL_ENTITY.email}
-          </a>{" "}
-          — situaci neprodleně vyřešíme, případně platbu vrátíme dle{" "}
+          </a>
+          . Nezjednáme-li nápravu do 3 pracovních dnů od Vaší výzvy, vrátíme uhrazenou platbu podle{" "}
           <Link to="/reklamacni-podminky" className="underline hover:text-text-primary">
             Reklamačních podmínek
           </Link>
@@ -70,7 +67,7 @@ export function DodaciPlatebniPodminkyPage() {
         </p>
         <p>2.2 Cena se hradí předem na začátku každého zúčtovacího období.</p>
         <p>
-          2.3 Přijímáme tyto způsoby platby, vše prostřednictvím platební brány{" "}
+          2.3 Přijímáme tyto způsoby platby, prostřednictvím platební brány{" "}
           <a
             href={COMGATE_INFO.gatewayUrl}
             target="_blank"
@@ -84,7 +81,11 @@ export function DodaciPlatebniPodminkyPage() {
         <ul className="list-disc space-y-1 pl-5">
           <li>platební karty Visa a Mastercard,</li>
           <li>Apple Pay a Google Pay,</li>
-          <li>online bankovní převod (platební tlačítka českých bank).</li>
+          <li>online bankovní převod (platební tlačítka českých bank),</li>
+          <li>
+            a mimo platební bránu bankovní převod na účet Poskytovatele podle údajů na vystavené
+            faktuře (včetně QR platby).
+          </li>
         </ul>
         <p>
           2.4 Za žádný způsob platby neúčtujeme příplatek — cena dle Ceníku je konečná. Platby

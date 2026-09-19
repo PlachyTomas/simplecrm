@@ -28,39 +28,49 @@ export function CookiesPage() {
         <article>
           <h3 className="font-semibold text-text-primary">a) Nezbytné cookies (bez souhlasu)</h3>
           <p className="text-xs text-text-tertiary">
-            § 89 odst. 3 zák. č. 127/2005 Sb. — výjimka z opt-in pro technické cookies.
+            § 89 odst. 3 zák. č. 127/2005 Sb. — výjimka z opt-in pro technicky nezbytné ukládání.
           </p>
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>
-              <code className="rounded bg-surface-overlay px-1 py-0.5 text-xs">session</code> —
-              udržení přihlášení, doba: 1 hodina
+              <code className="rounded bg-surface-overlay px-1 py-0.5 text-xs">
+                simplecrm_refresh
+              </code>{" "}
+              — udržení přihlášení v aplikaci, doba: 30 dnů
             </li>
+            <li>
+              <code className="rounded bg-surface-overlay px-1 py-0.5 text-xs">
+                simplecrm_oauth_state
+              </code>{" "}
+              — ochrana přihlášení přes účet Google, doba: 10 minut
+            </li>
+          </ul>
+        </article>
+        <article>
+          <h3 className="font-semibold text-text-primary">
+            b) Další úložiště v prohlížeči (localStorage, bez souhlasu)
+          </h3>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>
               <code className="rounded bg-surface-overlay px-1 py-0.5 text-xs">
                 simplecrm.cookie-consent.v1
               </code>{" "}
-              — záznam vaší volby cookies, doba: 12 měsíců
+              — záznam vaší volby cookies, uchováván do změny volby
+            </li>
+            <li>
+              <code className="rounded bg-surface-overlay px-1 py-0.5 text-xs">
+                simplecrm-theme
+              </code>{" "}
+              — vámi zvolené téma vzhledu; ukládá se pouze tehdy, když si téma sami zvolíte
             </li>
           </ul>
         </article>
-
         <article>
-          <h3 className="font-semibold text-text-primary">b) Analytické cookies (souhlas)</h3>
+          <h3 className="font-semibold text-text-primary">c) Analytické cookies (souhlas)</h3>
           <p>
             V tuto chvíli žádné analytické cookies nenasazujeme. Pokud v budoucnu zavedeme
-            analytiku, půjde primárně o nástroje bez sledovacích cookies (např. Plausible
-            Analytics).
+            analytiku, půjde primárně o nástroje bez sledovacích cookies a zeptáme se vás předem.
           </p>
         </article>
-
-        <article>
-          <h3 className="font-semibold text-text-primary">c) Preferenční cookies (souhlas)</h3>
-          <p>
-            Slouží k zapamatování si vašich preferencí (zvolené téma vzhledu). Bez souhlasu nejsou
-            uloženy.
-          </p>
-        </article>
-
         <article>
           <h3 className="font-semibold text-text-primary">d) Marketingové cookies</h3>
           <p>Nepoužíváme.</p>
@@ -86,7 +96,7 @@ export function CookiesPage() {
 
       <Section id="doba" title="4. Doba uchování a další informace">
         <p>
-          Konkrétní doby uchování jsou uvedeny u jednotlivých cookies výše. Pro otázky se obraťte na
+          Konkrétní doby uchování jsou uvedeny u jednotlivých položek výše. Pro otázky se obraťte na
           podporu — viz{" "}
           <a href="/kontakt" className="underline hover:text-text-primary">
             Kontakt

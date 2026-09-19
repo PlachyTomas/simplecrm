@@ -400,7 +400,7 @@ describe("Billing settings page", () => {
     await waitFor(() => expect(screen.getByTestId("paid-through-block")).toBeInTheDocument());
     const block = screen.getByTestId("paid-through-block");
     expect(block).toHaveTextContent(/Zkušební doba/);
-    expect(block).toHaveTextContent(/zašleme fakturu se splatností v den ukončení zkoušky/i);
+    expect(block).toHaveTextContent(/před koncem zkušební doby vám zašleme fakturu/i);
   });
 
   it("active → paid-through block shows Předplacené období + auto-renew hint", async () => {
